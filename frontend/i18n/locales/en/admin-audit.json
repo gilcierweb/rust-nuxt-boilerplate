@@ -1,0 +1,114 @@
+{
+  "admin": {
+    "auditLogs": {
+      "messages": {
+        "loadError": "Failed to load audit logs.",
+        "createSuccess": "Audit log created successfully.",
+        "createError": "Failed to create audit log.",
+        "updateSuccess": "Audit log updated successfully.",
+        "updateError": "Failed to update audit log."
+      },
+      "index": {
+        "header": {
+          "section": "Admin / Audit",
+          "title": "Audit logs"
+        },
+        "actions": {
+          "new": "New log",
+          "refresh": "@:common.actions.refresh"
+        },
+        "table": {
+          "action": "Action",
+          "resourceType": "Resource",
+          "actorUserId": "Actor",
+          "createdAt": "Date",
+          "actions": "@:common.table.actions",
+          "show": "@:common.actions.show",
+          "edit": "@:common.actions.edit",
+          "empty": "No logs loaded."
+        }
+      },
+      "new": {
+        "header": {
+          "section": "Admin / Audit",
+          "title": "New audit log"
+        },
+        "actions": {
+          "submit": "Create log"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Audit",
+          "title": "Edit audit log"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Audit",
+          "title": "Audit log details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Log not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "request": "Request",
+          "payload": "Payload"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "actorUserId": {
+            "label": "Actor User ID"
+          },
+          "actorRoleSnapshot": {
+            "label": "Actor role snapshot"
+          },
+          "targetCustomerId": {
+            "label": "Target Customer ID"
+          },
+          "action": {
+            "label": "Action"
+          },
+          "resourceType": {
+            "label": "Resource type"
+          },
+          "resourceId": {
+            "label": "Resource ID"
+          },
+          "ipAddress": {
+            "label": "IP Address"
+          },
+          "userAgent": {
+            "label": "User agent"
+          },
+          "requestId": {
+            "label": "Request ID"
+          },
+          "createdAt": {
+            "label": "Created at"
+          },
+          "changesJson": {
+            "label": "Changes JSON",
+            "placeholder": "JSON with applied changes"
+          },
+          "metadataJson": {
+            "label": "Metadata JSON",
+            "placeholder": "JSON with extra event metadata"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
+      }
+    }
+  }
+}

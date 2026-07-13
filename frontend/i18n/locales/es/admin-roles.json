@@ -1,0 +1,127 @@
+{
+  "admin": {
+    "memberships": {
+      "roles": {
+        "admin": "Admin",
+        "manager": "Manager",
+        "editor": "Editor",
+        "viewer": "Viewer"
+      },
+      "status": {
+        "active": "Activo",
+        "invited": "Invitado",
+        "suspended": "Suspendido"
+      },
+      "messages": {
+        "loadError": "Error al cargar vínculos.",
+        "createSuccess": "Vínculo creado con éxito.",
+        "createError": "Error al crear vínculo.",
+        "updateSuccess": "Vínculo actualizado con éxito.",
+        "updateError": "Error al actualizar vínculo."
+      },
+      "index": {
+        "header": {
+          "section": "Admin / Membresías",
+          "title": "Vínculos Usuario-Empresa"
+        },
+        "actions": {
+          "new": "Nuevo vínculo",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "active": "Activos",
+          "primary": "Principales"
+        },
+        "table": {
+          "user": "Usuario",
+          "company": "Empresa",
+          "role": "Rol",
+          "status": "Estado",
+          "primary": "Principal",
+          "actions": "@:common.table.actions",
+          "show": "@:common.actions.show",
+          "edit": "@:common.actions.edit",
+          "empty": "No hay vínculos cargados."
+        }
+      },
+      "new": {
+        "header": {
+          "section": "Admin / Membresías",
+          "title": "Nuevo vínculo"
+        },
+        "actions": {
+          "submit": "Crear vínculo"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Membresías",
+          "title": "Editar vínculo"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Membresías",
+          "title": "Detalles del vínculo"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "fields": {
+          "primary": "Principal"
+        },
+        "empty": "Vínculo no encontrado."
+      },
+      "form": {
+        "sections": {
+          "main": "Datos principales",
+          "audit": "Auditoría"
+        },
+        "fields": {
+          "userId": {
+            "label": "Usuario"
+          },
+          "companyId": {
+            "label": "Empresa"
+          },
+          "membershipRole": {
+            "label": "Rol del vínculo",
+            "options": {
+              "admin": "Admin",
+              "manager": "Manager",
+              "editor": "Editor",
+              "viewer": "Viewer"
+            }
+          },
+          "status": {
+            "label": "Estado",
+            "options": {
+              "active": "Activo",
+              "invited": "Invitado",
+              "suspended": "Suspendido"
+            }
+          },
+          "isPrimary": {
+            "label": "Vínculo principal"
+          },
+          "invitedBy": {
+            "label": "Invitado por"
+          },
+          "joinedAt": {
+            "label": "Fecha de ingreso"
+          },
+          "lastAccessedAt": {
+            "label": "Último acceso en"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
+      }
+    }
+  }
+}

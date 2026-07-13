@@ -1,0 +1,154 @@
+{
+  "admin": {
+    "sidebar": {
+      "closeSidebar": "Fechar barra lateral",
+      "sidebar": "Barra lateral",
+      "close": "Fechar",
+      "admin": "Admin",
+      "defaultUser": "admin@app.local",
+      "apiDocs": "Documentação da API",
+      "dashboard": "Dashboard",
+      "default": "Visão geral",
+      "coreResources": "Estrutura Organizacional",
+      "operations": "Operações",
+      "financial": "Financeiro",
+      "management": "Gestão",
+      "quickLinks": "Links rápidos",
+      "workspace": "Espaço de trabalho",
+      "openApiDocs": "Abrir docs da API"
+    },
+    "statusLabels": {
+      "active": "Ativo",
+      "inactive": "Inativo",
+      "pending": "Pendente",
+      "archived": "Arquivado",
+      "inProgress": "Em andamento",
+      "completed": "Concluído",
+      "cancelled": "Cancelado",
+      "paid": "Pago",
+      "approved": "Aprovado",
+      "rejected": "Rejeitado",
+      "unknown": "Desconhecido"
+    },
+    "common": {
+      "dashboard": "Dashboard",
+      "new": "Novo",
+      "edit": "Editar",
+      "details": "Detalhes",
+      "back": "Voltar",
+      "refresh": "Atualizar",
+      "view": "Visualizar",
+      "delete": "Excluir",
+      "actions": "Ações",
+      "total": "Total",
+      "endpoint": "Endpoint",
+      "status": "Status",
+      "resourceActive": "Recurso ativo",
+      "awaitingRecords": "Aguardando registros",
+      "loadingData": "Carregando dados...",
+      "loadingRecords": "Carregando registros...",
+      "errorLoadingData": "Erro ao carregar dados",
+      "tryAgain": "Tentar novamente",
+      "noRecords": "Nenhum registro encontrado para este recurso.",
+      "filterPlaceholder": "Filtrar registros...",
+      "viewDetails": "Visualize os detalhes do registro",
+      "yes": "Sim",
+      "no": "Não"
+    },
+    "roles": {
+      "title": "Cargos",
+      "description": "Papéis administrativos e seus escopos opcionais.",
+      "newTitle": "Novo Cargo",
+      "newDescription": "Crie um novo papel administrativo.",
+      "editTitle": "Editar Cargo",
+      "editDescription": "Atualize o papel e seu escopo opcional.",
+      "showTitle": "Detalhes do Cargo",
+      "showDescription": "Visualize os dados do papel e seu escopo associado.",
+      "empty": "Nenhum cargo encontrado.",
+      "searchPlaceholder": "Filtrar cargos...",
+      "table": {
+        "name": "Nome",
+        "resourceType": "Tipo de recurso"
+      },
+      "fields": {
+        "name": "Nome",
+        "resourceType": "Tipo de recurso"
+      },
+      "messages": {
+        "createSuccess": "Cargo criado com sucesso",
+        "createError": "Erro ao criar cargo",
+        "updateSuccess": "Cargo atualizado com sucesso",
+        "updateError": "Erro ao atualizar cargo",
+        "deleteSuccess": "Cargo excluído com sucesso",
+        "deleteError": "Erro ao excluir cargo",
+        "confirmDelete": "Tem certeza que deseja excluir este cargo?"
+      }
+    },
+    "users": {
+      "title": "Usuários",
+      "description": "Consulta operacional dos usuários públicos disponíveis no painel.",
+      "showTitle": "Detalhes do Usuário",
+      "showDescription": "Dados públicos de cadastro carregados no painel administrativo.",
+      "searchPlaceholder": "Filtrar usuários...",
+      "table": {
+        "displayName": "Nome de exibição",
+        "email": "Email"
+      },
+      "empty": "Nenhum usuário encontrado."
+    },
+    "auditLogs": {
+      "title": "Auditoria",
+      "description": "Trilha administrativa de ações e mudanças críticas.",
+      "newTitle": "Novo Log",
+      "newDescription": "Registre manualmente um evento de auditoria.",
+      "editTitle": "Editar Log",
+      "editDescription": "Atualize o evento de auditoria.",
+      "showTitle": "Detalhes do Log",
+      "showDescription": "Visualize o evento e seus dados de contexto.",
+      "empty": "Nenhum log encontrado.",
+      "searchPlaceholder": "Filtrar logs...",
+      "table": {
+        "action": "Ação",
+        "resource": "Recurso",
+        "actor": "Executor",
+        "customer": "Cliente",
+        "createdAt": "Criado em"
+      },
+      "fields": {
+        "company": "Empresa",
+        "actorUser": "Usuário executor",
+        "targetCustomer": "Cliente alvo",
+        "actorRoleSnapshot": "Perfil capturado",
+        "action": "Ação",
+        "resourceType": "Tipo de recurso",
+        "resourceId": "ID do recurso",
+        "requestId": "Request ID",
+        "ipAddress": "IP",
+        "userAgent": "User agent",
+        "changes": "Changes",
+        "metadata": "Metadata",
+        "createdAt": "Criado em"
+      },
+      "messages": {
+        "createSuccess": "Log criado com sucesso",
+        "createError": "Erro ao criar log",
+        "updateSuccess": "Log atualizado com sucesso",
+        "updateError": "Erro ao atualizar log",
+        "deleteSuccess": "Log excluído com sucesso",
+        "deleteError": "Erro ao excluir log",
+        "confirmDelete": "Tem certeza que deseja excluir este log?"
+      }
+    },
+    "dashboard": {
+      "activeCustomers": "Clientes ativos",
+      "openDebts": "Débitos em aberto",
+      "pendingPayments": "Pagamentos pendentes",
+      "pendingInvoices": "Notas pendentes",
+      "financialSummary": "Resumo Financeiro",
+      "totalDebts": "Total de débitos",
+      "completedPayments": "Pagamentos concluídos",
+      "visibleToCustomer": "Visíveis ao cliente",
+      "noRecentActivity": "Sem movimentações recentes."
+    }
+  }
+}

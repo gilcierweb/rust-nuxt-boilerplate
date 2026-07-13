@@ -1,0 +1,218 @@
+{
+  "landing": {
+    "nav": {
+      "technology": "Technology",
+      "cases": "Success Cases",
+      "impact": "Impact",
+      "support": "Support",
+      "teamAccess": "Team Access",
+      "buyerPortal": "Buyer Portal"
+    },
+    "hero": {
+      "badge": "Edition 2024 / Industrial Management",
+      "heading": "Command Your Construction with",
+      "highlight": "Absolute Precision.",
+      "description": "The new frontier of civil engineering where data and execution converge in a single high-performance panoramic view.",
+      "cta": "Request Demo"
+    },
+    "features": {
+      "sectionTitle": "Differentials",
+      "transparency": {
+        "title": "Total Transparency",
+        "description": "Complete visibility for clients and technical team at each critical stage of the project."
+      },
+      "precision": {
+        "title": "Data Precision",
+        "description": "Exact information gathered in real-time for evidence-based decision making."
+      },
+      "technology": {
+        "title": "Cutting-edge Technology",
+        "description": "Industrial management systems natively integrated with field mobile tools."
+      }
+    },
+    "schedule": {
+      "title": "Live Schedule",
+      "description": "The pulse of your construction transformed into precise metric visualizations.",
+      "globalAverage": "Global Average",
+      "task": {
+        "foundation": "Foundation and Structure",
+        "masonry": "Masonry and Walls",
+        "electrical": "Electrical Installations"
+      },
+      "status": {
+        "completed": "Completed {percent}%",
+        "inProgress": "{percent}% In Progress",
+        "planned": "{percent}% Planned"
+      }
+    },
+    "gallery": {
+      "title": "Visual Archive",
+      "tabs": {
+        "all": "All",
+        "structure": "Structure",
+        "finishing": "Finishing"
+      }
+    },
+    "investor": {
+      "badge": "Investor Insight",
+      "title": "Investor Portal",
+      "assetOnSite": "Asset on Site",
+      "description": "Follow the ROI of your construction with physical versus financial evolution charts. Transparency that values your investment.",
+      "reports": "Weekly Reports",
+      "audit": "Materials Audit",
+      "financialControl": "Financial control in the palm of your hand.",
+      "mobileDescription": "Our interface was designed for the casual decision maker who demands precise technical data without bureaucratic complexity."
+    },
+    "field": {
+      "badge": "Field Operations",
+      "title": "The Construction Yard Motor",
+      "description": "From the RDO (Daily Work Log) to input management, the field team operates at maximum efficiency through optimized workflows.",
+      "offlineFirst": {
+        "title": "Offline-First",
+        "description": "Works even without stable connection on site."
+      },
+      "geoTracking": {
+        "title": "Geo-Tracking",
+        "description": "Spatial validation of all measurements."
+      },
+      "rdos": {
+        "status": "Active",
+        "workforce": "Workforce:",
+        "workers": "{n} Workers",
+        "weather": "Weather:",
+        "weatherFormat": "{condition} ({temp})"
+      }
+    },
+    "infrastructure": {
+      "title": "Operational Infrastructure",
+      "rdos": {
+        "title": "Digital RDO",
+        "description": "Biometric signature and georeferencing."
+      },
+      "measurements": {
+        "title": "Measurements",
+        "description": "Conference via laser and project scan."
+      },
+      "inventory": {
+        "title": "Inventory",
+        "description": "Automated FIFO input control."
+      },
+      "bi": {
+        "title": "BI & Analytics",
+        "description": "Deviation forecast based on history."
+      }
+    },
+    "cases": {
+      "badge": "Proven Performance",
+      "title": "Success Cases",
+      "description": "Browse the projects that redefined efficiency standards with the BuildTrack platform.",
+      "project": {
+        "name": "Industrial Complex Delta",
+        "result": "15% Waste Reduction",
+        "quote": "Implementing the input tracking system changed our profit margin in just 6 months.",
+        "author": "Ricardo Almeida",
+        "role": "Chief Engineer"
+      }
+    },
+    "esg": {
+      "title": "Sustainability & ESG Compliance",
+      "waste": {
+        "title": "Waste Management",
+        "description": "Digital tracking of disposal and reuse of debris, ensuring certified landfills and legal compliance."
+      },
+      "carbon": {
+        "title": "Carbon Footprint",
+        "description": "Monitoring of logistics and energy consumption for carbon-zero or low environmental impact projects."
+      },
+      "wasteAvoided": "Waste Avoided",
+      "certification": {
+        "title": "GreenFlow Certification",
+        "description": "BuildTrack issues real-time waste management certificates for sustainability audits."
+      },
+      "impact": "IMPACT",
+      "metric": "{value} Ton"
+    },
+    "security": {
+      "title": "Data Immutability",
+      "description": "Our infrastructure uses security protocols that make photographic records and RDOs immutable once validated, guaranteeing absolute legal security.",
+      "certifications": {
+        "iso": "ISO 27001",
+        "lgpd": "LGPD Compliance",
+        "aws": "AWS Secured"
+      }
+    },
+    "testimonials": {
+      "title": "Market Voices",
+      "badge": "Customer Stories",
+      "quote1": {
+        "quote": "The transparency of BuildTrack zeroed communication noise with our investors. The buyer portal became our main closing tool.",
+        "author": "Carlos Mendes",
+        "role": "Director Apex Construction"
+      },
+      "quote2": {
+        "quote": "Identifying schedule deviations before they become costs is what differentiates a profitable construction from a headache.",
+        "author": "Mariana Silva",
+        "role": "Strategic Planning"
+      }
+    },
+    "faq": {
+      "title": "Technical Specifications",
+      "items": {
+        "erp": {
+          "question": "Integration with market ERPs?",
+          "answer": "Yes. Our native RESTful API connects with Sienge, TOTVS and SAP, ensuring bidirectional sync between financial and construction."
+        },
+        "offline": {
+          "question": "Offline operation?",
+          "answer": "The mobile app is offline-first. Stores photos and data locally and syncs automatically as soon as network is available."
+        },
+        "storage": {
+          "question": "Storage limits?",
+          "answer": "Our Enterprise plans include unlimited storage for projects and photographic records in AWS cloud."
+        }
+      }
+    },
+    "footer": {
+      "platform": {
+        "title": "Platform",
+        "teamPortal": "Team Portal",
+        "buyerApp": "Buyer App",
+        "apiIntegrations": "API Integrations",
+        "esgSecurity": "ESG Security"
+      },
+      "company": {
+        "title": "Company",
+        "aboutUs": "About Us",
+        "careers": "Careers",
+        "privacy": "Privacy",
+        "contact": "Contact"
+      },
+      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. ALL RIGHTS RESERVED.",
+      "cnpj": "CNPJ {number}",
+      "location": "{city}, {state}"
+    }
+  },
+  "about": {
+    "title": "About Us",
+    "hero": {
+      "title": "About BuildTrack",
+      "subtitle": "Transforming civil engineering with technology"
+    }
+  },
+  "contact": {
+    "title": "Contact Us",
+    "form": {
+      "name": "Name",
+      "email": "Email",
+      "subject": "Subject",
+      "message": "Message",
+      "submit": "Send Message"
+    }
+  },
+  "terms": {
+    "title": "Terms of Use"
+  },
+  "privacy": {
+    "title": "Privacy Policy"
+  }
+}

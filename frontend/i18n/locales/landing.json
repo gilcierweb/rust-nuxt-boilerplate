@@ -1,0 +1,218 @@
+{
+  "landing": {
+    "nav": {
+      "technology": "Tecnologia",
+      "cases": "Casos de Sucesso",
+      "impact": "Impacto",
+      "support": "Suporte",
+      "teamAccess": "Acesso Equipe",
+      "buyerPortal": "Portal Comprador"
+    },
+    "hero": {
+      "badge": "Edição 2024 / Gestão Industrial",
+      "heading": "Comande sua Obra com",
+      "highlight": "Precisão Absoluta.",
+      "description": "A nova fronteira da engenharia civil onde dados e execução convergem em uma única visão panorâmica de alto desempenho.",
+      "cta": "Solicitar Demonstração"
+    },
+    "features": {
+      "sectionTitle": "Diferenciais",
+      "transparency": {
+        "title": "Transparência Total",
+        "description": "Visibilidade completa para clientes e equipe técnica em cada etapa crítica do projeto."
+      },
+      "precision": {
+        "title": "Precisão de Dados",
+        "description": "Informações exatas colhidas em tempo real para uma tomada de decisão orientada por evidências."
+      },
+      "technology": {
+        "title": "Tecnologia de Ponta",
+        "description": "Sistemas de gestão industrial integrados nativamente com ferramentas de campo mobile."
+      }
+    },
+    "schedule": {
+      "title": "Cronograma Vivo",
+      "description": "O pulso da sua construção transformado em visualizações métricas precisas.",
+      "globalAverage": "Média Global",
+      "task": {
+        "foundation": "Fundação e Estrutura",
+        "masonry": "Alvenaria e Vedações",
+        "electrical": "Instalações Elétricas"
+      },
+      "status": {
+        "completed": "Concluído {percent}%",
+        "inProgress": "{percent}% Em Andamento",
+        "planned": "{percent}% Planejado"
+      }
+    },
+    "gallery": {
+      "title": "Arquivo Visual",
+      "tabs": {
+        "all": "Todos",
+        "structure": "Estrutura",
+        "finishing": "Acabamento"
+      }
+    },
+    "investor": {
+      "badge": "Investor Insight",
+      "title": "Portal do Investidor",
+      "assetOnSite": "Patrimônio em Obra",
+      "description": "Acompanhe o ROI da sua construção com gráficos de evolução física versus financeira. Transparência que valoriza seu investimento.",
+      "reports": "Relatórios Semanais",
+      "audit": "Auditoria de Materiais",
+      "financialControl": "Controle financeiro na palma da mão.",
+      "mobileDescription": "Nossa interface foi desenhada para o tomador de decisão casual que exige dados técnicos precisos sem a complexidade burocrática."
+    },
+    "field": {
+      "badge": "Operações de Campo",
+      "title": "O Motor do Canteiro",
+      "description": "Do RDO (Registro Diário de Obra) à gestão de insumos, a equipe de campo opera com eficiência máxima através de workflows otimizados.",
+      "offlineFirst": {
+        "title": "Offline-First",
+        "description": "Funciona mesmo sem conexão estável no canteiro."
+      },
+      "geoTracking": {
+        "title": "Geo-Tracking",
+        "description": "Validação espacial de todas as medições."
+      },
+      "rdos": {
+        "status": "Ativo",
+        "workforce": "Efetivo:",
+        "workers": "{n} Operários",
+        "weather": "Clima:",
+        "weatherFormat": "{condition} ({temp})"
+      }
+    },
+    "infrastructure": {
+      "title": "Infraestrutura Operacional",
+      "rdos": {
+        "title": "RDO Digital",
+        "description": "Assinatura biométrica e georreferenciamento."
+      },
+      "measurements": {
+        "title": "Medições",
+        "description": "Conferência via laser e scan de projetos."
+      },
+      "inventory": {
+        "title": "Inventário",
+        "description": "Controle de insumos FIFO automatizado."
+      },
+      "bi": {
+        "title": "BI & Analytics",
+        "description": "Previsão de desvios baseada em histórico."
+      }
+    },
+    "cases": {
+      "badge": "Performance Comprovada",
+      "title": "Casos de Sucesso",
+      "description": "Navegue pelos projetos que redefiniram o padrão de eficiência com a plataforma BuildTrack.",
+      "project": {
+        "name": "Complexo Industrial Delta",
+        "result": "Redução de 15% em Desperdício",
+        "quote": "A implementação do sistema de rastreamento de insumos mudou nossa margem de lucro em apenas 6 meses.",
+        "author": "Ricardo Almeida",
+        "role": "Eng. Chefe"
+      }
+    },
+    "esg": {
+      "title": "Sustentabilidade & Compliance ESG",
+      "waste": {
+        "title": "Gestão de Resíduos",
+        "description": "Tracking digital de descarte e reutilização de entulho, garantindo aterros sanitários certificados e conformidade legal."
+      },
+      "carbon": {
+        "title": "Pegada de Carbono",
+        "description": "Monitoramento de logística e consumo energético para projetos carbono-zero ou de baixo impacto ambiental."
+      },
+      "wasteAvoided": "Resíduos Evitados",
+      "certification": {
+        "title": "Certificação GreenFlow",
+        "description": "O BuildTrack emite certificados de gestão de resíduos em tempo real para auditorias de sustentabilidade."
+      },
+      "impact": "IMPACTO",
+      "metric": "{value} Ton"
+    },
+    "security": {
+      "title": "Imutabilidade de Dados",
+      "description": "Nossa infraestrutura utiliza protocolos de segurança que tornam registros fotográficos e RDOs imutáveis uma vez validados, garantindo segurança jurídica absoluta.",
+      "certifications": {
+        "iso": "ISO 27001",
+        "lgpd": "Conformidade LGPD",
+        "aws": "Segurança AWS"
+      }
+    },
+    "testimonials": {
+      "title": "Vozes do Mercado",
+      "badge": "Customer Stories",
+      "quote1": {
+        "quote": "A transparência do BuildTrack zerou os ruídos de comunicação com nossos investidores. O portal do comprador tornou-se nossa principal ferramenta de fechamento.",
+        "author": "Carlos Mendes",
+        "role": "Dir. Construtora Apex"
+      },
+      "quote2": {
+        "quote": "Identificar desvios no cronograma antes que eles se tornem custos é o que diferencia uma obra lucrativa de uma dor de cabeça.",
+        "author": "Mariana Silva",
+        "role": "Planejamento Estratégico"
+      }
+    },
+    "faq": {
+      "title": "Especificações Técnicas",
+      "items": {
+        "erp": {
+          "question": "Integração com ERPs de mercado?",
+          "answer": "Sim. Nossa API RESTful nativa conecta-se com Sienge, TOTVS e SAP, garantindo sincronia bidirecional entre financeiro e obra."
+        },
+        "offline": {
+          "question": "Funcionamento Offline?",
+          "answer": "O app móvel é offline-first. Armazena fotos e dados localmente e sincroniza automaticamente assim que houver rede disponível."
+        },
+        "storage": {
+          "question": "Limites de Armazenamento?",
+          "answer": "Nossos planos Enterprise incluem armazenamento ilimitado para projetos e registros fotográficos em nuvem AWS."
+        }
+      }
+    },
+    "footer": {
+      "platform": {
+        "title": "Plataforma",
+        "teamPortal": "Portal de Equipe",
+        "buyerApp": "App do Comprador",
+        "apiIntegrations": "Integrações API",
+        "esgSecurity": "Segurança ESG"
+      },
+      "company": {
+        "title": "Empresa",
+        "aboutUs": "Sobre Nós",
+        "careers": "Carreiras",
+        "privacy": "Privacidade",
+        "contact": "Contato"
+      },
+      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. TODOS OS DIREITOS RESERVADOS.",
+      "cnpj": "CNPJ @:numberFormat",
+      "location": "{city}, {state}"
+    }
+  },
+  "about": {
+    "title": "Sobre Nós",
+    "hero": {
+      "title": "Sobre o BuildTrack",
+      "subtitle": "Transformando a engenharia civil com tecnologia"
+    }
+  },
+  "contact": {
+    "title": "Contate-nos",
+    "form": {
+      "name": "Nome",
+      "email": "E-mail",
+      "subject": "Assunto",
+      "message": "Mensagem",
+      "submit": "Enviar Mensagem"
+    }
+  },
+  "terms": {
+    "title": "Termos de Uso"
+  },
+  "privacy": {
+    "title": "Política de Privacidade"
+  }
+}

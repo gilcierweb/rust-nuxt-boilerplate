@@ -1,0 +1,152 @@
+{
+  "admin": {
+    "roles": {
+      "messages": {
+        "loadError": "Falha ao carregar cargos.",
+        "createSuccess": "Cargo criado com sucesso.",
+        "createError": "Falha ao criar cargo.",
+        "updateSuccess": "Cargo atualizado com sucesso.",
+        "updateError": "Falha ao atualizar cargo."
+      },
+      "form": {
+        "error_title": "Erro",
+        "id": "ID",
+        "name": "Nome",
+        "resource_type": "Tipo de recurso",
+        "resource_id": "ID do recurso",
+        "created_at": "Criado em",
+        "updated_at": "Atualizado em",
+        "cancel": "Cancelar",
+        "saving": "Salvando...",
+        "create_role": "Criar cargo",
+        "save_changes": "Salvar alterações"
+      },
+      "validation": {
+        "name_required": "O nome é obrigatório"
+      }
+    },
+    "memberships": {
+      "roles": {
+        "admin": "Admin",
+        "manager": "Manager",
+        "editor": "Editor",
+        "viewer": "Viewer"
+      },
+      "status": {
+        "active": "Ativo",
+        "invited": "Convidado",
+        "suspended": "Suspenso"
+      },
+      "messages": {
+        "loadError": "Falha ao carregar vínculos.",
+        "createSuccess": "Vínculo criado com sucesso.",
+        "createError": "Falha ao criar vínculo.",
+        "updateSuccess": "Vínculo atualizado com sucesso.",
+        "updateError": "Falha ao atualizar vínculo."
+      },
+      "index": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Vínculos Usuário-Empresa"
+        },
+        "actions": {
+          "new": "Novo vínculo",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "active": "Ativos",
+          "primary": "Primários"
+        },
+        "table": {
+          "user": "Usuário",
+          "company": "Empresa",
+          "role": "Papel",
+          "status": "Status",
+          "primary": "Principal",
+          "actions": "@:common.table.actions",
+          "show": "@:common.actions.show",
+          "edit": "@:common.actions.edit",
+          "empty": "Nenhum vínculo carregado."
+        }
+      },
+      "new": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Novo vínculo"
+        },
+        "actions": {
+          "submit": "Criar vínculo"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Editar vínculo"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Detalhes do vínculo"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "fields": {
+          "primary": "Principal"
+        },
+        "empty": "Vínculo não encontrado."
+      },
+      "form": {
+        "sections": {
+          "main": "Dados principais",
+          "audit": "Auditoria"
+        },
+        "fields": {
+          "userId": {
+            "label": "User ID"
+          },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "membershipRole": {
+            "label": "Papel no vínculo",
+            "options": {
+              "admin": "Admin",
+              "manager": "Manager",
+              "editor": "Editor",
+              "viewer": "Viewer"
+            }
+          },
+          "status": {
+            "label": "Status",
+            "options": {
+              "active": "Ativo",
+              "invited": "Convidado",
+              "suspended": "Suspenso"
+            }
+          },
+          "isPrimary": {
+            "label": "Vínculo principal"
+          },
+          "invitedBy": {
+            "label": "Convidado por"
+          },
+          "joinedAt": {
+            "label": "Data de entrada"
+          },
+          "lastAccessedAt": {
+            "label": "Último acesso em"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
+      }
+    }
+  }
+}

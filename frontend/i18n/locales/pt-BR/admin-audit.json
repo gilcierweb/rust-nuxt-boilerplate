@@ -1,0 +1,114 @@
+{
+  "admin": {
+    "auditLogs": {
+      "messages": {
+        "loadError": "Falha ao carregar logs de auditoria.",
+        "createSuccess": "Log de auditoria criado com sucesso.",
+        "createError": "Falha ao criar log de auditoria.",
+        "updateSuccess": "Log de auditoria atualizado com sucesso.",
+        "updateError": "Falha ao atualizar log de auditoria."
+      },
+      "index": {
+        "header": {
+          "section": "Admin / Auditoria",
+          "title": "Logs de auditoria"
+        },
+        "actions": {
+          "new": "Novo log",
+          "refresh": "@:common.actions.refresh"
+        },
+        "table": {
+          "action": "Ação",
+          "resourceType": "Recurso",
+          "actorUserId": "Ator",
+          "createdAt": "Data",
+          "actions": "@:common.table.actions",
+          "show": "@:common.actions.show",
+          "edit": "@:common.actions.edit",
+          "empty": "Nenhum log carregado."
+        }
+      },
+      "new": {
+        "header": {
+          "section": "Admin / Auditoria",
+          "title": "Novo log de auditoria"
+        },
+        "actions": {
+          "submit": "Criar log"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Auditoria",
+          "title": "Editar log de auditoria"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Auditoria",
+          "title": "Detalhes do log"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Log não encontrado."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identificação",
+          "request": "Requisição",
+          "payload": "Payload"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "actorUserId": {
+            "label": "Actor User ID"
+          },
+          "actorRoleSnapshot": {
+            "label": "Snapshot do papel do ator"
+          },
+          "targetCustomerId": {
+            "label": "Target Customer ID"
+          },
+          "action": {
+            "label": "Ação"
+          },
+          "resourceType": {
+            "label": "Tipo do recurso"
+          },
+          "resourceId": {
+            "label": "Resource ID"
+          },
+          "ipAddress": {
+            "label": "IP Address"
+          },
+          "userAgent": {
+            "label": "User agent"
+          },
+          "requestId": {
+            "label": "Request ID"
+          },
+          "createdAt": {
+            "label": "Criado em"
+          },
+          "changesJson": {
+            "label": "Changes JSON",
+            "placeholder": "JSON com alterações aplicadas"
+          },
+          "metadataJson": {
+            "label": "Metadata JSON",
+            "placeholder": "JSON com metadados extras do evento"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
+      }
+    }
+  }
+}

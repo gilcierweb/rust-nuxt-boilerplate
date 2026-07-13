@@ -1,0 +1,152 @@
+{
+  "admin": {
+    "roles": {
+      "messages": {
+        "loadError": "Failed to load roles.",
+        "createSuccess": "Role created successfully.",
+        "createError": "Failed to create role.",
+        "updateSuccess": "Role updated successfully.",
+        "updateError": "Failed to update role."
+      },
+      "form": {
+        "error_title": "Error",
+        "id": "ID",
+        "name": "Name",
+        "resource_type": "Resource type",
+        "resource_id": "Resource ID",
+        "created_at": "Created at",
+        "updated_at": "Updated at",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "create_role": "Create role",
+        "save_changes": "Save changes"
+      },
+      "validation": {
+        "name_required": "Name is required"
+      }
+    },
+    "memberships": {
+      "roles": {
+        "admin": "Admin",
+        "manager": "Manager",
+        "editor": "Editor",
+        "viewer": "Viewer"
+      },
+      "status": {
+        "active": "Active",
+        "invited": "Invited",
+        "suspended": "Suspended"
+      },
+      "messages": {
+        "loadError": "Failed to load memberships.",
+        "createSuccess": "Membership created successfully.",
+        "createError": "Failed to create membership.",
+        "updateSuccess": "Membership updated successfully.",
+        "updateError": "Failed to update membership."
+      },
+      "index": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "User-Company Memberships"
+        },
+        "actions": {
+          "new": "New membership",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "active": "Active",
+          "primary": "Primary"
+        },
+        "table": {
+          "user": "User",
+          "company": "Company",
+          "role": "Role",
+          "status": "Status",
+          "primary": "Primary",
+          "actions": "@:common.table.actions",
+          "show": "@:common.actions.show",
+          "edit": "@:common.actions.edit",
+          "empty": "No memberships loaded."
+        }
+      },
+      "new": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "New membership"
+        },
+        "actions": {
+          "submit": "Create membership"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Edit membership"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Membership details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "fields": {
+          "primary": "Primary"
+        },
+        "empty": "Membership not found."
+      },
+      "form": {
+        "sections": {
+          "main": "Main data",
+          "audit": "Audit"
+        },
+        "fields": {
+          "userId": {
+            "label": "User ID"
+          },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "membershipRole": {
+            "label": "Membership Role",
+            "options": {
+              "admin": "Admin",
+              "manager": "Manager",
+              "editor": "Editor",
+              "viewer": "Viewer"
+            }
+          },
+          "status": {
+            "label": "Status",
+            "options": {
+              "active": "Active",
+              "invited": "Invited",
+              "suspended": "Suspended"
+            }
+          },
+          "isPrimary": {
+            "label": "Primary membership"
+          },
+          "invitedBy": {
+            "label": "Invited By"
+          },
+          "joinedAt": {
+            "label": "Joined At"
+          },
+          "lastAccessedAt": {
+            "label": "Last Accessed At"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
+      }
+    }
+  }
+}

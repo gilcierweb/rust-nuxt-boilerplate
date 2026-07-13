@@ -1,0 +1,268 @@
+use actix_web::{HttpResponse, delete, get, patch, post, web};
+use actix_web_grants::authorities::AuthDetails;
+use diesel::result::Error as DieselError;
+use uuid::Uuid;
+use validator::Validate;
+
+use crate::{
+    authz::{
+        ability::{AbilityAction, AbilityResource, authorize},
+        scope::{customer_scope_ids, ensure_optional_customer_in_scope},
+    },
+    errors::{AppError, AppResult},
+    middleware::auth::AuthUser,
+    models::audit_log::NewAuditLog,
+    repositories::container::AppContainer,
+    utils::validation::first_validation_error_message,
+};
+
+fn map_repo_error(error: DieselError, entity: &str) -> AppError {
+    match error {
+        DieselError::NotFound => AppError::NotFound(entity.to_string()),
+        other => AppError::Database(other),
+    }
+}
+
+#[get("/audit-logs")]
+pub async fn list_audit_logs(
+    details: AuthDetails,
+    user: AuthUser,
+    container: web::Data<AppContainer>,
+) -> AppResult<HttpResponse> {
+    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Read)?;
+    let scope = customer_scope_ids(&details, &user, container.as_ref()).await?;
+    let items = match scope {
+        Some(scope_ids) => {
+            let customer_ids = scope_ids.into_iter().collect::<Vec<_>>();
+            container
+                .domain_audit_logs
+                .all_by_target_customer_ids(&customer_ids)
+                .await
+                .map_err(AppError::Database)?
+        }
+        None => container
+            .domain_audit_logs
+            .all()
+            .await
+            .map_err(AppError::Database)?,
+    };
+    Ok(HttpResponse::Ok().json(items))
+}
+
+#[get("/audit-logs/{id}")]
+pub async fn get_audit_log(
+    details: AuthDetails,
+    user: AuthUser,
+    container: web::Data<AppContainer>,
+    id: web::Path<Uuid>,
+) -> AppResult<HttpResponse> {
+    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Read)?;
+    let scope = customer_scope_ids(&details, &user, container.as_ref()).await?;
+    let item = container
+        .domain_audit_logs
+        .find(&id.into_inner())
+        .await
+        .map_err(|error| map_repo_error(error, "AuditLog"))?;
+    ensure_optional_customer_in_scope(scope.as_ref(), item.target_customer_id)?;
+    Ok(HttpResponse::Ok().json(item))
+}
+
+#[post("/audit-logs")]
+pub async fn create_audit_log(
+    details: AuthDetails,
+    user: AuthUser,
+    container: web::Data<AppContainer>,
+    body: web::Json<NewAuditLog>,
+) -> AppResult<HttpResponse> {
+    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Create)?;
+    let payload = body.into_inner();
+    let scope = customer_scope_ids(&details, &user, container.as_ref()).await?;
+    ensure_optional_customer_in_scope(scope.as_ref(), payload.target_customer_id)?;
+    payload
+        .validate()
+        .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
+    let created = container
+        .domain_audit_logs
+        .create(&payload)
+        .await
+        .map_err(AppError::Database)?;
+    Ok(HttpResponse::Created().json(created))
+}
+
+#[patch("/audit-logs/{id}")]
+pub async fn update_audit_log(
+    details: AuthDetails,
+    user: AuthUser,
+    container: web::Data<AppContainer>,
+    id: web::Path<Uuid>,
+    body: web::Json<NewAuditLog>,
+) -> AppResult<HttpResponse> {
+    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Update)?;
+    let payload = body.into_inner();
+    let scope = customer_scope_ids(&details, &user, container.as_ref()).await?;
+    ensure_optional_customer_in_scope(scope.as_ref(), payload.target_customer_id)?;
+    payload
+        .validate()
+        .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
+    let updated = container
+        .domain_audit_logs
+        .update(&id.into_inner(), &payload)
+        .await
+        .map_err(|error| map_repo_error(error, "AuditLog"))?;
+    Ok(HttpResponse::Ok().json(updated))
+}
+
+#[delete("/audit-logs/{id}")]
+pub async fn delete_audit_log(
+    details: AuthDetails,
+    user: AuthUser,
+    container: web::Data<AppContainer>,
+    id: web::Path<Uuid>,
+) -> AppResult<HttpResponse> {
+    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Delete)?;
+    let scope = customer_scope_ids(&details, &user, container.as_ref()).await?;
+    let audit_log_id = id.into_inner();
+    let existing = container
+        .domain_audit_logs
+        .find(&audit_log_id)
+        .await
+        .map_err(|error| map_repo_error(error, "AuditLog"))?;
+    ensure_optional_customer_in_scope(scope.as_ref(), existing.target_customer_id)?;
+    let affected = container
+        .domain_audit_logs
+        .destroy(&audit_log_id)
+        .await
+        .map_err(AppError::Database)?;
+    if affected == 0 {
+        return Err(AppError::NotFound("AuditLog".to_string()));
+    }
+
+    Ok(HttpResponse::Ok().json(serde_json::json!({ "deleted": true })))
+}
+
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(list_audit_logs)
+        .service(get_audit_log)
+        .service(create_audit_log)
+        .service(update_audit_log)
+        .service(delete_audit_log);
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+    use std::sync::Arc;
+
+    use actix_web::{App, body::to_bytes, dev::ServiceRequest, http::StatusCode, test, web};
+    use chrono::Utc;
+    use serde_json::{Value, json};
+    use uuid::Uuid;
+
+    use crate::middleware::auth::create_token;
+    use crate::models::audit_log::AuditLog;
+    use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
+    use crate::repositories::test_utils::mocks::mock_container;
+
+    use super::config;
+
+    async fn test_extract_authorities(
+        req: &ServiceRequest,
+    ) -> Result<HashSet<String>, actix_web::Error> {
+        let authorities = req
+            .headers()
+            .get("x-test-authorities")
+            .and_then(|value| value.to_str().ok())
+            .map(|value| {
+                value
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|value| !value.is_empty())
+                    .map(str::to_owned)
+                    .collect::<HashSet<String>>()
+            })
+            .unwrap_or_default();
+
+        Ok(authorities)
+    }
+
+    fn test_token() -> String {
+        create_token(Uuid::new_v4(), Uuid::new_v4(), 1, "", 3600).unwrap()
+    }
+
+    #[actix_web::test]
+    async fn list_audit_logs_returns_forbidden_without_read_authority() {
+        let container = mock_container();
+        let app = test::init_service(
+            App::new().app_data(web::Data::new(container)).service(
+                web::scope("/admin")
+                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
+                        test_extract_authorities,
+                    ))
+                    .configure(config),
+            ),
+        )
+        .await;
+
+        let req = test::TestRequest::get()
+            .uri("/admin/audit-logs")
+            .insert_header((
+                actix_web::http::header::AUTHORIZATION,
+                format!("Bearer {}", test_token()),
+            ))
+            .insert_header(("x-test-authorities", "ROLE_ADMIN"))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[actix_web::test]
+    async fn list_audit_logs_returns_ok_with_read_authority() {
+        let mut container = mock_container();
+        let mut repo = MockIAuditLogRepository::new();
+        repo.expect_all().times(1).returning(|| {
+            Ok(vec![AuditLog {
+                id: Uuid::new_v4(),
+                company_id: Some(Uuid::new_v4()),
+                actor_user_id: Some(Uuid::new_v4()),
+                actor_role_snapshot: Some("admin".to_string()),
+                action: "create".to_string(),
+                resource_type: "Customer".to_string(),
+                resource_id: Some(Uuid::new_v4()),
+                target_customer_id: Some(Uuid::new_v4()),
+                ip_address: None,
+                user_agent: None,
+                request_id: None,
+                changes: json!({}),
+                metadata: json!({}),
+                created_at: Utc::now(),
+            }])
+        });
+        container.domain_audit_logs = Arc::new(repo);
+
+        let app = test::init_service(
+            App::new().app_data(web::Data::new(container)).service(
+                web::scope("/admin")
+                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
+                        test_extract_authorities,
+                    ))
+                    .configure(config),
+            ),
+        )
+        .await;
+
+        let req = test::TestRequest::get()
+            .uri("/admin/audit-logs")
+            .insert_header((
+                actix_web::http::header::AUTHORIZATION,
+                format!("Bearer {}", test_token()),
+            ))
+            .insert_header(("x-test-authorities", "ROLE_ADMIN,audit_logs:read"))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body = to_bytes(resp.into_body()).await.unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(json.as_array().map(|items| items.len()), Some(1));
+    }
+}

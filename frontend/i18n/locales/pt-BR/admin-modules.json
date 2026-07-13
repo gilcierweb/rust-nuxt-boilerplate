@@ -1,0 +1,551 @@
+{
+  "admin": {
+    "common": {
+      "dashboard": "Dashboard",
+      "new": "Novo",
+      "edit": "Editar",
+      "details": "Detalhes",
+      "back": "Voltar",
+      "refresh": "Atualizar",
+      "view": "Visualizar",
+      "delete": "Excluir",
+      "actions": "Ações",
+      "total": "Total",
+      "endpoint": "Endpoint",
+      "status": "Status",
+      "resourceActive": "Recurso ativo",
+      "awaitingRecords": "Aguardando registros",
+      "loadingData": "Carregando dados...",
+      "loadingRecords": "Carregando registros...",
+      "errorLoadingData": "Erro ao carregar dados",
+      "tryAgain": "Tentar novamente",
+      "noRecords": "Nenhum registro encontrado para este recurso.",
+      "filterPlaceholder": "Filtrar registros...",
+      "viewDetails": "Visualize os detalhes do registro",
+      "yes": "Sim",
+      "no": "Não"
+    },
+    "documents": {
+      "title": "Documentos",
+      "description": "Arquivos e registros documentais publicados para os clientes.",
+      "newTitle": "Novo Documento",
+      "newDescription": "Cadastre um documento anexado para cliente.",
+      "editTitle": "Editar Documento",
+      "editDescription": "Atualize o documento cadastrado.",
+      "showTitle": "Detalhes do Documento",
+      "showDescription": "Visualize o documento e seu arquivo relacionado.",
+      "empty": "Nenhum documento encontrado.",
+      "searchPlaceholder": "Filtrar documentos...",
+      "table": {
+        "title": "Título",
+        "customer": "Cliente",
+        "file": "Arquivo",
+        "reference": "Referência",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "fields": {
+        "id": "ID",
+        "company": "Empresa",
+        "customer": "Cliente",
+        "file": "Arquivo",
+        "uploadedBy": "Enviado por",
+        "status": "Status",
+        "type": "Tipo",
+        "reference": "Referência",
+        "title": "Título",
+        "description": "Descrição",
+        "visibleToCustomer": "Visível ao cliente",
+        "externalReference": "Referência externa",
+        "metadata": "Metadados",
+        "createdAt": "Criado em",
+        "updatedAt": "Atualizado em"
+      },
+      "messages": {
+        "createSuccess": "Documento criado com sucesso",
+        "createError": "Erro ao criar documento",
+        "updateSuccess": "Documento atualizado com sucesso",
+        "updateError": "Erro ao atualizar documento",
+        "deleteSuccess": "Documento excluído com sucesso",
+        "deleteError": "Erro ao excluir documento",
+        "confirmDelete": "Tem certeza que deseja excluir este documento?"
+      }
+    },
+    "invoiceRequests": {
+      "title": "Solicitações de Nota",
+      "description": "Fluxo operacional de emissão fiscal.",
+      "newTitle": "Nova Solicitação",
+      "newDescription": "Registre uma solicitação fiscal vinculada ao cliente.",
+      "editTitle": "Editar Solicitação",
+      "editDescription": "Atualize os dados fiscais da solicitação.",
+      "showTitle": "Detalhes da Solicitação",
+      "showDescription": "Visualize a solicitação fiscal e seus vínculos.",
+      "empty": "Nenhuma solicitação encontrada.",
+      "searchPlaceholder": "Filtrar solicitações...",
+      "table": {
+        "customer": "Cliente",
+        "service": "Serviço",
+        "amount": "Valor",
+        "status": "Status",
+        "createdAt": "Criado em",
+        "actions": "Ações"
+      },
+      "fields": {
+        "company": "Empresa",
+        "customer": "Cliente",
+        "requestedBy": "Solicitado por",
+        "issuedDocument": "Documento emitido",
+        "status": "Status",
+        "fiscalProvider": "Provedor fiscal",
+        "serviceDescription": "Descrição do serviço",
+        "serviceAmount": "Valor do serviço",
+        "serviceDate": "Data do serviço",
+        "providerReference": "Referência do provedor",
+        "metadata": "Metadados",
+        "createdAt": "Criado em",
+        "updatedAt": "Atualizado em"
+      },
+      "messages": {
+        "createSuccess": "Solicitação criada com sucesso",
+        "createError": "Erro ao criar solicitação",
+        "updateSuccess": "Solicitação atualizada com sucesso",
+        "updateError": "Erro ao atualizar solicitação",
+        "deleteSuccess": "Solicitação excluída com sucesso",
+        "deleteError": "Erro ao excluir solicitação",
+        "confirmDelete": "Tem certeza que deseja excluir esta solicitação?"
+      }
+    },
+    "issuedInvoices": {
+      "title": "Notas Fiscais Emitidas",
+      "newTitle": "Nova Nota Fiscal",
+      "newDescription": "Registre uma nota fiscal emitida",
+      "editTitle": "Editar Nota Fiscal",
+      "editDescription": "Atualize os dados da nota emitida",
+      "showTitle": "Detalhes da Nota Fiscal",
+      "showDescription": "Visualize os dados da nota emitida",
+      "empty": "Nenhuma nota fiscal encontrada.",
+      "messages": {
+        "createSuccess": "Nota fiscal criada com sucesso",
+        "createError": "Erro ao criar nota fiscal",
+        "updateSuccess": "Nota fiscal atualizada com sucesso",
+        "updateError": "Erro ao atualizar nota fiscal",
+        "deleteSuccess": "Nota fiscal excluída com sucesso",
+        "deleteError": "Erro ao excluir nota fiscal"
+      }
+    },
+    "paymentTransactions": {
+      "title": "Transações de Pagamento",
+      "newTitle": "Nova Transação",
+      "newDescription": "Registre um evento de pagamento ou tentativa",
+      "editTitle": "Editar Transação",
+      "editDescription": "Atualize os dados do evento de pagamento",
+      "showTitle": "Detalhes da Transação",
+      "showDescription": "Visualize os dados do evento de pagamento",
+      "fields": {
+        "customer": "Cliente",
+        "provider": "Provedor"
+      },
+      "messages": {
+        "createSuccess": "Transação criada com sucesso",
+        "createError": "Erro ao criar transação",
+        "updateSuccess": "Transação atualizada com sucesso",
+        "updateError": "Erro ao atualizar transação",
+        "statusUpdateSuccess": "Status da transação atualizado com sucesso",
+        "deleteSuccess": "Transação excluída com sucesso",
+        "deleteError": "Erro ao excluir transação"
+      }
+    },
+    "roles": {
+      "title": "Cargos",
+      "description": "Papéis administrativos e seus escopos opcionais.",
+      "newTitle": "Novo Cargo",
+      "newDescription": "Crie um novo papel administrativo.",
+      "editTitle": "Editar Cargo",
+      "editDescription": "Atualize o papel e seu escopo opcional.",
+      "showTitle": "Detalhes do Cargo",
+      "showDescription": "Visualize os dados do papel e seu escopo associado.",
+      "empty": "Nenhum cargo encontrado.",
+      "searchPlaceholder": "Filtrar cargos...",
+      "table": {
+        "name": "Nome",
+        "resourceType": "Tipo de recurso"
+      },
+      "fields": {
+        "name": "Nome",
+        "resourceType": "Tipo de recurso"
+      },
+      "messages": {
+        "createSuccess": "Cargo criado com sucesso",
+        "createError": "Erro ao criar cargo",
+        "updateSuccess": "Cargo atualizado com sucesso",
+        "updateError": "Erro ao atualizar cargo",
+        "deleteSuccess": "Cargo excluído com sucesso",
+        "deleteError": "Erro ao excluir cargo",
+        "confirmDelete": "Tem certeza que deseja excluir este cargo?"
+      }
+    },
+    "storageObjects": {
+      "title": "Arquivos de Armazenamento",
+      "newTitle": "Novo Arquivo",
+      "newDescription": "Registre metadados de um arquivo no storage",
+      "editTitle": "Editar Arquivo",
+      "editDescription": "Atualize os metadados do arquivo",
+      "showTitle": "Detalhes do Arquivo",
+      "showDescription": "Visualize os metadados do arquivo",
+      "searchPlaceholder": "Buscar arquivos...",
+      "messages": {
+        "createSuccess": "Arquivo criado com sucesso",
+        "createError": "Erro ao criar arquivo",
+        "updateSuccess": "Arquivo atualizado com sucesso",
+        "updateError": "Erro ao atualizar arquivo"
+      }
+    },
+    "users": {
+      "title": "Usuários",
+      "description": "Consulta operacional dos usuários públicos disponíveis no painel.",
+      "showTitle": "Detalhes do Usuário",
+      "showDescription": "Dados públicos de cadastro carregados no painel administrativo.",
+      "searchPlaceholder": "Filtrar usuários...",
+      "table": {
+        "displayName": "Nome de exibição",
+        "email": "Email"
+      },
+      "empty": "Nenhum usuário encontrado."
+    },
+    "auditLogs": {
+      "title": "Auditoria",
+      "description": "Trilha administrativa de ações e mudanças críticas.",
+      "newTitle": "Novo Log",
+      "newDescription": "Registre manualmente um evento de auditoria.",
+      "editTitle": "Editar Log",
+      "editDescription": "Atualize o evento de auditoria.",
+      "showTitle": "Detalhes do Log",
+      "showDescription": "Visualize o evento e seus dados de contexto.",
+      "empty": "Nenhum log encontrado.",
+      "searchPlaceholder": "Filtrar logs...",
+      "table": {
+        "action": "Ação",
+        "resource": "Recurso",
+        "actor": "Executor",
+        "customer": "Cliente",
+        "createdAt": "Criado em"
+      },
+      "fields": {
+        "company": "Empresa",
+        "actorUser": "Usuário executor",
+        "targetCustomer": "Cliente alvo",
+        "actorRoleSnapshot": "Perfil capturado",
+        "action": "Ação",
+        "resourceType": "Tipo de recurso",
+        "resourceId": "ID do recurso",
+        "requestId": "Request ID",
+        "ipAddress": "IP",
+        "userAgent": "User agent",
+        "changes": "Changes",
+        "metadata": "Metadata",
+        "createdAt": "Criado em"
+      },
+      "messages": {
+        "createSuccess": "Log criado com sucesso",
+        "createError": "Erro ao criar log",
+        "updateSuccess": "Log atualizado com sucesso",
+        "updateError": "Erro ao atualizar log",
+        "deleteSuccess": "Log excluído com sucesso",
+        "deleteError": "Erro ao excluir log",
+        "confirmDelete": "Tem certeza que deseja excluir este log?"
+      }
+    },
+    "companyDomains": {
+      "title": "Domínios",
+      "newTitle": "Novo Domínio",
+      "newDescription": "Preencha os dados para criar um novo domínio de empresa",
+      "editTitle": "Editar Domínio",
+      "editDescription": "Atualize os dados do domínio",
+      "showTitle": "Detalhes do Domínio",
+      "showDescription": "Visualize os detalhes do registro",
+      "empty": "Nenhum domínio encontrado.",
+      "searchPlaceholder": "Buscar domínios...",
+      "fields": {
+        "id": "ID",
+        "company": "Empresa",
+        "host": "Host",
+        "domainType": "Tipo de Domínio",
+        "isPrimary": "Primário",
+        "verifiedAt": "Verificado em",
+        "createdAt": "Criado em"
+      },
+      "messages": {
+        "createSuccess": "Domínio criado com sucesso",
+        "createError": "Erro ao criar domínio",
+        "updateSuccess": "Domínio atualizado com sucesso",
+        "updateError": "Erro ao atualizar domínio",
+        "deleteSuccess": "Domínio excluído com sucesso",
+        "deleteError": "Erro ao excluir domínio"
+      }
+    },
+    "companySettings": {
+      "title": "Configurações",
+      "newTitle": "Nova Configuração",
+      "newDescription": "Configure os parâmetros da empresa",
+      "editTitle": "Editar Configuração",
+      "editDescription": "Atualize os parâmetros da empresa",
+      "showTitle": "Detalhes da Configuração",
+      "showDescription": "Visualize os parâmetros da empresa",
+      "empty": "Nenhuma configuração encontrada.",
+      "searchPlaceholder": "Buscar configurações...",
+      "fields": {
+        "company": "Empresa",
+        "timezone": "Timezone",
+        "locale": "Locale",
+        "currency": "Moeda",
+        "invoiceProvider": "Provedor Fiscal",
+        "paymentProvider": "Provedor de Pagamento",
+        "whatsappProvider": "Provedor WhatsApp",
+        "createdAt": "Criado em",
+        "updatedAt": "Atualizado em"
+      },
+      "messages": {
+        "createSuccess": "Configuração criada com sucesso",
+        "createError": "Erro ao criar configuração",
+        "updateSuccess": "Configuração atualizada com sucesso",
+        "updateError": "Erro ao atualizar configuração",
+        "deleteSuccess": "Configuração excluída com sucesso",
+        "deleteError": "Erro ao excluir configuração"
+      }
+    },
+    "customerUsers": {
+      "title": "Usuários do Cliente",
+      "newTitle": "Novo Vínculo",
+      "newDescription": "Vincule um usuário ao cliente para acesso ao portal",
+      "editTitle": "Editar Vínculo",
+      "editDescription": "Atualize os dados do acesso ao portal",
+      "showTitle": "Detalhes do Vínculo",
+      "showDescription": "Visualize os detalhes do acesso ao portal",
+      "empty": "Nenhum vínculo encontrado.",
+      "searchPlaceholder": "Buscar vínculos...",
+      "fields": {
+        "id": "ID",
+        "customer": "Cliente",
+        "user": "Usuário",
+        "portalRole": "Papel no Portal",
+        "accessStatus": "Status de Acesso",
+        "primaryContact": "Contato Primário",
+        "invitedAt": "Convidado em",
+        "acceptedAt": "Aceito em",
+        "createdAt": "Criado em"
+      },
+      "messages": {
+        "createSuccess": "Vínculo criado com sucesso",
+        "createError": "Erro ao criar vínculo",
+        "updateSuccess": "Vínculo atualizado com sucesso",
+        "updateError": "Erro ao atualizar vínculo",
+        "deleteSuccess": "Vínculo excluído com sucesso",
+        "deleteError": "Erro ao excluir vínculo"
+      }
+    },
+    "debtCategories": {
+      "title": "Categorias de Débito",
+      "description": "Estrutura financeira normalizada para classificar cobranças.",
+      "newTitle": "Nova Categoria",
+      "newDescription": "Cadastre uma categoria financeira reutilizável.",
+      "editTitle": "Editar Categoria",
+      "editDescription": "Atualize o cadastro da categoria financeira.",
+      "showTitle": "Detalhes da Categoria",
+      "showDescription": "Visualize a classificação financeira vinculada aos débitos.",
+      "empty": "Nenhuma categoria encontrada.",
+      "searchPlaceholder": "Filtrar categorias...",
+      "table": {
+        "company": "Empresa",
+        "code": "Código",
+        "name": "Nome",
+        "status": "Status",
+        "order": "Ordem",
+        "actions": "Ações"
+      },
+      "fields": {
+        "id": "ID",
+        "company": "Empresa",
+        "code": "Código",
+        "name": "Nome",
+        "status": "Status",
+        "order": "Ordem",
+        "description": "Descrição",
+        "createdAt": "Criado em",
+        "updatedAt": "Atualizado em"
+      },
+      "messages": {
+        "createSuccess": "Categoria criada com sucesso",
+        "createError": "Erro ao criar categoria",
+        "updateSuccess": "Categoria atualizada com sucesso",
+        "updateError": "Erro ao atualizar categoria",
+        "deleteSuccess": "Categoria excluída com sucesso",
+        "deleteError": "Erro ao excluir categoria",
+        "confirmDelete": "Tem certeza que deseja excluir esta categoria?"
+      }
+    },
+    "debts": {
+      "title": "Débitos",
+      "description": "Cobranças registradas com categoria, vencimento e status.",
+      "newTitle": "Novo Débito",
+      "newDescription": "Registre uma cobrança vinculada a cliente e categoria.",
+      "editTitle": "Editar Débito",
+      "editDescription": "Atualize os dados da cobrança.",
+      "showTitle": "Detalhes do Débito",
+      "showDescription": "Visualize a cobrança e seus vínculos operacionais.",
+      "empty": "Nenhum débito encontrado.",
+      "searchPlaceholder": "Filtrar débitos...",
+      "table": {
+        "title": "Título",
+        "customer": "Cliente",
+        "category": "Categoria",
+        "amount": "Valor",
+        "dueDate": "Vencimento",
+        "status": "Status",
+        "actions": "Ações"
+      },
+      "fields": {
+        "company": "Empresa",
+        "createdBy": "Criado por",
+        "description": "Descrição",
+        "competence": "Competência",
+        "externalReference": "Referência externa",
+        "metadata": "Metadados",
+        "createdAt": "Criado em",
+        "updatedAt": "Atualizado em"
+      },
+      "messages": {
+        "createSuccess": "Débito criado com sucesso",
+        "createError": "Erro ao criar débito",
+        "updateSuccess": "Débito atualizado com sucesso",
+        "updateError": "Erro ao atualizar débito",
+        "deleteSuccess": "Débito excluído com sucesso",
+        "deleteError": "Erro ao excluir débito",
+        "confirmDelete": "Tem certeza que deseja excluir este débito?"
+      }
+    },
+    "customers": {
+      "index": {
+        "header": {
+          "title": "Clientes"
+        }
+      },
+      "new": {
+        "header": {
+          "title": "Novo Cliente",
+          "description": "Preencha os dados para criar um novo cliente"
+        }
+      },
+      "edit": {
+        "header": {
+          "title": "Editar Cliente",
+          "description": "Atualize os dados do cliente"
+        }
+      },
+      "show": {
+        "description": "Informações detalhadas do cliente"
+      },
+      "fields": {
+        "id": "ID",
+        "code": "Código",
+        "status": "Status",
+        "origin": "Origem",
+        "lgpdConsent": "Consentimento LGPD",
+        "invitedAt": "Convite em",
+        "activatedAt": "Ativado em",
+        "lastAccess": "Último Acesso",
+        "createdAt": "Criado em",
+        "updatedAt": "Atualizado em"
+      },
+      "messages": {
+        "createSuccess": "Cliente criado com sucesso",
+        "createError": "Erro ao criar cliente",
+        "updateSuccess": "Cliente atualizado com sucesso",
+        "updateError": "Erro ao atualizar cliente"
+      }
+    },
+    "reports": {
+      "company": "Empresa",
+      "allCompanies": "Todas",
+      "branch": "Filial",
+      "allBranches": "Todas",
+      "startDate": "Data inicial",
+      "endDate": "Data final",
+      "rankingLimit": "Limite ranking",
+      "applyFilters": "Aplicar filtros",
+      "clear": "Limpar",
+      "noData": "Sem dados no filtro atual.",
+      "loading": "Carregando relatórios...",
+      "orders": "Pedidos",
+      "grossTotal": "Total bruto",
+      "amountReceived": "Valor recebido",
+      "netRevenue": "Receita líquida",
+      "ordersByStatus": "Pedidos por status",
+      "paymentByStatus": "Pagamento por status",
+      "topBranches": "Top filiais",
+      "topCustomers": "Top clientes",
+      "expensesByCategory": "Despesas por categoria",
+      "payoutsByStatus": "Payouts por status",
+      "revenueByDay": "Receita por dia",
+      "table": {
+        "status": "Status",
+        "orders": "Pedidos",
+        "total": "Total",
+        "paid": "Pago",
+        "pending": "Pendente",
+        "branch": "Filial",
+        "received": "Recebido",
+        "expenses": "Despesas",
+        "net": "Líquido",
+        "customer": "Cliente",
+        "category": "Categoria",
+        "payouts": "Payouts",
+        "grossSales": "Venda bruta",
+        "netPayout": "Payout líquido",
+        "date": "Data"
+      }
+    },
+    "dashboard": {
+      "companies": "Companies",
+      "sites": "Sites",
+      "devices": "Devices",
+      "alerts": "Alertas",
+      "coverageRate": "Coverage rate",
+      "syncConfidence": "Sync confidence",
+      "fleetDensity": "Fleet density",
+      "criticalPressure": "Critical pressure",
+      "recentActivity": "Recent Activity",
+      "resourceByDomain": "Resource by Domain",
+      "adminCoverage": "Administrative coverage overview",
+      "operationsMetrics": "Operations Metrics",
+      "openAlerts": "Open alerts",
+      "telemetryEvents": "Telemetry events",
+      "generatedReports": "Generated reports",
+      "totalRecords": "Total records",
+      "resourceGoal": "Resource Goal",
+      "planCompleted": "Plan Completed",
+      "coveragePlan": "Coverage Plan",
+      "coverageDescription": "Percentage of resource groups currently populated with data.",
+      "operationalAnalysis": "Operational analysis indicators",
+      "openStatistics": "Open Statistics",
+      "healthSignals": "Health Signals",
+      "statusActive": "Active",
+      "statusPending": "Pending",
+      "table": {
+        "resource": "Resource",
+        "endpoint": "Endpoint",
+        "status": "Status",
+        "total": "Total",
+        "actions": "Actions"
+      },
+      "activeCustomers": "Clientes ativos",
+      "openDebts": "Débitos em aberto",
+      "pendingPayments": "Pagamentos pendentes",
+      "pendingInvoices": "Notas pendentes",
+      "financialSummary": "Resumo Financeiro",
+      "totalDebts": "Total de débitos",
+      "completedPayments": "Pagamentos concluídos",
+      "visibleToCustomer": "Visíveis ao cliente",
+      "noRecentActivity": "Sem movimentações recentes."
+    }
+  }
+}

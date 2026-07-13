@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/*  Dark mode continua via class */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Tema customizado */
+@theme {
+  /* COLORS */
+  --color-background: #fcf8f9;
+  --color-surface-tint: #5b5e66;
+  --color-surface-dim: #dcd9d9;
+  --color-on-tertiary: #ffffff;
+  --color-surface-bright: #fcf8f9;
+  --color-on-error: #ffffff;
+  --color-inverse-on-surface: #f3f0f0;
+  --color-on-surface-variant: #45474b;
+  --color-primary-container: #2b2f36;
+  --color-error: #ba1a1a;
+  --color-on-secondary-fixed: #001b3d;
+  --color-on-error-container: #93000a;
+  --color-tertiary-container: #382c24;
+  --color-on-tertiary-fixed-variant: #52443b;
+  --color-secondary-fixed: #d6e3ff;
+  --color-surface-container-high: #ebe7e8;
+  --color-on-secondary: #ffffff;
+  --color-on-tertiary-container: #a49388;
+  --color-on-secondary-container: #003670;
+  --color-surface-container: #f0eded;
+  --color-on-background: #1c1b1c;
+  --color-on-primary-fixed-variant: #43474e;
+  --color-inverse-surface: #313031;
+  --color-surface-container-lowest: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-secondary-fixed-variant: #00468c;
+  --color-on-primary-fixed: #181c22;
+  --color-tertiary: #221810;
+  --color-surface: #fcf8f9;
+  --color-tertiary-fixed: #f3dfd2;
+  --color-on-primary: #ffffff;
+  --color-inverse-primary: #c3c6cf;
+  --color-outline: #76777b;
+  --color-on-surface: #1c1b1c;
+  --color-primary-fixed: #dfe2ec;
+  --color-secondary-container: #65a1fe;
+  --color-secondary: #055db6;
+  --color-surface-container-highest: #e5e2e2;
+  --color-primary: #161a21;
+  --color-tertiary-fixed-dim: #d6c3b7;
+  --color-outline-variant: #c6c6cb;
+  --color-on-primary-container: #93969f;
+  --color-secondary-fixed-dim: #a9c7ff;
+  --color-surface-container-low: #f6f3f3;
+  --color-primary-fixed-dim: #c3c6cf;
+  --color-surface-variant: #e5e2e2;
+  --color-on-tertiary-fixed: #241912;
+
+  /* BORDER RADIUS */
+  --radius: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+
+  /* FONTS */
+  --font-headline: "Inter", sans-serif;
+  --font-display: "Inter", sans-serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+}

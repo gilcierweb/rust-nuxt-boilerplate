@@ -1,0 +1,34 @@
+{
+  "common": {
+    "appName": "Contifya",
+    "success": "Sucesso",
+    "error": "Erro",
+    "loading": "Carregando...",
+    "save": "Salvar",
+    "cancel": "Cancelar",
+    "submit": "Enviar",
+    "back": "Voltar",
+    "next": "Próximo",
+    "previous": "Anterior",
+    "close": "Fechar",
+    "yes": "Sim",
+    "no": "Não",
+    "or": "ou",
+    "and": "e",
+    "actions": {
+      "show": "Ver",
+      "edit": "Editar",
+      "new": "Novo",
+      "refresh": "Atualizar",
+      "saveChanges": "Salvar alterações",
+      "saving": "Salvando...",
+      "send": "Enviar",
+      "cancel": "Cancelar",
+      "back": "Voltar",
+      "submit": "Enviar"
+    },
+    "table": {
+      "actions": "Ações"
+    }
+  }
+}

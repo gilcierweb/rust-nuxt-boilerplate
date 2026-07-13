@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+@plugin "flyonui/index.js" {
+  themes: corporate --default, dark --prefersdark;
+}
+
+/* -- Performance: Restricted Scanning  */
+@source "../../../**/*.{vue,js,ts,jsx,tsx}";
+/* @source "../../../../node_modules/flyonui/flyonui.js"; */
+@source "../../node_modules/flyonui/dist/js/*.js"; /* Garante que o Tailwind processe o JS do FlyonUI */
+
+@import "flyonui/variants.css";
+@source "../node_modules/flyonui/flyonui.js";
+
+@plugin "@iconify/tailwind4";
+
+/* -- Fresh & Clean Theme (Lavanderia) - FlyonUI 2 / Tailwind 4  */
+/* @plugin "flyonui/theme" { */
+  /* name: "fresh-clean";
+  default: true;
+  prefersdark: false;
+  color-scheme: light; */
+
+  /* Surface system - Clean background */
+  /* --color-base-100: #F7FAFC;
+  --color-base-200: #FFFFFF;
+  --color-base-300: #E0F7FA;
+  --color-base-content: #1F2937; */
+
+  /* Brand + semantic - Fresh laundry colors */
+  /* --color-primary: #2F80ED;
+  --color-primary-content: #FFFFFF;
+  --color-secondary: #56CCF2;
+  --color-secondary-content: #1F2937;
+  --color-accent: #27AE60;
+  --color-accent-content: #FFFFFF;
+  --color-neutral: #6B7280;
+  --color-neutral-content: #FFFFFF;
+  --color-info: #56CCF2;
+  --color-success: #27AE60;
+  --color-warning: #F59E0B;
+  --color-error: #DC2626; */
+
+  /* Soft radius for clean feel */
+  /* --radius-selector: 0.25rem;
+  --radius-field: 0.5rem;
+  --radius-box: 0.75rem; */
+/* } */
+
+/* -- Tailwind CSS 4 Theme Tokens - Fresh & Clean */
+/* @theme { */
+  /* Font Families */
+  /* --font-sans: "Inter", sans-serif;
+  --font-display: "Space Grotesk", sans-serif; */
+
+  /* Color tokens - Fresh & Clean theme */
+  /* --color-surface: #F7FAFC;
+  --color-surface-gray: #FFFFFF;
+  --color-highlight: #E0F7FA;
+  --color-primary: #2F80ED;
+  --color-secondary: #56CCF2;
+  --color-accent: #27AE60;
+  --color-graphite: #1F2937;
+  --color-on-surface: #1F2937;
+  --color-on-surface-variant: #6B7280;
+  --color-outline-variant: #E0F7FA;
+  --color-success: #27AE60;
+  --color-warning: #F59E0B;
+  --color-error: #DC2626; */
+
+  /* Soft rounded corners */
+  /* --radius: 0.25rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem; */
+/* } */
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.5s;
+}
+.fade-enter,
+.fade-leave-active {
+  opacity: 0;
+}

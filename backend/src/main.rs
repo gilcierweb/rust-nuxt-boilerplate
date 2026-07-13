@@ -1,0 +1,221 @@
+#[macro_use]
+extern crate rust_i18n;
+
+use actix_cors::Cors;
+use actix_web::{App, HttpResponse, HttpServer, web};
+use deadpool_redis::{Config as RedisConfig, Runtime};
+use serde::Serialize;
+use std::borrow::Cow;
+use std::io::BufReader;
+use std::sync::Arc;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+mod api_docs;
+mod auth;
+mod authz;
+mod config;
+mod controllers;
+mod db;
+mod errors;
+mod middleware;
+mod models;
+mod repositories;
+mod routes;
+mod security;
+mod services;
+mod utils;
+mod ws;
+
+use config::AppConfig;
+use db::database::{DBPool, Database};
+use errors::AppError;
+
+i18n!("locales");
+
+#[derive(Clone)]
+pub struct AppState {
+    pub db: DBPool,
+    pub redis: deadpool_redis::Pool,
+    pub config: Arc<AppConfig>,
+    pub metrics: Arc<services::metrics_service::MetricsRegistry>,
+    pub ws: ws::WsState,
+}
+
+#[derive(Serialize)]
+pub struct Response<'a> {
+    pub message: Cow<'a, str>,
+}
+
+async fn not_found() -> Result<HttpResponse, actix_web::Error> {
+    let response = Response {
+        message: t!("errors.not_found", resource = "Resource"),
+    };
+    Ok(HttpResponse::NotFound().json(response))
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    rust_i18n::set_locale("pt-BR");
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "backend_api=debug,actix_web=info".into()),
+        )
+        .with(tracing_subscriber::fmt::layer().json())
+        .init();
+
+    dotenvy::dotenv().ok();
+    let config = AppConfig::from_env().expect("Failed to load configuration");
+    let config = Arc::new(config);
+    tracing::info!(
+        "Starting Backend API v{} on {}:{}",
+        env!("CARGO_PKG_VERSION"),
+        config.host,
+        config.port
+    );
+
+    let api_db = Database::new();
+    let db_pool = api_db.pool.clone();
+    let db_pool_for_container = db_pool.clone();
+
+    let redis_cfg = RedisConfig::from_url(&config.redis_url);
+
+    let redis_pool = redis_cfg
+        .create_pool(Some(Runtime::Tokio1))
+        .expect("Failed to create Redis connection pool");
+    let redis_pool_for_container = redis_pool.clone();
+
+    let ws_state = web::Data::new(ws::server::WsState::new());
+
+    let state = web::Data::new(AppState {
+        db: db_pool,
+        redis: redis_pool,
+        config: config.clone(),
+        metrics: Arc::new(services::metrics_service::MetricsRegistry::new()),
+        ws: ws::WsState::new(),
+    });
+
+    let container = web::Data::new(repositories::AppContainer::new(
+        db_pool_for_container,
+        redis_pool_for_container,
+        (*config).clone(),
+    ));
+
+    let cors_origins = std::env::var("FRONTEND_URL")
+        .unwrap_or_else(|_| "http://localhost:3000,http://localhost:3001,http://localhost:4000,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:4000".to_string());
+
+    let cors_origins_list: Vec<String> = cors_origins.split(',').map(|s| s.to_string()).collect();
+
+    let host = config.host.clone();
+    let port = config.port;
+
+    let app = move || {
+        let pool_for_router = state.redis.clone();
+
+        let mut cors = Cors::default()
+            .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+            .allowed_headers(vec![
+                actix_web::http::header::AUTHORIZATION,
+                actix_web::http::header::CONTENT_TYPE,
+                actix_web::http::header::ACCEPT,
+                actix_web::http::header::ACCESS_CONTROL_REQUEST_HEADERS,
+            ])
+            .allowed_header("x-api-key")
+            .supports_credentials()
+            .max_age(3600);
+
+        for origin in &cors_origins_list {
+            cors = cors.allowed_origin(origin);
+        }
+
+        App::new()
+            .app_data(state.clone())
+            .app_data(container.clone())
+            .app_data(ws_state.clone())
+            .app_data(web::JsonConfig::default().limit(1024 * 1024).error_handler(
+                |_error, _request| {
+                    AppError::BadRequest(t!("errors.bad_request_payload").into_owned()).into()
+                },
+            ))
+            .wrap(cors)
+            .wrap(actix_web::middleware::Compress::default())
+            .wrap(middleware::metrics_middleware::MetricsMiddleware)
+            .wrap(middleware::request_log_middleware::RequestLogMiddleware)
+            .route(
+                "/metrics",
+                web::get().to(controllers::metrics_controller::metrics),
+            )
+            .route(
+                "/health",
+                web::get().to(controllers::health_controller::health_check),
+            )
+            .configure(|cfg| routes::router::config(cfg, pool_for_router.clone()))
+            .default_service(web::route().to(not_found))
+    };
+
+    let server = HttpServer::new(app);
+
+    match config.environment {
+        config::app_config::Environment::Staging | config::app_config::Environment::Production => {
+            // Initialize TLS crypto provider - falls back to default if already initialized
+            let _ = rustls::crypto::CryptoProvider::get_default();
+
+            let cert_path = config.tls_cert_path.clone();
+            let key_path = config.tls_key_path.clone();
+
+            let mut certs_file =
+                BufReader::new(std::fs::File::open(&cert_path).map_err(|error| {
+                    std::io::Error::other(format!(
+                        "failed to open TLS certificate file '{}': {}",
+                        cert_path, error
+                    ))
+                })?);
+            let mut key_file = BufReader::new(std::fs::File::open(&key_path).map_err(|error| {
+                std::io::Error::other(format!(
+                    "failed to open TLS private key file '{}': {}",
+                    key_path, error
+                ))
+            })?);
+
+            let tls_certs = rustls_pemfile::certs(&mut certs_file)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|error| {
+                    std::io::Error::other(format!(
+                        "failed to parse TLS certificates from '{}': {}",
+                        cert_path, error
+                    ))
+                })?;
+
+            let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
+                .next()
+                .transpose()
+                .map_err(|error| {
+                    std::io::Error::other(format!(
+                        "failed to parse TLS private key from '{}': {}",
+                        key_path, error
+                    ))
+                })?
+                .ok_or_else(|| {
+                    std::io::Error::other(format!("no PKCS#8 private key found in '{}'", key_path))
+                })?;
+
+            let tls_config = rustls::ServerConfig::builder()
+                .with_no_client_auth()
+                .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
+                .map_err(std::io::Error::other)?;
+
+            let https_port = config.https_port;
+            println!("Running in HTTPS on port {}", https_port);
+
+            server
+                .bind_rustls_0_23((host.clone(), https_port), tls_config)?
+                .run()
+                .await
+        }
+        config::app_config::Environment::Development | config::app_config::Environment::Test => {
+            println!("Running in HTTP on http://localhost:{}", port);
+            server.bind((host, port))?.run().await
+        }
+    }
+}

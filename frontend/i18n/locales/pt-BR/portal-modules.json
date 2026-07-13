@@ -1,0 +1,102 @@
+{
+  "portal": {
+    "common": {
+      "back": "Voltar",
+      "refresh": "Atualizar",
+      "filter": "Filtrar",
+      "loading": "Carregando...",
+      "noData": "Sem dados para exibir.",
+      "tryAgain": "Tentar novamente",
+      "errorLoading": "Falha ao carregar dados."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "openDebts": "Débitos em aberto",
+      "pendingPayments": "Pagamentos pendentes",
+      "availableDocuments": "Documentos disponíveis",
+      "openInvoiceRequests": "Solicitações de nota abertas",
+      "upcomingDueDates": "Próximos vencimentos",
+      "viewDebts": "Ver débitos",
+      "noUpcomingDebts": "Nenhum débito com vencimento próximo.",
+      "recentActivity": "Atividade recente",
+      "viewPayments": "Ver pagamentos",
+      "noRecentActivity": "Sem movimentações recentes."
+    },
+    "debts": {
+      "title": "Débitos",
+      "description": "Consulte seus débitos pendentes e histórico.",
+      "empty": "Nenhum débito encontrado.",
+      "searchPlaceholder": "Filtrar por título, referência ou valor",
+      "table": {
+        "title": "Título",
+        "dueDate": "Vencimento",
+        "amount": "Valor",
+        "status": "Status"
+      }
+    },
+    "documents": {
+      "title": "Documentos",
+      "description": "Arquivos e registros disponíveis para seu cliente.",
+      "empty": "Nenhum documento disponível.",
+      "table": {
+        "title": "Título",
+        "reference": "Referência",
+        "status": "Status",
+        "updatedAt": "Atualizado em",
+        "actions": "Ações"
+      }
+    },
+    "history": {
+      "title": "Histórico",
+      "empty": "Sem eventos para exibir.",
+      "table": {
+        "date": "Data",
+        "type": "Tipo",
+        "description": "Descrição",
+        "reference": "Referência"
+      }
+    },
+    "invoiceRequests": {
+      "title": "Solicitações de Nota",
+      "description": "Acompanhe e abra novas solicitações de emissão.",
+      "empty": "Nenhuma solicitação encontrada.",
+      "newTitle": "Nova Solicitação de Nota",
+      "newDescription": "Informe os dados do serviço para solicitar a emissão fiscal.",
+      "table": {
+        "service": "Serviço",
+        "amount": "Valor",
+        "status": "Status",
+        "createdAt": "Criado em"
+      },
+      "form": {
+        "serviceDescription": "Descrição do serviço",
+        "serviceAmount": "Valor do serviço",
+        "serviceDate": "Data do serviço",
+        "cancel": "Cancelar"
+      },
+      "messages": {
+        "createSuccess": "Solicitação enviada com sucesso",
+        "createError": "Erro ao enviar solicitação"
+      }
+    },
+    "payments": {
+      "title": "Pagamentos",
+      "description": "Acompanhe status e histórico dos seus pagamentos.",
+      "empty": "Nenhum pagamento encontrado.",
+      "searchPlaceholder": "Filtrar por referência",
+      "table": {
+        "reference": "Referência",
+        "method": "Método",
+        "grossAmount": "Valor bruto",
+        "netAmount": "Valor líquido",
+        "status": "Status",
+        "paidAt": "Pago em"
+      }
+    },
+    "support": {
+      "title": "Suporte",
+      "messageLabel": "Mensagem",
+      "messagePlaceholder": "Descreva sua dúvida ou problema"
+    }
+  }
+}

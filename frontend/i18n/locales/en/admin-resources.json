@@ -1,0 +1,154 @@
+{
+  "admin": {
+    "sidebar": {
+      "closeSidebar": "Close sidebar",
+      "sidebar": "Sidebar",
+      "close": "Close",
+      "admin": "Admin",
+      "defaultUser": "admin&#64;example.com",
+      "apiDocs": "API Documentation",
+      "dashboard": "Dashboard",
+      "default": "Overview",
+      "coreResources": "Organizational Structure",
+      "operations": "Operations",
+      "financial": "Financial",
+      "management": "Management",
+      "quickLinks": "Quick Links",
+      "workspace": "Workspace",
+      "openApiDocs": "Open API Docs"
+    },
+    "statusLabels": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "pending": "Pending",
+      "archived": "Archived",
+      "inProgress": "In Progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled",
+      "paid": "Paid",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "unknown": "Unknown"
+    },
+    "common": {
+      "dashboard": "Dashboard",
+      "new": "New",
+      "edit": "Edit",
+      "details": "Details",
+      "back": "Back",
+      "refresh": "Refresh",
+      "view": "View",
+      "delete": "Delete",
+      "actions": "Actions",
+      "total": "Total",
+      "endpoint": "Endpoint",
+      "status": "Status",
+      "resourceActive": "Active resource",
+      "awaitingRecords": "Awaiting records",
+      "loadingData": "Loading data...",
+      "loadingRecords": "Loading records...",
+      "errorLoadingData": "Error loading data",
+      "tryAgain": "Try again",
+      "noRecords": "No records found for this resource.",
+      "filterPlaceholder": "Filter records...",
+      "viewDetails": "View record details",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "roles": {
+      "title": "Roles",
+      "description": "Administrative roles and their optional scopes.",
+      "newTitle": "New Role",
+      "newDescription": "Create a new administrative role.",
+      "editTitle": "Edit Role",
+      "editDescription": "Update the role and its optional scope.",
+      "showTitle": "Role Details",
+      "showDescription": "View the role data and its associated scope.",
+      "empty": "No roles found.",
+      "searchPlaceholder": "Filter roles...",
+      "table": {
+        "name": "Name",
+        "resourceType": "Resource Type"
+      },
+      "fields": {
+        "name": "Name",
+        "resourceType": "Resource Type"
+      },
+      "messages": {
+        "createSuccess": "Role created successfully",
+        "createError": "Error creating role",
+        "updateSuccess": "Role updated successfully",
+        "updateError": "Error updating role",
+        "deleteSuccess": "Role deleted successfully",
+        "deleteError": "Error deleting role",
+        "confirmDelete": "Are you sure you want to delete this role?"
+      }
+    },
+    "users": {
+      "title": "Users",
+      "description": "Operational query of public users available in the admin panel.",
+      "showTitle": "User Details",
+      "showDescription": "Public registration data loaded in the admin panel.",
+      "searchPlaceholder": "Filter users...",
+      "table": {
+        "displayName": "Display Name",
+        "email": "Email"
+      },
+      "empty": "No users found."
+    },
+    "auditLogs": {
+      "title": "Audit Logs",
+      "description": "Administrative trail of actions and critical changes.",
+      "newTitle": "New Log",
+      "newDescription": "Manually register an audit event.",
+      "editTitle": "Edit Log",
+      "editDescription": "Update the audit event.",
+      "showTitle": "Log Details",
+      "showDescription": "View the event and its context data.",
+      "empty": "No logs found.",
+      "searchPlaceholder": "Filter logs...",
+      "table": {
+        "action": "Action",
+        "resource": "Resource",
+        "actor": "Actor",
+        "customer": "Customer",
+        "createdAt": "Created At"
+      },
+      "fields": {
+        "company": "Company",
+        "actorUser": "Actor User",
+        "targetCustomer": "Target Customer",
+        "actorRoleSnapshot": "Captured Role",
+        "action": "Action",
+        "resourceType": "Resource Type",
+        "resourceId": "Resource ID",
+        "requestId": "Request ID",
+        "ipAddress": "IP",
+        "userAgent": "User Agent",
+        "changes": "Changes",
+        "metadata": "Metadata",
+        "createdAt": "Created At"
+      },
+      "messages": {
+        "createSuccess": "Log created successfully",
+        "createError": "Error creating log",
+        "updateSuccess": "Log updated successfully",
+        "updateError": "Error updating log",
+        "deleteSuccess": "Log deleted successfully",
+        "deleteError": "Error deleting log",
+        "confirmDelete": "Are you sure you want to delete this log?"
+      }
+    },
+    "dashboard": {
+      "activeCustomers": "Active customers",
+      "openDebts": "Open debts",
+      "pendingPayments": "Pending payments",
+      "pendingInvoices": "Pending invoices",
+      "financialSummary": "Financial Summary",
+      "totalDebts": "Total debts",
+      "completedPayments": "Completed payments",
+      "visibleToCustomer": "Visible to customer",
+      "noRecentActivity": "No recent activity."
+    }
+  }
+}

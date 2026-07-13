@@ -1,0 +1,33 @@
+{
+  "common": {
+    "success": "Success",
+    "error": "Error",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "and": "and",
+    "actions": {
+      "show": "Show",
+      "edit": "Edit",
+      "new": "New",
+      "refresh": "Refresh",
+      "saveChanges": "Save changes",
+      "saving": "Saving...",
+      "send": "Send",
+      "cancel": "Cancel",
+      "back": "Back",
+      "submit": "Submit"
+    },
+    "table": {
+      "actions": "Actions"
+    }
+  }
+}

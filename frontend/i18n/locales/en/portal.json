@@ -1,0 +1,48 @@
+{
+  "common": {
+    "actions": {
+      "refresh": "@:common.actions.refresh",
+      "show": "@:common.actions.show",
+      "edit": "@:common.actions.edit",
+      "new": "@:common.actions.new",
+      "save": "@:common.save",
+      "submit": "@:common.actions.submit",
+      "cancel": "@:common.actions.cancel",
+      "back": "@:common.actions.back",
+      "send": "@:common.actions.send"
+    },
+    "status": {
+      "planning": "Planning",
+      "inProgress": "In Progress",
+      "paused": "Paused",
+      "completed": "Completed",
+      "open": "Open",
+      "waiting": "Waiting",
+      "resolved": "Resolved",
+      "closed": "Closed"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "loading": "Loading...",
+    "empty": "No records found.",
+    "error": "Failed to load data."
+  },
+  "dashboard": {
+    "title": "Client Dashboard",
+    "description": "Track your documents, requests and support in one place.",
+    "cards": {
+      "documents": "Documents"
+    },
+    "quickAccess": "Quick Access"
+  },
+  "support": {
+    "title": "Support",
+    "messageLabel": "Message",
+    "messagePlaceholder": "Describe your question or issue",
+    "submit": "Submit"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "portal": {
+    "common": {
+      "back": "Voltar",
+      "refresh": "Atualizar",
+      "filter": "Filtrar",
+      "loading": "Carregando...",
+      "noData": "Sem dados para exibir.",
+      "tryAgain": "Tentar novamente",
+      "errorLoading": "Falha ao carregar dados."
+    },
+    "dashboard": {
+      "title": "Dashboard",
+      "description": "Acompanhe seus documentos, solicitações e suporte."
+    },
+    "support": {
+      "title": "Suporte",
+      "messageLabel": "Mensagem",
+      "messagePlaceholder": "Descreva sua dúvida ou problema",
+      "submit": "Enviar"
+    }
+  }
+}

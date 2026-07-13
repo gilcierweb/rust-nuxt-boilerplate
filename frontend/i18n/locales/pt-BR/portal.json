@@ -1,0 +1,48 @@
+{
+  "common": {
+    "actions": {
+      "refresh": "@:common.actions.refresh",
+      "show": "@:common.actions.show",
+      "edit": "@:common.actions.edit",
+      "new": "@:common.actions.new",
+      "save": "@:common.save",
+      "submit": "@:common.actions.submit",
+      "cancel": "@:common.actions.cancel",
+      "back": "@:common.actions.back",
+      "send": "@:common.actions.send"
+    },
+    "status": {
+      "planning": "Planejamento",
+      "inProgress": "Em andamento",
+      "paused": "Pausado",
+      "completed": "Concluído",
+      "open": "Aberto",
+      "waiting": "Aguardando",
+      "resolved": "Resolvido",
+      "closed": "Fechado"
+    },
+    "priority": {
+      "low": "Baixa",
+      "medium": "Média",
+      "high": "Alta",
+      "urgent": "Urgente"
+    },
+    "loading": "Carregando...",
+    "empty": "Nenhum registro encontrado.",
+    "error": "Falha ao carregar dados."
+  },
+  "dashboard": {
+    "title": "Painel do Cliente",
+    "description": "Acompanhe seus documentos, solicitações e suporte em um só lugar.",
+    "cards": {
+      "documents": "Documentos"
+    },
+    "quickAccess": "Acesso Rápido"
+  },
+  "support": {
+    "title": "Suporte",
+    "messageLabel": "Mensagem",
+    "messagePlaceholder": "Descreva sua dúvida ou problema",
+    "submit": "Enviar"
+  }
+}
