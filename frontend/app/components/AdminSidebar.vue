@@ -130,74 +130,6 @@
                 <span class="grow">{{ $t('admin.sidebar.apiDocs') }}</span>
               </a>
             </li>
-            <li>
-              <NuxtLink to="/terms" class="inline-flex w-full items-center px-2">
-                <span class="icon-[tabler--file-description] size-4.5"></span>
-                <span class="grow">{{ $t('admin.sidebar.terms') }}</span>
-              </NuxtLink>
-            </li>
-            <li>
-              <NuxtLink to="/privacy" class="inline-flex w-full items-center px-2">
-                <span class="icon-[tabler--shield-lock] size-4.5"></span>
-                <span class="grow">{{ $t('admin.sidebar.privacy') }}</span>
-              </NuxtLink>
-            </li>
-          </ul>
-        </div>
-
-        <div class="dropdown relative inline-flex w-full p-2 [--offset:5] [--placement:bottom]">
-          <button
-            id="workshop-dropdown"
-            type="button"
-            class="dropdown-toggle bg-base-200 rounded-box flex w-full items-center gap-4 px-4 py-2.5"
-            aria-haspopup="menu"
-            :aria-expanded="workspaceDropdownOpen"
-            :aria-label="$t('admin.sidebar.dropdown')"
-            @click="workspaceDropdownOpen = !workspaceDropdownOpen"
-          >
-            <span class="avatar">
-              <span class="bg-primary/15 text-primary flex size-9.5 items-center justify-center rounded-box">
-                <span class="icon-[tabler--building-community] size-5"></span>
-              </span>
-            </span>
-            <span class="flex flex-1 flex-col text-start">
-              <span class="text-base-content font-semibold">{{ appName }}</span>
-              <span class="text-base-content/80 text-sm">{{ $t('admin.sidebar.workspace') }}</span>
-            </span>
-            <span
-              class="icon-[tabler--chevron-up] size-6 transition-transform duration-300"
-              :class="{ 'rotate-180': workspaceDropdownOpen }"
-            ></span>
-          </button>
-
-          <ul
-            class="dropdown-menu w-full max-w-60 space-y-2"
-            :class="{ hidden: !workspaceDropdownOpen, block: workspaceDropdownOpen }"
-            role="menu"
-            aria-orientation="vertical"
-            aria-labelledby="workshop-dropdown"
-          >
-            <li>
-              <a class="dropdown-item dropdown-active" href="#">
-                <div class="flex items-center gap-3">
-                  <div class="avatar">
-                    <div class="bg-primary/15 text-primary flex size-9.5 items-center justify-center rounded-box">
-                      <span class="icon-[tabler--building-community] size-5"></span>
-                    </div>
-                  </div>
-                  <div class="flex-1 text-start">
-                    <h6 class="text-base-content font-semibold">{{ appName }}</h6>
-                    <p class="text-base-content/80 text-sm">{{ $t('admin.sidebar.workspace') }}</p>
-                  </div>
-                </div>
-              </a>
-            </li>
-            <li>
-              <a class="btn btn-primary btn-soft btn-block" href="/swagger-ui/" target="_blank">
-                {{ $t('admin.sidebar.openApiDocs') }}
-                <span class="icon-[tabler--plus] size-5"></span>
-              </a>
-            </li>
           </ul>
         </div>
       </div>
@@ -214,7 +146,7 @@ const authStore = useAuthStore()
 const sidebarState = useState('admin-sidebar-open', () => false)
 
 const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
-const userEmail = computed(() => authStore.user?.email || $t('admin.sidebar.defaultUser'))
+const userEmail = computed(() => authStore.user?.email || 'admin@example.com')
 const initials = computed(() => userEmail.value.slice(0, 2).toUpperCase())
 
 const sidebarOpen = computed({
@@ -233,7 +165,6 @@ const managementItems = computed(() => ADMIN_RESOURCES.filter((item) => item.gro
 
 const dashboardOpen = ref(route.path === '/admin/dashboard')
 const managementOpen = ref(managementItems.value.some((item) => item.slug === currentSlug.value))
-const workspaceDropdownOpen = ref(false)
 
 function toggleAccordion(id: string) {
   switch (id) {
