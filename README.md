@@ -259,7 +259,21 @@ POSTGRES_USER=boilerplate
 POSTGRES_PASSWORD=changeme_secure_password
 POSTGRES_DB=boilerplate_dev
 DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-DB_POOL_SIZE=10
+
+# Connection Pool Settings (Diesel r2d2)
+# Tune these for high-concurrency scenarios
+DB_POOL_SIZE=10                          # Max connections (default: 10)
+DB_POOL_MIN_IDLE=2                       # Min idle connections (optional)
+DB_POOL_MAX_LIFETIME_SECS=1800           # Max connection lifetime: 30 min (optional)
+DB_POOL_IDLE_TIMEOUT_SECS=600            # Idle timeout: 10 min (optional)
+DB_POOL_CONNECTION_TIMEOUT_SECS=10       # Connection timeout: 10 sec (default: 10)
+
+# High-concurrency example (uncomment and adjust for production):
+# DB_POOL_SIZE=50
+# DB_POOL_MIN_IDLE=10
+# DB_POOL_MAX_LIFETIME_SECS=3600
+# DB_POOL_IDLE_TIMEOUT_SECS=300
+# DB_POOL_CONNECTION_TIMEOUT_SECS=30
 
 # ──────────────────────────────────────────────
 # REDIS
@@ -500,7 +514,13 @@ POSTGRES_USER=boilerplate
 POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
 POSTGRES_DB=boilerplate_dev
 DATABASE_URL=postgres://boilerplate:${POSTGRES_PASSWORD}@postgres:5432/boilerplate_dev
+
+# Connection Pool Settings
 DB_POOL_SIZE=10
+DB_POOL_MIN_IDLE=2
+DB_POOL_MAX_LIFETIME_SECS=1800
+DB_POOL_IDLE_TIMEOUT_SECS=600
+DB_POOL_CONNECTION_TIMEOUT_SECS=10
 
 # REDIS
 REDIS_PASSWORD=${REDIS_PASSWORD}
@@ -846,6 +866,34 @@ docker compose exec postgres pg_dump -U boilerplate boilerplate_dev > backup.sql
 # Restore database
 cat backup.sql | docker compose exec -T postgres psql -U boilerplate -d boilerplate_dev
 ```
+
+### Connection Pool Tuning
+
+The Diesel connection pool can be tuned for high-concurrency scenarios:
+
+**Environment Variables:**
+- `DB_POOL_SIZE`: Maximum connections (default: 10)
+- `DB_POOL_MIN_IDLE`: Minimum idle connections (default: auto, 20% of pool size)
+- `DB_POOL_MAX_LIFETIME_SECS`: Max connection lifetime (default: 1800 = 30 min)
+- `DB_POOL_IDLE_TIMEOUT_SECS`: Idle timeout (default: 600 = 10 min)
+- `DB_POOL_CONNECTION_TIMEOUT_SECS`: Connection timeout (default: 10 sec)
+
+**Recommended Settings by Workload:**
+
+| Workload | DB_POOL_SIZE | DB_POOL_MIN_IDLE | Notes |
+|----------|--------------|------------------|-------|
+| Development | 5-10 | 1-2 | Minimal resource usage |
+| Staging | 10-20 | 2-5 | Moderate load testing |
+| Production (Low) | 20-30 | 5-10 | < 100 req/s |
+| Production (Medium) | 30-50 | 10-15 | 100-500 req/s |
+| Production (High) | 50-100 | 15-30 | > 500 req/s, monitor closely |
+
+**Tips:**
+- Start with defaults and monitor `pg_stat_activity`
+- Increase pool size gradually based on metrics
+- Set `DB_POOL_MAX_LIFETIME_SECS` to prevent connection leaks
+- Use connection pooling at the database level (PgBouncer) for very high concurrency
+- Monitor: active connections, idle connections, wait time
 
 ---
 

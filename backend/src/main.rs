@@ -82,7 +82,7 @@ tracing_subscriber::registry()
         config.port
     );
 
-    let api_db = Database::new();
+    let api_db = Database::from_config(&config);
     let db_pool = api_db.pool.clone();
     let db_pool_for_container = db_pool.clone();
 

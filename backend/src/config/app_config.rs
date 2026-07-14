@@ -16,6 +16,10 @@ pub struct AppConfig {
     // Database
     pub database_url: String,
     pub db_pool_size: u32,
+    pub db_pool_min_idle: Option<u32>,
+    pub db_pool_max_lifetime_secs: Option<u64>,
+    pub db_pool_idle_timeout_secs: Option<u64>,
+    pub db_pool_connection_timeout_secs: u64,
 
     // Redis
     pub redis_url: String,
@@ -114,6 +118,19 @@ impl AppConfig {
 
             database_url: env::var("DATABASE_URL")?,
             db_pool_size: env::var("DB_POOL_SIZE")
+                .unwrap_or_else(|_| "10".to_string())
+                .parse()
+                .unwrap_or(10),
+            db_pool_min_idle: env::var("DB_POOL_MIN_IDLE")
+                .ok()
+                .and_then(|s| s.parse::<u32>().ok()),
+            db_pool_max_lifetime_secs: env::var("DB_POOL_MAX_LIFETIME_SECS")
+                .ok()
+                .and_then(|s| s.parse::<u64>().ok()),
+            db_pool_idle_timeout_secs: env::var("DB_POOL_IDLE_TIMEOUT_SECS")
+                .ok()
+                .and_then(|s| s.parse::<u64>().ok()),
+            db_pool_connection_timeout_secs: env::var("DB_POOL_CONNECTION_TIMEOUT_SECS")
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
                 .unwrap_or(10),
