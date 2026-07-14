@@ -1,5 +1,6 @@
 use actix_web::{HttpResponse, ResponseError};
 use diesel::result::Error as DieselError;
+use jsonwebtoken::errors::Error as JwtError;
 use serde_json::json;
 
 use crate::errors::AppError;
@@ -7,6 +8,12 @@ use crate::errors::AppError;
 impl From<DieselError> for AppError {
     fn from(error: DieselError) -> Self {
         AppError::Database(error)
+    }
+}
+
+impl From<JwtError> for AppError {
+    fn from(error: JwtError) -> Self {
+        AppError::Unauthorized(format!("Token error: {}", error))
     }
 }
 

@@ -1,5 +1,9 @@
+#![allow(dead_code)]
+
 use crate::errors::AppResult;
+#[allow(unused_imports)]
 use crate::models::user::User;
+#[allow(unused_imports)]
 use crate::security::SecurityService;
 use chrono::Utc;
 use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};

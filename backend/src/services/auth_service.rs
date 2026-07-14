@@ -1,11 +1,13 @@
 #![allow(dead_code)]
 
 use crate::{
-    errors::{AppError, AppResult},
+    errors::AppError,
     models::user::{NewUser, User},
     security::SecurityService,
     services::{token::generate_random_token, token_service::hash_token},
 };
+#[allow(unused_imports)]
+use crate::errors::AppResult;
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
@@ -206,9 +208,8 @@ pub fn record_successful_login(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::database::Database;
-    use crate::models::user::User;
     use diesel::r2d2::{ConnectionManager, Pool};
+    use std::ops::Deref;
     use std::sync::Arc;
 
     fn setup_test_db() -> Arc<Pool<ConnectionManager<PgConnection>>> {
@@ -218,7 +219,7 @@ mod tests {
         Arc::new(Pool::builder().max_size(1).build(manager).expect("Failed to create pool"))
     }
 
-    fn get_conn(pool: &Arc<Pool<ConnectionManager<PgConnection>>>) -> PgConnection {
+    fn get_conn(pool: &Arc<Pool<ConnectionManager<PgConnection>>>) -> impl Deref<Target = PgConnection> {
         pool.get().expect("Failed to get connection")
     }
 

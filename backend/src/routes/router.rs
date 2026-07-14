@@ -10,6 +10,7 @@ use actix_web::http::Method;
 use actix_web::web;
 
 use crate::middleware::csrf_protection::CsrfProtection;
+use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 
 fn bearer_exempt_routes() -> Vec<crate::middleware::api_access_middleware::PublicRoute> {
     use crate::middleware::api_access_middleware::PublicRoute;
@@ -105,6 +106,13 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .service(auth_controller::enable_2fa)
                     .service(auth_controller::disable_2fa)
                     .service(auth_controller::change_password),
+            )
+            // Webhook routes
+            .service(
+                web::scope("/webhooks")
+                    .wrap(StripeWebhookVerifier::new())
+                    .route("/stripe", web::post().to(auth_controller::stripe_webhook))
+                    .route("/pix", web::post().to(auth_controller::pix_webhook)),
             )
             // Admin domain routes
             .service(

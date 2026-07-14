@@ -39,6 +39,9 @@ impl CsrfProtection {
             // Email confirmation
             "/api/v1/auth/confirm".to_string(),
             "/api/v1/auth/confirm/".to_string(),
+            // Webhooks (have their own verification mechanisms)
+            "/api/v1/webhooks".to_string(),
+            "/api/v1/webhooks/".to_string(),
         ];
         
         // Add any additional paths passed by the caller

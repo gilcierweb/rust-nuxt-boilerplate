@@ -57,6 +57,7 @@ pub mod mocks {
             max_video_size_bytes: 1000,
             max_photo_size_bytes: 1000,
             max_audio_size_bytes: 1000,
+            csrf_secret_key: "test_csrf_secret_key_for_testing_purposes_only".to_string(),
         }
     }
 
@@ -66,18 +67,21 @@ pub mod mocks {
             .create_pool(Some(deadpool_redis::Runtime::Tokio1))
             .unwrap();
 
+        let cache = Arc::new(CacheManager::from_pool(
+            pool.clone(),
+            std::time::Duration::from_secs(60),
+        ));
+
         AppContainer {
             config: Arc::new(mock_app_config()),
-            cache: Arc::new(CacheManager::from_pool(
-                pool,
-                std::time::Duration::from_secs(60),
-            )),
+            cache,
             users: Arc::new(MockIUserRepository::new()),
             profiles: Arc::new(MockIProfileRepository::new()),
             refresh_tokens: Arc::new(MockIRefreshTokenRepository::new()),
             user_roles: Arc::new(MockIUserRoleRepository::new()),
             roles: Arc::new(MockIRoleRepository::new()),
             domain_audit_logs: Arc::new(MockIAuditLogRepository::new()),
+            access_token_blacklist: Arc::new(crate::repositories::access_token_blacklist::AccessTokenBlacklist::new(pool)),
         }
     }
 }

@@ -1257,6 +1257,59 @@ impl UserExt for User {
     }
 }
 
+// -- Webhook Handlers
+
+/// Handle Stripe webhook events
+pub async fn stripe_webhook(
+    req: HttpRequest,
+    _payload: web::Bytes,
+    _config: web::Data<AppConfig>,
+) -> HttpResponse {
+    // Signature was already verified by StripeWebhookVerifier middleware
+    // Parse the event type from the header
+    let event_type = req
+        .headers()
+        .get("stripe-event-type")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("unknown");
+
+    tracing::info!(event_type = %event_type, "Received Stripe webhook");
+
+    // For now, just acknowledge receipt
+    // In a real implementation, you would:
+    // 1. Parse the webhook payload
+    // 2. Match on event_type
+    // 3. Execute appropriate business logic
+    // 4. Return appropriate response
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "received": true,
+        "event_type": event_type
+    }))
+}
+
+/// Handle Pix webhook events (Brazilian instant payment system)
+pub async fn pix_webhook(
+    _payload: web::Bytes,
+    _config: web::Data<AppConfig>,
+) -> HttpResponse {
+    // Pix webhooks may have different verification mechanisms
+    // depending on the payment provider implementation
+    
+    tracing::info!("Received Pix webhook");
+
+    // For now, just acknowledge receipt
+    // In a real implementation, you would:
+    // 1. Verify the webhook signature (provider-specific)
+    // 2. Parse the payload
+    // 3. Process the payment event
+    // 4. Return appropriate response
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "received": true
+    }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
