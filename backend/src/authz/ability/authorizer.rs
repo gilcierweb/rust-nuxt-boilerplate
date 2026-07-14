@@ -28,19 +28,7 @@ pub fn authorize(
     let resource_key = match resource {
         AbilityResource::All => "authorization.resources.all",
         AbilityResource::AuditLogs => "authorization.resources.audit_logs",
-        AbilityResource::Companies => "authorization.resources.companies",
-        AbilityResource::CompanyDomains => "authorization.resources.company_domains",
-        AbilityResource::CompanySettings => "authorization.resources.company_settings",
-        AbilityResource::CustomerUsers => "authorization.resources.customer_users",
-        AbilityResource::Customers => "authorization.resources.customers",
-        AbilityResource::DebtCategories => "authorization.resources.debt_categories",
-        AbilityResource::Debts => "authorization.resources.debts",
-        AbilityResource::Documents => "authorization.resources.documents",
-        AbilityResource::InvoiceRequests => "authorization.resources.invoice_requests",
-        AbilityResource::IssuedInvoices => "authorization.resources.issued_invoices",
-        AbilityResource::PaymentTransactions => "authorization.resources.payment_transactions",
         AbilityResource::Roles => "authorization.resources.roles",
-        AbilityResource::StorageObjects => "authorization.resources.storage_objects",
         AbilityResource::Users => "authorization.resources.users",
     };
     let action_label = t!(action_key);

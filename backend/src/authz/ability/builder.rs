@@ -49,16 +49,16 @@ mod tests {
     use super::{build_ability, build_authorities};
 
     #[test]
-    fn admin_gets_customers_crud_authorities() {
+    fn admin_gets_users_crud_authorities() {
         let ability = build_ability(1, &["admin".to_string()]);
         let authorities = ability.authorities();
 
         assert!(authorities.contains(&authority_for(
-            AbilityResource::Customers,
+            AbilityResource::Users,
             AbilityAction::Read
         )));
         assert!(authorities.contains(&authority_for(
-            AbilityResource::Customers,
+            AbilityResource::Users,
             AbilityAction::Delete
         )));
     }
@@ -74,9 +74,8 @@ mod tests {
         let ability = build_ability(3, &["customer".to_string()]);
         let authorities = ability.authorities();
         assert!(authorities.contains(&authority_for(
-            AbilityResource::Customers,
+            AbilityResource::Users,
             AbilityAction::Read
         )));
-        assert!(authorities.contains(&authority_for(AbilityResource::Debts, AbilityAction::Read)));
     }
 }

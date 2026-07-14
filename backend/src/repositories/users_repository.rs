@@ -357,20 +357,6 @@ impl IUserRepository for UsersRepository {
             .await
     }
 
-    async fn get_user_customer_ids(&self, user_id: &Uuid) -> diesel::QueryResult<Vec<Uuid>> {
-        let user_id = *user_id;
-        use crate::db::schema::customer_users;
-        use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
-        self.base
-            .run(move |conn| {
-                customer_users::table
-                    .filter(customer_users::user_id.eq(user_id))
-                    .select(customer_users::customer_id)
-                    .load::<Uuid>(conn)
-            })
-            .await
-    }
-
     async fn get_user_permissions(&self, user_id: &Uuid) -> diesel::QueryResult<Vec<String>> {
         #[derive(diesel::QueryableByName)]
         struct PermissionCodeRow {

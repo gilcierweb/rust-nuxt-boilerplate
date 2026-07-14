@@ -30,29 +30,6 @@ impl IAuditLogRepository for AuditLogsRepository {
             .await
     }
 
-    async fn all_by_target_customer_ids(
-        &self,
-        customer_ids: &[Uuid],
-    ) -> diesel::QueryResult<Vec<AuditLog>> {
-        if customer_ids.is_empty() {
-            return Ok(Vec::new());
-        }
-
-        let target_ids = customer_ids
-            .iter()
-            .copied()
-            .map(Some)
-            .collect::<Vec<Option<Uuid>>>();
-
-        self.base
-            .run(move |conn| {
-                audit_logs_table::table
-                    .filter(audit_logs_table::target_customer_id.eq_any(target_ids))
-                    .load::<AuditLog>(conn)
-            })
-            .await
-    }
-
     async fn find(&self, id: &Uuid) -> diesel::QueryResult<AuditLog> {
         let id = *id;
         self.base

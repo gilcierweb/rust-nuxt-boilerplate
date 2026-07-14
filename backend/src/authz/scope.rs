@@ -17,28 +17,13 @@ pub fn is_customer(details: &AuthDetails) -> bool {
     details.has_authority("ROLE_CUSTOMER")
 }
 
+/// Returns None - no customer scoping in this boilerplate
 pub async fn customer_scope_ids(
-    details: &AuthDetails,
-    user: &AuthUser,
-    container: &AppContainer,
+    _details: &AuthDetails,
+    _user: &AuthUser,
+    _container: &AppContainer,
 ) -> AppResult<Option<HashSet<Uuid>>> {
-    if !is_customer(details) {
-        return Ok(None);
-    }
-
-    let customer_ids = container
-        .users
-        .get_user_customer_ids(&user.claims().sub)
-        .await
-        .map_err(AppError::Database)?
-        .into_iter()
-        .collect::<HashSet<_>>();
-
-    if customer_ids.is_empty() {
-        return Err(customer_scope_denied());
-    }
-
-    Ok(Some(customer_ids))
+    Ok(None)
 }
 
 #[allow(dead_code)]

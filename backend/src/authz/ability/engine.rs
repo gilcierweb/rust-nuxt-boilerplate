@@ -140,23 +140,12 @@ fn crud_actions() -> [AbilityAction; 4] {
     ]
 }
 
-fn managed_resources() -> [AbilityResource; 15] {
+fn managed_resources() -> [AbilityResource; 4] {
     [
         AbilityResource::AuditLogs,
-        AbilityResource::Companies,
-        AbilityResource::CompanyDomains,
-        AbilityResource::CompanySettings,
-        AbilityResource::CustomerUsers,
-        AbilityResource::Customers,
-        AbilityResource::DebtCategories,
-        AbilityResource::Debts,
-        AbilityResource::Documents,
-        AbilityResource::InvoiceRequests,
-        AbilityResource::IssuedInvoices,
-        AbilityResource::PaymentTransactions,
         AbilityResource::Roles,
-        AbilityResource::StorageObjects,
         AbilityResource::Users,
+        AbilityResource::All,
     ]
 }
 
@@ -167,28 +156,28 @@ mod tests {
     #[test]
     fn cannot_overrides_can_by_order() {
         let mut ability = Ability::new();
-        ability.can(AbilityAction::Manage, AbilityResource::Customers);
-        ability.cannot(AbilityAction::Delete, AbilityResource::Customers);
+        ability.can(AbilityAction::Manage, AbilityResource::Roles);
+        ability.cannot(AbilityAction::Delete, AbilityResource::Roles);
 
-        assert!(!ability.allows(AbilityAction::Delete, AbilityResource::Customers));
-        assert!(ability.allows(AbilityAction::Read, AbilityResource::Customers));
+        assert!(!ability.allows(AbilityAction::Delete, AbilityResource::Roles));
+        assert!(ability.allows(AbilityAction::Read, AbilityResource::Roles));
     }
 
     #[test]
     fn instance_rule_does_not_grant_class_check() {
         let mut ability = Ability::new();
-        ability.can_instance(AbilityAction::Read, AbilityResource::Customers);
+        ability.can_instance(AbilityAction::Read, AbilityResource::Roles);
 
-        assert!(!ability.allows(AbilityAction::Read, AbilityResource::Customers));
-        assert!(ability.allows_instance(AbilityAction::Read, AbilityResource::Customers));
+        assert!(!ability.allows(AbilityAction::Read, AbilityResource::Roles));
+        assert!(ability.allows_instance(AbilityAction::Read, AbilityResource::Roles));
     }
 
     #[test]
     fn instance_cannot_overrides_instance_can_by_order() {
         let mut ability = Ability::new();
-        ability.can_instance(AbilityAction::Update, AbilityResource::Debts);
-        ability.cannot_instance(AbilityAction::Update, AbilityResource::Debts);
+        ability.can_instance(AbilityAction::Update, AbilityResource::AuditLogs);
+        ability.cannot_instance(AbilityAction::Update, AbilityResource::AuditLogs);
 
-        assert!(!ability.allows_instance(AbilityAction::Update, AbilityResource::Debts));
+        assert!(!ability.allows_instance(AbilityAction::Update, AbilityResource::AuditLogs));
     }
 }

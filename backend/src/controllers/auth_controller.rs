@@ -1913,8 +1913,16 @@ mod tests {
             .times(1)
             .returning(|_, _| Ok(1));
 
+        let mut mock_refresh = MockIRefreshTokenRepository::new();
+        mock_refresh
+            .expect_revoke_all_for_user()
+            .withf(move |user_id| *user_id == expected_user_id)
+            .times(1)
+            .returning(|_| Ok(0));
+
         let mut container = mock_container();
         container.users = Arc::new(mock_users);
+        container.refresh_tokens = Arc::new(mock_refresh);
 
         let app = test::init_service(
             App::new()

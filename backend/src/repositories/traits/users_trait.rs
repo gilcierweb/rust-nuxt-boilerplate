@@ -56,7 +56,6 @@ pub trait IUserRepository: Send + Sync {
         ip: Option<IpNet>,
     ) -> QueryResult<usize>;
     async fn get_user_roles(&self, user_id: &Uuid) -> QueryResult<Vec<String>>;
-    async fn get_user_customer_ids(&self, user_id: &Uuid) -> QueryResult<Vec<Uuid>>;
     async fn get_user_permissions(&self, user_id: &Uuid) -> QueryResult<Vec<String>>;
     async fn create_password_reset_token(
         &self,

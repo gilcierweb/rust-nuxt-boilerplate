@@ -23,19 +23,7 @@ impl AbilityAction {
 pub enum AbilityResource {
     All,
     AuditLogs,
-    Companies,
-    CompanyDomains,
-    CompanySettings,
-    CustomerUsers,
-    Customers,
-    DebtCategories,
-    Debts,
-    Documents,
-    InvoiceRequests,
-    IssuedInvoices,
-    PaymentTransactions,
     Roles,
-    StorageObjects,
     Users,
 }
 
@@ -44,19 +32,7 @@ impl AbilityResource {
         match self {
             AbilityResource::All => "all",
             AbilityResource::AuditLogs => "audit_logs",
-            AbilityResource::Companies => "companies",
-            AbilityResource::CompanyDomains => "company_domains",
-            AbilityResource::CompanySettings => "company_settings",
-            AbilityResource::CustomerUsers => "customer_users",
-            AbilityResource::Customers => "customers",
-            AbilityResource::DebtCategories => "debt_categories",
-            AbilityResource::Debts => "debts",
-            AbilityResource::Documents => "documents",
-            AbilityResource::InvoiceRequests => "invoice_requests",
-            AbilityResource::IssuedInvoices => "issued_invoices",
-            AbilityResource::PaymentTransactions => "payment_transactions",
             AbilityResource::Roles => "roles",
-            AbilityResource::StorageObjects => "storage_objects",
             AbilityResource::Users => "users",
         }
     }

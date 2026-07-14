@@ -14,13 +14,11 @@ use crate::db::schema::audit_logs;
 pub struct AuditLog {
     #[serde(default)]
     pub id: Uuid,
-    pub company_id: Option<Uuid>,
     pub actor_user_id: Option<Uuid>,
     pub actor_role_snapshot: Option<String>,
     pub action: String,
     pub resource_type: String,
     pub resource_id: Option<Uuid>,
-    pub target_customer_id: Option<Uuid>,
     pub ip_address: Option<IpNet>,
     pub user_agent: Option<String>,
     pub request_id: Option<Uuid>,
@@ -32,7 +30,6 @@ pub struct AuditLog {
 #[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset, Validate)]
 #[diesel(table_name = audit_logs)]
 pub struct NewAuditLog {
-    pub company_id: Option<Uuid>,
     pub actor_user_id: Option<Uuid>,
     #[validate(length(max = 255))]
     pub actor_role_snapshot: Option<String>,
@@ -41,7 +38,6 @@ pub struct NewAuditLog {
     #[validate(length(min = 1, max = 255))]
     pub resource_type: String,
     pub resource_id: Option<Uuid>,
-    pub target_customer_id: Option<Uuid>,
     pub ip_address: Option<IpNet>,
     #[validate(length(max = 500))]
     pub user_agent: Option<String>,
