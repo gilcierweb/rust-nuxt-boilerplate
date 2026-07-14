@@ -7,13 +7,13 @@
         <div class="max-w-[1440px] mx-auto px-6 text-center relative z-10">
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
             <span class="material-symbols-outlined text-sm" data-icon="mail">mail</span>
-            Entre em Contato
+            Get in Touch
           </div>
           <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight max-w-4xl mx-auto">
-            Estamos Aqui para Ajudar
+            We'd Love to Hear from You
           </h1>
           <p class="font-body-lg text-body-lg text-on-surface-variant mb-10 max-w-2xl mx-auto">
-            Tem alguma dúvida? Nossa equipe está pronta para ajudar você a transformar sua lavanderia.
+            Have questions about the boilerplate? Need enterprise support? Want to contribute? Our team is here to help.
           </p>
         </div>
       </section>
@@ -29,40 +29,43 @@
                 <div class="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                   <span class="material-symbols-outlined text-2xl" data-icon="email">email</span>
                 </div>
-                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">E-mail</h3>
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Email</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
-                  Resposta em até 24 horas
+                  Response within 24 hours
                 </p>
-                <a href="mailto:contato@ilaundry.com" class="text-primary font-medium hover:underline">
-                  contato@ilaundry.com
+                <a href="mailto:hello@boilerplate.dev" class="text-primary font-medium hover:underline">
+                  hello@boilerplate.dev
                 </a>
               </div>
 
-              <!-- Phone -->
+              <!-- GitHub -->
               <div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30">
                 <div class="w-12 h-12 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
-                  <span class="material-symbols-outlined text-2xl" data-icon="phone">phone</span>
+                  <span class="material-symbols-outlined text-2xl" data-icon="code">code</span>
                 </div>
-                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Telefone</h3>
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">GitHub</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
-                  Seg-Sex, 8h às 18h
+                  Issues, discussions, contributions
                 </p>
-                <a href="tel:+5511999999999" class="text-secondary font-medium hover:underline">
-                  (11) 99999-9999
+                <a href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank" class="text-secondary font-medium hover:underline flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span>
+                  View Repository
                 </a>
               </div>
 
-              <!-- Address -->
+              <!-- Discord -->
               <div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30">
                 <div class="w-12 h-12 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
-                  <span class="material-symbols-outlined text-2xl" data-icon="location_on">location_on</span>
+                  <span class="material-symbols-outlined text-2xl" data-icon="chat">chat</span>
                 </div>
-                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Endereço</h3>
-                <p class="font-body-md text-body-md text-on-surface-variant">
-                  Av. Paulista, 1000<br>
-                  Bela Vista, São Paulo - SP<br>
-                  CEP: 01310-100
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Discord Community</h3>
+                <p class="font-body-md text-body-md text-on-surface-variant mb-3">
+                  Real-time help and discussion
                 </p>
+                <a href="https://discord.gg/your-invite" target="_blank" class="text-tertiary font-medium hover:underline flex items-center gap-1">
+                  <span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span>
+                  Join Server
+                </a>
               </div>
             </div>
 
@@ -70,7 +73,7 @@
             <div class="lg:col-span-2">
               <div class="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/30">
                 <h2 class="font-headline-lg text-headline-lg text-on-surface mb-6">
-                  Envie uma Mensagem
+                  Send a Message
                 </h2>
                 
                 <form @submit.prevent="handleSubmit" class="space-y-6">
@@ -78,13 +81,13 @@
                     <!-- Name -->
                     <div class="form-control">
                       <label class="label">
-                        <span class="label-text font-medium text-on-surface">Nome Completo</span>
+                        <span class="label-text font-medium text-on-surface">Full Name</span>
                         <span class="text-error">*</span>
                       </label>
                       <input
                         v-model="form.name"
                         type="text"
-                        placeholder="Seu nome"
+                        placeholder="Your name"
                         class="input input-bordered w-full bg-surface"
                         required
                       />
@@ -93,13 +96,13 @@
                     <!-- Email -->
                     <div class="form-control">
                       <label class="label">
-                        <span class="label-text font-medium text-on-surface">E-mail</span>
+                        <span class="label-text font-medium text-on-surface">Email</span>
                         <span class="text-error">*</span>
                       </label>
                       <input
                         v-model="form.email"
                         type="email"
-                        placeholder="seu@email.com"
+                        placeholder="you@example.com"
                         class="input input-bordered w-full bg-surface"
                         required
                       />
@@ -107,15 +110,15 @@
                   </div>
 
                   <div class="grid md:grid-cols-2 gap-6">
-                    <!-- Phone -->
+                    <!-- Company/Org (optional) -->
                     <div class="form-control">
                       <label class="label">
-                        <span class="label-text font-medium text-on-surface">Telefone</span>
+                        <span class="label-text font-medium text-on-surface">Company / Organization</span>
                       </label>
                       <input
-                        v-model="form.phone"
-                        type="tel"
-                        placeholder="(11) 99999-9999"
+                        v-model="form.company"
+                        type="text"
+                        placeholder="Your company (optional)"
                         class="input input-bordered w-full bg-surface"
                       />
                     </div>
@@ -123,16 +126,17 @@
                     <!-- Subject -->
                     <div class="form-control">
                       <label class="label">
-                        <span class="label-text font-medium text-on-surface">Assunto</span>
+                        <span class="label-text font-medium text-on-surface">Subject</span>
                         <span class="text-error">*</span>
                       </label>
                       <select v-model="form.subject" class="select select-bordered w-full bg-surface" required>
-                        <option value="">Selecione...</option>
-                        <option value="sales">Vendas - Quero contratar</option>
-                        <option value="support">Suporte Técnico</option>
-                        <option value="billing">Faturamento</option>
-                        <option value="partnership">Parcerias</option>
-                        <option value="other">Outro</option>
+                        <option value="">Select a topic...</option>
+                        <option value="general">General Inquiry</option>
+                        <option value="support">Technical Support</option>
+                        <option value="enterprise">Enterprise / Custom Features</option>
+                        <option value="security">Security Issue</option>
+                        <option value="contribution">Contribution / Partnership</option>
+                        <option value="other">Other</option>
                       </select>
                     </div>
                   </div>
@@ -140,12 +144,12 @@
                   <!-- Message -->
                   <div class="form-control">
                     <label class="label">
-                      <span class="label-text font-medium text-on-surface">Mensagem</span>
+                      <span class="label-text font-medium text-on-surface">Message</span>
                       <span class="text-error">*</span>
                     </label>
                     <textarea
                       v-model="form.message"
-                      placeholder="Como podemos ajudar?"
+                      placeholder="How can we help you?"
                       class="textarea textarea-bordered w-full bg-surface min-h-[150px]"
                       required
                     ></textarea>
@@ -156,7 +160,7 @@
                     <label class="label cursor-pointer justify-start gap-3">
                       <input v-model="form.privacy" type="checkbox" class="checkbox checkbox-primary" required />
                       <span class="label-text text-on-surface-variant">
-                        Li e concordo com a <NuxtLink to="/privacy" class="text-primary hover:underline">Política de Privacidade</NuxtLink>
+                        I agree to the <NuxtLink to="/privacy" class="text-primary hover:underline">Privacy Policy</NuxtLink> and understand my data will be used to respond to this inquiry.
                       </span>
                     </label>
                   </div>
@@ -170,12 +174,17 @@
                     >
                       <span v-if="submitting" class="loading loading-spinner loading-sm mr-2"></span>
                       <span v-else class="material-symbols-outlined mr-2" data-icon="send">send</span>
-                      {{ submitting ? 'Enviando...' : 'Enviar Mensagem' }}
+                      {{ submitting ? 'Sending...' : 'Send Message' }}
                     </button>
                     
                     <span v-if="success" class="text-success flex items-center gap-2">
                       <span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
-                      Mensagem enviada com sucesso!
+                      Message sent successfully! We'll get back to you soon.
+                    </span>
+                    
+                    <span v-if="error" class="text-error flex items-center gap-2">
+                      <span class="material-symbols-outlined" data-icon="error">error</span>
+                      Failed to send. Please try again or email us directly.
                     </span>
                   </div>
                 </form>
@@ -189,9 +198,9 @@
       <section class="py-24 bg-surface-container-low border-y border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Perguntas Frequentes</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Frequently Asked Questions</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Respostas rápidas para as dúvidas mais comuns.
+              Quick answers to common questions about the boilerplate.
             </p>
           </div>
 
@@ -200,10 +209,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="material-symbols-outlined text-primary" data-icon="help">help</span>
-                Como funciona o teste gratuito?
+                Is this production-ready?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Oferecemos 14 dias de teste completo sem necessidade de cartão de crédito. Acesso total a todas as funcionalidades.
+                Yes! The boilerplate includes authentication, authorization, admin panel, database migrations, Docker setup, and comprehensive tests. It's designed for production use from day one.
               </p>
             </div>
 
@@ -211,10 +220,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="material-symbols-outlined text-secondary" data-icon="help">help</span>
-                Posso migrar meus dados?
+                Can I use this for commercial projects?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Sim! Nossa equipe de suporte auxilia na migração de dados de qualquer sistema anterior gratuitamente.
+                Absolutely! The project is MIT licensed, which permits commercial use, modification, distribution, and private use without attribution requirements.
               </p>
             </div>
 
@@ -222,10 +231,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="material-symbols-outlined text-tertiary" data-icon="help">help</span>
-                Qual o prazo de implementação?
+                How do I get support?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                A maioria dos clientes está operando em até 48 horas. Treinamento incluso e suporte dedicado.
+                Community support is available via GitHub Discussions and Discord. For enterprise customers, we offer dedicated support channels with SLA guarantees and priority response times.
               </p>
             </div>
 
@@ -233,36 +242,59 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="material-symbols-outlined text-success" data-icon="help">help</span>
-                Funciona offline?
+                Does it work with my existing database?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Sim! O sistema sincroniza automaticamente quando a conexão retorna. Nunca perca uma venda.
+                Yes! The boilerplate uses Diesel ORM with PostgreSQL. You can connect to any PostgreSQL-compatible database (AWS RDS, Supabase, Neon, Cloud SQL, etc.) by updating the DATABASE_URL environment variable.
+              </p>
+            </div>
+
+            <!-- FAQ 5 -->
+            <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
+                <span class="material-symbols-outlined text-warning" data-icon="help">help</span>
+                Can I remove features I don't need?
+              </h3>
+              <p class="font-body-md text-body-md text-on-surface-variant">
+                Yes! The modular architecture makes it easy to remove unused modules. Each feature (auth, admin, websockets, etc.) is isolated. Simply remove the routes, controllers, and dependencies you don't need.
+              </p>
+            </div>
+
+            <!-- FAQ 6 -->
+            <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
+                <span class="material-symbols-outlined text-info" data-icon="help">help</span>
+                How do I deploy this?
+              </h3>
+              <p class="font-body-md text-body-md text-on-surface-variant">
+                The boilerplate includes Docker multi-stage builds and docker-compose for local development. For production, deploy the Docker images to any container platform (Kubernetes, ECS, Cloud Run, Fly.io, Railway, etc.). Health checks and graceful shutdown are built-in.
               </p>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Map Placeholder Section -->
+      <!-- Support Section -->
       <section class="py-24 bg-surface-container-lowest">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="bg-surface p-8 md:p-12 rounded-3xl border border-outline-variant/30 text-center relative overflow-hidden">
-            <div class="aspect-[21/9] bg-surface-container-low flex items-center justify-center relative">
-              <div class="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5"></div>
-              <div class="text-center relative z-10">
-                <span class="material-symbols-outlined text-6xl text-primary/40 mb-4" data-icon="map">map</span>
-                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Nosso Escritório</h3>
-                <p class="font-body-md text-body-md text-on-surface-variant">
-                  Avenida Paulista, 1000 - São Paulo, SP
-                </p>
-                <a 
-                  href="https://maps.google.com/?q=Av.+Paulista+1000+São+Paulo" 
-                  target="_blank"
-                  class="btn btn-outline btn-primary mt-6"
-                >
-                  <span class="material-symbols-outlined mr-2" data-icon="open_in_new">open_in_new</span>
-                  Ver no Google Maps
-                </a>
+            <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
+            <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>
+            
+            <div class="relative z-10">
+              <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Need Enterprise Support?</h2>
+              <p class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-2xl mx-auto">
+                Dedicated support, custom feature development, security audits, migration assistance, and SLA-backed response times.
+              </p>
+              <div class="flex flex-wrap justify-center gap-4">
+                <NuxtLink to="/contact" class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
+                  <span class="material-symbols-outlined" data-icon="business_center">business_center</span>
+                  Contact Sales
+                </NuxtLink>
+                <NuxtLink to="https://github.com/your-org/rust-nuxt-boilerplate/discussions" target="_blank" class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
+                  <span class="material-symbols-outlined" data-icon="forum">forum</span>
+                  Community Forum
+                </NuxtLink>
               </div>
             </div>
           </div>
@@ -272,7 +304,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 definePageMeta({
   layout: 'landing'
 })
@@ -280,7 +312,7 @@ definePageMeta({
 const form = reactive({
   name: '',
   email: '',
-  phone: '',
+  company: '',
   subject: '',
   message: '',
   privacy: false
@@ -288,9 +320,11 @@ const form = reactive({
 
 const submitting = ref(false)
 const success = ref(false)
+const error = ref(false)
 
 async function handleSubmit() {
   submitting.value = true
+  error.value = false
   
   // Simulate API call
   await new Promise(resolve => setTimeout(resolve, 1500))

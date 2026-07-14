@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Contifya",
+    "appName": "Boilerplate Rust Nuxt",
     "success": "Sucesso",
     "error": "Erro",
     "loading": "Carregando...",
