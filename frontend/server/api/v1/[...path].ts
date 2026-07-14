@@ -23,6 +23,13 @@ export default defineEventHandler(async (event) => {
     backendApiKey,
     ['authorization', 'accept', 'content-type', 'cookie', 'user-agent'],
     accessToken,
+    {
+      filterCookies: true,
+      allowedCookiePrefixes: [
+        'refresh_token',
+        'csrf',
+      ],
+    },
   )
 
   const method = event.method || 'GET'

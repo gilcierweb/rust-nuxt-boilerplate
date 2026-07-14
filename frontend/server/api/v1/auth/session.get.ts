@@ -16,6 +16,14 @@ export default defineEventHandler(async (event) => {
     event,
     backendApiKey,
     ['accept', 'cookie', 'user-agent'],
+    undefined,
+    {
+      filterCookies: true,
+      allowedCookiePrefixes: [
+        'refresh_token',
+        'csrf',
+      ],
+    },
   )
 
   try {

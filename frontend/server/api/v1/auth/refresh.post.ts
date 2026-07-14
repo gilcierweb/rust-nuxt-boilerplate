@@ -20,6 +20,14 @@ export default defineEventHandler(async (event) => {
     event,
     backendApiKey,
     ['accept', 'content-type', 'cookie', 'user-agent'],
+    undefined,
+    {
+      filterCookies: true,
+      allowedCookiePrefixes: [
+        'refresh_token',
+        'csrf',
+      ],
+    },
   )
 
   const body = await readRawBody(event, false)
