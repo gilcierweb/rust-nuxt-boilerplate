@@ -44,6 +44,16 @@ BLIND_INDEX_KEY=$(openssl rand -base64 32)
 echo "BLIND_INDEX_KEY=${BLIND_INDEX_KEY}"
 echo
 
+# CSRF Secret (hex, 32 bytes = 64 chars)
+CSRF_SECRET_KEY=$(openssl rand -hex 32)
+echo "CSRF_SECRET_KEY=${CSRF_SECRET_KEY}"
+echo
+
+# Backend API Key (for frontend server-to-server calls, hex 32 bytes)
+BACKEND_API_KEY=$(openssl rand -hex 32)
+echo "BACKEND_API_KEY=${BACKEND_API_KEY}"
+echo
+
 # Optional: Stripe webhook secret prefix (if using Stripe)
 # STRIPE_WEBHOOK_SECRET=whsec_$(openssl rand -hex 32)
 # echo "STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}"

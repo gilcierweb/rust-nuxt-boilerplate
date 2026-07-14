@@ -371,13 +371,13 @@ NUXT_PUBLIC_API_BASE=http://localhost:8080/api/v1
 # CSRF PROTECTION (must match backend)
 # ──────────────────────────────────────────────
 # Generate with: openssl rand -hex 32
-CSRF_SECRET_KEY=332bd0f32a7216c7c2528f3e3845001d
+CSRF_SECRET_KEY=REPLACE_WITH_GENERATED_CSRF_SECRET
 
 # ──────────────────────────────────────────────
 # BACKEND API KEY (for server-to-server calls from frontend)
 # ──────────────────────────────────────────────
 # Must match one of INTERNAL_API_KEYS in backend
-BACKEND_API_KEY=919c73d32c98839f1ee86e34829aa22812af6737f064a58f61a95df80dfece3d
+BACKEND_API_KEY=REPLACE_WITH_GENERATED_API_KEY
 
 # ──────────────────────────────────────────────
 # APP CONFIG
@@ -398,7 +398,7 @@ NUXT_PUBLIC_ENABLE_PWA=true
 |----------|-------------|:--------:|
 | `NUXT_PUBLIC_API_BASE` | Backend API base URL | ✅ |
 | `CSRF_SECRET_KEY` | CSRF secret (must match backend) | ✅ |
-| `BACKEND_API_KEY` | Internal API key for server calls | ✅ |
+| `BACKEND_API_KEY` | Internal API key for server-to-server calls | ✅ |
 | `NUXT_PUBLIC_APP_NAME` | Display name | - |
 | `NUXT_PUBLIC_APP_URL` | Frontend URL | - |
 
@@ -408,12 +408,12 @@ NUXT_PUBLIC_ENABLE_PWA=true
 
 **Backend** (`backend/.env` or root `.env`):
 ```bash
-export CSRF_SECRET_KEY=changeme-same-backend-frontend
+export CSRF_SECRET_KEY=REPLACE_WITH_GENERATED_CSRF_SECRET
 ```
 
 **Frontend** (`frontend/.env`):
 ```bash
-export CSRF_SECRET_KEY=changeme-same-backend-frontend
+export CSRF_SECRET_KEY=REPLACE_WITH_GENERATED_CSRF_SECRET
 ```
 
 **Exclusions** (paths that skip CSRF validation):
