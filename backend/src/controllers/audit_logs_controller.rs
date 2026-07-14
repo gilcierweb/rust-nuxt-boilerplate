@@ -11,7 +11,10 @@ use crate::{
     errors::{AppError, AppResult},
     models::audit_log::NewAuditLog,
     repositories::container::AppContainer,
-    utils::validation::first_validation_error_message,
+    utils::{
+        pagination::{PaginatedResponse, PaginationParams},
+        validation::first_validation_error_message,
+    },
 };
 
 fn map_repo_error(error: DieselError, entity: &str) -> AppError {
@@ -25,14 +28,24 @@ fn map_repo_error(error: DieselError, entity: &str) -> AppError {
 pub async fn list_audit_logs(
     details: AuthDetails,
     container: web::Data<AppContainer>,
+    pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::AuditLogs, AbilityAction::Read)?;
+    let pagination = pagination.into_inner().validated();
     let items = container
         .domain_audit_logs
         .all()
         .await
         .map_err(AppError::Database)?;
-    Ok(HttpResponse::Ok().json(items))
+
+    let total = items.len() as i64;
+    let offset = pagination.offset() as usize;
+    let limit = pagination.limit() as usize;
+
+    let paginated_data: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
+    let response = PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 #[get("/audit-logs/{id}")]
@@ -229,6 +242,6 @@ mod tests {
 
         let body = to_bytes(resp.into_body()).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(json.as_array().map(|items| items.len()), Some(1));
+        assert_eq!(json["data"].as_array().map(|items| items.len()), Some(1));
     }
 }

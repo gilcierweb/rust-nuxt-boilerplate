@@ -10,6 +10,7 @@ use crate::{
     errors::{AppError, AppResult},
     repositories::container::AppContainer,
     security::SecurityService,
+    utils::pagination::{PaginatedResponse, PaginationParams},
 };
 
 #[derive(Debug, Serialize)]
@@ -26,8 +27,11 @@ struct AdminUserLookupItem {
 pub async fn list_users(
     details: AuthDetails,
     container: web::Data<AppContainer>,
+    pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
+
+    let pagination = pagination.into_inner().validated();
 
     let users = container.users.all().await.map_err(AppError::Database)?;
     let profiles = container.profiles.all().await.map_err(AppError::Database)?;
@@ -54,7 +58,19 @@ pub async fn list_users(
         });
     }
 
-    Ok(HttpResponse::Ok().json(items))
+    let total = items.len() as i64;
+    let offset = pagination.offset() as usize;
+    let limit = pagination.limit() as usize;
+
+    let paginated_data: Vec<_> = items
+        .into_iter()
+        .skip(offset)
+        .take(limit)
+        .collect();
+
+    let response = PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
+
+    Ok(HttpResponse::Ok().json(response))
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
@@ -157,6 +173,6 @@ mod tests {
 
         let body = to_bytes(resp.into_body()).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
-        assert_eq!(json.as_array().map(|items| items.len()), Some(0));
+        assert_eq!(json["data"].as_array().map(|items| items.len()), Some(0));
     }
 }
