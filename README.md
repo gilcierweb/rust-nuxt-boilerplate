@@ -197,6 +197,373 @@ See [`.env.example`](.env.example) for complete list.
 
 ---
 
+## 🔧 Backend & Frontend Environment Setup (Step by Step)
+
+### Backend Environment Variables
+
+Create `backend/.env` (or use root `.env` with Docker Compose):
+
+```bash
+# ──────────────────────────────────────────────
+# APPLICATION
+# ──────────────────────────────────────────────
+ENVIRONMENT=development                 # development | staging | production
+FRONTEND_URL=http://localhost:3000
+
+# ──────────────────────────────────────────────
+# SERVER
+# ──────────────────────────────────────────────
+HOST=0.0.0.0
+PORT=8080
+HTTPS_PORT=8443
+TLS_CERT_PATH=./infra/ssl/cert.pem
+TLS_KEY_PATH=./infra/ssl/key.pem
+
+# ──────────────────────────────────────────────
+# DATABASE (PostgreSQL)
+# ──────────────────────────────────────────────
+POSTGRES_USER=boilerplate
+POSTGRES_PASSWORD=changeme_secure_password
+POSTGRES_DB=boilerplate_dev
+DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+DB_POOL_SIZE=10
+
+# ──────────────────────────────────────────────
+# REDIS
+# ──────────────────────────────────────────────
+REDIS_PASSWORD=changeme_redis_password
+REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+
+# ──────────────────────────────────────────────
+# JWT / AUTHENTICATION
+# ──────────────────────────────────────────────
+# Generate with: openssl rand -base64 48
+JWT_SECRET=REPLACE_WITH_GENERATED_64_CHAR_BASE64_SECRET
+JWT_ACCESS_EXPIRY_SECS=900           # 15 minutes
+JWT_REFRESH_EXPIRY_SECS=2592000      # 30 days
+
+# ──────────────────────────────────────────────
+# SECURITY / ENCRYPTION
+# ──────────────────────────────────────────────
+# Master key for field-level encryption (AES-GCM, 32 bytes base64)
+# Generate with: openssl rand -base64 32
+MASTER_ENCRYPTION_KEY=REPLACE_WITH_GENERATED_32_BYTE_BASE64_KEY
+
+# Blind index key for PII search (32 bytes base64)
+# Generate with: openssl rand -base64 32
+BLIND_INDEX_KEY=REPLACE_WITH_GENERATED_32_BYTE_BASE64_KEY
+
+CURRENT_ENCRYPTION_KEY_VERSION=1
+
+# Internal API keys (comma-separated) for service-to-service auth
+INTERNAL_API_KEYS=
+
+# ──────────────────────────────────────────────
+# EMAIL (Resend)
+# ──────────────────────────────────────────────
+RESEND_API_KEY=
+EMAIL_FROM=noreply@boilerplate-rust-nuxt.com
+EMAIL_FROM_NAME=Boilerplate Rust Nuxt
+
+# SMTP fallback
+SMTP_HOST=
+SMTP_PORT=587
+SMTP_USER=
+SMTP_PASSWORD=
+SMTP_FROM=
+
+# ──────────────────────────────────────────────
+# BUNNY.NET (CDN / Storage / Stream)
+# ──────────────────────────────────────────────
+BUNNY_STORAGE_ZONE=
+BUNNY_STORAGE_KEY=
+BUNNY_CDN_URL=https://cdn.boilerplate-rust-nuxt.com
+BUNNY_TOKEN_KEY=
+
+BUNNY_STREAM_LIBRARY_ID=
+BUNNY_STREAM_KEY=
+BUNNY_STREAM_WEBHOOK_SECRET=
+
+# ──────────────────────────────────────────────
+# BACKBLAZE B2 (Alternative Storage)
+# ──────────────────────────────────────────────
+B2_KEY_ID=
+B2_APPLICATION_KEY=
+B2_BUCKET_ID=
+B2_BUCKET_NAME=
+B2_ENDPOINT=https://s3.us-west-004.backblazeb2.com
+
+# ──────────────────────────────────────────────
+# STRIPE (Payments / Subscriptions)
+# ──────────────────────────────────────────────
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PUBLISHABLE_KEY=
+
+PLATFORM_COMMISSION_PERCENT=20.0
+MIN_SUBSCRIPTION_PRICE_CENTS=500
+MAX_SUBSCRIPTION_PRICE_CENTS=50000
+MIN_WITHDRAWAL_AMOUNT_CENTS=2000
+
+# ──────────────────────────────────────────────
+# 2FA / TOTP
+# ──────────────────────────────────────────────
+TOTP_ISSUER=Boilerplate Rust Nuxt
+
+# ──────────────────────────────────────────────
+# MEILISEARCH
+# ──────────────────────────────────────────────
+MEILI_MASTER_KEY=REPLACE_WITH_GENERATED_KEY
+MEILI_URL=http://meilisearch:7700
+
+# ──────────────────────────────────────────────
+# OBSERVABILITY
+# ──────────────────────────────────────────────
+GRAFANA_PASSWORD=REPLACE_WITH_GENERATED_PASSWORD
+
+# ──────────────────────────────────────────────
+# FILE UPLOAD LIMITS
+# ──────────────────────────────────────────────
+MAX_VIDEO_SIZE_BYTES=10737418240    # 10 GB
+MAX_PHOTO_SIZE_BYTES=52428800       # 50 MB
+MAX_AUDIO_SIZE_BYTES=524288000      # 500 MB
+```
+
+#### Generate Backend Secrets
+
+```bash
+# JWT Secret (64 chars base64 = 48 bytes entropy)
+openssl rand -base64 48
+
+# Database/Redis passwords (24 chars base64 = 18 bytes)
+openssl rand -base64 24 | tr -d '/+=' | cut -c1-24
+
+# Master Encryption Key (32 bytes base64 = 256 bits for AES-GCM)
+openssl rand -base64 32
+
+# Blind Index Key (32 bytes base64)
+openssl rand -base64 32
+
+# MeiliSearch Master Key
+openssl rand -base64 24
+
+# Grafana Admin Password
+openssl rand -base64 16
+
+# CSRF Secret (hex, 32 bytes = 64 chars)
+openssl rand -hex 32
+```
+
+---
+
+### Frontend Environment Variables
+
+Create `frontend/.env` or set in Nuxt config:
+
+```bash
+# ──────────────────────────────────────────────
+# BACKEND API
+# ──────────────────────────────────────────────
+# Base URL for backend API (used by Nitro proxy & generated client)
+NUXT_PUBLIC_API_BASE=http://localhost:8080/api/v1
+
+# ──────────────────────────────────────────────
+# CSRF PROTECTION (must match backend)
+# ──────────────────────────────────────────────
+# Generate with: openssl rand -hex 32
+CSRF_SECRET_KEY=332bd0f32a7216c7c2528f3e3845001d
+
+# ──────────────────────────────────────────────
+# BACKEND API KEY (for server-to-server calls from frontend)
+# ──────────────────────────────────────────────
+# Must match one of INTERNAL_API_KEYS in backend
+BACKEND_API_KEY=919c73d32c98839f1ee86e34829aa22812af6737f064a58f61a95df80dfece3d
+
+# ──────────────────────────────────────────────
+# APP CONFIG
+# ──────────────────────────────────────────────
+NUXT_PUBLIC_APP_NAME=RustNuxt Boilerplate
+NUXT_PUBLIC_APP_URL=http://localhost:3000
+
+# ──────────────────────────────────────────────
+# FEATURE FLAGS
+# ──────────────────────────────────────────────
+NUXT_PUBLIC_ENABLE_2FA=true
+NUXT_PUBLIC_ENABLE_PWA=true
+```
+
+#### Frontend Required Variables
+
+| Variable | Description | Required |
+|----------|-------------|:--------:|
+| `NUXT_PUBLIC_API_BASE` | Backend API base URL | ✅ |
+| `CSRF_SECRET_KEY` | CSRF secret (must match backend) | ✅ |
+| `BACKEND_API_KEY` | Internal API key for server calls | ✅ |
+| `NUXT_PUBLIC_APP_NAME` | Display name | - |
+| `NUXT_PUBLIC_APP_URL` | Frontend URL | - |
+
+---
+
+### CSRF Configuration
+
+**Backend** (`backend/.env` or root `.env`):
+```bash
+export CSRF_SECRET_KEY=changeme-same-backend-frontend
+```
+
+**Frontend** (`frontend/.env`):
+```bash
+export CSRF_SECRET_KEY=changeme-same-backend-frontend
+```
+
+**Exclusions** (paths that skip CSRF validation):
+- Auth endpoints: `/api/v1/auth/*`
+- Webhooks: `/api/v1/webhooks/*`
+- WebSocket: `/api/v1/ws/*`
+- Swagger/Scalar docs: `/swagger-ui`, `/scalar`, `/openapi.json`
+
+---
+
+### Quick Setup Script
+
+```bash
+#!/usr/bin/env bash
+# setup-env.sh - Run from project root
+
+set -euo pipefail
+
+echo "🔐 Generating secrets..."
+
+# Backend secrets
+JWT_SECRET=$(openssl rand -base64 48)
+POSTGRES_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+REDIS_PASSWORD=$(openssl rand -base64 24 | tr -d '/+=' | cut -c1-24)
+MASTER_KEY=$(openssl rand -base64 32)
+BLIND_INDEX_KEY=$(openssl rand -base64 32)
+MEILI_MASTER_KEY=$(openssl rand -base64 24)
+GRAFANA_PASSWORD=$(openssl rand -base64 16)
+CSRF_SECRET=$(openssl rand -hex 32)
+INTERNAL_API_KEY=$(openssl rand -hex 32)
+BACKEND_API_KEY=$(openssl rand -hex 32)
+
+cat > .env <<EOF
+# ──────────────────────────────────────────────
+# GENERATED - $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+# ──────────────────────────────────────────────
+
+# APPLICATION
+ENVIRONMENT=development
+FRONTEND_URL=http://localhost:3000
+
+# SERVER
+HOST=0.0.0.0
+PORT=8080
+HTTPS_PORT=8443
+TLS_CERT_PATH=./infra/ssl/cert.pem
+TLS_KEY_PATH=./infra/ssl/key.pem
+
+# DATABASE
+POSTGRES_USER=boilerplate
+POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+POSTGRES_DB=boilerplate_dev
+DATABASE_URL=postgres://boilerplate:${POSTGRES_PASSWORD}@postgres:5432/boilerplate_dev
+DB_POOL_SIZE=10
+
+# REDIS
+REDIS_PASSWORD=${REDIS_PASSWORD}
+REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+
+# JWT / AUTH
+JWT_SECRET=${JWT_SECRET}
+JWT_ACCESS_EXPIRY_SECS=900
+JWT_REFRESH_EXPIRY_SECS=2592000
+
+# SECURITY / ENCRYPTION
+MASTER_ENCRYPTION_KEY=${MASTER_KEY}
+BLIND_INDEX_KEY=${BLIND_INDEX_KEY}
+CURRENT_ENCRYPTION_KEY_VERSION=1
+INTERNAL_API_KEYS=${INTERNAL_API_KEY}
+
+# EMAIL
+RESEND_API_KEY=
+EMAIL_FROM=noreply@boilerplate-rust-nuxt.com
+EMAIL_FROM_NAME=Boilerplate Rust Nuxt
+
+# BUNNY.NET
+BUNNY_STORAGE_ZONE=
+BUNNY_STORAGE_KEY=
+BUNNY_CDN_URL=https://cdn.boilerplate-rust-nuxt.com
+BUNNY_TOKEN_KEY=${CSRF_SECRET}
+
+# STRIPE
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PUBLISHABLE_KEY=
+
+# MEILISEARCH
+MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+MEILI_URL=http://meilisearch:7700
+
+# OBSERVABILITY
+GRAFANA_PASSWORD=${GRAFANA_PASSWORD}
+
+# FILE UPLOAD LIMITS
+MAX_VIDEO_SIZE_BYTES=10737418240
+MAX_PHOTO_SIZE_BYTES=52428800
+MAX_AUDIO_SIZE_BYTES=524288000
+
+# CSRF (shared)
+CSRF_SECRET_KEY=${CSRF_SECRET}
+
+# BACKEND API KEY (for frontend server calls)
+BACKEND_API_KEY=${BACKEND_API_KEY}
+EOF
+
+# Frontend .env
+cat > frontend/.env <<EOF
+# Generated $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+# Backend API
+NUXT_PUBLIC_API_BASE=http://localhost:8080/api/v1
+
+# CSRF (must match backend)
+CSRF_SECRET_KEY=${CSRF_SECRET}
+
+# Backend API Key (for server-to-server)
+BACKEND_API_KEY=${BACKEND_API_KEY}
+
+# App Config
+NUXT_PUBLIC_APP_NAME=RustNuxt Boilerplate
+NUXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Features
+NUXT_PUBLIC_ENABLE_2FA=true
+NUXT_PUBLIC_ENABLE_PWA=true
+EOF
+
+echo "✅ .env files created"
+echo ""
+echo "📋 Generated values (save these!):"
+echo "  JWT_SECRET:           ${JWT_SECRET}"
+echo "  POSTGRES_PASSWORD:    ${POSTGRES_PASSWORD}"
+echo "  REDIS_PASSWORD:       ${REDIS_PASSWORD}"
+echo "  MASTER_KEY:           ${MASTER_KEY}"
+echo "  BLIND_INDEX_KEY:      ${BLIND_INDEX_KEY}"
+echo "  MEILI_MASTER_KEY:     ${MEILI_MASTER_KEY}"
+echo "  GRAFANA_PASSWORD:     ${GRAFANA_PASSWORD}"
+echo "  CSRF_SECRET_KEY:      ${CSRF_SECRET}"
+echo "  INTERNAL_API_KEY:     ${INTERNAL_API_KEY}"
+echo "  BACKEND_API_KEY:      ${BACKEND_API_KEY}"
+echo ""
+echo "🚀 Next steps:"
+echo "  1. Review .env and frontend/.env"
+echo "  2. docker compose up --build"
+echo "  3. docker compose exec backend diesel migration run"
+echo "  4. docker compose exec backend cargo run --bin seed"
+```
+
+---
+
 ## 🐳 Docker Compose Profiles
 
 ```bash
