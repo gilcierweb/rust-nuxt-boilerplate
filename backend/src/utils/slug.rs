@@ -1,6 +1,7 @@
 use unicode_normalization::UnicodeNormalization;
 
 /// Simulates the behavior of ActiveSupport's `String#parameterize` (Rails)
+#[allow(dead_code)]
 pub fn parameterize(text: &str) -> String {
     text.nfd() // Decomposes characters (e.g., 'á' -> 'a' + '´')
         .filter(|c| c.is_ascii_alphanumeric() || c.is_whitespace())
@@ -12,6 +13,7 @@ pub fn parameterize(text: &str) -> String {
 }
 
 /// Normalize display name: remove control characters, preserve unicode
+#[allow(dead_code)]
 pub fn normalize_display_name(name: &str) -> String {
     name.trim()
         .nfc()

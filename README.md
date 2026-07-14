@@ -60,6 +60,12 @@ cd rust-nuxt-boilerplate
 # Generate secure secrets
 ./scripts/generate-secrets.sh
 
+# commands diesel cli
+diesel database reset
+diesel migration run
+diesel migration redo
+diesel migration revert
+
 # Review generated .env file
 cat .env
 ```

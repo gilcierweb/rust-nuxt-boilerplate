@@ -17,6 +17,7 @@ pub struct Money {
 }
 
 impl Money {
+    #[allow(dead_code)]
     pub fn new(amount_minor: i64, currency: Currency) -> Self {
         Self {
             amount_minor,

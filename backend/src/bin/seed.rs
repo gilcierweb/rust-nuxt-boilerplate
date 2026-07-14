@@ -9,17 +9,10 @@ use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel::sql_types::{Text, Uuid as SqlUuid};
 use faker_rust::{name};
-use hmac::{Hmac, Mac};
 use ipnet::IpNet;
 use rand::RngCore;
-use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use uuid::Uuid;
-
-use aes_gcm::{
-    aead::{Aead, KeyInit},
-    Aes256Gcm, Nonce,
-};
 
 #[path = "../db/schema.rs"]
 mod schema;
@@ -99,10 +92,9 @@ fn pool() -> SeedResult<PgPool> {
 }
 
 fn protect_email(email: &str) -> SeedResult<(Vec<u8>, Vec<u8>, i32)> {
-    use crate::schema::users::dsl::*;
-    use diesel::dsl::sql_query;
-    use diesel::sql_types::Bytea;
-
+    use aes_gcm::aead::{Aead, KeyInit};
+    use hmac::Mac;
+    use sha2::Digest;
     let normalized = email
         .trim()
         .to_lowercase()

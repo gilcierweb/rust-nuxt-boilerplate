@@ -41,6 +41,7 @@ pub async fn customer_scope_ids(
     Ok(Some(customer_ids))
 }
 
+#[allow(dead_code)]
 pub fn ensure_customer_in_scope(scope: Option<&HashSet<Uuid>>, customer_id: Uuid) -> AppResult<()> {
     match scope {
         Some(ids) if !ids.contains(&customer_id) => Err(customer_scope_denied()),
