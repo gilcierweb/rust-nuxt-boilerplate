@@ -1,15 +1,23 @@
 use unicode_normalization::UnicodeNormalization;
+use uuid::Uuid;
 
 /// Simulates the behavior of ActiveSupport's `String#parameterize` (Rails)
 #[allow(dead_code)]
 pub fn parameterize(text: &str) -> String {
-    text.nfd() // Decomposes characters (e.g., 'á' -> 'a' + '´')
+    text.nfd()
         .filter(|c| c.is_ascii_alphanumeric() || c.is_whitespace())
         .collect::<String>()
         .to_lowercase()
-        .split_whitespace() // Treats multiple spaces as one
+        .split_whitespace()
         .collect::<Vec<_>>()
         .join("-")
+}
+
+/// parameterize + UUID suffix for guaranteed uniqueness
+#[allow(dead_code)]
+pub fn parameterize_unique(text: &str) -> String {
+    let slug = parameterize(text);
+    format!("{slug}-{}", Uuid::new_v4())
 }
 
 /// Normalize display name: remove control characters, preserve unicode

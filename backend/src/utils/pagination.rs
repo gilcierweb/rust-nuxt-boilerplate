@@ -1,8 +1,7 @@
-#![allow(dead_code)]
-
 use serde::{Deserialize, Serialize};
 
 /// Pagination parameters for list endpoints
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone, Copy)]
 pub struct PaginationParams {
     /// Page number (1-based)
@@ -15,16 +14,19 @@ pub struct PaginationParams {
 
 impl PaginationParams {
     /// Returns offset for database queries
+    #[allow(dead_code)]
     pub fn offset(&self) -> i64 {
         ((self.page - 1) * self.per_page).max(0)
     }
 
     /// Returns limit for database queries
+    #[allow(dead_code)]
     pub fn limit(&self) -> i64 {
         self.per_page.clamp(1, 100)
     }
 
     /// Creates pagination params with defaults
+    #[allow(dead_code)]
     pub fn new(page: i64, per_page: i64) -> Self {
         Self {
             page: page.max(1),
@@ -42,15 +44,18 @@ impl Default for PaginationParams {
     }
 }
 
+#[allow(dead_code)]
 fn default_page() -> i64 {
     1
 }
 
+#[allow(dead_code)]
 fn default_per_page() -> i64 {
     20
 }
 
 /// Paginated response wrapper
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PaginatedResponse<T> {
     pub data: Vec<T>,
@@ -58,6 +63,7 @@ pub struct PaginatedResponse<T> {
 }
 
 impl<T> PaginatedResponse<T> {
+    #[allow(dead_code)]
     pub fn new(data: Vec<T>, total: i64, page: i64, per_page: i64) -> Self {
         let total_pages = (total as f64 / per_page as f64).ceil() as i64;
         Self {
@@ -75,6 +81,7 @@ impl<T> PaginatedResponse<T> {
 }
 
 /// Pagination metadata
+#[allow(dead_code)]
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PaginationMeta {
     pub page: i64,
@@ -86,6 +93,7 @@ pub struct PaginationMeta {
 }
 
 /// Cursor-based pagination params
+#[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]
 pub struct CursorParams {
     pub cursor: Option<String>,
@@ -94,12 +102,14 @@ pub struct CursorParams {
 }
 
 impl CursorParams {
+    #[allow(dead_code)]
     pub fn limit(&self) -> i64 {
         self.limit.clamp(1, 100)
     }
 }
 
 /// Cursor-based paginated response
+#[allow(dead_code)]
 #[derive(Debug, Serialize)]
 pub struct CursorResponse<T> {
     pub data: Vec<T>,
@@ -108,6 +118,7 @@ pub struct CursorResponse<T> {
 }
 
 impl<T> CursorResponse<T> {
+    #[allow(dead_code)]
     pub fn new(data: Vec<T>, next_cursor: Option<String>, has_more: bool) -> Self {
         Self {
             data,

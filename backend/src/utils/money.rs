@@ -5,9 +5,9 @@ use std::ops::{Add, Sub};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Currency {
-    BRL,
-    USD,
-    EUR,
+    Brl,
+    Usd,
+    Euro,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,7 +26,7 @@ impl Money {
     }
 
     /// Converte para decimal (ex: 1050 -> 10.50)
-    pub fn to_decimal(&self) -> BigDecimal {
+    pub fn to_decimal(self) -> BigDecimal {
         BigDecimal::from(self.amount_minor) / BigDecimal::from(100)
     }
 
@@ -58,6 +58,7 @@ impl Money {
     }
 
     /// Soma segura (mesma moeda)
+    #[allow(dead_code)]
     pub fn checked_add(self, other: Self) -> Self {
         assert_eq!(self.currency, other.currency, "Moedas diferentes");
 
@@ -68,6 +69,7 @@ impl Money {
     }
 
     /// Subtração segura
+    #[allow(dead_code)]
     pub fn checked_sub(self, other: Self) -> Self {
         assert_eq!(self.currency, other.currency, "Moedas diferentes");
 

@@ -1,6 +1,12 @@
 use crate::db::database::DBPool;
 use diesel::prelude::*;
 
+#[derive(QueryableByName)]
+struct ExistsResult {
+    #[diesel(sql_type = diesel::sql_types::Bool)]
+    flag: bool,
+}
+
 pub struct BaseRepo {
     pub pool: DBPool,
 }
@@ -29,5 +35,33 @@ impl BaseRepo {
                 Box::new(e.to_string()),
             ))
         })
+    }
+
+    /// Generic exists? — equivalent to Rails' `Model.exists?(column: value)`.
+    ///
+    /// Uses `SELECT EXISTS(...)` with parameterized values ($1) for safety.
+    /// `table` and `column` are developer-controlled identifiers (never user input).
+    ///
+    /// # Examples
+    /// ```ignore
+    /// // Rails equivalent:
+    /// // User.exists?(email: "foo@bar.com")
+    /// repo.base.exists("users", "email", "foo@bar.com").await?
+    ///
+    /// // Establishment.exists?(slug: "restaurante-bom")
+    /// repo.base.exists("establishments", "slug", "restaurante-bom").await?
+    /// ```
+    pub async fn exists(&self, table: &str, column: &str, value: &str) -> QueryResult<bool> {
+        let tbl = table.to_string();
+        let col = column.to_string();
+        let val = value.to_string();
+        self.run(move |conn| {
+            let query = format!("SELECT EXISTS(SELECT 1 FROM {tbl} WHERE {col} = $1) AS flag");
+            let result = diesel::sql_query(query)
+                .bind::<diesel::sql_types::Text, _>(&val)
+                .get_result::<ExistsResult>(conn)?;
+            Ok(result.flag)
+        })
+        .await
     }
 }

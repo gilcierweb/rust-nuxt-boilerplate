@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use ammonia;
 use std::collections::HashSet;
 
@@ -11,11 +9,13 @@ pub fn sanitize_input(input: &str) -> String {
         .collect()
 }
 
+#[allow(dead_code)]
 pub fn validate_length(input: &str, min: usize, max: usize) -> bool {
     let len = input.chars().count();
     len >= min && len <= max
 }
 
+#[allow(dead_code)]
 pub fn contains_dangerous_patterns(input: &str) -> bool {
     let lower = input.to_lowercase();
     [
@@ -39,6 +39,7 @@ pub fn sanitize_html(input: &str) -> String {
     ammonia::Builder::new().tags(tags).clean(input).to_string()
 }
 
+#[allow(dead_code)]
 pub fn strip_html(input: &str) -> String {
     ammonia::Builder::new()
         .tags(HashSet::new())
