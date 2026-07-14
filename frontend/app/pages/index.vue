@@ -22,10 +22,9 @@
             <div class="flex flex-wrap items-center gap-4">
               <a class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2"
                  href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank">View on GitHub <span
-                  class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span></a>
+                  class="icon-[tabler--arrow-right]"></span></a>
               <a class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50"
-                 href="#features">Explore Features <span class="material-symbols-outlined"
-                                                         data-icon="explore">explore</span></a>
+                 href="#features">Explore Features <span class="icon-[tabler--compass]"></span></a>
             </div>
           </div>
           <div
@@ -40,7 +39,7 @@
                 <div
                     class="bg-surface rounded-xl border border-outline-variant/20 h-full flex flex-col overflow-hidden">
                   <div class="p-4 border-b border-outline-variant/20 flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary" data-icon="code">code</span>
+                    <span class="icon-[tabler--code] text-primary"></span>
                     <span class="font-headline-sm text-headline-sm text-on-surface">main.rs</span>
                   </div>
                   <pre
@@ -117,7 +116,7 @@ async fn main() -> std::io::Result<()> {
                 class="bg-surface p-8 rounded-2xl border border-outline-variant/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
-                <span class="material-symbols-outlined text-3xl" data-icon="bolt">bolt</span></div>
+                <span class="icon-[tabler--bolt] text-3xl"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Zero-Config Start</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">Clone, run `docker compose up`, and you have
                 a working full-stack app with hot-reload in seconds.</p>
@@ -126,7 +125,7 @@ async fn main() -> std::io::Result<()> {
                 class="bg-surface p-8 rounded-2xl border border-outline-variant/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
-                <span class="material-symbols-outlined text-3xl" data-icon="security">security</span></div>
+                <span class="icon-[tabler--shield-lock] text-3xl"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Secure by Default</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">JWT auth, PBKDF2 password hashing, RBAC
                 permissions, CSRF protection, and encrypted sensitive fields out of the box.</p>
@@ -135,7 +134,7 @@ async fn main() -> std::io::Result<()> {
                 class="bg-surface p-8 rounded-2xl border border-outline-variant/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
-                <span class="material-symbols-outlined text-3xl" data-icon="architecture">architecture</span></div>
+                <span class="icon-[tabler--building-estate] text-3xl"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Clean Architecture</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">Domain-driven design with repositories,
                 services, controllers, and middleware separated for maintainability.</p>
@@ -152,8 +151,7 @@ async fn main() -> std::io::Result<()> {
                 class="order-2 lg:order-1 relative rounded-[2rem] overflow-hidden shadow-xl border border-outline-variant/30 aspect-[4/3] bg-surface-container">
               <div
                   class="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 flex items-center justify-center">
-                <div class="text-center p-8"><span class="material-symbols-outlined text-8xl text-primary/30 mb-4"
-                                                   data-icon="integration_instructions">integration_instructions</span>
+                <div class="text-center p-8"><span class="icon-[tabler--file-code-2] text-8xl text-primary/30 mb-4"></span>
                   <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Full-Stack Type Safety</h3>
                   <p class="font-body-md text-body-md text-on-surface-variant max-w-xs mx-auto">Shared types between
                     Rust backend and TypeScript frontend via OpenAPI generation.</p></div>
@@ -165,26 +163,21 @@ async fn main() -> std::io::Result<()> {
               <p class="font-body-lg text-body-lg text-on-surface-variant mb-8">Each technology chosen for developer
                 experience, performance, and long-term stability.</p>
               <ul class="space-y-4 mb-8">
-                <li class="flex items-start gap-3"><span class="material-symbols-outlined text-primary mt-0.5"
-                                                         data-icon="check_circle">check_circle</span><span
+                <li class="flex items-start gap-3"><span class="icon-[tabler--circle-check] text-primary mt-0.5"></span><span
                     class="font-body-md text-body-md text-on-surface"><strong>Backend:</strong> Rust + Actix Web + Diesel ORM + PostgreSQL</span>
                 </li>
-                <li class="flex items-start gap-3"><span class="material-symbols-outlined text-primary mt-0.5"
-                                                         data-icon="check_circle">check_circle</span><span
+                <li class="flex items-start gap-3"><span class="icon-[tabler--circle-check] text-primary mt-0.5"></span><span
                     class="font-body-md text-body-md text-on-surface"><strong>Frontend:</strong> Nuxt 4 + Vue 3 + TypeScript + Tailwind CSS 4</span>
                 </li>
-                <li class="flex items-start gap-3"><span class="material-symbols-outlined text-primary mt-0.5"
-                                                         data-icon="check_circle">check_circle</span><span
+                <li class="flex items-start gap-3"><span class="icon-[tabler--circle-check] text-primary mt-0.5"></span><span
                     class="font-body-md text-body-md text-on-surface"><strong>Auth:</strong> JWT + PBKDF2 + Paseto tokens + RBAC</span>
                 </li>
-                <li class="flex items-start gap-3"><span class="material-symbols-outlined text-primary mt-0.5"
-                                                         data-icon="check_circle">check_circle</span><span
+                <li class="flex items-start gap-3"><span class="icon-[tabler--circle-check] text-primary mt-0.5"></span><span
                     class="font-body-md text-body-md text-on-surface"><strong>DevOps:</strong> Docker + Docker Compose + Hot Reload</span>
                 </li>
               </ul>
               <a class="text-primary font-headline-md text-headline-md font-medium hover:underline flex items-center gap-1"
-                 href="#tech-details">View Full Stack <span class="material-symbols-outlined text-sm"
-                                                            data-icon="chevron_right">chevron_right</span></a>
+                 href="#tech-details">View Full Stack <span class="icon-[tabler--chevron-right] text-sm"></span></a>
             </div>
           </div>
         </div>
@@ -202,7 +195,7 @@ async fn main() -> std::io::Result<()> {
                 class="md:col-span-2 bg-surface border border-outline-variant/30 rounded-3xl p-8 relative overflow-hidden group hover:shadow-md transition-shadow">
               <div class="relative z-10 w-2/3">
                 <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                  <span class="material-symbols-outlined" data-icon="shield">shield</span></div>
+                  <span class="icon-[tabler--shield]"></span></div>
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Complete Auth System</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">JWT access/refresh tokens, Paseto for email
                   verification, PBKDF2 password hashing, 2FA/TOTP, OAuth2 providers ready.</p></div>
@@ -212,7 +205,7 @@ async fn main() -> std::io::Result<()> {
             <div
                 class="bg-surface-container-low border border-outline-variant/30 rounded-3xl p-8 relative overflow-hidden group hover:shadow-md transition-shadow">
               <div class="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center text-secondary mb-4">
-                <span class="material-symbols-outlined" data-icon="admin_panel_settings">admin_panel_settings</span>
+                <span class="icon-[tabler--shield-cog]"></span>
               </div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Admin Panel</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">User management, role editor, audit logs,
@@ -220,7 +213,7 @@ async fn main() -> std::io::Result<()> {
             <div
                 class="bg-surface-container-low border border-outline-variant/30 rounded-3xl p-8 relative overflow-hidden group hover:shadow-md transition-shadow">
               <div class="w-12 h-12 rounded-full bg-tertiary/10 flex items-center justify-center text-tertiary mb-4">
-                <span class="material-symbols-outlined" data-icon="database">database</span></div>
+                <span class="icon-[tabler--database]"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Type-Safe Database</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">Diesel ORM with compile-time SQL
                 verification, migrations, connection pooling, and repository pattern.</p></div>
@@ -228,7 +221,7 @@ async fn main() -> std::io::Result<()> {
                 class="md:col-span-2 bg-surface border border-outline-variant/30 rounded-3xl p-8 relative overflow-hidden group hover:shadow-md transition-shadow">
               <div class="relative z-10 w-2/3">
                 <div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-4">
-                  <span class="material-symbols-outlined" data-icon="api">api</span></div>
+                  <span class="icon-[tabler--api]"></span></div>
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">OpenAPI + Type Generation</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">Auto-generated OpenAPI 3.1 spec with
                   TypeScript client types. Zero-drift API contracts.</p></div>
@@ -252,7 +245,7 @@ async fn main() -> std::io::Result<()> {
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mx-auto mb-4 text-primary">
-                <span class="material-symbols-outlined text-3xl" data-icon="domain">domain</span></div>
+                <span class="icon-[tabler--building] text-3xl"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Domain Layer</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">Entities, value objects, domain events, and
                 business rules. Pure Rust, zero dependencies.</p></div>
@@ -260,7 +253,7 @@ async fn main() -> std::io::Result<()> {
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mx-auto mb-4 text-secondary">
-                <span class="material-symbols-outlined text-3xl" data-icon="storage">storage</span></div>
+                <span class="icon-[tabler--server] text-3xl"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Data Layer</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">Diesel repositories, migrations, connection
                 pooling, and query builder. Type-safe SQL.</p></div>
@@ -268,7 +261,7 @@ async fn main() -> std::io::Result<()> {
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mx-auto mb-4 text-tertiary">
-                <span class="material-symbols-outlined text-3xl" data-icon="build">build</span></div>
+                <span class="icon-[tabler--tool] text-3xl"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Application Layer</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">Services, use cases, DTOs, and transaction
                 management. Orchestrates domain and data.</p></div>
@@ -276,7 +269,7 @@ async fn main() -> std::io::Result<()> {
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mx-auto mb-4 text-primary">
-                <span class="material-symbols-outlined text-3xl" data-icon="cloud">cloud</span></div>
+                <span class="icon-[tabler--cloud] text-3xl"></span></div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Interface Layer</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">Actix Web controllers, middleware, OpenAPI
                 docs, WebSocket server, and Nuxt frontend.</p></div>
@@ -292,8 +285,7 @@ async fn main() -> std::io::Result<()> {
                 class="order-2 lg:order-1 relative rounded-[2rem] overflow-hidden shadow-xl border border-outline-variant/30 aspect-[4/3] bg-surface-container">
               <div
                   class="absolute inset-0 bg-gradient-to-br from-primary/5 to-secondary/5 flex items-center justify-center p-8">
-                <div class="text-center"><span class="material-symbols-outlined text-8xl text-primary/30 mb-4"
-                                               data-icon="dashboard">dashboard</span>
+                <div class="text-center"><span class="icon-[tabler--layout-dashboard] text-8xl text-primary/30 mb-4"></span>
                   <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Admin Dashboard</h3>
                   <p class="font-body-md text-body-md text-on-surface-variant max-w-xs mx-auto">Real-time metrics, user
                     management, audit trails, and system health in one place.</p></div>
@@ -307,15 +299,13 @@ async fn main() -> std::io::Result<()> {
                 access, comprehensive audit logging, and real-time metrics.</p>
               <div class="space-y-6">
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
-                  <div class="mt-1 text-secondary"><span class="material-symbols-outlined"
-                                                         data-icon="people">people</span></div>
+                  <div class="mt-1 text-secondary"><span class="icon-[tabler--users]"></span></div>
                   <div><h4 class="font-headline-md text-headline-md text-on-surface mb-1">User & Role Management</h4>
                     <p class="font-body-md text-body-md text-on-surface-variant">Create users, assign roles, configure
                       permissions with visual editor.</p></div>
                 </div>
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
-                  <div class="mt-1 text-secondary"><span class="material-symbols-outlined"
-                                                         data-icon="history">history</span></div>
+                  <div class="mt-1 text-secondary"><span class="icon-[tabler--history]"></span></div>
                   <div><h4 class="font-headline-md text-headline-md text-on-surface mb-1">Audit Logging</h4>
                     <p class="font-body-md text-body-md text-on-surface-variant">Full trail of critical actions with
                       actor, resource, changes, and metadata.</p></div>
@@ -346,23 +336,22 @@ docker compose up --watch`}</code></pre>
                 and Vue frontend. TypeScript types regenerate automatically on API changes.</p>
               <div class="grid grid-cols-2 gap-6">
                 <div class="bg-surface-container-low p-5 rounded-2xl"><span
-                    class="material-symbols-outlined text-tertiary mb-2 block" data-icon="sync">sync</span><h4
+                    class="icon-[tabler--refresh] text-tertiary mb-2 block"></span><h4
                     class="font-headline-md text-headline-md text-on-surface mb-1 text-sm">Hot Reload</h4>
                   <p class="font-body-md text-body-md text-on-surface-variant text-xs">Rust + Vue simultaneous
                     reload</p></div>
                 <div class="bg-surface-container-low p-5 rounded-2xl"><span
-                    class="material-symbols-outlined text-tertiary mb-2 block" data-icon="bug_report">bug_report</span>
+                    class="icon-[tabler--bug] text-tertiary mb-2 block"></span>
                   <h4 class="font-headline-md text-headline-md text-on-surface mb-1 text-sm">Debug Support</h4>
                   <p class="font-body-md text-body-md text-on-surface-variant text-xs">VS Code launch configs
                     included</p></div>
                 <div class="bg-surface-container-low p-5 rounded-2xl"><span
-                    class="material-symbols-outlined text-tertiary mb-2 block" data-icon="terminal">terminal</span><h4
+                    class="icon-[tabler--terminal] text-tertiary mb-2 block"></span><h4
                     class="font-headline-md text-headline-md text-on-surface mb-1 text-sm">CLI Tools</h4>
                   <p class="font-body-md text-body-md text-on-surface-variant text-xs">Migration, seed, codegen
                     commands</p></div>
                 <div class="bg-surface-container-low p-5 rounded-2xl"><span
-                    class="material-symbols-outlined text-tertiary mb-2 block"
-                    data-icon="description">description</span><h4
+                    class="icon-[tabler--file-text] text-tertiary mb-2 block"></span><h4
                     class="font-headline-md text-headline-md text-on-surface mb-1 text-sm">API Docs</h4>
                   <p class="font-body-md text-body-md text-on-surface-variant text-xs">Swagger UI + Scalar at
                     /swagger-ui</p></div>
@@ -451,17 +440,13 @@ docker compose up --watch`}</code></pre>
                   case.</p>
                 <div class="mb-6"><span class="text-4xl font-bold text-on-surface font-display-xl">FREE</span></div>
                 <ul class="space-y-4 mb-8 flex-1">
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">Commercial use allowed</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">Modification & distribution</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">Private use</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">No attribution required</span></li>
                 </ul>
                 <button
@@ -480,20 +465,15 @@ docker compose up --watch`}</code></pre>
                   applications.</p>
                 <div class="mb-6"><span class="text-4xl font-bold font-display-xl">Contact Us</span></div>
                 <ul class="space-y-4 mb-8 flex-1">
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span
                       class="font-body-md text-sm">Priority email support</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span
                       class="font-body-md text-sm">Dedicated Slack channel</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span
                       class="font-body-md text-sm">Security advisory notifications</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span
                       class="font-body-md text-sm">Migration assistance</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span
                       class="font-body-md text-sm">Architecture review (annual)</span></li>
                 </ul>
                 <button
@@ -507,20 +487,15 @@ docker compose up --watch`}</code></pre>
                   requirements.</p>
                 <div class="mb-6"><span class="text-4xl font-bold text-on-surface font-display-xl">Custom</span></div>
                 <ul class="space-y-4 mb-8 flex-1">
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">SLA with guaranteed response times</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">Custom feature development</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">Security audit assistance</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">On-premise deployment support</span></li>
-                  <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm"
-                                                            data-icon="check">check</span><span
+                  <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span
                       class="font-body-md text-sm">Team training & workshops</span></li>
                 </ul>
                 <button
@@ -588,7 +563,7 @@ docker compose up --build
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Discord Community</h3>
               <p class="font-body-md text-body-md text-on-surface-variant mb-6">Get help, share ideas, and connect with
                 other builders.</p><a class="btn btn-outline btn-primary" href="#" target="_blank"><span
-                class="material-symbols-outlined mr-2" data-icon="chat">chat</span>Join Discord</a></div>
+                class="icon-[tabler--message-circle] mr-2"></span>Join Discord</a></div>
             <div
                 class="bg-surface border-2 border-primary/20 p-8 rounded-3xl shadow-md relative transform md:-translate-y-4">
               <div
@@ -599,13 +574,13 @@ docker compose up --build
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">GitHub Discussions</h3>
               <p class="font-body-md text-body-md text-on-surface-variant mb-6">Ask questions, request features, report
                 bugs, and contribute code.</p><a class="btn btn-primary" href="#" target="_blank"><span
-                class="material-symbols-outlined mr-2" data-icon="code">code</span>View Repository</a></div>
+                class="icon-[tabler--code] mr-2"></span>View Repository</a></div>
             <div class="bg-surface-container-lowest border border-outline-variant/30 p-8 rounded-3xl shadow-sm">
               <div class="text-4xl font-black text-primary mb-4 font-display-xl">📖</div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Documentation</h3>
               <p class="font-body-md text-body-md text-on-surface-variant mb-6">Comprehensive guides, API reference, and
                 architecture deep-dives.</p><a class="btn btn-outline btn-primary" href="#" target="_blank"><span
-                class="material-symbols-outlined mr-2" data-icon="menu_book">menu_book</span>Read Docs</a></div>
+                class="icon-[tabler--book] mr-2"></span>Read Docs</a></div>
           </div>
         </div>
       </section>
@@ -625,10 +600,10 @@ docker compose up --build
               <div class="flex flex-wrap justify-center gap-4"><a
                   href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"
                   class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2"><span
-                  class="material-symbols-outlined" data-icon="rocket_launch">rocket_launch</span>Star on GitHub</a><a
+                  class="icon-[tabler--rocket]"></span>Star on GitHub</a><a
                   href="#getting-started"
                   class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50"><span
-                  class="material-symbols-outlined" data-icon="play_arrow">play_arrow</span>View Quick Start</a></div>
+                  class="icon-[tabler--player-play]"></span>View Quick Start</a></div>
             </div>
           </div>
         </div>

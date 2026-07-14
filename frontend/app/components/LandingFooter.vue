@@ -3,13 +3,13 @@
     <div class="max-w-[1440px] mx-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-8 mb-12">
       <div class="col-span-2">
         <div class="flex items-center gap-2 mb-4">
-          <span class="material-symbols-outlined text-primary text-3xl" data-icon="code">code</span>
+          <span class="icon-[tabler--code] text-primary text-3xl" />
           <span class="text-xl font-bold text-on-surface font-display-xl tracking-tight">RustNuxt Boilerplate</span>
         </div>
         <p class="text-sm leading-relaxed text-on-surface-variant mb-6 max-w-xs">A production-ready Rust (Actix Web) + Nuxt 4 boilerplate with authentication, RBAC, admin panel, and modern developer experience.</p>
         <div class="flex gap-4">
-          <a class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"><span class="material-symbols-outlined text-sm" data-icon="code">code</span></a>
-          <a class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="mailto:contact@example.com"><span class="material-symbols-outlined text-sm" data-icon="mail">mail</span></a>
+          <a class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"><span class="icon-[tabler--code] text-sm" /></a>
+          <a class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="mailto:contact@example.com"><span class="icon-[tabler--mail] text-sm" /></a>
         </div>
       </div>
       <div>

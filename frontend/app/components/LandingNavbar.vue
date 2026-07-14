@@ -4,7 +4,7 @@
       <div class="max-w-[1440px] mx-auto px-6 h-20 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <NuxtLink to="/">
-            <span class="material-symbols-outlined text-primary text-3xl" data-icon="code">code</span>
+            <span class="icon-[tabler--code] text-primary text-3xl" />
             <span class="text-2xl font-black tracking-tight text-primary font-display-xl">RustNuxt</span>
           </NuxtLink>
         </div>

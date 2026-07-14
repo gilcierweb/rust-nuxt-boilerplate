@@ -6,7 +6,7 @@
         <div class="absolute inset-0 bg-gradient-to-br from-primary-container/10 to-transparent pointer-events-none"></div>
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
-            <span class="material-symbols-outlined text-sm" data-icon="play_circle">play_circle</span>
+            <span class="icon-[tabler--player-play] text-sm"></span>
             Getting Started Guide
           </div>
           <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight max-w-4xl mx-auto">
@@ -29,7 +29,7 @@
                   1
                 </div>
                 <div class="w-16 h-16 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 mt-4 text-primary">
-                  <span class="material-symbols-outlined text-3xl" data-icon="download">download</span>
+                  <span class="icon-[tabler--download] text-3xl"></span>
                 </div>
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Clone & Install</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
@@ -37,15 +37,15 @@
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-primary text-sm"></span>
                     Git clone the repo
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-primary text-sm"></span>
                     Docker Compose up
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-primary text-sm"></span>
                     Auto-migrations run
                   </li>
                 </ul>
@@ -59,7 +59,7 @@
                   2
                 </div>
                 <div class="w-16 h-16 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 mt-4 text-secondary">
-                  <span class="material-symbols-outlined text-3xl" data-icon="tune">tune</span>
+                  <span class="icon-[tabler--adjustments] text-3xl"></span>
                 </div>
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Configure Environment</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
@@ -67,15 +67,15 @@
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-secondary text-sm"></span>
                     Copy .env.example
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-secondary text-sm"></span>
                     Set DATABASE_URL
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-secondary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-secondary text-sm"></span>
                     Configure JWT secrets
                   </li>
                 </ul>
@@ -89,7 +89,7 @@
                   3
                 </div>
                 <div class="w-16 h-16 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 mt-4 text-tertiary">
-                  <span class="material-symbols-outlined text-3xl" data-icon="person_add">person_add</span>
+                  <span class="icon-[tabler--user-plus] text-3xl"></span>
                 </div>
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Create Admin User</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
@@ -97,15 +97,15 @@
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-tertiary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-tertiary text-sm"></span>
                     Run seed command
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-tertiary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-tertiary text-sm"></span>
                     Admin user created
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-tertiary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-tertiary text-sm"></span>
                     Default roles assigned
                   </li>
                 </ul>
@@ -119,7 +119,7 @@
                   4
                 </div>
                 <div class="w-16 h-16 rounded-xl bg-success-container/10 flex items-center justify-center mb-6 mt-4 text-success">
-                  <span class="material-symbols-outlined text-3xl" data-icon="admin_panel_settings">admin_panel_settings</span>
+                  <span class="icon-[tabler--shield-cog] text-3xl"></span>
                 </div>
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Explore Admin Panel</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
@@ -127,15 +127,15 @@
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-success text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-success text-sm"></span>
                     Dashboard with metrics
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-success text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-success text-sm"></span>
                     User & role management
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-success text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-success text-sm"></span>
                     Audit logs & health
                   </li>
                 </ul>
@@ -149,7 +149,7 @@
                   5
                 </div>
                 <div class="w-16 h-16 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 mt-4 text-primary">
-                  <span class="material-symbols-outlined text-3xl" data-icon="rocket_launch">rocket_launch</span>
+                  <span class="icon-[tabler--rocket] text-3xl"></span>
                 </div>
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Start Building</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
@@ -157,15 +157,15 @@
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-primary text-sm"></span>
                     Add domain models
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-primary text-sm"></span>
                     Create API endpoints
                   </li>
                   <li class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                    <span class="icon-[tabler--check] text-primary text-sm"></span>
                     Deploy to production
                   </li>
                 </ul>              </div>
@@ -187,7 +187,7 @@
           <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
-                <span class="material-symbols-outlined text-3xl" data-icon="shield">shield</span>
+                <span class="icon-[tabler--shield] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Authentication System</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -197,7 +197,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
-                <span class="material-symbols-outlined text-3xl" data-icon="admin_panel_settings">admin_panel_settings</span>
+                <span class="icon-[tabler--shield-cog] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">RBAC Authorization</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -207,7 +207,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
-                <span class="material-symbols-outlined text-3xl" data-icon="database">database</span>
+                <span class="icon-[tabler--database] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Type-Safe Database</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -217,7 +217,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
-                <span class="material-symbols-outlined text-3xl" data-icon="api">api</span>
+                <span class="icon-[tabler--api] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">OpenAPI + Type Gen</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -227,7 +227,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
-                <span class="material-symbols-outlined text-3xl" data-icon="analytics">analytics</span>
+                <span class="icon-[tabler--chart-bar] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Admin Dashboard</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -237,7 +237,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
-                <span class="material-symbols-outlined text-3xl" data-icon="integration_instructions">integration_instructions</span>
+                <span class="icon-[tabler--file-code-2] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Developer Experience</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -247,7 +247,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
-                <span class="material-symbols-outlined text-3xl" data-icon="security">security</span>
+                <span class="icon-[tabler--shield-lock] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Data Protection</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -257,7 +257,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
-                <span class="material-symbols-outlined text-3xl" data-icon="cloud">cloud</span>
+                <span class="icon-[tabler--cloud] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Deployment Ready</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -267,7 +267,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
-                <span class="material-symbols-outlined text-3xl" data-icon="extension">extension</span>
+                <span class="icon-[tabler--puzzle] text-3xl"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Extensible Core</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -290,28 +290,28 @@
               </p>
               <div class="space-y-6">
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
-                  <div class="mt-1 text-secondary"><span class="material-symbols-outlined" data-icon="domain">domain</span></div>
+                  <div class="mt-1 text-secondary"><span class="icon-[tabler--building]"></span></div>
                   <div>
                     <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Domain Layer</h4>
                     <p class="font-body-md text-body-md text-on-surface-variant">Entities, value objects, domain events, business rules. Pure Rust, zero dependencies.</p>
                   </div>
                 </div>
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
-                  <div class="mt-1 text-secondary"><span class="material-symbols-outlined" data-icon="storage">storage</span></div>
+                  <div class="mt-1 text-secondary"><span class="icon-[tabler--server]"></span></div>
                   <div>
                     <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Data Layer</h4>
                     <p class="font-body-md text-body-md text-on-surface-variant">Diesel repositories, migrations, connection pooling, query builder. Type-safe SQL.</p>
                   </div>
                 </div>
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
-                  <div class="mt-1 text-secondary"><span class="material-symbols-outlined" data-icon="build">build</span></div>
+                  <div class="mt-1 text-secondary"><span class="icon-[tabler--tool]"></span></div>
                   <div>
                     <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Application Layer</h4>
                     <p class="font-body-md text-body-md text-on-surface-variant">Services, use cases, DTOs, transaction management. Orchestrates domain and data.</p>
                   </div>
                 </div>
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
-                  <div class="mt-1 text-secondary"><span class="material-symbols-outlined" data-icon="cloud">cloud</span></div>
+                  <div class="mt-1 text-secondary"><span class="icon-[tabler--cloud]"></span></div>
                   <div>
                     <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Interface Layer</h4>
                     <p class="font-body-md text-body-md text-on-surface-variant">Actix Web controllers, middleware, OpenAPI docs, WebSocket server, Nuxt frontend.</p>
@@ -380,7 +380,7 @@
               <div class="space-y-4">
                 <div class="flex items-center gap-4 p-4 bg-surface rounded-xl border border-outline-variant/30">
                   <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined text-2xl" data-icon="payments">payments</span>
+                    <span class="icon-[tabler--credit-card] text-2xl"></span>
                   </div>
                   <div>
                     <h4 class="font-headline-sm text-headline-sm text-on-surface">Payment Gateways</h4>
@@ -390,7 +390,7 @@
 
                 <div class="flex items-center gap-4 p-4 bg-surface rounded-xl border border-outline-variant/30">
                   <div class="w-12 h-12 rounded-lg bg-secondary/10 flex items-center justify-center text-secondary">
-                    <span class="material-symbols-outlined text-2xl" data-icon="sms">sms</span>
+                    <span class="icon-[tabler--message] text-2xl"></span>
                   </div>
                   <div>
                     <h4 class="font-headline-sm text-headline-sm text-on-surface">SMS & WhatsApp</h4>
@@ -400,7 +400,7 @@
 
                 <div class="flex items-center gap-4 p-4 bg-surface rounded-xl border border-outline-variant/30">
                   <div class="w-12 h-12 rounded-lg bg-tertiary/10 flex items-center justify-center text-tertiary">
-                    <span class="material-symbols-outlined text-2xl" data-icon="account_balance">account_balance</span>
+                    <span class="icon-[tabler--building-bank] text-2xl"></span>
                   </div>
                   <div>
                     <h4 class="font-headline-sm text-headline-sm text-on-surface">Accounting & ERP</h4>
@@ -410,7 +410,7 @@
 
                 <div class="flex items-center gap-4 p-4 bg-surface rounded-xl border border-outline-variant/30">
                   <div class="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
-                    <span class="material-symbols-outlined text-2xl" data-icon="cloud">cloud</span>
+                    <span class="icon-[tabler--cloud] text-2xl"></span>
                   </div>
                   <div>
                     <h4 class="font-headline-sm text-headline-sm text-on-surface">Storage Providers</h4>
@@ -425,7 +425,7 @@
               <div class="relative z-10">
                 <div class="aspect-square bg-surface-container-low rounded-2xl flex items-center justify-center">
                   <div class="text-center">
-                    <span class="material-symbols-outlined text-8xl text-primary/30 mb-4" data-icon="hub">hub</span>
+                    <span class="icon-[tabler--router] text-8xl text-primary/30 mb-4"></span>
                     <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Open API</h3>
                     <p class="font-body-md text-body-md text-on-surface-variant max-w-xs">
                       Build custom integrations with our REST API and auto-generated TypeScript client.
@@ -454,10 +454,10 @@
                 <span class="text-4xl font-bold text-on-surface font-display-xl">FREE</span>
               </div>
               <ul class="space-y-4 mb-8 flex-1">
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Full source code access</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">All core features included</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Community Discord support</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">MIT License - commercial use OK</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Full source code access</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">All core features included</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Community Discord support</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">MIT License - commercial use OK</span></li>
               </ul>
               <a href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank" class="w-full py-3 rounded-xl border border-primary text-primary font-headline-md text-headline-md hover:bg-primary/5 transition-colors">
                 View on GitHub
@@ -473,11 +473,11 @@
                 <span class="text-4xl font-bold font-display-xl">Contact Us</span>
               </div>
               <ul class="space-y-4 mb-8 flex-1">
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Priority email support</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Dedicated Slack channel</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Security advisory notifications</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Migration assistance</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary-fixed text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Architecture review (annual)</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Priority email support</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Dedicated Slack channel</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Security advisory notifications</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Migration assistance</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Architecture review (annual)</span></li>
               </ul>
               <button class="w-full py-3 rounded-xl bg-on-primary text-primary font-headline-md text-headline-md hover:bg-white/90 transition-colors">
                 Get Pro Support
@@ -490,11 +490,11 @@
                 <span class="text-4xl font-bold text-on-surface font-display-xl">Custom</span>
               </div>
               <ul class="space-y-4 mb-8 flex-1">
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">SLA with guaranteed response times</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Custom feature development</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Security audit assistance</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">On-premise deployment support</span></li>
-                <li class="flex items-center gap-3"><span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span><span class="font-body-md text-sm">Team training & workshops</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">SLA with guaranteed response times</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Custom feature development</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Security audit assistance</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">On-premise deployment support</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Team training & workshops</span></li>
               </ul>
               <button class="w-full py-3 rounded-xl border border-primary text-primary font-headline-md text-headline-md hover:bg-primary/5 transition-colors">
                 Contact Sales
@@ -517,7 +517,7 @@
           <div class="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-primary"></span>
                 Can I use this for commercial projects?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -527,7 +527,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-secondary" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-secondary"></span>
                 What Rust version is required?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -537,7 +537,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-tertiary" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-tertiary"></span>
                 Can I use a different database?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -547,7 +547,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-success" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-success"></span>
                 How does the authentication work?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -557,7 +557,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-warning" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-warning"></span>
                 Can I remove features I don't need?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -567,7 +567,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-info" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-info"></span>
                 How do I deploy to production?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -577,7 +577,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-purple" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-purple"></span>
                 Is there a migration guide from v0.x?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -587,7 +587,7 @@
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-pink" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-pink"></span>
                 How can I contribute?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -612,11 +612,11 @@
               </p>
               <div class="flex flex-wrap justify-center gap-4">
                 <a href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank" class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
-                  <span class="material-symbols-outlined" data-icon="rocket_launch">rocket_launch</span>
+                  <span class="icon-[tabler--rocket]"></span>
                   Star on GitHub
                 </a>
                 <a href="#steps" class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
-                  <span class="material-symbols-outlined" data-icon="play_arrow">play_arrow</span>
+                  <span class="icon-[tabler--player-play]"></span>
                   View Quick Start
                 </a>
               </div>
