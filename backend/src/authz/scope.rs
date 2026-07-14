@@ -13,10 +13,12 @@ fn customer_scope_denied() -> AppError {
     AppError::Forbidden(t!("authorization.customer_scope_denied").into_owned())
 }
 
+#[allow(dead_code)]
 pub fn is_customer(details: &AuthDetails) -> bool {
     details.has_authority("ROLE_CUSTOMER")
 }
 
+#[allow(dead_code)]
 /// Returns None - no customer scoping in this boilerplate
 pub async fn customer_scope_ids(
     _details: &AuthDetails,
@@ -34,6 +36,7 @@ pub fn ensure_customer_in_scope(scope: Option<&HashSet<Uuid>>, customer_id: Uuid
     }
 }
 
+#[allow(dead_code)]
 pub fn ensure_optional_customer_in_scope(
     scope: Option<&HashSet<Uuid>>,
     customer_id: Option<Uuid>,

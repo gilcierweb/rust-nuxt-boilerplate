@@ -29,6 +29,7 @@ impl Ability {
         });
     }
 
+    #[allow(dead_code)]
     pub fn cannot(&mut self, action: AbilityAction, resource: AbilityResource) {
         self.rules.push(AbilityRule {
             allowed: false,
