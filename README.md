@@ -108,6 +108,39 @@ docker compose exec backend cargo run --bin seed
 - Email: `admin@example.com`
 - Password: `changeme123` ⚠️ **Change immediately!**
 
+### API Endpoints Reference
+
+| Category | Endpoint | Method | Auth | Description |
+|----------|----------|--------|------|-------------|
+| **Auth** | `/api/v1/auth/register` | POST | No | Register new user |
+| | `/api/v1/auth/login` | POST | No | Login (returns JWT + sets refresh cookie) |
+| | `/api/v1/auth/refresh` | POST | No | Refresh access token (via cookie) |
+| | `/api/v1/auth/logout` | POST | Yes | Invalidate refresh token |
+| | `/api/v1/auth/recover` | POST | No | Request password reset |
+| | `/api/v1/auth/reset` | POST | No | Reset password with token |
+| | `/api/v1/auth/confirm` | GET | No | Verify email with token |
+| | `/api/v1/auth/session` | GET | Yes | Get current session user |
+| | `/api/v1/auth/2fa/setup` | POST | Yes | Setup TOTP 2FA |
+| | `/api/v1/auth/2fa/enable` | POST | Yes | Enable TOTP 2FA |
+| | `/api/v1/auth/2fa/disable` | POST | Yes | Disable TOTP 2FA |
+| | `/api/v1/auth/2fa/verify` | POST | Yes | Verify TOTP code |
+| | `/api/v1/auth/change-password` | POST | Yes | Change password |
+| **Admin** | `/api/v1/admin/users` | GET | Admin | List users (paginated) |
+| | `/api/v1/admin/users` | POST | Admin | Create user |
+| | `/api/v1/admin/users/{id}` | GET | Admin | Get user |
+| | `/api/v1/admin/users/{id}` | PATCH | Admin | Update user |
+| | `/api/v1/admin/users/{id}` | DELETE | Admin | Delete user |
+| | `/api/v1/admin/roles` | GET | Admin | List roles |
+| | `/api/v1/admin/roles` | POST | Admin | Create role |
+| | `/api/v1/admin/roles/{id}` | GET | Admin | Get role |
+| | `/api/v1/admin/roles/{id}` | PATCH | Admin | Update role |
+| | `/api/v1/admin/roles/{id}` | DELETE | Admin | Delete role |
+| | `/api/v1/admin/audit-logs` | GET | Admin | List audit logs (paginated) |
+| | `/api/v1/admin/audit-logs` | POST | Admin | Create audit log |
+| | `/api/v1/admin/audit-logs/{id}` | GET | Admin | Get audit log |
+| **Health** | `/health` | GET | No | Service health |
+| | `/metrics` | GET | No | Prometheus metrics |
+
 ---
 
 ## 🛠️ Local Development (Without Docker)
