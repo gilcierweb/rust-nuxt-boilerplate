@@ -57,12 +57,19 @@ async fn not_found() -> Result<HttpResponse, actix_web::Error> {
 async fn main() -> std::io::Result<()> {
     rust_i18n::set_locale("pt-BR");
 
-    tracing_subscriber::registry()
+tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "backend_api=debug,actix_web=info".into()),
+                .unwrap_or_else(|_| "backend_api=debug,actix_web=info,http.request=info".into()),
         )
-        .with(tracing_subscriber::fmt::layer().json())
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_target(false)
+                .with_thread_ids(true)
+                .with_file(true)
+                .with_line_number(true)
+                .pretty()
+        )
         .init();
 
     dotenvy::dotenv().ok();
