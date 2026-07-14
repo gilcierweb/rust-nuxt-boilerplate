@@ -1,59 +1,57 @@
 #![allow(dead_code)]
 
+use crate::{
+    errors::{AppError, AppResult},
+    models::user::{NewUser, User},
+    security::SecurityService,
+    services::{token::generate_random_token, token_service::hash_token},
+};
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
 use chrono::Utc;
-use diesel::SelectableHelper;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-use crate::{
-    errors::ApiError,
-    models::user::{NewUser, User},
-    security::SecurityService,
-    services::{token::generate_random_token, token_service::hash_token},
-};
-
 /// Hash a plaintext password using Argon2id.
-pub fn hash_password(password: &str) -> Result<String, ApiError> {
+pub fn hash_password(password: &str) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     argon2
         .hash_password(password.as_bytes(), &salt)
         .map(|h| h.to_string())
-        .map_err(|e| ApiError::Internal(format!("Password hash error: {}", e)))
+        .map_err(|e| AppError::Internal(format!("Password hash error: {}", e)))
 }
 
 /// Verify a plaintext password against an Argon2id hash.
-pub fn verify_password(password: &str, hash: &str) -> Result<bool, ApiError> {
+pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
     let parsed = PasswordHash::new(hash)
-        .map_err(|e| ApiError::Internal(format!("Password parse error: {}", e)))?;
+        .map_err(|e| AppError::Internal(format!("Password parse error: {}", e)))?;
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed)
         .is_ok())
 }
 
 /// Validate password strength: min 12 chars, at least 1 digit, 1 uppercase, 1 special char.
-pub fn validate_password_strength(password: &str) -> Result<(), ApiError> {
+pub fn validate_password_strength(password: &str) -> Result<(), AppError> {
     if password.len() < 12 {
-        return Err(ApiError::Validation(
+        return Err(AppError::Validation(
             t!("auth.password.must_be_12_chars").into_owned(),
         ));
     }
     if !password.chars().any(|c| c.is_ascii_digit()) {
-        return Err(ApiError::Validation(
+        return Err(AppError::Validation(
             t!("auth.password.must_have_number").into_owned(),
         ));
     }
     if !password.chars().any(|c| c.is_uppercase()) {
-        return Err(ApiError::Validation(
+        return Err(AppError::Validation(
             t!("auth.password.must_have_uppercase").into_owned(),
         ));
     }
     if !password.chars().any(|c| c.is_ascii_punctuation()) {
-        return Err(ApiError::Validation(
+        return Err(AppError::Validation(
             t!("auth.password.must_have_special").into_owned(),
         ));
     }
@@ -61,7 +59,7 @@ pub fn validate_password_strength(password: &str) -> Result<(), ApiError> {
 }
 
 /// Fetch user by email (case-insensitive).
-pub fn find_user_by_email(conn: &mut PgConnection, email_input: &str) -> Result<User, ApiError> {
+pub fn find_user_by_email(conn: &mut PgConnection, email_input: &str) -> Result<User, AppError> {
     use crate::db::schema::users::dsl::*;
     let security = SecurityService::from_env()?;
     let protected_email = security.protect_email(email_input)?;
@@ -71,22 +69,22 @@ pub fn find_user_by_email(conn: &mut PgConnection, email_input: &str) -> Result<
         .first::<User>(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
-                ApiError::Unauthorized("Invalid email or password".to_string())
+                AppError::Unauthorized("Invalid email or password".to_string())
             }
-            _ => ApiError::Database(e),
+            _ => AppError::Database(e),
         })
 }
 
 /// Fetch user by ID.
-pub fn find_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<User, ApiError> {
+pub fn find_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<User, AppError> {
     use crate::db::schema::users::dsl::*;
     users
         .find(user_id)
         .select(User::as_select())
         .first::<User>(conn)
         .map_err(|e| match e {
-            diesel::result::Error::NotFound => ApiError::NotFound("User".to_string()),
-            _ => ApiError::Database(e),
+            diesel::result::Error::NotFound => AppError::NotFound("User".to_string()),
+            _ => AppError::Database(e),
         })
 }
 
@@ -95,7 +93,7 @@ pub fn register_user(
     conn: &mut PgConnection,
     email_input: &str,
     password: &str,
-) -> Result<(User, String), ApiError> {
+) -> Result<(User, String), AppError> {
     validate_password_strength(password)?;
     let security = SecurityService::from_env()?;
     let protected_email = security.protect_email(email_input)?;
@@ -106,10 +104,10 @@ pub fn register_user(
         users.filter(email_blind_index.eq(protected_email.blind_index.clone())),
     ))
     .get_result(conn)
-    .map_err(ApiError::Database)?;
+    .map_err(AppError::Database)?;
 
     if exists {
-        return Err(ApiError::Conflict("Email already registered".to_string()));
+        return Err(AppError::Conflict("Email already registered".to_string()));
     }
 
     let hashed = hash_password(password)?;
@@ -138,13 +136,13 @@ pub fn register_user(
         ))
         .returning(User::as_returning())
         .get_result::<User>(conn)
-        .map_err(ApiError::Database)?;
+        .map_err(AppError::Database)?;
 
     Ok((user, confirmation_token_plain))
 }
 
 /// Confirm a user's email by their token.
-pub fn confirm_email(conn: &mut PgConnection, token: &str) -> Result<User, ApiError> {
+pub fn confirm_email(conn: &mut PgConnection, token: &str) -> Result<User, AppError> {
     use crate::db::schema::users::dsl::*;
     use diesel::dsl::sql;
 
@@ -155,9 +153,9 @@ pub fn confirm_email(conn: &mut PgConnection, token: &str) -> Result<User, ApiEr
         .first::<User>(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
-                ApiError::BadRequest("Invalid or already used confirmation token".to_string())
+                AppError::BadRequest("Invalid or already used confirmation token".to_string())
             }
-            _ => ApiError::Database(e),
+            _ => AppError::Database(e),
         })?;
 
     let now = Utc::now();
@@ -177,7 +175,7 @@ pub fn confirm_email(conn: &mut PgConnection, token: &str) -> Result<User, ApiEr
         ))
         .returning(User::as_returning())
         .get_result::<User>(conn)
-        .map_err(ApiError::Database)
+        .map_err(AppError::Database)
 }
 
 /// Record a successful login: bump counter, update timestamps and IP.
@@ -185,7 +183,7 @@ pub fn record_successful_login(
     conn: &mut PgConnection,
     user: &User,
     ip: Option<String>,
-) -> Result<(), ApiError> {
+) -> Result<(), AppError> {
     use crate::db::schema::users::dsl::*;
     let now = Utc::now();
     let ip_net: Option<ipnet::IpNet> = ip.and_then(|s| s.parse().ok());
@@ -201,131 +199,120 @@ pub fn record_successful_login(
             updated_at.eq(now),
         ))
         .execute(conn)
-        .map_err(ApiError::Database)?;
+        .map_err(AppError::Database)?;
     Ok(())
 }
 
-/// Increment failed login attempts; lock account if threshold reached.
-pub fn record_failed_login(
-    conn: &mut PgConnection,
-    user: &User,
-    max_attempts: i32,
-) -> Result<(), ApiError> {
-    use crate::db::schema::users::dsl::*;
-    let now = Utc::now();
-    let new_attempts = user.failed_attempts + 1;
-    let lock_time = if new_attempts >= max_attempts {
-        Some(now)
-    } else {
-        None
-    };
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::database::Database;
+    use crate::models::user::User;
+    use diesel::r2d2::{ConnectionManager, Pool};
+    use std::sync::Arc;
 
-    diesel::update(users.find(user.id))
-        .set((
-            failed_attempts.eq(new_attempts),
-            locked_at.eq(lock_time),
-            updated_at.eq(now),
-        ))
-        .execute(conn)
-        .map_err(ApiError::Database)?;
-    Ok(())
-}
-
-/// Issue a password reset token (stored as plain, returned to caller for email).
-pub fn create_password_reset_token(
-    conn: &mut PgConnection,
-    email_input: &str,
-) -> Result<(User, String), ApiError> {
-    use crate::db::schema::users::dsl::*;
-    let security = SecurityService::from_env()?;
-    let protected_email = security.protect_email(email_input)?;
-
-    let user = users
-        .filter(email_blind_index.eq(protected_email.blind_index))
-        .select(User::as_select())
-        .first::<User>(conn)
-        .map_err(|e| match e {
-            diesel::result::Error::NotFound => {
-                // Intentionally vague to prevent email enumeration
-                ApiError::BadRequest(
-                    "If this email exists you will receive reset instructions".to_string(),
-                )
-            }
-            _ => ApiError::Database(e),
-        })?;
-
-    let token_plain = generate_random_token(32);
-    let now = Utc::now();
-
-    diesel::update(users.find(user.id))
-        .set((
-            reset_password_token_digest.eq(Some(hash_token(&token_plain))),
-            reset_password_sent_at.eq(Some(now)),
-            updated_at.eq(now),
-        ))
-        .execute(conn)
-        .map_err(ApiError::Database)?;
-
-    Ok((user, token_plain))
-}
-
-/// Consume a reset token, validate expiry (2h), set new password.
-pub fn reset_password(
-    conn: &mut PgConnection,
-    token: &str,
-    new_password: &str,
-) -> Result<User, ApiError> {
-    use crate::db::schema::users::dsl::*;
-
-    validate_password_strength(new_password)?;
-
-    let user = users
-        .filter(reset_password_token_digest.eq(hash_token(token)))
-        .select(User::as_select())
-        .first::<User>(conn)
-        .map_err(|e| match e {
-            diesel::result::Error::NotFound => {
-                ApiError::BadRequest("Invalid or expired reset token".to_string())
-            }
-            _ => ApiError::Database(e),
-        })?;
-
-    // Check token expiry (2 hours)
-    if let Some(sent_at) = user.reset_password_sent_at {
-        if Utc::now() - sent_at > chrono::Duration::hours(2) {
-            return Err(ApiError::BadRequest("Reset token has expired".to_string()));
-        }
-    } else {
-        return Err(ApiError::BadRequest("Invalid reset token".to_string()));
+    fn setup_test_db() -> Arc<Pool<ConnectionManager<PgConnection>>> {
+        let database_url = std::env::var("DATABASE_URL_TEST")
+            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string());
+        let manager = ConnectionManager::<PgConnection>::new(database_url);
+        Arc::new(Pool::builder().max_size(1).build(manager).expect("Failed to create pool"))
     }
 
-    let hashed = hash_password(new_password)?;
-    let now = Utc::now();
+    fn get_conn(pool: &Arc<Pool<ConnectionManager<PgConnection>>>) -> PgConnection {
+        pool.get().expect("Failed to get connection")
+    }
 
-    diesel::update(users.find(user.id))
-        .set((
-            encrypted_password.eq(hashed),
-            reset_password_token_digest.eq::<Option<String>>(None),
-            reset_password_sent_at.eq::<Option<chrono::DateTime<Utc>>>(None),
-            failed_attempts.eq(0),
-            locked_at.eq::<Option<chrono::DateTime<Utc>>>(None),
-            updated_at.eq(now),
-        ))
-        .returning(User::as_returning())
-        .get_result::<User>(conn)
-        .map_err(ApiError::Database)
-}
+    #[test]
+    fn test_hash_password_creates_valid_hash() {
+        let password = "TestPassword123!";
+        let hash = hash_password(password).expect("Failed to hash password");
 
-/// Get roles for a user from users_roles + roles tables.
-pub fn get_user_roles(conn: &mut PgConnection, user_id: Uuid) -> Result<Vec<String>, ApiError> {
-    use crate::db::schema::{roles, users_roles};
+        assert!(!hash.is_empty());
+        assert!(hash.starts_with("$argon2id$"));
+    }
 
-    let role_names: Vec<String> = users_roles::table
-        .inner_join(roles::table.on(roles::id.eq(users_roles::role_id)))
-        .filter(users_roles::user_id.eq(user_id))
-        .select(roles::name)
-        .load::<String>(conn)
-        .map_err(ApiError::Database)?;
+    #[test]
+    fn test_verify_password_correct() {
+        let password = "TestPassword123!";
+        let hash = hash_password(password).expect("Failed to hash password");
+        let result = verify_password(password, &hash).expect("Failed to verify password");
+        assert!(result);
+    }
 
-    Ok(role_names)
+    #[test]
+    fn test_verify_password_incorrect() {
+        let password = "TestPassword123!";
+        let wrong_password = "WrongPassword123!";
+        let hash = hash_password(password).expect("Failed to hash password");
+        let result = verify_password(wrong_password, &hash).expect("Failed to verify password");
+        assert!(!result);
+    }
+
+    #[test]
+    fn test_verify_password_wrong_hash() {
+        let password = "TestPassword123!";
+        let wrong_hash = "$argon2id$v=19$m=19456,t=2,p=1$wrongsalt$wronghash";
+        let result = verify_password(password, wrong_hash);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_password_strength_valid() {
+        let password = "ValidPass123!";
+        let result = validate_password_strength(password);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_validate_password_strength_too_short() {
+        let password = "Short1!";
+        let result = validate_password_strength(password);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_password_strength_no_digit() {
+        let password = "NoDigitPass!";
+        let result = validate_password_strength(password);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_password_strength_no_uppercase() {
+        let password = "nouppercase1!";
+        let result = validate_password_strength(password);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_password_strength_no_special() {
+        let password = "NoSpecial123";
+        let result = validate_password_strength(password);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_generate_random_token() {
+        let token1 = generate_random_token(32);
+        let token2 = generate_random_token(32);
+        assert_eq!(token1.len(), 32);
+        assert_eq!(token2.len(), 32);
+        assert_ne!(token1, token2);
+    }
+
+    #[test]
+    fn test_hash_token_consistency() {
+        let token = "test-token-123";
+        let hash1 = hash_token(token);
+        let hash2 = hash_token(token);
+        assert_eq!(hash1, hash2);
+        assert!(!hash1.is_empty());
+    }
+
+    #[test]
+    fn test_hash_token_different_inputs() {
+        let hash1 = hash_token("token-1");
+        let hash2 = hash_token("token-2");
+        assert_ne!(hash1, hash2);
+    }
 }

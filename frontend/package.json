@@ -7,7 +7,12 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "test": "vitest",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --ext .vue,.js,.ts",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@nuxtjs/i18n": "10.2.4",
@@ -29,6 +34,18 @@
   "devDependencies": {
     "@iconify-json/tabler": "^1.2.33",
     "@iconify/tailwind4": "^1.2.3",
-    "sass-embedded": "^1.99.0"
+    "@playwright/test": "^1.40.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vitejs/plugin-vue": "^4.4.0",
+    "@vitest/coverage-v8": "^1.0.0",
+    "@vitest/ui": "^1.0.0",
+    "eslint": "^8.0.0",
+    "eslint-plugin-vue": "^9.0.0",
+    "sass-embedded": "^1.99.0",
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "vue-test-utils": "^2.0.0"
   }
 }
