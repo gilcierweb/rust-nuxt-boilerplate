@@ -1,6 +1,6 @@
 version: "3.9"
 
-# -- contifya Platform - Docker Compose 
+# -- rust_nuxt_boilerplate Platform - Docker Compose 
 # Development: docker compose up
 # Production:  docker compose --env-file .env.production up -d
 
@@ -9,29 +9,29 @@ services:
   # -- PostgreSQL 
   postgres:
     image: postgres:16-alpine
-    container_name: contifya_postgres
+    container_name: rust_nuxt_boilerplate_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-contifya}
+      POSTGRES_USER: ${POSTGRES_USER:-rust_nuxt_boilerplate}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
-      POSTGRES_DB: ${POSTGRES_DB:-contifya_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-rust_nuxt_boilerplate_dev}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-contifya}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rust_nuxt_boilerplate}"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- Redis 
   redis:
     image: redis:7-alpine
-    container_name: contifya_redis
+    container_name: rust_nuxt_boilerplate_redis
     restart: unless-stopped
     command: >
       redis-server
@@ -49,7 +49,7 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- Backend (Rust / Actix-Web) 
   backend:
@@ -57,11 +57,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: development
-    container_name: contifya_backend
+    container_name: rust_nuxt_boilerplate_backend
     restart: unless-stopped
     env_file: .env
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-contifya}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-contifya_dev}
+      DATABASE_URL: postgres://${POSTGRES_USER:-rust_nuxt_boilerplate}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rust_nuxt_boilerplate_dev}
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
     ports:
       - "8080:8080"
@@ -79,7 +79,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- Frontend (Nuxt.js) 
   frontend:
@@ -87,7 +87,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: development
-    container_name: contifya_frontend
+    container_name: rust_nuxt_boilerplate_frontend
     restart: unless-stopped
     env_file: .env
     environment:
@@ -101,12 +101,12 @@ services:
     depends_on:
       - backend
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- Nginx (Reverse Proxy) 
   nginx:
     image: nginx:alpine
-    container_name: contifya_nginx
+    container_name: rust_nuxt_boilerplate_nginx
     restart: unless-stopped
     ports:
       - "80:80"
@@ -120,12 +120,12 @@ services:
       - backend
       - frontend
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- MeiliSearch 
   meilisearch:
     image: getmeili/meilisearch:v1.7
-    container_name: contifya_search
+    container_name: rust_nuxt_boilerplate_search
     restart: unless-stopped
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?MEILI_MASTER_KEY is required}
@@ -135,12 +135,12 @@ services:
     ports:
       - "7700:7700"
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- Portainer (Container Management UI) 
   portainer:
     image: portainer/portainer-ce:latest
-    container_name: contifya_portainer
+    container_name: rust_nuxt_boilerplate_portainer
     restart: unless-stopped
     ports:
       - "9000:9000"
@@ -148,12 +148,12 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- Prometheus 
   prometheus:
     image: prom/prometheus:latest
-    container_name: contifya_prometheus
+    container_name: rust_nuxt_boilerplate_prometheus
     restart: unless-stopped
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
@@ -164,12 +164,12 @@ services:
     ports:
       - "9090:9090"
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
   # -- Grafana 
   grafana:
     image: grafana/grafana:latest
-    container_name: contifya_grafana
+    container_name: rust_nuxt_boilerplate_grafana
     restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?GRAFANA_PASSWORD is required}
@@ -183,7 +183,7 @@ services:
     depends_on:
       - prometheus
     networks:
-      - contifya_net
+      - rust_nuxt_boilerplate_net
 
 # -- Volumes 
 volumes:
@@ -197,5 +197,5 @@ volumes:
 
 # -- Networks 
 networks:
-  contifya_net:
+  rust_nuxt_boilerplate_net:
     driver: bridge

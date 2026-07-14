@@ -60,7 +60,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
-RUN groupadd -r contifya && useradd -r -g contifya contifya
+RUN groupadd -r rust_nuxt_boilerplate && useradd -r -g rust_nuxt_boilerplate rust_nuxt_boilerplate
 
 WORKDIR /app
 
@@ -70,8 +70,8 @@ COPY --from=builder /root/.cargo/bin/diesel ./diesel
 COPY --from=builder /app/migrations ./migrations
 
 # Ownership
-RUN chown -R contifya:contifya /app
-USER contifya
+RUN chown -R rust_nuxt_boilerplate:rust_nuxt_boilerplate /app
+USER rust_nuxt_boilerplate
 
 EXPOSE 8080
 

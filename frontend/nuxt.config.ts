@@ -22,11 +22,11 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: "App Contifya - Plataforma web para contabilidade digital",
+      title: "App Rust Nuxt Boilerplate - A production-ready Rust (Actix Web) + Nuxt 4 boilerplate with authentication, authorization, admin panel, and modern developer experience. Clone, configure, and ship.",
       meta: [
         { charset: "utf-8" },
         { name: "viewport", content: "width=device-width, initial-scale=1" },
-        { name: "description", content: "Plataforma web para contabilidade digital" },
+        { name: "description", content: "A production-ready Rust (Actix Web) + Nuxt 4 boilerplate with authentication, authorization, admin panel, and modern developer experience. Clone, configure, and ship." },
         { name: "robots", content: "noindex, nofollow" }, // keep off search engines
         { name: "theme-color", content: "#FF6F00" },
       ],
@@ -38,9 +38,9 @@ export default defineNuxtConfig({
     registerType: 'autoUpdate',
     manifest: {
       id: '/?source=pwa',
-      name: 'App Contifya',
-      short_name: 'App Contifya',
-      description: 'Plataforma web para contabilidade digital',
+      name: 'App Rust Nuxt Boilerplate',
+      short_name: 'App Rust Nuxt Boilerplate',
+      description: 'A production-ready Rust (Actix Web) + Nuxt 4 boilerplate with authentication, authorization, admin panel, and modern developer experience. Clone, configure, and ship.',
       start_url: '/?source=twa',
       scope: '/',
       display: 'standalone',
@@ -93,11 +93,11 @@ export default defineNuxtConfig({
       // @ts-ignore
       wsBase: process.env.NUXT_PUBLIC_WS_BASE || "http://localhost:8080/api/v1",
       // @ts-ignore
-      cdnUrl: process.env.NUXT_PUBLIC_CDN_URL || "https://cdn.telosync.com",
+      cdnUrl: process.env.NUXT_PUBLIC_CDN_URL || "https://cdn.rust-nuxt-boilerplate.com",
       // @ts-ignore
       stripeKey: process.env.NUXT_PUBLIC_STRIPE_KEY || "",
       // @ts-ignore
-      appName: process.env.NUXT_PUBLIC_APP_NAME || "App Contifya",
+      appName: process.env.NUXT_PUBLIC_APP_NAME || "App Rust Nuxt Boilerplate",
     },
   },
 

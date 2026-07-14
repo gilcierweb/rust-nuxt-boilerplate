@@ -51,7 +51,7 @@ const runtimeConfig = useRuntimeConfig()
 const route = useRoute()
 const sidebarState = useState('portal-sidebar-open', () => false)
 
-const appName = computed(() => runtimeConfig.public.appName || 'Contifya')
+const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
 
 const sidebarOpen = computed({
   get: () => sidebarState.value,

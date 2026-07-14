@@ -35,7 +35,7 @@ const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 const sidebarState = useState('portal-sidebar-open', () => false)
 
-const appName = computed(() => runtimeConfig.public.appName || 'Contifya')
+const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
 const userEmail = computed(() => authStore.user?.email || 'Cliente')
 const userRoleLabel = computed(() =>
   authStore.isAdmin ? 'Administrador' : 'Cliente',

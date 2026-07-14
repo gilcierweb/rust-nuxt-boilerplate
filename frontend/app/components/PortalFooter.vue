@@ -8,5 +8,5 @@
 
 <script setup lang="ts">
 const runtimeConfig = useRuntimeConfig()
-const appName = computed(() => runtimeConfig.public.appName || 'Contifya')
+const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
 </script>

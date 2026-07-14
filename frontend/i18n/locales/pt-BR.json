@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "Contifya",
+    "appName": "Rust Nuxt Boilerplate",
     "success": "Sucesso",
     "error": "Erro",
     "loading": "Carregando...",
@@ -659,7 +659,7 @@
       "payments": "Pagamentos",
       "customers": "Clientes",
       "audit": "Auditoria",
-      "defaultUser": "admin{'@'}app-contifya.local"
+      "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
     },
     "dashboard": {
       "search": {

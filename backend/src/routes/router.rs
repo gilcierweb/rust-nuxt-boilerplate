@@ -9,6 +9,8 @@ pub use crate::controllers::{
 use actix_web::http::Method;
 use actix_web::web;
 
+use crate::middleware::csrf_protection::CsrfProtection;
+
 fn bearer_exempt_routes() -> Vec<crate::middleware::api_access_middleware::PublicRoute> {
     use crate::middleware::api_access_middleware::PublicRoute;
 
@@ -84,6 +86,15 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // Auth routes
             .service(
                 web::scope("/auth")
+                    .wrap(CsrfProtection::new(vec![
+                        "/api/v1/auth/login".to_string(),
+                        "/api/v1/auth/register".to_string(),
+                        "/api/v1/auth/recover".to_string(),
+                        "/api/v1/auth/reset".to_string(),
+                        "/api/v1/auth/confirm".to_string(),
+                        "/api/v1/auth/logout".to_string(),
+                        "/api/v1/auth/refresh".to_string(),
+                    ]))
                     .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,

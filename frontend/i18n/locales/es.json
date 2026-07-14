@@ -224,7 +224,7 @@
       "documents": "Documentos",
       "payments": "Pagos",
       "audit": "Auditoría",
-      "defaultUser": "admin{'@'}app-contifya.local"
+      "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
     },
     "dashboard": {
       "search": {

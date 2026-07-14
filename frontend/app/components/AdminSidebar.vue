@@ -213,7 +213,7 @@ const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 const sidebarState = useState('admin-sidebar-open', () => false)
 
-const appName = computed(() => runtimeConfig.public.appName || 'Contifya')
+const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
 const userEmail = computed(() => authStore.user?.email || $t('admin.sidebar.defaultUser'))
 const initials = computed(() => userEmail.value.slice(0, 2).toUpperCase())
 
