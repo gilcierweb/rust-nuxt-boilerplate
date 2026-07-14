@@ -118,6 +118,9 @@ tracing_subscriber::registry()
     let host = config.host.clone();
     let port = config.port;
 
+    let config_json_limit = config.json_payload_limit;
+    let config_form_limit = config.form_payload_limit;
+
     let app = move || {
         let pool_for_router = state.redis.clone();
 
@@ -141,11 +144,14 @@ tracing_subscriber::registry()
             .app_data(state.clone())
             .app_data(container.clone())
             .app_data(ws_state.clone())
-            .app_data(web::JsonConfig::default().limit(1024 * 1024).error_handler(
-                |_error, _request| {
-                    AppError::BadRequest(t!("errors.bad_request_payload").into_owned()).into()
-                },
-            ))
+            .app_data(
+                web::JsonConfig::default()
+                    .limit(config_json_limit)
+                    .error_handler(|_error, _request| {
+                        AppError::BadRequest(t!("errors.bad_request_payload").into_owned()).into()
+                    }),
+            )
+            .app_data(web::PayloadConfig::new(config_form_limit))
             .wrap(cors)
             .wrap(actix_web::middleware::Compress::default())
             .wrap(middleware::metrics_middleware::MetricsMiddleware)

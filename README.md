@@ -920,6 +920,29 @@ Connection pools can be tuned for high-concurrency scenarios:
 - Use connection pooling at the database level (PgBouncer) for very high concurrency
 - Monitor: active connections, idle connections, wait time
 
+### Request Payload Limits
+
+Request payload limits can be tuned based on your API requirements:
+
+**Environment Variables:**
+- `JSON_PAYLOAD_LIMIT`: JSON body size limit in bytes (default: 16 MB)
+- `FORM_PAYLOAD_LIMIT`: Form/multipart body size limit in bytes (default: 20 MB)
+
+**When to increase:**
+- **JSON_PAYLOAD_LIMIT**: When endpoints accept large JSON payloads (e.g., file upload metadata, batch operations, complex nested data)
+- **FORM_PAYLOAD_LIMIT**: When endpoints accept large multipart forms (e.g., multiple files, large form submissions)
+
+**Example (High-upload scenarios):**
+```bash
+# Allow larger JSON payloads (e.g., file upload metadata with thumbnails)
+JSON_PAYLOAD_LIMIT=33554432       # 32 MB
+
+# Allow larger multipart forms
+FORM_PAYLOAD_LIMIT=104857600      # 100 MB
+```
+
+> **Note**: These limits apply to metadata only. Actual file uploads should use dedicated file storage (S3, Backblaze B2, Bunny.net) and not be sent through the JSON/Form payload.
+
 ---
 
 ## 🚀 Deployment

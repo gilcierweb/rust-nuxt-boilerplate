@@ -79,6 +79,10 @@ pub struct AppConfig {
     pub max_video_size_bytes: u64, // 10 GB
     pub max_photo_size_bytes: u64, // 50 MB
     pub max_audio_size_bytes: u64, // 500 MB
+
+    // Request payload limits
+    pub json_payload_limit: usize,    // JSON body size limit (bytes)
+    pub form_payload_limit: usize,    // Form body size limit (bytes)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -227,6 +231,17 @@ impl AppConfig {
             max_video_size_bytes: 10 * 1024 * 1024 * 1024, // 10 GB
             max_photo_size_bytes: 50 * 1024 * 1024,        // 50 MB
             max_audio_size_bytes: 500 * 1024 * 1024,       // 500 MB
+
+            // Default JSON payload limit is 16 MB - sufficient for file upload metadata
+            // Form payload limit is 20 MB for multipart form-data with metadata
+            json_payload_limit: env::var("JSON_PAYLOAD_LIMIT")
+                .ok()
+                .and_then(|s| s.parse::<usize>().ok())
+                .unwrap_or(16 * 1024 * 1024),
+            form_payload_limit: env::var("FORM_PAYLOAD_LIMIT")
+                .ok()
+                .and_then(|s| s.parse::<usize>().ok())
+                .unwrap_or(20 * 1024 * 1024),
         })
     }
 
