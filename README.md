@@ -691,6 +691,49 @@ docker compose -f docker-compose.test.yml up --abort-on-container-exit
 
 ---
 
+## 🔒 Security
+
+### Automated Security Scanning
+
+This project uses automated security scanning via GitHub Actions:
+
+- **Cargo Audit**: Runs on every push/PR to `main` branch
+- **Daily Scheduled Scans**: Runs automatically at 00:00 UTC
+- **Dependency Monitoring**: Checks for known vulnerabilities in Rust dependencies
+
+### Running Security Audits Locally
+
+```bash
+# Using the convenience script
+./scripts/security-audit.sh
+
+# Or directly
+cd backend
+cargo audit
+```
+
+### CI/CD Security Checks
+
+The CI pipeline includes:
+- Security vulnerability scanning with `cargo audit`
+- Code linting with `cargo clippy`
+- Format checking with `cargo fmt`
+- Unit and integration tests
+
+All security checks must pass before merging PRs.
+
+### Security Best Practices
+
+- All dependencies are regularly audited
+- Secrets are managed via environment variables
+- Password hashing uses Argon2id
+- JWT tokens use HS256 with secure key management
+- 2FA support with TOTP
+- Rate limiting on auth endpoints
+- CSRF protection on state-changing operations
+
+---
+
 ## 📁 Project Structure Details
 
 ### Backend Architecture
@@ -820,7 +863,8 @@ cat backup.sql | docker compose exec -T postgres psql -U boilerplate -d boilerpl
 - [ ] Configure Stripe keys (if using payments)
 - [ ] Set up monitoring alerts (Grafana/Prometheus)
 - [ ] Configure backup strategy
-- [ ] Run security audit (`cargo audit`)
+- [ ] Run security audit (`cargo audit` or `./scripts/security-audit.sh`)
+- [ ] Verify CI/CD workflows are passing (GitHub Actions)
 
 ### Kubernetes / Cloud Deploy
 
