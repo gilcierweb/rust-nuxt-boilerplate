@@ -109,6 +109,7 @@ export default defineNuxtConfig({
         iso: "en-US",
         name: "English",
         files: [
+          "en.json",
           "en/common.json",
           "en/auth.json",
           "en/landing.json",
@@ -124,6 +125,7 @@ export default defineNuxtConfig({
         iso: "es-ES",
         name: "Español",
         files: [
+          "es.json",
           "es/common.json",
           "es/auth.json",
           "es/landing.json",
@@ -137,6 +139,7 @@ export default defineNuxtConfig({
         iso: "pt-BR",
         name: "Português Brasil",
         files: [
+          "pt-BR.json",
           "pt-BR/common.json",
           "pt-BR/auth.json",
           "pt-BR/landing.json",
@@ -153,6 +156,7 @@ export default defineNuxtConfig({
         code: "pt",
         iso: "pt-BR",
         files: [
+          "pt-BR.json",
           "pt-BR/common.json",
           "pt-BR/auth.json",
           "pt-BR/landing.json",
