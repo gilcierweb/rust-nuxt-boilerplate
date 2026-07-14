@@ -13,6 +13,12 @@ use std::rc::Rc;
 
 use crate::{AppState, repositories::container::AppContainer};
 
+/// Rate limit configuration.
+/// 
+/// # Fields
+/// * `max_requests` - Maximum number of requests allowed within the window
+/// * `window_secs` - Time window in seconds for the rate limit
+/// * `key_prefix` - Prefix for Redis keys used to track requests
 #[derive(Clone, Debug)]
 pub struct RateLimit {
     pub max_requests: u64,
@@ -30,11 +36,41 @@ impl RateLimit {
     }
 }
 
+// ============================================================================
+// Rate Limit Configurations
+// ============================================================================
+// These constants define the rate limits for different parts of the API.
+// All limits are enforced using Redis-backed sliding window counters.
+// ============================================================================
+
+/// Authentication endpoints (login, register, password reset)
+/// Limit: 100 requests per minute (per IP)
+/// Use case: Standard auth operations with moderate protection
 pub const RATE_AUTH: RateLimit = RateLimit::new(100, 60, "rl:auth");
+
+/// Strict authentication endpoints (login POST, register POST, password recovery)
+/// Limit: 10 requests per minute (per IP)
+/// Use case: Write operations that are susceptible to brute force attacks
 pub const RATE_AUTH_STRICT: RateLimit = RateLimit::new(10, 60, "rl:auth_strict");
+
+/// General API endpoints
+/// Limit: 120 requests per minute (per IP)
+/// Use case: Standard API operations with relaxed limits
 pub const RATE_API: RateLimit = RateLimit::new(120, 60, "rl:api");
+
+/// Session management endpoints (refresh, session check)
+/// Limit: 300 requests per minute (per IP)
+/// Use case: High-frequency session operations with minimal restriction
 pub const RATE_AUTH_SESSION: RateLimit = RateLimit::new(300, 60, "rl:auth_session");
+
+/// File upload endpoints
+/// Limit: 10 requests per hour (per IP)
+/// Use case: Resource-intensive operations requiring strict limits
 pub const RATE_UPLOAD: RateLimit = RateLimit::new(10, 3600, "rl:upload");
+
+/// Messaging endpoints
+/// Limit: 60 requests per minute (per IP)
+/// Use case: User messaging with spam prevention
 pub const RATE_MESSAGES: RateLimit = RateLimit::new(60, 60, "rl:msg");
 
 pub struct RateLimiter {

@@ -199,8 +199,6 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn test_signature_format_parsing() {
         let signature = "t=1234567890,v1=abc123,v0=def456";

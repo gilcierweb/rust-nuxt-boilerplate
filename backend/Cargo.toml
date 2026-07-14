@@ -70,6 +70,9 @@ futures-util = "0.3.32"
 
 totp-rs = { version = "5", features = ["qr", "zeroize", "gen_secret"] }
 # -- Rate Limiting
+# Note: actix-governor is available but not currently used.
+# The application uses a custom Redis-backed rate limiter (see middleware/rate_limit_middleware.rs)
+# with explicit, configurable limits for different endpoint categories.
 actix-governor = "0.10.0"
 governor = "0.10.4"
 
