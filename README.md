@@ -885,7 +885,7 @@ Built by [gilcierweb](https://gilcierweb.com.br) - https://gilcierweb.com.br
 
 ---
 <div align="center">
-  <strong>Built with ❤️ for developers who want to ship faster</strong>
+  <strong>Built for developers who want to ship faster</strong>
   <br>
   <sub>Clone, configure, and deploy your first feature today.</sub>
 </div>

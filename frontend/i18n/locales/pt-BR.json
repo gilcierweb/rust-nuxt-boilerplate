@@ -659,9 +659,18 @@
       "payments": "Pagamentos",
       "customers": "Clientes",
       "audit": "Auditoria",
+      "users": "Usuários",
+      "roles": "Cargos",
+      "auditLogs": "Logs de Auditoria",
       "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
     },
     "dashboard": {
+      "totalUsers": "Total de Usuários",
+      "totalRoles": "Total de Cargos",
+      "totalAuditLogs": "Total de Logs de Auditoria",
+      "quickLinks": "Links Rápidos",
+      "recentActivity": "Atividade Recente",
+      "noRecentActivity": "Nenhuma atividade recente.",
       "search": {
         "placeholder": "Digite paraBuscar...",
         "ariaLabel": "Buscar"

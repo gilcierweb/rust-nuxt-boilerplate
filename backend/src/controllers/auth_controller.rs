@@ -596,6 +596,23 @@ pub async fn logout(
     req: HttpRequest,
     container: web::Data<AppContainer>,
 ) -> AppResult<HttpResponse> {
+    // Extract access token from Authorization header for blacklisting
+    let access_token = req
+        .headers()
+        .get(actix_web::http::header::AUTHORIZATION)
+        .and_then(|h| h.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .map(|t| t.to_string());
+
+    // Blacklist the access token if present
+    if let Some(token) = &access_token {
+        let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
+        let ttl = container.config.jwt_access_expiry_secs as u64;
+        if let Err(e) = container.access_token_blacklist.add(&token_hash, ttl).await {
+            tracing::warn!("Failed to blacklist access token: {}", e);
+        }
+    }
+
     let mut revoked_count: usize = 0;
     for refresh_token in extract_refresh_cookies(&req) {
         let token_hash = hash_token(&refresh_token);

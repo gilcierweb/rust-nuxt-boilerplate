@@ -2,6 +2,7 @@ use crate::db::database::DBPool;
 use diesel::prelude::*;
 
 #[derive(QueryableByName)]
+#[allow(dead_code)]
 struct ExistsResult {
     #[diesel(sql_type = diesel::sql_types::Bool)]
     flag: bool,
@@ -51,6 +52,7 @@ impl BaseRepo {
     /// // Establishment.exists?(slug: "restaurante-bom")
     /// repo.base.exists("establishments", "slug", "restaurante-bom").await?
     /// ```
+    #[allow(dead_code)]
     pub async fn exists(&self, table: &str, column: &str, value: &str) -> QueryResult<bool> {
         let tbl = table.to_string();
         let col = column.to_string();

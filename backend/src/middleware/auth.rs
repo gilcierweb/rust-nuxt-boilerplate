@@ -4,6 +4,7 @@ use std::future::{Ready, ready};
 use crate::{
     AppState,
     errors::{AppError, AppResult},
+    models::role::ROLE_ADMIN,
 };
 
 /// JWT Claims structure
@@ -16,6 +17,31 @@ pub struct Claims {
     pub token_use: String,
     pub exp: usize,
     pub iat: usize,
+}
+
+impl Claims {
+    /// Check if the user has a specific role by name.
+    /// Maps role names to their i32 values from the Role enum.
+    pub fn has_role(&self, role: &str) -> bool {
+        match role.to_ascii_lowercase().as_str() {
+            "admin" => self.role == ROLE_ADMIN.as_i32(),
+            "operator" | "moderator" | "support" | "creator" | "agency" => {
+                self.role == crate::models::role::ROLE_OPERATOR.as_i32()
+            }
+            "viewer" | "fan" => self.role == crate::models::role::ROLE_VIEWER.as_i32(),
+            _ => false,
+        }
+    }
+
+    /// Check if the user has admin role
+    pub fn is_admin(&self) -> bool {
+        self.role == ROLE_ADMIN.as_i32()
+    }
+
+    /// Get profile_id as Uuid result
+    pub fn profile_id(&self) -> Result<uuid::Uuid, AppError> {
+        Ok(self.profile_id)
+    }
 }
 
 const ACCESS_TOKEN_USE: &str = "access";

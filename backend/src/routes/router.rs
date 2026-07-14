@@ -86,15 +86,7 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // Auth routes
             .service(
                 web::scope("/auth")
-                    .wrap(CsrfProtection::new(vec![
-                        "/api/v1/auth/login".to_string(),
-                        "/api/v1/auth/register".to_string(),
-                        "/api/v1/auth/recover".to_string(),
-                        "/api/v1/auth/reset".to_string(),
-                        "/api/v1/auth/confirm".to_string(),
-                        "/api/v1/auth/logout".to_string(),
-                        "/api/v1/auth/refresh".to_string(),
-                    ]))
+                    .wrap(CsrfProtection::new(vec![]))
                     .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,
@@ -117,6 +109,11 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // Admin domain routes
             .service(
                 web::scope("/admin")
+                    .wrap(CsrfProtection::new(vec![]))
+                    .wrap(crate::middleware::auth_middleware::JwtAuth::new(
+                        std::sync::Arc::new(crate::config::AppConfig::from_env().unwrap()),
+                        vec![], // No public paths for admin
+                    ))
                     .configure(roles_controller::config)
                     .configure(users_controller::config)
                     .configure(audit_logs_controller::config),

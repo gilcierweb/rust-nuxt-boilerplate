@@ -19,14 +19,12 @@ function withAuthHeader(headers: Headers, accessToken: string | null) {
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig();
-  const configuredBaseURL = String(config.public.apiBase || "/api/v1");
-  // On SSR always target Nuxt internal API routes to preserve proxy behavior.
-  const baseURL = import.meta.server ? "/api/v1" : configuredBaseURL;
+  // Always use relative URL to force Nuxt proxy (works for both SSR and client)
+  const baseURL = "/api/v1";
 
   function buildHeaders(inputHeaders?: HeadersInit) {
     const authStore = useAuthStore(nuxtApp.$pinia);
     const headers = new Headers(inputHeaders ?? {});
-    const { csrf, headerName } = useCsrf();
 
     if (!headers.has("accept")) {
       headers.set("accept", "application/json");
@@ -51,10 +49,18 @@ export default defineNuxtPlugin((nuxtApp) => {
       accessToken = event?.context?.authAccessToken ?? null;
     }
 
-    // nuxt-security/nuxt-csurf validates mutation requests on the Nuxt server.
-    // For browser requests, always forward the CSRF token generated in the page meta.
-    if (import.meta.client && csrf && headerName && !headers.has(headerName)) {
-      headers.set(headerName, csrf);
+    // Read CSRF token from cookie and send in header (client-side only)
+    if (import.meta.client) {
+      const csrfCookie = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrf_token='));
+      
+      if (csrfCookie) {
+        const csrfToken = csrfCookie.split('=')[1];
+        if (csrfToken && !headers.has("csrf-token")) {
+          headers.set("csrf-token", csrfToken);
+        }
+      }
     }
 
     return withAuthHeader(headers, accessToken);
@@ -62,7 +68,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const rawApi = $fetch.create({
     baseURL,
-    credentials: "include",
+    credentials: "include", // Important: send cookies
     retry: 0,
     onRequest({ options }) {
       options.headers = buildHeaders(options.headers);

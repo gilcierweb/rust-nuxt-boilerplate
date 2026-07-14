@@ -31,6 +31,7 @@ pub struct AppConfig {
     pub blind_index_key: String,
     pub current_encryption_key_version: u32,
     pub internal_api_keys: Vec<String>,
+    pub csrf_secret_key: String,
 
     // Email (Resend)
     pub resend_api_key: String,
@@ -161,6 +162,8 @@ impl AppConfig {
                 .filter(|value| !value.is_empty())
                 .map(str::to_owned)
                 .collect(),
+            csrf_secret_key: env::var("CSRF_SECRET_KEY")
+                .unwrap_or_else(|_| "default_csrf_secret_key_change_in_production".to_string()),
 
             resend_api_key: env::var("RESEND_API_KEY").unwrap_or_default(),
             email_from: env::var("EMAIL_FROM")

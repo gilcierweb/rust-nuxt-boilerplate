@@ -78,10 +78,18 @@ export default defineNuxtConfig({
   },
 
   security: {
+    headers: {
+      contentSecurityPolicy: {
+        "default-src": ["'self'"],
+        "img-src": ["'self'", "data:", "blob:"],
+        "style-src": ["'self'", "'unsafe-inline'"],
+        "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      },
+    },
     csrf: true,
   },
 
-  // -- Runtime Config
+// -- Runtime Config
   runtimeConfig: {
     // Server-only (private)
     backendApiBase: process.env.BACKEND_API_BASE || "http://localhost:8080/api/v1",
@@ -89,9 +97,9 @@ export default defineNuxtConfig({
     // Public (exposed to client)
     public: {
       // @ts-ignore
-      apiBase: process.env.NUXT_PUBLIC_API_BASE || "/api/v1",
+      apiBase: "/api/v1", // Always use relative URL for proxy
       // @ts-ignore
-      wsBase: process.env.NUXT_PUBLIC_WS_BASE || "http://localhost:8080/api/v1",
+      wsBase: process.env.NUXT_PUBLIC_WS_BASE || "ws://localhost:8080/api/v1",
       // @ts-ignore
       cdnUrl: process.env.NUXT_PUBLIC_CDN_URL || "https://cdn.rust-nuxt-boilerplate.com",
       // @ts-ignore
@@ -187,6 +195,7 @@ export default defineNuxtConfig({
         security: {
           rateLimiter: false,
         },
+        csurf: false,
       },
     },
   },

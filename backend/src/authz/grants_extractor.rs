@@ -6,6 +6,7 @@ use crate::{
     AppState,
     authz::ability::{build_ability, build_authorities},
     middleware::auth::verify_token,
+    repositories::access_token_blacklist::hash_token_for_blacklist,
     repositories::container::AppContainer,
 };
 
@@ -28,6 +29,15 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
                 .map(|container| container.config.jwt_secret.clone())
         })
         .unwrap_or_default();
+
+    // Check token blacklist first
+    if let Some(container) = req.app_data::<web::Data<AppContainer>>() {
+        let token_hash = hash_token_for_blacklist(raw_token);
+        if container.access_token_blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
+            tracing::warn!("grants extractor: token is blacklisted");
+            return Ok(HashSet::new());
+        }
+    }
 
     let claims = match verify_token(raw_token, &secret) {
         Ok(claims) => claims,

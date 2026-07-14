@@ -8,24 +8,29 @@ use futures::future::{LocalBoxFuture, Ready, ready};
 use std::{rc::Rc, sync::Arc};
 
 use crate::{
-    config::AppConfig,
-    errors::ApiError,
-    services::token::{Claims, verify_access_token},
+    AppState,
+    middleware::auth::{Claims, verify_token},
+    repositories::access_token_blacklist::AccessTokenBlacklist,
 };
 
 /// Actix-Web middleware that validates the `Authorization: Bearer <token>` header.
 /// On success, inserts `Claims` into request extensions for handlers to extract.
 pub struct JwtAuth {
-    config: Arc<AppConfig>,
     public_paths: Vec<String>,
+    token_blacklist: Option<Arc<AccessTokenBlacklist>>,
 }
 
 impl JwtAuth {
-    pub fn new(config: Arc<AppConfig>, public_paths: Vec<String>) -> Self {
+    pub fn new(_config: Arc<crate::config::AppConfig>, public_paths: Vec<String>) -> Self {
         Self {
-            config,
             public_paths,
+            token_blacklist: None,
         }
+    }
+
+    pub fn with_token_blacklist(mut self, blacklist: Arc<AccessTokenBlacklist>) -> Self {
+        self.token_blacklist = Some(blacklist);
+        self
     }
 
     /// Check if the request path matches any public path pattern
@@ -58,16 +63,16 @@ where
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(JwtAuthMiddleware {
             service: Rc::new(service),
-            config: self.config.clone(),
             public_paths: self.public_paths.clone(),
+            token_blacklist: self.token_blacklist.clone(),
         }))
     }
 }
 
 pub struct JwtAuthMiddleware<S> {
     service: Rc<S>,
-    config: Arc<AppConfig>,
     public_paths: Vec<String>,
+    token_blacklist: Option<Arc<AccessTokenBlacklist>>,
 }
 
 impl<S, B> Service<ServiceRequest> for JwtAuthMiddleware<S>
@@ -84,9 +89,8 @@ where
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let svc = self.service.clone();
-        let secret = self.config.jwt_secret.clone();
-        let public_key = self.config.jwt_public_key.clone();
         let public_paths = self.public_paths.clone();
+        let token_blacklist = self.token_blacklist.clone();
 
         Box::pin(async move {
             let path = req.uri().path();
@@ -122,12 +126,29 @@ where
                 None => Err(actix_web::error::ErrorUnauthorized(
                     "Missing Authorization header",
                 )),
-                Some(t) => match verify_access_token(&t, &secret, public_key.as_deref()) {
-                    Ok(claims) => {
-                        req.extensions_mut().insert(claims);
-                        svc.call(req).await
+                Some(t) => {
+                    // Check token blacklist
+                    if let Some(blacklist) = &token_blacklist {
+                        let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(&t);
+                        if blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
+                            return Err(actix_web::error::ErrorUnauthorized("Token revoked"));
+                        }
                     }
-                    Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid token")),
+
+                    // Get JWT secret from AppState
+                    let state = req.app_data::<actix_web::web::Data<AppState>>();
+                    let secret = state
+                        .as_ref()
+                        .map(|s| s.config.jwt_secret.clone())
+                        .unwrap_or_default();
+
+                    match verify_token(&t, &secret) {
+                        Ok(claims) => {
+                            req.extensions_mut().insert(claims);
+                            svc.call(req).await
+                        }
+                        Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid token")),
+                    }
                 },
             }
         })
@@ -135,9 +156,9 @@ where
 }
 
 /// Extract claims from request extensions (call after JwtAuth middleware).
-pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, ApiError> {
+pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::errors::ApiError> {
     req.extensions()
         .get::<Claims>()
         .cloned()
-        .ok_or_else(|| ApiError::Unauthorized("Not authenticated".to_string()))
+        .ok_or_else(|| crate::errors::ApiError::Unauthorized("Not authenticated".to_string()))
 }
