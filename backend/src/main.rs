@@ -86,7 +86,8 @@ tracing_subscriber::registry()
     let db_pool = api_db.pool.clone();
     let db_pool_for_container = db_pool.clone();
 
-    let redis_cfg = RedisConfig::from_url(&config.redis_url);
+    let mut redis_cfg = RedisConfig::from_url(&config.redis_url);
+    redis_cfg.pool = Some(deadpool_redis::PoolConfig::new(config.redis_pool_size));
 
     let redis_pool = redis_cfg
         .create_pool(Some(Runtime::Tokio1))

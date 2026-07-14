@@ -281,6 +281,12 @@ DB_POOL_CONNECTION_TIMEOUT_SECS=10       # Connection timeout: 10 sec (default: 
 REDIS_PASSWORD=changeme_redis_password
 REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
 
+# Connection Pool Settings
+REDIS_POOL_SIZE=10                       # Max connections (default: 10)
+
+# High-concurrency example (uncomment and adjust for production):
+# REDIS_POOL_SIZE=50
+
 # ──────────────────────────────────────────────
 # JWT / AUTHENTICATION
 # ──────────────────────────────────────────────
@@ -525,6 +531,7 @@ DB_POOL_CONNECTION_TIMEOUT_SECS=10
 # REDIS
 REDIS_PASSWORD=${REDIS_PASSWORD}
 REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+REDIS_POOL_SIZE=10
 
 # JWT / AUTH
 JWT_SECRET=${JWT_SECRET}
@@ -869,7 +876,9 @@ cat backup.sql | docker compose exec -T postgres psql -U boilerplate -d boilerpl
 
 ### Connection Pool Tuning
 
-The Diesel connection pool can be tuned for high-concurrency scenarios:
+Connection pools can be tuned for high-concurrency scenarios:
+
+#### PostgreSQL (Diesel)
 
 **Environment Variables:**
 - `DB_POOL_SIZE`: Maximum connections (default: 10)
@@ -888,10 +897,26 @@ The Diesel connection pool can be tuned for high-concurrency scenarios:
 | Production (Medium) | 30-50 | 10-15 | 100-500 req/s |
 | Production (High) | 50-100 | 15-30 | > 500 req/s, monitor closely |
 
+#### Redis (deadpool-redis)
+
+**Environment Variables:**
+- `REDIS_POOL_SIZE`: Maximum connections (default: 10)
+
+**Recommended Settings by Workload:**
+
+| Workload | REDIS_POOL_SIZE | Notes |
+|----------|-----------------|-------|
+| Development | 5-10 | Minimal resource usage |
+| Staging | 10-20 | Moderate load testing |
+| Production (Low) | 20-30 | < 100 req/s |
+| Production (Medium) | 30-50 | 100-500 req/s |
+| Production (High) | 50-100 | > 500 req/s, monitor closely |
+
 **Tips:**
-- Start with defaults and monitor `pg_stat_activity`
-- Increase pool size gradually based on metrics
-- Set `DB_POOL_MAX_LIFETIME_SECS` to prevent connection leaks
+- Start with defaults and monitor connection usage
+- Increase pool sizes gradually based on metrics
+- For PostgreSQL: set `DB_POOL_MAX_LIFETIME_SECS` to prevent connection leaks
+- For Redis: deadpool-redis handles connection recycling automatically
 - Use connection pooling at the database level (PgBouncer) for very high concurrency
 - Monitor: active connections, idle connections, wait time
 

@@ -23,6 +23,7 @@ pub struct AppConfig {
 
     // Redis
     pub redis_url: String,
+    pub redis_pool_size: usize,
 
     // JWT
     pub jwt_secret: String,
@@ -137,6 +138,10 @@ impl AppConfig {
 
             redis_url: env::var("REDIS_URL")
                 .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
+            redis_pool_size: env::var("REDIS_POOL_SIZE")
+                .unwrap_or_else(|_| "10".to_string())
+                .parse()
+                .unwrap_or(10),
 
             jwt_secret: env::var("JWT_SECRET")?,
             jwt_public_key: env::var("JWT_PUBLIC_KEY").ok(),
