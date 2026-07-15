@@ -83,6 +83,9 @@ pub struct AppConfig {
     // Request payload limits
     pub json_payload_limit: usize,    // JSON body size limit (bytes)
     pub form_payload_limit: usize,    // Form body size limit (bytes)
+
+    // Rate limiting
+    pub rate_limit_enabled: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -242,6 +245,13 @@ impl AppConfig {
                 .ok()
                 .and_then(|s| s.parse::<usize>().ok())
                 .unwrap_or(20 * 1024 * 1024),
+
+            // Rate limiting - enabled by default in all environments
+            // Can be disabled via RATE_LIMIT_ENABLED=false
+            rate_limit_enabled: env::var("RATE_LIMIT_ENABLED")
+                .ok()
+                .and_then(|s| s.parse::<bool>().ok())
+                .unwrap_or(true),
         })
     }
 

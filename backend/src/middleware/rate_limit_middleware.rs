@@ -176,12 +176,12 @@ where
         let limit = self.limit.clone();
         let rate_limit_enabled = req
             .app_data::<web::Data<AppContainer>>()
-            .map(|container| container.config.is_production())
+            .map(|container| container.config.rate_limit_enabled)
             .or_else(|| {
                 req.app_data::<web::Data<AppState>>()
-                    .map(|state| state.config.is_production())
+                    .map(|state| state.config.rate_limit_enabled)
             })
-            .unwrap_or(false);
+            .unwrap_or(true); // Default to enabled for safety
 
         let client_key = req
             .connection_info()

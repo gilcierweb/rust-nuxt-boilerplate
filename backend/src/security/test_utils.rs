@@ -57,6 +57,7 @@ pub fn test_config() -> AppConfig {
         json_payload_limit: 1024 * 1024,
         form_payload_limit: 2 * 1024 * 1024,
         csrf_secret_key: "test_csrf_secret_key_for_testing_purposes_only".to_string(),
+        rate_limit_enabled: true,
     }
 }
 
