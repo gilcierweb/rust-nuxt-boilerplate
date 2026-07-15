@@ -107,6 +107,11 @@ export default defineNuxtConfig({
       stripeKey: process.env.NUXT_PUBLIC_STRIPE_KEY || "",
       // @ts-ignore
       appName: process.env.NUXT_PUBLIC_APP_NAME || "App Rust Nuxt Boilerplate",
+      // @ts-ignore
+      // Direct backend API URL for client-side requests (CSR) to bypass Nitro proxy
+      // When set, client-side fetches will go directly to backend instead of through Nitro
+      // Leave empty to use the default proxy behavior
+      apiDirectBase: process.env.NUXT_PUBLIC_API_BASE || "",
     },
   },
 

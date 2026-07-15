@@ -19,8 +19,23 @@ function withAuthHeader(headers: Headers, accessToken: string | null) {
 
 export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig();
-  // Always use relative URL to force Nuxt proxy (works for both SSR and client)
-  const baseURL = "/api/v1";
+  const publicConfig = config.public;
+  
+  /**
+   * Decide which base URL to use based on execution context:
+   * - Server-side (SSR): use relative `/api/v1` so the Nitro proxy routes the
+   *   request through `server/api/v1/[...path].ts`. This is required because
+   *   SSR fetches run inside the Nitro server process, and only the proxy can
+   *   attach the correct internal cookies/headers.
+   * - Client-side (CSR): use the absolute public API base URL
+   *   (`NUXT_PUBLIC_API_BASE`), which bypasses the Nitro proxy round-trip for
+   *   non-SSR requests. This reduces latency for client-initiated requests by
+   *   going directly to the backend. The backend still receives the same
+   *   cookies via `credentials: "include"` and any auth headers set below.
+   */
+  const baseURL = import.meta.server
+    ? "/api/v1"
+    : String(publicConfig.apiBase || "/api/v1").replace(/\/+$/, "");
 
   function buildHeaders(inputHeaders?: HeadersInit) {
     const authStore = useAuthStore(nuxtApp.$pinia);

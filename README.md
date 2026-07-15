@@ -420,6 +420,14 @@ Create `frontend/.env` or set in Nuxt config:
 # Base URL for backend API (used by Nitro proxy & generated client)
 NUXT_PUBLIC_API_BASE=http://localhost:8080/api/v1
 
+# Direct backend API URL for client-side (CSR) requests
+# When set, client-side fetches will go directly to the backend instead of
+# going through the Nitro proxy. This reduces latency for non-SSR requests.
+# The Nitro proxy is still used for SSR fetches to attach cookies/headers.
+# Leave empty to use default proxy behavior for all requests.
+# Example: http://localhost:8080/api/v1
+NUXT_PUBLIC_API_BASE=http://localhost:8080/api/v1
+
 # ──────────────────────────────────────────────
 # CSRF PROTECTION (must match backend)
 # ──────────────────────────────────────────────

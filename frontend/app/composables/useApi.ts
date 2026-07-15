@@ -10,6 +10,27 @@ type ApiRequestOptions = {
   headers?: HeadersInit
 }
 
+/**
+ * Determines the API base URL based on the execution context.
+ * - SSR: Always use the proxy ('/api/v1') for proper hydration
+ * - CSR: Use direct backend URL if configured (NUXT_PUBLIC_API_BASE), otherwise fall back to proxy
+ */
+function getApiBase(config: any): string {
+  // SSR always uses proxy for proper hydration
+  if (import.meta.server) {
+    return '/api/v1'
+  }
+  
+  // CSR: Check if direct API base is configured
+  const directBase = config.public.apiDirectBase?.replace(/\/+$/, '')
+  if (directBase) {
+    return directBase
+  }
+  
+  // Fallback to proxy
+  return config.public.apiBase || '/api/v1'
+}
+
 export const useApi = () => {
   const { $api } = useNuxtApp()
   const { clearFormAlertMessage, setFormAlertMessage } = useFormAlert()
@@ -98,7 +119,7 @@ function withRouteFetchDefaults(options: Record<string, any>) {
 export function useApiFetch<T>(url: string | (() => string), options: Record<string, any> = {}) {
   const { $api } = useNuxtApp()
   const config = useRuntimeConfig()
-  const apiBase = String(import.meta.server ? '/api/v1' : (config.public.apiBase || '/api/v1')).replace(/\/+$/, '')
+  const apiBase = getApiBase(config)
   const fetchOptions = withRouteFetchDefaults(options)
   const route = useRoute()
   const resolvedUrl =
@@ -118,7 +139,7 @@ export function useApiLazyFetch<T>(
 ) {
   const { $api } = useNuxtApp()
   const config = useRuntimeConfig()
-  const apiBase = String(import.meta.server ? '/api/v1' : (config.public.apiBase || '/api/v1')).replace(/\/+$/, '')
+  const apiBase = getApiBase(config)
   const fetchOptions = withRouteFetchDefaults(options)
   const resolvedUrl =
     typeof url === 'function'
