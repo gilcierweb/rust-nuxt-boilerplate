@@ -29,11 +29,64 @@ async fn not_found() -> Result<HttpResponse, actix_web::Error> {
     Ok(HttpResponse::NotFound().json(response))
 }
 
+/// Initialize OpenTelemetry tracer provider.
+///
+/// Reads `OTEL_EXPORTER_OTLP_ENDPOINT` env var (default: `http://localhost:4317`).
+/// Returns None if OTEL is disabled or initialization fails.
+fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
+    use opentelemetry_otlp::WithExportConfig;
+
+    let endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:4317".to_string());
+
+    // Disable OTEL by setting OTEL_ENABLED=false
+    if std::env::var("OTEL_ENABLED")
+        .map(|v| v == "false" || v == "0")
+        .unwrap_or(false)
+    {
+        tracing::info!("OpenTelemetry disabled via OTEL_ENABLED=false");
+        return None;
+    }
+
+    let resource = opentelemetry_sdk::Resource::builder()
+        .with_attributes(vec![
+            opentelemetry::KeyValue::new("service.name", "backend-api"),
+            opentelemetry::KeyValue::new("service.version", env!("CARGO_PKG_VERSION")),
+        ])
+        .build();
+
+    // Build span exporter
+    let exporter = match opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .with_endpoint(&endpoint)
+        .build()
+    {
+        Ok(exporter) => exporter,
+        Err(e) => {
+            tracing::warn!(error = %e, "Failed to create OTLP span exporter");
+            return None;
+        }
+    };
+
+    // Create tracer provider
+    let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_resource(resource)
+        .build();
+
+    tracing::info!(endpoint = %endpoint, "OpenTelemetry tracing initialized");
+    Some(provider)
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     rust_i18n::set_locale("pt-BR");
 
-tracing_subscriber::registry()
+    // Initialize OpenTelemetry (optional)
+    let otel_provider = init_opentelemetry();
+
+    // Build tracing subscriber with optional OpenTelemetry layer
+    let registry = tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
                 .unwrap_or_else(|_| "backend_api=debug,actix_web=info,http.request=info".into()),
@@ -45,8 +98,17 @@ tracing_subscriber::registry()
                 .with_file(true)
                 .with_line_number(true)
                 .pretty()
-        )
-        .init();
+        );
+
+    // Add OpenTelemetry layer if provider is available
+    if let Some(ref provider) = otel_provider {
+        use opentelemetry::trace::TracerProvider;
+        let tracer = provider.tracer("backend-api");
+        let otel_layer = tracing_opentelemetry::layer().with_tracer(tracer);
+        registry.with(otel_layer).init();
+    } else {
+        registry.init();
+    }
 
     dotenvy::dotenv().ok();
     let config = AppConfig::from_env().expect("Failed to load configuration");
@@ -216,7 +278,7 @@ tracing_subscriber::registry()
 
     let server = HttpServer::new(app);
 
-    match config.environment {
+    let result = match config.environment {
         backend::config::app_config::Environment::Staging | backend::config::app_config::Environment::Production => {
             // Initialize TLS crypto provider - falls back to default if already initialized
             let _ = rustls::crypto::CryptoProvider::get_default();
@@ -277,5 +339,14 @@ tracing_subscriber::registry()
             println!("Running in HTTP on http://localhost:{}", port);
             server.bind((host, port))?.run().await
         }
+    };
+
+    // Shutdown OpenTelemetry provider to flush pending traces
+    if let Some(provider) = otel_provider {
+        if let Err(e) = provider.shutdown() {
+            tracing::warn!(error = %e, "Failed to shutdown OpenTelemetry provider");
+        }
     }
+
+    result
 }
