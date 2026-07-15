@@ -1,6 +1,104 @@
 use std::env;
+use std::fs;
 
-/// All configuration values loaded from environment variables.
+/// Read a secret value from multiple sources in priority order:
+/// 1. Environment variable `<NAME>`
+/// 2. File at `<NAME>_FILE` env var path (Docker secrets pattern)
+/// 3. Default value
+///
+/// This supports:
+/// - **Environment variables**: Direct `JWT_SECRET=xxx`
+/// - **Docker secrets**: `JWT_SECRET_FILE=/run/secrets/jwt_secret`
+/// - **Kubernetes secrets**: Mounted as files via `secretKeyRef`
+/// - **AWS/GCP/Azure**: Secrets mounted as files or fetched via SDK
+///
+/// # Security Benefits
+///
+/// Reading from files avoids exposing secrets in:
+/// - Process environment (`/proc/<pid>/environ`)
+/// - Container inspection (`docker inspect`)
+/// - CI/CD logs
+/// - Docker image layers (when using multi-stage builds)
+///
+/// # Example
+///
+/// ```bash
+/// # Option 1: Direct environment variable
+/// export JWT_SECRET=supersecret
+///
+/// # Option 2: Docker secrets (recommended for production)
+/// echo "supersecret" | docker secret create jwt_secret -
+/// export JWT_SECRET_FILE=/run/secrets/jwt_secret
+/// ```
+fn secret_from_env_or_file(name: &str, default: &str) -> String {
+    // First, check for direct environment variable
+    if let Ok(value) = env::var(name) {
+        if !value.is_empty() {
+            return value;
+        }
+    }
+
+    // Second, check for file-based secret (Docker secrets pattern)
+    let file_var = format!("{}_FILE", name);
+    if let Ok(file_path) = env::var(&file_var) {
+        match fs::read_to_string(&file_path) {
+            Ok(content) => {
+                let trimmed = content.trim().to_string();
+                if !trimmed.is_empty() {
+                    tracing::debug!(secret = %name, "Loaded secret from file");
+                    return trimmed;
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    secret = %name,
+                    path = %file_path,
+                    error = %e,
+                    "Failed to read secret file, falling back to default"
+                );
+            }
+        }
+    }
+
+    default.to_string()
+}
+
+/// Read a required secret from environment or file.
+/// Returns error if not found in either location.
+fn required_secret(name: &str) -> Result<String, env::VarError> {
+    // Check direct environment variable first
+    if let Ok(value) = env::var(name) {
+        if !value.is_empty() {
+            return Ok(value);
+        }
+    }
+
+    // Check file-based secret
+    let file_var = format!("{}_FILE", name);
+    if let Ok(file_path) = env::var(&file_var) {
+        match fs::read_to_string(&file_path) {
+            Ok(content) => {
+                let trimmed = content.trim().to_string();
+                if !trimmed.is_empty() {
+                    tracing::debug!(secret = %name, "Loaded secret from file");
+                    return Ok(trimmed);
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    secret = %name,
+                    path = %file_path,
+                    error = %e,
+                    "Failed to read secret file"
+                );
+            }
+        }
+    }
+
+    Err(env::VarError::NotPresent)
+}
+
+/// All configuration values loaded from environment variables or secret files.
 /// In production, use Docker secrets or a secrets manager like Vault.
 #[derive(Debug, Clone)]
 pub struct AppConfig {
@@ -126,7 +224,7 @@ impl AppConfig {
                 }
             },
 
-            database_url: env::var("DATABASE_URL")?,
+            database_url: required_secret("DATABASE_URL")?,
             db_pool_size: env::var("DB_POOL_SIZE")
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
@@ -155,14 +253,14 @@ impl AppConfig {
                 .parse()
                 .unwrap_or(10),
 
-            jwt_secret: env::var("JWT_SECRET")?,
+            jwt_secret: required_secret("JWT_SECRET")?,
             jwt_public_key: env::var("JWT_PUBLIC_KEY").ok(),
             jwt_access_expiry_secs: 2 * 60 * 60,
             jwt_refresh_expiry_secs: 30 * 24 * 3600,
 
             // Production requires secrets - fail fast if missing
             master_key: {
-                let key = env::var("MASTER_KEY");
+                let key = required_secret("MASTER_KEY");
                 let env_check = env::var("ENVIRONMENT")
                     .unwrap_or_else(|_| "development".to_string())
                     .to_ascii_lowercase();
@@ -180,7 +278,7 @@ impl AppConfig {
                 }
             },
             blind_index_key: {
-                let key = env::var("BLIND_INDEX_KEY");
+                let key = required_secret("BLIND_INDEX_KEY");
                 let env_check = env::var("ENVIRONMENT")
                     .unwrap_or_else(|_| "development".to_string())
                     .to_ascii_lowercase();
@@ -208,10 +306,12 @@ impl AppConfig {
                 .filter(|value| !value.is_empty())
                 .map(str::to_owned)
                 .collect(),
-            csrf_secret_key: env::var("CSRF_SECRET_KEY")
-                .unwrap_or_else(|_| "default_csrf_secret_key_change_in_production".to_string()),
+            csrf_secret_key: secret_from_env_or_file(
+                "CSRF_SECRET_KEY",
+                "default_csrf_secret_key_change_in_production",
+            ),
             refresh_token_hash_salt: {
-                let salt = env::var("REFRESH_TOKEN_HASH_SALT");
+                let salt = required_secret("REFRESH_TOKEN_HASH_SALT");
                 let env_check = env::var("ENVIRONMENT")
                     .unwrap_or_else(|_| "development".to_string())
                     .to_ascii_lowercase();
@@ -223,7 +323,7 @@ impl AppConfig {
                 salt.unwrap_or_else(|_| "refresh_token_salt_change_in_production".to_string())
             },
 
-            resend_api_key: env::var("RESEND_API_KEY").unwrap_or_default(),
+            resend_api_key: secret_from_env_or_file("RESEND_API_KEY", ""),
             email_from: env::var("EMAIL_FROM")
                 .unwrap_or_else(|_| "noreply@boilerplate-rust-nuxt.com".to_string()),
             email_from_name: env::var("EMAIL_FROM_NAME").unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
@@ -246,9 +346,9 @@ impl AppConfig {
             b2_endpoint: env::var("B2_ENDPOINT")
                 .unwrap_or_else(|_| "https://s3.us-west-004.backblazeb2.com".to_string()),
 
-            stripe_secret_key: env::var("STRIPE_SECRET_KEY").unwrap_or_default(),
-            stripe_webhook_secret: env::var("STRIPE_WEBHOOK_SECRET").unwrap_or_default(),
-            stripe_publishable_key: env::var("STRIPE_PUBLISHABLE_KEY").unwrap_or_default(),
+            stripe_secret_key: secret_from_env_or_file("STRIPE_SECRET_KEY", ""),
+            stripe_webhook_secret: secret_from_env_or_file("STRIPE_WEBHOOK_SECRET", ""),
+            stripe_publishable_key: secret_from_env_or_file("STRIPE_PUBLISHABLE_KEY", ""),
 
             platform_commission_percent: env::var("PLATFORM_COMMISSION_PERCENT")
                 .unwrap_or_else(|_| "20.0".to_string())
