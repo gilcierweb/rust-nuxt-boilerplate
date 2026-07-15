@@ -1,6 +1,8 @@
 use std::env;
 use std::fs;
 
+use base64::Engine as _;
+
 /// Read a secret value from multiple sources in priority order:
 /// 1. Environment variable `<NAME>`
 /// 2. File at `<NAME>_FILE` env var path (Docker secrets pattern)
@@ -393,5 +395,134 @@ impl AppConfig {
             self.environment,
             Environment::Staging | Environment::Production
         )
+    }
+
+    /// Validate configuration at startup.
+    ///
+    /// Returns a list of validation errors. If empty, config is valid.
+    /// Called after `from_env()` to catch misconfiguration before runtime.
+    pub fn validate(&self) -> Vec<String> {
+        let mut errors = Vec::new();
+
+        // Port validation
+        if self.port == 0 {
+            errors.push("PORT must not be 0".to_string());
+        }
+        if self.https_port == 0 {
+            errors.push("HTTPS_PORT must not be 0".to_string());
+        }
+        if self.port == self.https_port {
+            errors.push("PORT and HTTPS_PORT must be different".to_string());
+        }
+
+        // JWT secret validation
+        if self.jwt_secret.len() < 32 {
+            errors.push(format!(
+                "JWT_SECRET must be at least 32 bytes, got {}",
+                self.jwt_secret.len()
+            ));
+        }
+
+        // Master key validation (must be valid base64, decodes to ≥32 bytes)
+        match base64::engine::general_purpose::STANDARD.decode(&self.master_key) {
+            Ok(bytes) if bytes.len() >= 32 => {}
+            Ok(bytes) => {
+                errors.push(format!(
+                    "MASTER_KEY must decode to at least 32 bytes, got {}",
+                    bytes.len()
+                ));
+            }
+            Err(_) => {
+                errors.push("MASTER_KEY must be valid base64".to_string());
+            }
+        }
+
+        // Blind index key validation (must be valid base64, decodes to ≥32 bytes)
+        match base64::engine::general_purpose::STANDARD.decode(&self.blind_index_key) {
+            Ok(bytes) if bytes.len() >= 32 => {}
+            Ok(bytes) => {
+                errors.push(format!(
+                    "BLIND_INDEX_KEY must decode to at least 32 bytes, got {}",
+                    bytes.len()
+                ));
+            }
+            Err(_) => {
+                errors.push("BLIND_INDEX_KEY must be valid base64".to_string());
+            }
+        }
+
+        // CSRF secret key validation
+        if self.is_production_like() && self.csrf_secret_key.len() < 32 {
+            errors.push(format!(
+                "CSRF_SECRET_KEY must be at least 32 bytes in production, got {}",
+                self.csrf_secret_key.len()
+            ));
+        }
+
+        // Refresh token hash salt validation
+        if self.is_production_like() && self.refresh_token_hash_salt.len() < 16 {
+            errors.push(format!(
+                "REFRESH_TOKEN_HASH_SALT must be at least 16 bytes in production, got {}",
+                self.refresh_token_hash_salt.len()
+            ));
+        }
+
+        // Database URL validation
+        if !self.database_url.starts_with("postgres://")
+            && !self.database_url.starts_with("postgresql://")
+        {
+            errors.push("DATABASE_URL must start with postgres:// or postgresql://".to_string());
+        }
+
+        // Redis URL validation
+        if !self.redis_url.starts_with("redis://")
+            && !self.redis_url.starts_with("rediss://")
+        {
+            errors.push("REDIS_URL must start with redis:// or rediss://".to_string());
+        }
+
+        // Pool size validation
+        if self.db_pool_size == 0 {
+            errors.push("DB_POOL_SIZE must be greater than 0".to_string());
+        }
+        if self.redis_pool_size == 0 {
+            errors.push("REDIS_POOL_SIZE must be greater than 0".to_string());
+        }
+
+        // Platform settings validation
+        if self.platform_commission_percent < 0.0 || self.platform_commission_percent > 100.0 {
+            errors.push(format!(
+                "PLATFORM_COMMISSION_PERCENT must be between 0 and 100, got {}",
+                self.platform_commission_percent
+            ));
+        }
+        if self.min_subscription_price_cents >= self.max_subscription_price_cents {
+            errors.push(
+                "MIN_SUBSCRIPTION_PRICE_CENTS must be less than MAX_SUBSCRIPTION_PRICE_CENTS"
+                    .to_string(),
+            );
+        }
+
+        errors
+    }
+
+    /// Validate configuration and panic with clear message if invalid.
+    ///
+    /// Use this at application startup after `from_env()`.
+    pub fn validate_or_panic(&self) {
+        let errors = self.validate();
+        if !errors.is_empty() {
+            eprintln!("╔══════════════════════════════════════════════════════════╗");
+            eprintln!("║           CONFIGURATION VALIDATION FAILED              ║");
+            eprintln!("╠══════════════════════════════════════════════════════════╣");
+            for error in &errors {
+                eprintln!("║  ✗ {:54} ║", error);
+            }
+            eprintln!("╠══════════════════════════════════════════════════════════╣");
+            eprintln!("║  Fix the above issues and restart the application.     ║");
+            eprintln!("║  See .env.example for configuration documentation.     ║");
+            eprintln!("╚══════════════════════════════════════════════════════════╝");
+            std::process::exit(1);
+        }
     }
 }

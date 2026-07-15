@@ -112,6 +112,7 @@ async fn main() -> std::io::Result<()> {
 
     dotenvy::dotenv().ok();
     let config = AppConfig::from_env().expect("Failed to load configuration");
+    config.validate_or_panic();
     let config = Arc::new(config);
     tracing::info!(
         "Starting Backend API v{} on {}:{}",
