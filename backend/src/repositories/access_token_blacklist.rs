@@ -19,7 +19,10 @@ impl AccessTokenBlacklist {
         Self { redis, prefix }
     }
 
-    /// Add a token to the blacklist with TTL matching the token's remaining lifetime
+    /// Add a token to the blacklist with TTL matching the token's remaining lifetime.
+    ///
+    /// The TTL is critical — Redis automatically expires keys after the specified duration.
+    /// Always set TTL to prevent unbounded memory growth.
     pub async fn add(&self, token_hash: &str, ttl_seconds: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut conn = self.redis.get().await?;
         let key = format!("{}{}", self.prefix, token_hash);
@@ -47,6 +50,86 @@ impl AccessTokenBlacklist {
         let key = format!("{}{}", self.prefix, token_hash);
         let _: usize = conn.del(&key).await?;
         Ok(())
+    }
+
+    /// Count the number of blacklisted tokens currently in Redis.
+    ///
+    /// Uses SCAN to iterate keys with the blacklist prefix. This is O(N) but
+    /// non-blocking — Redis SCAN does not block the server.
+    pub async fn count(&self) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+        let mut conn = self.redis.get().await?;
+        let pattern = format!("{}*", self.prefix);
+        let mut count = 0usize;
+        let mut cursor = 0u64;
+
+        loop {
+            let (new_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(&pattern)
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await?;
+
+            count += keys.len();
+            cursor = new_cursor;
+
+            if cursor == 0 {
+                break;
+            }
+        }
+
+        Ok(count)
+    }
+
+    /// Remove expired blacklist entries.
+    ///
+    /// Redis automatically expires keys via TTL, but this method provides explicit
+    /// cleanup as a safety net for edge cases:
+    /// - TTL was not set correctly during `add()`
+    /// - Redis restarted without persistence and lost TTL metadata
+    /// - Manual inspection/cleanup needed
+    ///
+    /// Uses SCAN to find keys and checks TTL. Only removes keys that are expired
+    /// or have no TTL set (which indicates a bug).
+    pub async fn cleanup_expired(&self) -> Result<usize, Box<dyn std::error::Error + Send + Sync>> {
+        let mut conn = self.redis.get().await?;
+        let pattern = format!("{}*", self.prefix);
+        let mut removed = 0usize;
+        let mut cursor = 0u64;
+
+        loop {
+            let (new_cursor, keys): (u64, Vec<String>) = redis::cmd("SCAN")
+                .arg(cursor)
+                .arg("MATCH")
+                .arg(&pattern)
+                .arg("COUNT")
+                .arg(100)
+                .query_async(&mut conn)
+                .await?;
+
+            for key in &keys {
+                // Check TTL — -1 means no expiry set (bug), -2 means key doesn't exist
+                let ttl: i64 = redis::cmd("TTL")
+                    .arg(key)
+                    .query_async(&mut conn)
+                    .await?;
+
+                // Remove if no TTL set (should never happen) or already expired
+                if ttl == -1 || ttl == 0 {
+                    let _: usize = conn.del(key.as_str()).await?;
+                    removed += 1;
+                }
+            }
+
+            cursor = new_cursor;
+            if cursor == 0 {
+                break;
+            }
+        }
+
+        Ok(removed)
     }
 }
 
