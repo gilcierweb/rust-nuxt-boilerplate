@@ -24,7 +24,7 @@ codegen-units = 1
 [dependencies]
 actix = "0.13"
 actix-cors = "0.7.1"
-actix-web = { version = "4.13.0", features = ["rustls-0_23"] }
+actix-web = { version = "4.14.0", features = ["rustls-0_23"] }
 actix-web-actors = "4.3"
 actix-web-grants = "4.1.2"
 actix-ws = "0.4.0"

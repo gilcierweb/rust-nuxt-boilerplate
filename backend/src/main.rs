@@ -26,6 +26,9 @@ mod services;
 mod utils;
 mod ws;
 
+#[cfg(test)]
+pub mod test_utils;
+
 use config::AppConfig;
 use db::database::{DBPool, Database};
 use errors::AppError;
