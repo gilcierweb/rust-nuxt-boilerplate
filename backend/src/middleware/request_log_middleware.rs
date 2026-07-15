@@ -7,7 +7,8 @@ use actix_web::{
     http::header::{HeaderName, HeaderValue},
 };
 use futures::future::{LocalBoxFuture, Ready, ready};
-use uuid::Uuid;
+
+use super::request_id::RequestId;
 
 pub struct RequestLogMiddleware;
 
@@ -56,13 +57,8 @@ where
             .and_then(|value| value.to_str().ok())
             .unwrap_or("unknown")
             .to_string();
-        let request_id = req
-            .headers()
-            .get("x-request-id")
-            .and_then(|value| value.to_str().ok())
-            .filter(|value| !value.trim().is_empty())
-            .map(|value| value.trim().to_string())
-            .unwrap_or_else(|| Uuid::new_v4().to_string());
+        // Get request ID from extensions (set by RequestIdMiddleware) or generate one
+        let request_id = RequestId::from_req_or_new(&req);
         let started_at = Instant::now();
 
         Box::pin(async move {
@@ -113,13 +109,19 @@ mod tests {
     use actix_web::{App, HttpResponse, http::StatusCode, test, web};
 
     use super::RequestLogMiddleware;
+    use crate::middleware::request_id::RequestIdMiddleware;
 
     #[actix_web::test]
     async fn preserves_existing_request_id_header() {
-        let app = test::init_service(App::new().wrap(RequestLogMiddleware).route(
-            "/ok",
-            web::get().to(|| async { HttpResponse::Ok().finish() }),
-        ))
+        let app = test::init_service(
+            App::new()
+                .wrap(RequestLogMiddleware)
+                .wrap(RequestIdMiddleware)
+                .route(
+                    "/ok",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                ),
+        )
         .await;
 
         let request = test::TestRequest::get()
@@ -140,10 +142,15 @@ mod tests {
 
     #[actix_web::test]
     async fn generates_request_id_when_missing() {
-        let app = test::init_service(App::new().wrap(RequestLogMiddleware).route(
-            "/ok",
-            web::get().to(|| async { HttpResponse::Ok().finish() }),
-        ))
+        let app = test::init_service(
+            App::new()
+                .wrap(RequestLogMiddleware)
+                .wrap(RequestIdMiddleware)
+                .route(
+                    "/ok",
+                    web::get().to(|| async { HttpResponse::Ok().finish() }),
+                ),
+        )
         .await;
 
         let request = test::TestRequest::get().uri("/ok").to_request();
