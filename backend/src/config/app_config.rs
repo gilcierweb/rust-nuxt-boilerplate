@@ -171,7 +171,13 @@ impl AppConfig {
                 if requires_strict_secrets && key.is_err() {
                     panic!("MASTER_KEY must be set in staging/production");
                 }
-                key.unwrap_or_else(|_| "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=".to_string())
+                match key {
+                    Ok(k) => k,
+                    Err(_) => {
+                        eprintln!("[SECURITY WARNING] Using default MASTER_KEY. Run `./scripts/generate-secrets.sh >> .env` to generate secure secrets.");
+                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=".to_string()
+                    }
+                }
             },
             blind_index_key: {
                 let key = env::var("BLIND_INDEX_KEY");
@@ -183,7 +189,13 @@ impl AppConfig {
                 if requires_strict_secrets && key.is_err() {
                     panic!("BLIND_INDEX_KEY must be set in staging/production");
                 }
-                key.unwrap_or_else(|_| "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=".to_string())
+                match key {
+                    Ok(k) => k,
+                    Err(_) => {
+                        eprintln!("[SECURITY WARNING] Using default BLIND_INDEX_KEY. Run `./scripts/generate-secrets.sh >> .env` to generate secure secrets.");
+                        "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=".to_string()
+                    }
+                }
             },
             current_encryption_key_version: env::var("CURRENT_ENCRYPTION_KEY_VERSION")
                 .unwrap_or_else(|_| "1".to_string())
