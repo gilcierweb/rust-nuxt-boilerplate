@@ -1,9 +1,31 @@
 use diesel::prelude::*;
-use diesel::r2d2::{ConnectionManager, Pool};
+use diesel::r2d2::{ConnectionManager, Pool, CustomizeConnection};
 
 use crate::config::AppConfig;
 
 pub type DBPool = Pool<ConnectionManager<PgConnection>>;
+
+/// Connection customizer that sets statement timeout on each new connection
+#[derive(Debug)]
+struct StatementTimeoutCustomizer {
+    timeout_secs: Option<u64>,
+}
+
+impl CustomizeConnection<PgConnection, diesel::r2d2::Error> for StatementTimeoutCustomizer {
+    fn on_acquire(&self, conn: &mut PgConnection) -> Result<(), diesel::r2d2::Error> {
+        use diesel::sql_query;
+
+        if let Some(timeout) = self.timeout_secs {
+            // Set statement timeout in milliseconds
+            let timeout_ms = (timeout * 1000) as i32;
+            sql_query(format!("SET statement_timeout = {}", timeout_ms))
+                .execute(conn)
+                .map_err(diesel::r2d2::Error::QueryError)?;
+        }
+
+        Ok(())
+    }
+}
 
 pub struct Database {
     pub pool: DBPool,
@@ -51,6 +73,12 @@ impl Database {
             // Default: 10 minutes
             pool_builder = pool_builder.idle_timeout(Some(std::time::Duration::from_secs(600)));
         }
+
+        // Set statement timeout customizer
+        let customizer = StatementTimeoutCustomizer {
+            timeout_secs: config.db_statement_timeout_secs,
+        };
+        pool_builder = pool_builder.connection_customizer(Box::new(customizer));
 
         let result = pool_builder
             .build(manager)

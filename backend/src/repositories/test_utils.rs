@@ -26,6 +26,7 @@ pub mod mocks {
             db_pool_max_lifetime_secs: Some(1800),
             db_pool_idle_timeout_secs: Some(600),
             db_pool_connection_timeout_secs: 10,
+            db_statement_timeout_secs: Some(30),
             redis_url: "redis://127.0.0.1:6379".to_string(),
             redis_pool_size: 10,
             jwt_secret: "secret_for_tests".to_string(),

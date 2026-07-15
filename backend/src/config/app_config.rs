@@ -20,6 +20,7 @@ pub struct AppConfig {
     pub db_pool_max_lifetime_secs: Option<u64>,
     pub db_pool_idle_timeout_secs: Option<u64>,
     pub db_pool_connection_timeout_secs: u64,
+    pub db_statement_timeout_secs: Option<u64>,
 
     // Redis
     pub redis_url: String,
@@ -143,6 +144,9 @@ impl AppConfig {
                 .unwrap_or_else(|_| "10".to_string())
                 .parse()
                 .unwrap_or(10),
+            db_statement_timeout_secs: env::var("DB_STATEMENT_TIMEOUT_SECS")
+                .ok()
+                .and_then(|s| s.parse::<u64>().ok()),
 
             redis_url: env::var("REDIS_URL")
                 .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
