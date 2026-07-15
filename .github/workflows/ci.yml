@@ -69,6 +69,12 @@ jobs:
         run: cargo audit
         continue-on-error: false
 
+      - name: Install diesel_cli
+        run: cargo install diesel_cli --no-default-features --features postgres
+
+      - name: Run diesel migrations
+        run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
+
       - name: Run cargo fmt (check formatting)
         run: cargo fmt --all -- --check
 
