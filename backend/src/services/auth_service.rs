@@ -16,10 +16,20 @@ use chrono::Utc;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-/// Hash a plaintext password using Argon2id.
+/// Current Argon2 parameters for password hashing.
+/// Update these when strengthening requirements.
+const ARGON2_M_COST: u32 = 65536;
+const ARGON2_T_COST: u32 = 3;
+const ARGON2_P_COST: u32 = 1;
+
+/// Hash a plaintext password using Argon2id with current parameters.
 pub fn hash_password(password: &str) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
+
+    let params = argon2::Params::new(ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST, None)
+        .map_err(|e| AppError::Internal(format!("Invalid Argon2 parameters: {}", e)))?;
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
+
     argon2
         .hash_password(password.as_bytes(), &salt)
         .map(|h| h.to_string())
@@ -33,6 +43,29 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
     Ok(Argon2::default()
         .verify_password(password.as_bytes(), &parsed)
         .is_ok())
+}
+
+/// Check if a password hash needs to be rehashed with current parameters.
+/// Returns true if the hash was created with different parameters than the current policy.
+pub fn needs_rehash(hash: &str) -> bool {
+    let parsed = match PasswordHash::new(hash) {
+        Ok(h) => h,
+        Err(_) => return true,
+    };
+
+    let params = &parsed.params;
+
+    let m_cost = params.get("m").and_then(|v| v.to_string().parse::<u32>().ok()).unwrap_or(0);
+    let t_cost = params.get("t").and_then(|v| v.to_string().parse::<u32>().ok()).unwrap_or(0);
+    let p_cost = params.get("p").and_then(|v| v.to_string().parse::<u32>().ok()).unwrap_or(0);
+
+    m_cost != ARGON2_M_COST || t_cost != ARGON2_T_COST || p_cost != ARGON2_P_COST
+}
+
+/// Rehash a password with current parameters. Returns the new hash.
+/// Should only be called after successful password verification.
+pub fn rehash_password(password: &str) -> Result<String, AppError> {
+    hash_password(password)
 }
 
 /// Validate password strength: min 12 chars, at least 1 digit, 1 uppercase, 1 special char.

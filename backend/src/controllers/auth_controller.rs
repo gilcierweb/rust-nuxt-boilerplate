@@ -1,5 +1,4 @@
 use crate::{
-    auth::password::{password_hash, verify, needs_rehash, rehash_password},
     config::AppConfig,
     errors::{AppError, AppResult},
     middleware::auth::AuthUser,
@@ -9,7 +8,7 @@ use crate::{
     models::user::{NewUser, User},
     repositories::container::AppContainer,
     security::SecurityService,
-    services::auth_service::validate_password_strength,
+    services::auth_service::{hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password},
     services::email_service::EmailService,
     services::token_service::hash_token,
     utils::validation::first_validation_error_message,
@@ -122,7 +121,7 @@ pub async fn register(
         ));
     }
 
-    let encrypted_password = password_hash(body.password.clone());
+    let encrypted_password = hash_password(&body.password)?;
     let now = Utc::now();
     let confirmation_token = Uuid::new_v4().to_string();
     let confirmation_token_digest = hash_token(&confirmation_token, &container.config.refresh_token_hash_salt);
@@ -327,7 +326,7 @@ pub async fn login(
     }
 
     // Verify password
-    let password_valid = verify(body.password.clone(), user.encrypted_password.clone());
+    let password_valid = verify_password(&body.password, &user.encrypted_password)?;
     if !password_valid {
         container
             .users
@@ -346,7 +345,19 @@ pub async fn login(
 
     // Upgrade password hash if using outdated Argon2 parameters
     if needs_rehash(&user.encrypted_password) {
-        let new_hash = rehash_password(&body.password);
+        let new_hash = match rehash_password(&body.password) {
+            Ok(h) => h,
+            Err(e) => {
+                tracing::warn!(
+                    event = "auth.login.rehash_error",
+                    user_id = %user.id,
+                    error = %e,
+                    "password rehash error"
+                );
+                // Non-fatal: continue with old hash
+                user.encrypted_password.clone()
+            }
+        };
         if let Err(e) = container
             .users
             .update_password(&user.id, &new_hash)
@@ -804,7 +815,7 @@ pub async fn reset_password(
         ));
     }
 
-    let hashed_password = password_hash(body.password.clone());
+    let hashed_password = hash_password(&body.password)?;
     let affected_rows = container
         .users
         .update_password(&user.id, &hashed_password)
@@ -1012,10 +1023,7 @@ pub async fn change_password(
         .await
         .map_err(AppError::Database)?;
 
-    if !verify(
-        body.current_password.clone(),
-        user_data.encrypted_password.clone(),
-    ) {
+    if !verify_password(&body.current_password, &user_data.encrypted_password)? {
         tracing::warn!(
             event = "auth.password.change_invalid_current",
             user_id = %user_id,
@@ -1027,7 +1035,7 @@ pub async fn change_password(
     }
 
     validate_password_strength(&body.new_password)?;
-    let hashed = password_hash(body.new_password.clone());
+    let hashed = hash_password(&body.new_password)?;
 
     container
         .users
@@ -1609,9 +1617,7 @@ mod tests {
             id: Uuid::new_v4(),
             email_blind_index: protected_email.blind_index,
             email_encrypted: protected_email.encrypted,
-            encrypted_password: crate::auth::password::password_hash(
-                "CorrectPassword1".to_string(),
-            ),
+            encrypted_password: hash_password("CorrectPassword1").unwrap(),
             reset_password_token_digest: None,
             reset_password_sent_at: None,
             remember_created_at: None,
@@ -2227,10 +2233,7 @@ mod tests {
             .withf(move |user_id, hashed_password| {
                 *user_id == expected_user_id
                     && hashed_password != "Password123"
-                    && crate::auth::password::verify(
-                        "Password123".to_string(),
-                        hashed_password.to_string(),
-                    )
+                    && verify_password("Password123", hashed_password).unwrap_or(false)
             })
             .times(1)
             .returning(|_, _| Ok(1));
