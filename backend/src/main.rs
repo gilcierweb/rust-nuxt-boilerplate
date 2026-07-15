@@ -10,39 +10,12 @@ use std::io::BufReader;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-mod api_docs;
-mod auth;
-mod authz;
-mod config;
-mod controllers;
-mod db;
-mod errors;
-mod middleware;
-mod models;
-mod repositories;
-mod routes;
-mod security;
-mod services;
-mod utils;
-mod ws;
-
-#[cfg(test)]
-pub mod test_utils;
-
-use config::AppConfig;
-use db::database::{DBPool, Database};
-use errors::AppError;
+use backend::config::AppConfig;
+use backend::db::database::Database;
+use backend::errors::AppError;
+use backend::AppState;
 
 i18n!("locales");
-
-#[derive(Clone)]
-pub struct AppState {
-    pub db: DBPool,
-    pub redis: deadpool_redis::Pool,
-    pub config: Arc<AppConfig>,
-    pub metrics: Arc<services::metrics_service::MetricsRegistry>,
-    pub ws: ws::WsState,
-}
 
 #[derive(Serialize)]
 pub struct Response<'a> {
@@ -100,7 +73,7 @@ tracing_subscriber::registry()
     );
 
     // Warn if pool size is too low for production workloads
-    if config.redis_pool_size < 20 && matches!(config.environment, crate::config::app_config::Environment::Production) {
+    if config.redis_pool_size < 20 && matches!(config.environment, backend::config::app_config::Environment::Production) {
         tracing::warn!(
             event = "redis.pool_size_low",
             pool_size = config.redis_pool_size,
@@ -116,17 +89,17 @@ tracing_subscriber::registry()
         .expect("Failed to create Redis connection pool");
     let redis_pool_for_container = redis_pool.clone();
 
-    let ws_state = web::Data::new(ws::server::WsState::new());
+    let ws_state = web::Data::new(backend::ws::server::WsState::new());
 
     let state = web::Data::new(AppState {
         db: db_pool,
         redis: redis_pool,
         config: config.clone(),
-        metrics: Arc::new(services::metrics_service::MetricsRegistry::new()),
-        ws: ws::WsState::new(),
+        metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
+        ws: backend::ws::WsState::new(),
     });
 
-    let container = web::Data::new(repositories::AppContainer::new(
+    let container = web::Data::new(backend::repositories::AppContainer::new(
         db_pool_for_container,
         redis_pool_for_container,
         (*config).clone(),
@@ -225,24 +198,24 @@ tracing_subscriber::registry()
             .app_data(web::PayloadConfig::new(config_form_limit))
             .wrap(cors)
             .wrap(actix_web::middleware::Compress::default())
-            .wrap(middleware::metrics_middleware::MetricsMiddleware)
-            .wrap(middleware::request_log_middleware::RequestLogMiddleware)
+            .wrap(backend::middleware::metrics_middleware::MetricsMiddleware)
+            .wrap(backend::middleware::request_log_middleware::RequestLogMiddleware)
             .route(
                 "/metrics",
-                web::get().to(controllers::metrics_controller::metrics),
+                web::get().to(backend::controllers::metrics_controller::metrics),
             )
             .route(
                 "/health",
-                web::get().to(controllers::health_controller::health_check),
+                web::get().to(backend::controllers::health_controller::health_check),
             )
-            .configure(|cfg| routes::router::config(cfg, pool_for_router.clone()))
+            .configure(|cfg| backend::routes::router::config(cfg, pool_for_router.clone()))
             .default_service(web::route().to(not_found))
     };
 
     let server = HttpServer::new(app);
 
     match config.environment {
-        config::app_config::Environment::Staging | config::app_config::Environment::Production => {
+        backend::config::app_config::Environment::Staging | backend::config::app_config::Environment::Production => {
             // Initialize TLS crypto provider - falls back to default if already initialized
             let _ = rustls::crypto::CryptoProvider::get_default();
 
@@ -298,7 +271,7 @@ tracing_subscriber::registry()
                 .run()
                 .await
         }
-        config::app_config::Environment::Development | config::app_config::Environment::Test => {
+        backend::config::app_config::Environment::Development | backend::config::app_config::Environment::Test => {
             println!("Running in HTTP on http://localhost:{}", port);
             server.bind((host, port))?.run().await
         }
