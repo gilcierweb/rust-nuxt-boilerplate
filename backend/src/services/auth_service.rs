@@ -311,12 +311,16 @@ mod tests {
 
     #[test]
     fn test_hash_token_consistency() {
+        use super::super::token_service::verify_token_hash;
         let token = "test-token-123";
         let salt = "test_salt";
         let hash1 = hash_token(token, salt);
         let hash2 = hash_token(token, salt);
-        assert_eq!(hash1, hash2);
-        assert!(!hash1.is_empty());
+        // Argon2id uses random salt, so hashes are different each time
+        assert_ne!(hash1, hash2);
+        // But both should verify correctly with the original token
+        assert!(verify_token_hash(token, &hash1));
+        assert!(verify_token_hash(token, &hash2));
     }
 
     #[test]

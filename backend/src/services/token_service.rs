@@ -51,15 +51,54 @@ pub fn verify_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
     Ok(token_data.claims)
 }
 
-pub fn hash_token(token: &str, salt: &str) -> String {
-    use hmac::{Hmac, Mac};
-    use sha2::Sha256;
+pub fn hash_token(_token: &str, _salt: &str) -> String {
+    use argon2::Argon2;
+    use rand::rngs::OsRng;
+    use rand::RngCore;
 
-    type HmacSha256 = Hmac<Sha256>;
+    // Generate a random 16-byte salt for Argon2id
+    let mut salt_bytes = [0u8; 16];
+    OsRng.fill_bytes(&mut salt_bytes);
 
-    let mut mac = HmacSha256::new_from_slice(salt.as_bytes()).unwrap();
-    mac.update(token.as_bytes());
-    hex::encode(mac.finalize().into_bytes())
+    // Hash with Argon2id (same params as password hashing)
+    let mut output = [0u8; 32];
+    let params = argon2::Params::new(65536, 3, 1, Some(32)).unwrap();
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
+    argon2
+        .hash_password_into(_token.as_bytes(), &salt_bytes, &mut output)
+        .expect("Argon2id hashing should not fail");
+
+    // Return salt:hash format for storage
+    format!("{}:{}", hex::encode(salt_bytes), hex::encode(output))
+}
+
+/// Verify a token against a stored Argon2id hash (format: salt:hash).
+pub fn verify_token_hash(token: &str, stored: &str) -> bool {
+    use argon2::Argon2;
+
+    let parts: Vec<&str> = stored.splitn(2, ':').collect();
+    if parts.len() != 2 {
+        return false;
+    }
+
+    let salt_bytes = match hex::decode(parts[0]) {
+        Ok(b) => b,
+        Err(_) => return false,
+    };
+    let expected_hash = match hex::decode(parts[1]) {
+        Ok(b) => b,
+        Err(_) => return false,
+    };
+
+    let mut output = vec![0u8; expected_hash.len()];
+    let params = argon2::Params::new(65536, 3, 1, Some(expected_hash.len())).unwrap();
+    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
+    argon2
+        .hash_password_into(token.as_bytes(), &salt_bytes, &mut output)
+        .expect("Argon2id hashing should not fail");
+
+    // Constant-time comparison
+    output == expected_hash
 }
 
 pub fn generate_random_token(length: usize) -> String {
@@ -116,8 +155,11 @@ mod tests {
         let hash1 = hash_token(token, salt);
         let hash2 = hash_token(token, salt);
 
-        assert_eq!(hash1, hash2);
-        assert!(!hash1.is_empty());
+        // Argon2id uses random salt, so hashes are different each time
+        assert_ne!(hash1, hash2);
+        // But both should contain the salt:hash format
+        assert!(hash1.contains(':'));
+        assert!(hash2.contains(':'));
     }
 
     #[test]
@@ -136,6 +178,16 @@ mod tests {
         let hash2 = hash_token(token, "salt2");
 
         assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_verify_token_hash() {
+        let token = "test-refresh-token-12345";
+        let salt = "test_salt";
+        let stored = hash_token(token, salt);
+
+        assert!(verify_token_hash(token, &stored));
+        assert!(!verify_token_hash("wrong-token", &stored));
     }
 
     #[test]

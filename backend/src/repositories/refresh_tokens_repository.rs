@@ -88,6 +88,34 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
             .await
     }
 
+    async fn find_valid_by_token(
+        &self,
+        plaintext_token: &str,
+    ) -> diesel::QueryResult<Option<RefreshToken>> {
+        use crate::services::token_service::verify_token_hash;
+        use chrono::Utc;
+        use crate::db::schema::refresh_tokens::dsl::*;
+        use diesel::{
+            ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
+        };
+
+        let token = plaintext_token.to_string();
+        self.base
+            .run(move |conn| {
+                let now = Utc::now();
+                let candidates: Vec<RefreshToken> = refresh_tokens_table::table
+                    .filter(revoked_at.is_null())
+                    .filter(expires_at.gt(now))
+                    .select(RefreshToken::as_select())
+                    .load::<RefreshToken>(conn)?;
+
+                Ok(candidates
+                    .into_iter()
+                    .find(|t| verify_token_hash(&token, &t.token_hash)))
+            })
+            .await
+    }
+
     async fn revoke(&self, tid: &Uuid) -> diesel::QueryResult<usize> {
         let tid = *tid;
         use crate::db::schema::refresh_tokens::dsl::*;
@@ -119,37 +147,37 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         token_hash_str: &str,
         new_token: &NewRefreshToken,
     ) -> diesel::QueryResult<Option<RefreshToken>> {
-        let hash = token_hash_str.to_string();
+        let plaintext = token_hash_str.to_string();
         let new_token = new_token.clone();
         use crate::db::schema::refresh_tokens::dsl::*;
+        use crate::services::token_service::verify_token_hash;
+        use chrono::Utc;
         use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
         // Use a transaction to ensure atomicity: revoke old token AND create new token
         self.base
             .run_transaction(move |conn| {
-                // First, find the existing token
-                let existing_token: Option<RefreshToken> = refresh_tokens_table::table
-                    .filter(token_hash.eq(&hash))
+                let now = Utc::now();
+
+                // Find all valid tokens and verify the plaintext against each
+                let candidates: Vec<RefreshToken> = refresh_tokens_table::table
+                    .filter(revoked_at.is_null())
+                    .filter(expires_at.gt(now))
                     .select(RefreshToken::as_select())
-                    .first::<RefreshToken>(conn)
-                    .optional()?;
+                    .load::<RefreshToken>(conn)?;
+
+                let existing_token = candidates
+                    .into_iter()
+                    .find(|t| verify_token_hash(&plaintext, &t.token_hash));
 
                 let existing_token = match existing_token {
                     Some(t) => t,
                     None => return Ok(None),
                 };
 
-                // Check if token is already revoked or expired
-                if existing_token.revoked_at.is_some() {
-                    return Ok(None);
-                }
-                if existing_token.expires_at < chrono::Utc::now() {
-                    return Ok(None);
-                }
-
                 // Revoke the old token
                 diesel::update(refresh_tokens_table::table.find(existing_token.id))
-                    .set(revoked_at.eq(Some(chrono::Utc::now())))
+                    .set(revoked_at.eq(Some(Utc::now())))
                     .execute(conn)?;
 
                 // Create the new token

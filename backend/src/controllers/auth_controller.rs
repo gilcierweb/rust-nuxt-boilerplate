@@ -472,13 +472,12 @@ pub async fn refresh(
     // rotate_token atomically validates the token (exists, not revoked, not expired),
     // revokes it, and creates a new token with the same device_info and ip_address
     for refresh_token in refresh_tokens {
-        let token_hash = hash_token(&refresh_token, &container.config.refresh_token_hash_salt);
-
-        // Try to atomically rotate the token
-        // rotate_token validates the token, revokes the old one, and creates a new one atomically
+        // Try to atomically rotate the token using plaintext verification
+        // rotate_token verifies the plaintext token against stored Argon2id hashes,
+        // revokes the old one, and creates a new one atomically
         match container
             .refresh_tokens
-            .rotate_token(&token_hash, &NewRefreshToken {
+            .rotate_token(&refresh_token, &NewRefreshToken {
                 id: Uuid::new_v4(),
                 user_id: Uuid::nil(), // Will be set from old token
                 token_hash: String::new(), // Will be set from new token
@@ -659,11 +658,9 @@ pub async fn logout(
 
     let mut revoked_count: usize = 0;
     for refresh_token in extract_refresh_cookies(&req) {
-        let token_hash = hash_token(&refresh_token, &container.config.refresh_token_hash_salt);
-
         if let Ok(Some(token)) = container
             .refresh_tokens
-            .find_by_token_hash(&token_hash)
+            .find_valid_by_token(&refresh_token)
             .await
         {
             container
@@ -1220,11 +1217,9 @@ async fn find_valid_refresh_token(
     }
 
     for refresh_token in refresh_tokens {
-        let token_hash = hash_token(&refresh_token, &container.config.refresh_token_hash_salt);
-
         let stored = match container
             .refresh_tokens
-            .find_by_token_hash(&token_hash)
+            .find_valid_by_token(&refresh_token)
             .await
         {
             Ok(Some(token)) => token,
@@ -1617,10 +1612,10 @@ mod tests {
             .returning(move |_| Ok(Some(profile.clone())));
 
         let mut mock_refresh_tokens = MockIRefreshTokenRepository::new();
-        let refresh_token_hash = hash_token(refresh_token_plain, "test_refresh_token_salt");
+        let refresh_token_plain_owned = refresh_token_plain.to_string();
         mock_refresh_tokens
-            .expect_find_by_token_hash()
-            .withf(move |value| value == &refresh_token_hash)
+            .expect_find_valid_by_token()
+            .withf(move |value| value == &refresh_token_plain_owned)
             .times(1)
             .returning(move |_| {
                 Ok(Some(RefreshToken {
@@ -1791,7 +1786,7 @@ mod tests {
 
         mock_users
             .expect_confirm_email()
-            .withf(|token_digest| token_digest.len() == 64)
+            .withf(|token_digest| token_digest.contains(':') && token_digest.len() > 64)
             .times(1)
             .returning(|_| Ok(0));
 
@@ -1820,7 +1815,7 @@ mod tests {
 
         mock_users
             .expect_confirm_email()
-            .withf(|token_digest| token_digest.len() == 64)
+            .withf(|token_digest| token_digest.contains(':') && token_digest.len() > 64)
             .times(1)
             .returning(|_| Ok(1));
 
@@ -1855,7 +1850,7 @@ mod tests {
 
         mock_users
             .expect_create_password_reset_token()
-            .withf(|_, token_digest, _| token_digest.len() == 64)
+            .withf(|_, token_digest, _| token_digest.contains(':') && token_digest.len() > 64)
             .times(1)
             .returning(|_, _, _| Ok(1));
 
@@ -1923,7 +1918,7 @@ mod tests {
 
         mock_users
             .expect_find_by_reset_token_digest()
-            .withf(|token_digest| token_digest.len() == 64)
+            .withf(|token_digest| token_digest.contains(':') && token_digest.len() > 64)
             .times(1)
             .returning(move |_| Ok(Some(user.clone())));
 
@@ -1962,7 +1957,7 @@ mod tests {
 
         mock_users
             .expect_find_by_reset_token_digest()
-            .withf(|token_digest| token_digest.len() == 64)
+            .withf(|token_digest| token_digest.contains(':') && token_digest.len() > 64)
             .times(1)
             .returning(move |_| Ok(Some(user.clone())));
 
