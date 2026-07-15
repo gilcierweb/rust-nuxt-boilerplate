@@ -80,6 +80,39 @@ docker compose up --build
 docker compose up -d --build
 ```
 
+### 2b. Alternative: Proctor (Process Manager)
+
+For local development without Docker, use **Proctor** with the included `Procfile`:
+
+```bash
+# Install Proctor (written in Rust)
+curl -fsSL https://raw.githubusercontent.com/alecthomas/proctor/master/install.sh | sh
+
+cd rust-nuxt-boilerplate/
+# Start all services defined in Procfile
+proctor
+
+# Or run specific service
+proctor backend
+proctor frontend
+```
+
+**Procfile** defines:
+- `backend`: Rust Actix Web server with auto-reload (`cargo watch`)
+- `frontend`: Nuxt dev server on port 4000 (to avoid conflict with backend on 8080)
+- Health probe waits for backend to be ready before starting frontend
+
+```bash
+# Install backend watcher
+cargo install cargo-watch
+
+# Start manually without proctor (backend)
+cd backend && cargo watch -x "run --bin backend"
+
+# Start manually without proctor (frontend)
+cd frontend && pnpm dev -p 4000
+```
+
 ### 3. Initialize Database
 
 ```bash
@@ -145,7 +178,26 @@ docker compose exec backend cargo run --bin seed
 
 ## 🛠️ Local Development (Without Docker)
 
-### Backend
+### Using Proctor (Recommended)
+
+The project includes a `Procfile` for [Proctor](https://github.com/alecthomas/proctor) - a process manager that handles multiple services with health checks and dependencies.
+
+```bash
+# Install Proctor (written in Rust)
+curl -fsSL https://raw.githubusercontent.com/alecthomas/proctor/master/install.sh | sh
+
+# Install backend watcher
+cargo install cargo-watch
+
+# Start all services (backend + frontend) with dependency ordering
+proctor
+```
+
+This starts:
+- **Backend**: `cd backend && cargo watch -x "run --bin backend"` (port 8080)
+- **Frontend**: `cd frontend && pnpm dev -p 4000` (port 4000, waits for backend health check)
+
+### Manual Backend
 
 ```bash
 cd backend
@@ -230,9 +282,75 @@ See [`.env.example`](.env.example) for complete list.
 
 ---
 
-## 🔧 Backend & Frontend Environment Setup (Step by Step)
+## 🔄 Process Management
 
-### Backend Environment Variables
+### Proctor (Recommended for Local Dev)
+
+[Proctor](https://github.com/alecthomas/proctor) manages multiple processes with a single config, similar to Foreman/Procfile but with better log handling and health checks. Written in **Rust**.
+
+**Install:**
+```bash
+# Official install script (recommended)
+curl -fsSL https://raw.githubusercontent.com/alecthomas/proctor/master/install.sh | sh
+
+# Or install specific version to custom directory
+curl -fsSL https://raw.githubusercontent.com/alecthomas/proctor/master/install.sh | INSTALL_DIR=~/.local/bin sh -s v0.1.0
+
+# macOS via Homebrew
+brew install alecthomas/tap/proctor
+```
+
+**Usage with included Procfile:**
+```bash
+# Start all processes (databases → backend → frontend)
+proctor
+
+# Follow logs
+proctor logs -f
+
+# Stop all
+proctor stop
+
+# Restart single process
+proctor restart backend
+
+# Check status
+proctor status
+```
+
+The project includes a `Procfile` that Proctor reads directly. It defines:
+- `postgres`: PostgreSQL via docker compose
+- `redis`: Redis via docker compose  
+- `backend`: Rust backend with hot reload (depends on postgres + redis)
+- `frontend`: Nuxt frontend (depends on backend)
+
+### Procfile (Alternative)
+
+Create `Procfile` in project root for Foreman/Heroku-style process management (already included):
+
+```procfile
+# Procfile - already included in this repo
+backend: cd backend && cargo watch -x "run --bin backend"
+frontend: cd frontend && pnpm dev -p 4000
+postgres: docker compose up postgres
+redis: docker compose up redis
+meilisearch: docker compose up meilisearch
+monitoring: docker compose --profile monitoring up
+```
+
+**Usage with Foreman:**
+```bash
+# Install foreman
+gem install foreman
+
+# Start all processes
+foreman start
+
+# Or with specific formation
+foreman start -f Procfile
+```
+
+### Manual Backend
 
 Create `backend/.env` (or use root `.env` with Docker Compose):
 
