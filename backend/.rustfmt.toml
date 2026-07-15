@@ -1,0 +1,51 @@
+# Rustfmt Configuration
+# This file ensures consistent code formatting across all contributors.
+# Uses only stable options.
+
+edition = "2024"
+max_width = 100
+
+# Use 4 spaces for indentation (not tabs)
+indent_style = "Block"
+tab_spaces = 4
+hard_tabs = false
+
+# Newline style
+newline_style = "Unix"
+
+# Import grouping and ordering
+imports_granularity = "Module"
+group_imports = "StdExternalCrate"
+
+# Braces
+brace_style = "PreferSameLine"
+control_brace_style = "AlwaysSameLine"
+
+# Function formatting
+fn_args_layout = "Tall"
+
+# Match arms
+match_arm_leading_pipes = "Never"
+match_block_trailing_comma = true
+
+# Trailing commas
+trailing_comma = "Vertical"
+
+# Reorder imports
+reorder_imports = true
+
+# Use field init shorthand
+use_field_init_shorthand = true
+
+# Use try shorthand
+use_try_shorthand = true
+
+# Format macros
+format_macro_matchers = true
+format_macro_bodies = true
+
+# Empty item single line
+empty_item_single_line = true
+
+# Config version
+version = "Two"
