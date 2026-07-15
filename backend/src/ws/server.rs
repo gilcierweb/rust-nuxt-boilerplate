@@ -6,7 +6,8 @@ use actix_web_actors::ws;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex as TokioMutex;
 use uuid::Uuid;
 
 use crate::AppState;
@@ -16,8 +17,8 @@ const WS_PROTOCOL: &str = "justfans-ws";
 const WS_AUTH_PROTOCOL_PREFIX: &str = "auth.";
 
 /// Shared state for WebSocket connections
-pub type WsConnections = Arc<Mutex<HashMap<String, ConnectionInfo>>>;
-pub type WsPresence = Arc<Mutex<HashMap<Uuid, PresenceInfo>>>;
+pub type WsConnections = Arc<TokioMutex<HashMap<String, ConnectionInfo>>>;
+pub type WsPresence = Arc<TokioMutex<HashMap<Uuid, PresenceInfo>>>;
 
 #[derive(Clone, Debug)]
 pub struct ConnectionInfo {
@@ -43,21 +44,21 @@ pub struct WsState {
 impl WsState {
     pub fn new() -> Self {
         Self {
-            connections: Arc::new(Mutex::new(HashMap::new())),
-            presence: Arc::new(Mutex::new(HashMap::new())),
+            connections: Arc::new(TokioMutex::new(HashMap::new())),
+            presence: Arc::new(TokioMutex::new(HashMap::new())),
         }
     }
 
-    pub fn add_connection(&self, conn_id: String, info: ConnectionInfo) {
+    pub async fn add_connection(&self, conn_id: String, info: ConnectionInfo) {
         let should_broadcast_online = {
-            let mut conns = self.connections.lock().unwrap();
+            let mut conns = self.connections.lock().await;
             let is_new_connection = conns.insert(conn_id, info.clone()).is_none();
             drop(conns);
 
             if !is_new_connection {
                 false
             } else {
-                let mut presence = self.presence.lock().unwrap();
+                let mut presence = self.presence.lock().await;
                 let entry = presence.entry(info.profile_id).or_insert(PresenceInfo {
                     active_connections: 0,
                     last_seen_at: None,
@@ -69,13 +70,13 @@ impl WsState {
         };
 
         if should_broadcast_online {
-            self.broadcast_presence_change(info.profile_id, true, None);
+            self.broadcast_presence_change(info.profile_id, true, None).await;
         }
     }
 
-    pub fn remove_connection(&self, conn_id: &str) {
+    pub async fn remove_connection(&self, conn_id: &str) {
         let removed_profile_id = {
-            let mut conns = self.connections.lock().unwrap();
+            let mut conns = self.connections.lock().await;
             conns.remove(conn_id).map(|info| info.profile_id)
         };
 
@@ -84,7 +85,7 @@ impl WsState {
         };
 
         let last_seen_at = {
-            let mut presence = self.presence.lock().unwrap();
+            let mut presence = self.presence.lock().await;
             let Some(entry) = presence.get_mut(&profile_id) else {
                 return;
             };
@@ -103,12 +104,12 @@ impl WsState {
         };
 
         if let Some(seen_at) = last_seen_at {
-            self.broadcast_presence_change(profile_id, false, Some(seen_at));
+            self.broadcast_presence_change(profile_id, false, Some(seen_at)).await;
         }
     }
 
-    pub fn broadcast_to_room(&self, room: &str, message: WsMessage) {
-        let conns = self.connections.lock().unwrap();
+    pub async fn broadcast_to_room(&self, room: &str, message: WsMessage) {
+        let conns = self.connections.lock().await;
         for (_, info) in conns.iter() {
             if info.room.as_ref() == Some(&room.to_string()) {
                 let _ = info.addr.try_send(message.clone());
@@ -116,13 +117,13 @@ impl WsState {
         }
     }
 
-    pub fn broadcast_to_room_except(
+    pub async fn broadcast_to_room_except(
         &self,
         room: &str,
         excluded_profile_id: Uuid,
         message: WsMessage,
     ) {
-        let conns = self.connections.lock().unwrap();
+        let conns = self.connections.lock().await;
         for (_, info) in conns.iter() {
             if info.room.as_ref() == Some(&room.to_string())
                 && info.profile_id != excluded_profile_id
@@ -132,9 +133,9 @@ impl WsState {
         }
     }
 
-    pub fn send_to_user(&self, profile_id: Uuid, message: WsMessage) {
+    pub async fn send_to_user(&self, profile_id: Uuid, message: WsMessage) {
         tracing::debug!(target_profile_id = %profile_id, "Dispatching websocket message");
-        let conns = self.connections.lock().unwrap();
+        let conns = self.connections.lock().await;
         for (conn_id, info) in conns.iter() {
             if info.profile_id == profile_id {
                 tracing::debug!(connection_id = %conn_id, "Websocket target connection found");
@@ -143,19 +144,19 @@ impl WsState {
         }
     }
 
-    pub fn get_presence(&self, profile_id: Uuid) -> PresenceInfo {
-        let presence = self.presence.lock().unwrap();
+    pub async fn get_presence(&self, profile_id: Uuid) -> PresenceInfo {
+        let presence = self.presence.lock().await;
         presence.get(&profile_id).cloned().unwrap_or(PresenceInfo {
             active_connections: 0,
             last_seen_at: None,
         })
     }
 
-    pub fn is_user_online(&self, profile_id: Uuid) -> bool {
-        self.get_presence(profile_id).active_connections > 0
+    pub async fn is_user_online(&self, profile_id: Uuid) -> bool {
+        self.get_presence(profile_id).await.active_connections > 0
     }
 
-    fn broadcast_presence_change(
+    async fn broadcast_presence_change(
         &self,
         profile_id: Uuid,
         is_online: bool,
@@ -169,11 +170,11 @@ impl WsState {
                 "last_seen_at": last_seen_at,
             }),
         );
-        self.broadcast_to_all(message);
+        self.broadcast_to_all(message).await;
     }
 
-    fn broadcast_to_all(&self, message: WsMessage) {
-        let conns = self.connections.lock().unwrap();
+    async fn broadcast_to_all(&self, message: WsMessage) {
+        let conns = self.connections.lock().await;
         for (_, info) in conns.iter() {
             let _ = info.addr.try_send(message.clone());
         }
@@ -253,8 +254,12 @@ impl Actor for WebSocketActor {
             room: self.room.clone(),
             addr: ctx.address().recipient(),
         };
-        self.ws_state
-            .add_connection(self.conn_id.clone(), conn_info);
+        let ws_state = self.ws_state.clone();
+        let conn_id = self.conn_id.clone();
+        let fut = async move {
+            ws_state.add_connection(conn_id, conn_info).await;
+        };
+        ctx.spawn(actix::fut::wrap_future(fut));
 
         tracing::info!(
             "WebSocket connected: {} (profile: {})",
@@ -263,8 +268,13 @@ impl Actor for WebSocketActor {
         );
     }
 
-    fn stopped(&mut self, _ctx: &mut Self::Context) {
-        self.ws_state.remove_connection(&self.conn_id);
+    fn stopped(&mut self, ctx: &mut Self::Context) {
+        let ws_state = self.ws_state.clone();
+        let conn_id = self.conn_id.clone();
+        let fut = async move {
+            ws_state.remove_connection(&conn_id).await;
+        };
+        ctx.spawn(actix::fut::wrap_future(fut));
         tracing::info!("WebSocket disconnected: {}", self.conn_id);
     }
 }
@@ -309,8 +319,11 @@ impl WebSocketActor {
                             room: self.room.clone(),
                             addr: ctx.address().recipient(),
                         };
-                        self.ws_state
-                            .add_connection(self.conn_id.clone(), conn_info);
+                        let ws_state = self.ws_state.clone();
+                        let conn_id = self.conn_id.clone();
+                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                            ws_state.add_connection(conn_id, conn_info).await;
+                        }));
 
                         let response = WsMessage::new(
                             "joined_room",
@@ -330,15 +343,22 @@ impl WebSocketActor {
                         room: None,
                         addr: ctx.address().recipient(),
                     };
-                    self.ws_state
-                        .add_connection(self.conn_id.clone(), conn_info);
+                    let ws_state = self.ws_state.clone();
+                    let conn_id = self.conn_id.clone();
+                    ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                        ws_state.add_connection(conn_id, conn_info).await;
+                    }));
                 }
                 "chat" => {
                     if let (Some(room), Some(content)) =
                         (&self.room, msg.data.get("content").and_then(|v| v.as_str()))
                     {
                         let chat_msg = WsMessage::chat(content, &self.username);
-                        self.ws_state.broadcast_to_room(room, chat_msg);
+                        let ws_state = self.ws_state.clone();
+                        let room = room.to_string();
+                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                            ws_state.broadcast_to_room(&room, chat_msg).await;
+                        }));
                     }
                 }
                 "typing" => {
@@ -350,8 +370,12 @@ impl WebSocketActor {
                                 "room": room,
                             }),
                         );
-                        self.ws_state
-                            .broadcast_to_room_except(room, self.profile_id, typing_msg);
+                        let ws_state = self.ws_state.clone();
+                        let room = room.clone();
+                        let profile_id = self.profile_id;
+                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                            ws_state.broadcast_to_room_except(&room, profile_id, typing_msg).await;
+                        }));
                     }
                 }
                 "stop_typing" => {
@@ -363,11 +387,12 @@ impl WebSocketActor {
                                 "room": room,
                             }),
                         );
-                        self.ws_state.broadcast_to_room_except(
-                            room,
-                            self.profile_id,
-                            stop_typing_msg,
-                        );
+                        let ws_state = self.ws_state.clone();
+                        let room = room.clone();
+                        let profile_id = self.profile_id;
+                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                            ws_state.broadcast_to_room_except(&room, profile_id, stop_typing_msg).await;
+                        }));
                     }
                 }
                 "ping" => {
@@ -503,26 +528,26 @@ mod tests {
     mod ws_state_tests {
         use super::super::*;
 
-        #[test]
-        fn ws_state_new_creates_empty_state() {
+        #[actix_web::test]
+        async fn ws_state_new_creates_empty_state() {
             let state = WsState::new();
-            let conns = state.connections.lock().unwrap();
+            let conns = state.connections.lock().await;
             assert!(conns.is_empty());
         }
 
-        #[test]
-        fn remove_nonexistent_connection_is_noop() {
+        #[actix_web::test]
+        async fn remove_nonexistent_connection_is_noop() {
             let state = WsState::new();
-            state.remove_connection("nonexistent");
-            assert!(state.connections.lock().unwrap().is_empty());
+            state.remove_connection("nonexistent").await;
+            assert!(state.connections.lock().await.is_empty());
         }
 
-        #[test]
-        fn user_with_no_connections_is_not_online() {
+        #[actix_web::test]
+        async fn user_with_no_connections_is_not_online() {
             let state = WsState::new();
             let profile_id = Uuid::new_v4();
-            assert!(!state.is_user_online(profile_id));
-            let presence = state.get_presence(profile_id);
+            assert!(!state.is_user_online(profile_id).await);
+            let presence = state.get_presence(profile_id).await;
             assert_eq!(presence.active_connections, 0);
             assert!(presence.last_seen_at.is_none());
         }
@@ -599,15 +624,15 @@ mod tests {
             let profile_id = Uuid::new_v4();
             let conn_id = "conn-1".to_string();
 
-            state.add_connection(conn_id.clone(), make_conn_info(profile_id, None));
+            state.add_connection(conn_id.clone(), make_conn_info(profile_id, None)).await;
             {
-                let conns = state.connections.lock().unwrap();
+                let conns = state.connections.lock().await;
                 assert!(conns.contains_key(&conn_id));
             }
 
-            state.remove_connection(&conn_id);
+            state.remove_connection(&conn_id).await;
             {
-                let conns = state.connections.lock().unwrap();
+                let conns = state.connections.lock().await;
                 assert!(!conns.contains_key(&conn_id));
             }
         }
@@ -617,12 +642,12 @@ mod tests {
             let state = WsState::new();
             let profile_id = Uuid::new_v4();
 
-            state.add_connection("c1".to_string(), make_conn_info(profile_id, None));
-            state.add_connection("c2".to_string(), make_conn_info(profile_id, None));
+            state.add_connection("c1".to_string(), make_conn_info(profile_id, None)).await;
+            state.add_connection("c2".to_string(), make_conn_info(profile_id, None)).await;
 
-            let presence = state.get_presence(profile_id);
+            let presence = state.get_presence(profile_id).await;
             assert_eq!(presence.active_connections, 2);
-            assert!(state.is_user_online(profile_id));
+            assert!(state.is_user_online(profile_id).await);
         }
 
         #[actix_web::test]
@@ -630,13 +655,13 @@ mod tests {
             let state = WsState::new();
             let profile_id = Uuid::new_v4();
 
-            state.add_connection("c1".to_string(), make_conn_info(profile_id, None));
-            state.add_connection("c2".to_string(), make_conn_info(profile_id, None));
-            state.remove_connection("c1");
+            state.add_connection("c1".to_string(), make_conn_info(profile_id, None)).await;
+            state.add_connection("c2".to_string(), make_conn_info(profile_id, None)).await;
+            state.remove_connection("c1").await;
 
-            let presence = state.get_presence(profile_id);
+            let presence = state.get_presence(profile_id).await;
             assert_eq!(presence.active_connections, 1);
-            assert!(state.is_user_online(profile_id));
+            assert!(state.is_user_online(profile_id).await);
         }
 
         #[actix_web::test]
@@ -644,13 +669,13 @@ mod tests {
             let state = WsState::new();
             let profile_id = Uuid::new_v4();
 
-            state.add_connection("c1".to_string(), make_conn_info(profile_id, None));
-            state.remove_connection("c1");
+            state.add_connection("c1".to_string(), make_conn_info(profile_id, None)).await;
+            state.remove_connection("c1").await;
 
-            let presence = state.get_presence(profile_id);
+            let presence = state.get_presence(profile_id).await;
             assert_eq!(presence.active_connections, 0);
             assert!(presence.last_seen_at.is_some());
-            assert!(!state.is_user_online(profile_id));
+            assert!(!state.is_user_online(profile_id).await);
         }
     }
 }
