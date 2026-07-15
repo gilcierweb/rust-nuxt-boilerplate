@@ -35,17 +35,19 @@
     "@iconify-json/tabler": "^1.2.33",
     "@iconify/tailwind4": "^1.2.3",
     "@playwright/test": "^1.40.0",
+    "@testing-library/jest-dom": "^6.0.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vitejs/plugin-vue": "^4.4.0",
     "@vitest/coverage-v8": "^1.0.0",
     "@vitest/ui": "^1.0.0",
+    "@vue/test-utils": "^2.4.0",
     "eslint": "^8.0.0",
     "eslint-plugin-vue": "^9.0.0",
+    "jsdom": "^29.1.1",
     "sass-embedded": "^1.99.0",
     "typescript": "^5.0.0",
-    "vitest": "^1.0.0",
-    "vue-test-utils": "^2.0.0"
+    "vitest": "^1.0.0"
   }
 }

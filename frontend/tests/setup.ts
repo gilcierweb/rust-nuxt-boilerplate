@@ -1,31 +1,38 @@
-// Test setup file
-import '@testing-library/jest-dom'
-// Import any global mocks or setup here
+import '@testing-library/jest-dom/vitest'
+import { vi } from 'vitest'
 
-// Mock resizeObserver if needed
-global.ResizeObserver = class ResizeObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-// Mock IntersectionObserver if needed
-global.IntersectionObserver = class IntersectionObserver {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-}
-
-// MatchMedia matcher
-window.matchMedia = window.matchMedia || function() {
-  return {
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
-    media: '',
+    media: query,
     onchange: null,
-    addListener: () => {}, // deprecated
-    removeListener: () => {}, // deprecated
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => false,
-  }
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
 }
+
+Object.defineProperty(globalThis, 'ResizeObserver', {
+  writable: true,
+  value: MockResizeObserver,
+})
+
+class MockIntersectionObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+Object.defineProperty(globalThis, 'IntersectionObserver', {
+  writable: true,
+  value: MockIntersectionObserver,
+})
