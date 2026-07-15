@@ -55,7 +55,7 @@
 
 ```bash
 git clone https://github.com/your-org/rust-nuxt-boilerplate.git
-cd rust-nuxt-boilerplate
+cd rust-nuxt-boilerplate/
 
 # Generate secure secrets
 ./scripts/generate-secrets.sh
