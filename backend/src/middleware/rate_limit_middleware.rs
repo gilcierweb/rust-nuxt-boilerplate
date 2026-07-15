@@ -73,6 +73,33 @@ pub const RATE_UPLOAD: RateLimit = RateLimit::new(10, 3600, "rl:upload");
 /// Use case: User messaging with spam prevention
 pub const RATE_MESSAGES: RateLimit = RateLimit::new(60, 60, "rl:msg");
 
+/// Lua script for atomic sliding window rate limiting
+/// Uses sorted sets to track request timestamps
+/// Returns: 1 if allowed, 0 if rate limited
+const RATE_LIMIT_LUA_SCRIPT: &str = r#"
+local key = KEYS[1]
+local window = tonumber(ARGV[1])
+local max_requests = tonumber(ARGV[2])
+local now = tonumber(ARGV[3])
+
+-- Remove expired entries from the sorted set
+redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
+
+-- Count current requests in window
+local current = redis.call('ZCARD', key)
+
+if current < max_requests then
+    -- Add current request
+    redis.call('ZADD', key, now, now .. ':' .. math.random(1000000))
+    redis.call('EXPIRE', key, window)
+    return 1
+else
+    -- Rate limited, still set expiry for cleanup
+    redis.call('EXPIRE', key, window)
+    return 0
+end
+"#;
+
 pub struct RateLimiter {
     redis: deadpool_redis::Pool,
     limit: RateLimit,
@@ -173,20 +200,24 @@ where
             let allowed = async {
                 let mut conn = redis.get().await.ok()?;
 
-                let count: u64 = redis::pipe()
-                    .atomic()
-                    .cmd("INCR")
-                    .arg(&key)
-                    .cmd("EXPIRE")
+                // Use Lua script for atomic sliding window rate limiting
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .ok()?
+                    .as_secs();
+
+                let result: u64 = redis::cmd("EVAL")
+                    .arg(RATE_LIMIT_LUA_SCRIPT)
+                    .arg(1) // number of keys
                     .arg(&key)
                     .arg(effective_limit.window_secs)
-                    .ignore()
-                    .query_async::<(u64,)>(&mut conn)
+                    .arg(effective_limit.max_requests)
+                    .arg(now)
+                    .query_async(&mut conn)
                     .await
-                    .ok()?
-                    .0;
+                    .ok()?;
 
-                Some(count <= effective_limit.max_requests)
+                Some(result == 1)
             }
             .await
             .unwrap_or(true);
