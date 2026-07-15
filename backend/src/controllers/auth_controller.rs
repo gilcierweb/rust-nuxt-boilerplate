@@ -9,6 +9,7 @@ use crate::{
     models::user::{NewUser, User},
     repositories::container::AppContainer,
     security::SecurityService,
+    services::auth_service::validate_password_strength,
     services::email_service::EmailService,
     services::token_service::hash_token,
     utils::validation::first_validation_error_message,
@@ -1103,30 +1104,6 @@ fn generate_random_token(length: usize) -> String {
             CHARSET[idx] as char
         })
         .collect()
-}
-
-fn validate_password_strength(password: &str) -> AppResult<()> {
-    if password.len() < 12 {
-        return Err(AppError::Validation(
-            t!("auth.password.must_be_12_chars").into_owned(),
-        ));
-    }
-    if !password.chars().any(|c| c.is_ascii_digit()) {
-        return Err(AppError::Validation(
-            t!("auth.password.must_have_number").into_owned(),
-        ));
-    }
-    if !password.chars().any(|c| c.is_uppercase()) {
-        return Err(AppError::Validation(
-            t!("auth.password.must_have_uppercase").into_owned(),
-        ));
-    }
-    if !password.chars().any(|c| c.is_ascii_punctuation()) {
-        return Err(AppError::Validation(
-            t!("auth.password.must_have_special").into_owned(),
-        ));
-    }
-    Ok(())
 }
 
 fn request_ip(req: &HttpRequest) -> Option<String> {
