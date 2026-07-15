@@ -498,4 +498,159 @@ mod tests {
 
         assert!(extract_ws_protocol_token(&req).is_none());
     }
+
+    #[cfg(test)]
+    mod ws_state_tests {
+        use super::super::*;
+
+        #[test]
+        fn ws_state_new_creates_empty_state() {
+            let state = WsState::new();
+            let conns = state.connections.lock().unwrap();
+            assert!(conns.is_empty());
+        }
+
+        #[test]
+        fn remove_nonexistent_connection_is_noop() {
+            let state = WsState::new();
+            state.remove_connection("nonexistent");
+            assert!(state.connections.lock().unwrap().is_empty());
+        }
+
+        #[test]
+        fn user_with_no_connections_is_not_online() {
+            let state = WsState::new();
+            let profile_id = Uuid::new_v4();
+            assert!(!state.is_user_online(profile_id));
+            let presence = state.get_presence(profile_id);
+            assert_eq!(presence.active_connections, 0);
+            assert!(presence.last_seen_at.is_none());
+        }
+
+        #[test]
+        fn ws_message_chat_factory() {
+            let msg = WsMessage::chat("hello", "user1");
+            assert_eq!(msg.msg_type, "chat");
+            assert_eq!(msg.sender.as_deref(), Some("user1"));
+            assert_eq!(msg.payload["content"], "hello");
+        }
+
+        #[test]
+        fn ws_message_notification_factory() {
+            let msg = WsMessage::notification("Title", "Body");
+            assert_eq!(msg.msg_type, "notification");
+            assert_eq!(msg.payload["title"], "Title");
+            assert_eq!(msg.payload["message"], "Body");
+        }
+
+        #[test]
+        fn ws_message_live_status_factory() {
+            let msg = WsMessage::live_status("stream-1", true, 42);
+            assert_eq!(msg.msg_type, "live_status");
+            assert_eq!(msg.payload["stream_id"], "stream-1");
+            assert_eq!(msg.payload["is_live"], true);
+            assert_eq!(msg.payload["viewer_count"], 42);
+        }
+
+        #[test]
+        fn ws_message_new_sets_timestamp() {
+            let msg = WsMessage::new("test", serde_json::json!({}));
+            assert!(msg.timestamp > 0);
+            assert_eq!(msg.msg_type, "test");
+            assert!(msg.sender.is_none());
+        }
+    }
+
+    #[cfg(test)]
+    mod ws_state_actor_tests {
+        use super::super::*;
+        use actix::Actor;
+        use actix::Addr;
+        use actix::Context;
+
+        struct DummyActor;
+
+        impl Actor for DummyActor {
+            type Context = Context<Self>;
+        }
+
+        impl actix::Handler<WsMessage> for DummyActor {
+            type Result = ();
+            fn handle(&mut self, _msg: WsMessage, _ctx: &mut Self::Context) {}
+        }
+
+        fn dummy_recipient() -> actix::Recipient<WsMessage> {
+            let addr: Addr<DummyActor> = DummyActor.start();
+            addr.recipient()
+        }
+
+        fn make_conn_info(profile_id: Uuid, room: Option<&str>) -> ConnectionInfo {
+            ConnectionInfo {
+                profile_id,
+                username: "test_user".to_string(),
+                room: room.map(|r| r.to_string()),
+                addr: dummy_recipient(),
+            }
+        }
+
+        #[actix_web::test]
+        async fn add_and_remove_connection() {
+            let state = WsState::new();
+            let profile_id = Uuid::new_v4();
+            let conn_id = "conn-1".to_string();
+
+            state.add_connection(conn_id.clone(), make_conn_info(profile_id, None));
+            {
+                let conns = state.connections.lock().unwrap();
+                assert!(conns.contains_key(&conn_id));
+            }
+
+            state.remove_connection(&conn_id);
+            {
+                let conns = state.connections.lock().unwrap();
+                assert!(!conns.contains_key(&conn_id));
+            }
+        }
+
+        #[actix_web::test]
+        async fn presence_tracks_active_connections() {
+            let state = WsState::new();
+            let profile_id = Uuid::new_v4();
+
+            state.add_connection("c1".to_string(), make_conn_info(profile_id, None));
+            state.add_connection("c2".to_string(), make_conn_info(profile_id, None));
+
+            let presence = state.get_presence(profile_id);
+            assert_eq!(presence.active_connections, 2);
+            assert!(state.is_user_online(profile_id));
+        }
+
+        #[actix_web::test]
+        async fn presence_decrements_on_remove() {
+            let state = WsState::new();
+            let profile_id = Uuid::new_v4();
+
+            state.add_connection("c1".to_string(), make_conn_info(profile_id, None));
+            state.add_connection("c2".to_string(), make_conn_info(profile_id, None));
+            state.remove_connection("c1");
+
+            let presence = state.get_presence(profile_id);
+            assert_eq!(presence.active_connections, 1);
+            assert!(state.is_user_online(profile_id));
+        }
+
+        #[actix_web::test]
+        async fn last_connection_sets_last_seen() {
+            let state = WsState::new();
+            let profile_id = Uuid::new_v4();
+
+            state.add_connection("c1".to_string(), make_conn_info(profile_id, None));
+            state.remove_connection("c1");
+
+            let presence = state.get_presence(profile_id);
+            assert_eq!(presence.active_connections, 0);
+            assert!(presence.last_seen_at.is_some());
+            assert!(!state.is_user_online(profile_id));
+        }
+    }
 }

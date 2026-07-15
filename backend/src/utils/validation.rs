@@ -44,11 +44,44 @@ pub fn first_validation_error_message(errors: &ValidationErrors) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::resolve_field_label;
+    use super::*;
+    use validator::{ValidationError, ValidationErrors};
 
     #[test]
     fn resolves_translated_label_for_legal_name_in_pt_br() {
         rust_i18n::set_locale("pt-BR");
         assert_eq!(resolve_field_label("legal_name"), "Razão social");
+    }
+
+    #[test]
+    fn resolves_translated_label_for_email_in_pt_br() {
+        rust_i18n::set_locale("pt-BR");
+        assert_eq!(resolve_field_label("email"), "E-mail");
+    }
+
+    #[test]
+    fn falls_back_to_field_name_for_unknown_field() {
+        rust_i18n::set_locale("en");
+        assert_eq!(resolve_field_label("unknown_field_xyz"), "unknown_field_xyz");
+    }
+
+    #[test]
+    fn first_validation_error_message_returns_required_error() {
+        rust_i18n::set_locale("pt-BR");
+        let mut errors = ValidationErrors::new();
+        let mut err = ValidationError::new("required");
+        err.message = Some("required".into());
+        errors.add("email", err);
+
+        let msg = first_validation_error_message(&errors);
+        assert!(!msg.is_empty());
+    }
+
+    #[test]
+    fn first_validation_error_message_returns_fallback_when_no_errors() {
+        rust_i18n::set_locale("pt-BR");
+        let errors = ValidationErrors::new();
+        let msg = first_validation_error_message(&errors);
+        assert!(!msg.is_empty());
     }
 }

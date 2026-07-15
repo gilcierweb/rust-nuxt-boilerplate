@@ -69,4 +69,17 @@ mod tests {
         assert_eq!(hash.len(), 64); // SHA256 hex = 64 chars
         assert_eq!(hash, hash_token_for_blacklist(token)); // Deterministic
     }
+
+    #[test]
+    fn test_hash_token_different_inputs_differ() {
+        let hash1 = hash_token_for_blacklist("token-a");
+        let hash2 = hash_token_for_blacklist("token-b");
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_token_is_hex_encoded() {
+        let hash = hash_token_for_blacklist("test");
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    }
 }

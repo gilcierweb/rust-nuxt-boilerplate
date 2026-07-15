@@ -195,11 +195,25 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use sha2::Sha256;
+
+    fn make_valid_signature(payload: &[u8], secret: &str, timestamp: i64) -> String {
+        use hmac::{Hmac, Mac};
+        type HmacSha256 = Hmac<Sha256>;
+
+        let signed_payload = format!("{}.{}", timestamp, String::from_utf8_lossy(payload));
+        let mut mac = HmacSha256::new_from_slice(secret.as_bytes()).unwrap();
+        mac.update(signed_payload.as_bytes());
+        let sig = format!("{:x}", mac.finalize().into_bytes());
+        format!("t={},v1={}", timestamp, sig)
+    }
+
     #[test]
     fn test_signature_format_parsing() {
         let signature = "t=1234567890,v1=abc123,v0=def456";
         let parts: Vec<&str> = signature.split(',').collect();
-        
+
         let mut timestamp: Option<i64> = None;
         let mut signatures: Vec<&str> = Vec::new();
 
@@ -219,5 +233,65 @@ mod tests {
 
         assert_eq!(timestamp, Some(1234567890));
         assert_eq!(signatures, vec!["abc123", "def456"]);
+    }
+
+    #[test]
+    fn verify_stripe_signature_valid() {
+        let payload = b"{\"id\":\"evt_123\"}";
+        let secret = "whsec_test_secret";
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        let sig = make_valid_signature(payload, secret, now);
+
+        assert!(verify_stripe_signature(&Bytes::from_static(payload), &sig, secret));
+    }
+
+    #[test]
+    fn verify_stripe_signature_rejects_expired_timestamp() {
+        let payload = b"test";
+        let secret = "whsec_test";
+        let old_timestamp = 1000000; // way in the past
+        let sig = make_valid_signature(payload, secret, old_timestamp);
+
+        assert!(!verify_stripe_signature(&Bytes::from_static(payload), &sig, secret));
+    }
+
+    #[test]
+    fn verify_stripe_signature_rejects_wrong_secret() {
+        let payload = b"test";
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        let sig = make_valid_signature(payload, "wrong_secret", now);
+
+        assert!(!verify_stripe_signature(&Bytes::from_static(payload), &sig, "correct_secret"));
+    }
+
+    #[test]
+    fn verify_stripe_signature_rejects_wrong_payload() {
+        let payload = b"original";
+        let secret = "whsec_test";
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
+        let sig = make_valid_signature(payload, secret, now);
+
+        assert!(!verify_stripe_signature(&Bytes::from_static(b"tampered"), &sig, secret));
+    }
+
+    #[test]
+    fn verify_stripe_signature_rejects_missing_timestamp() {
+        let sig = "v1=abc123";
+        assert!(!verify_stripe_signature(&Bytes::from_static(b"test"), sig, "secret"));
+    }
+
+    #[test]
+    fn verify_stripe_signature_rejects_empty_signatures() {
+        let sig = "t=1234567890";
+        assert!(!verify_stripe_signature(&Bytes::from_static(b"test"), sig, "secret"));
     }
 }

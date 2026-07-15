@@ -152,7 +152,7 @@ fn managed_resources() -> [AbilityResource; 4] {
 
 #[cfg(test)]
 mod tests {
-    use super::{Ability, AbilityAction, AbilityResource};
+    use super::{Ability, AbilityAction, AbilityResource, authority_for};
 
     #[test]
     fn cannot_overrides_can_by_order() {
@@ -180,5 +180,93 @@ mod tests {
         ability.cannot_instance(AbilityAction::Update, AbilityResource::AuditLogs);
 
         assert!(!ability.allows_instance(AbilityAction::Update, AbilityResource::AuditLogs));
+    }
+
+    #[test]
+    fn manage_all_expands_to_all_resources_and_crud_actions() {
+        let mut ability = Ability::new();
+        ability.can(AbilityAction::Manage, AbilityResource::All);
+
+        let authorities = ability.authorities();
+        for resource in [
+            AbilityResource::AuditLogs,
+            AbilityResource::Roles,
+            AbilityResource::Users,
+            AbilityResource::All,
+        ] {
+            for action in [
+                AbilityAction::Read,
+                AbilityAction::Create,
+                AbilityAction::Update,
+                AbilityAction::Delete,
+            ] {
+                let auth = authority_for(resource, action);
+                assert!(
+                    authorities.contains(&auth),
+                    "Missing authority: {}",
+                    auth
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn manage_specific_resource_expands_to_crud_actions() {
+        let mut ability = Ability::new();
+        ability.can(AbilityAction::Manage, AbilityResource::Users);
+
+        let authorities = ability.authorities();
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Create)));
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Update)));
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Delete)));
+        assert!(!authorities.contains(&authority_for(AbilityResource::Roles, AbilityAction::Read)));
+    }
+
+    #[test]
+    fn single_action_produces_single_authority() {
+        let mut ability = Ability::new();
+        ability.can(AbilityAction::Read, AbilityResource::Users);
+
+        let authorities = ability.authorities();
+        assert_eq!(authorities.len(), 1);
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
+    }
+
+    #[test]
+    fn empty_ability_produces_no_authorities() {
+        let ability = Ability::new();
+        assert!(ability.authorities().is_empty());
+    }
+
+    #[test]
+    fn manage_wildcard_matches_any_action() {
+        let mut ability = Ability::new();
+        ability.can(AbilityAction::Manage, AbilityResource::Users);
+
+        assert!(ability.allows(AbilityAction::Read, AbilityResource::Users));
+        assert!(ability.allows(AbilityAction::Create, AbilityResource::Users));
+        assert!(ability.allows(AbilityAction::Update, AbilityResource::Users));
+        assert!(ability.allows(AbilityAction::Delete, AbilityResource::Users));
+    }
+
+    #[test]
+    fn all_wildcard_matches_any_resource() {
+        let mut ability = Ability::new();
+        ability.can(AbilityAction::Read, AbilityResource::All);
+
+        assert!(ability.allows(AbilityAction::Read, AbilityResource::Users));
+        assert!(ability.allows(AbilityAction::Read, AbilityResource::Roles));
+        assert!(ability.allows(AbilityAction::Read, AbilityResource::AuditLogs));
+    }
+
+    #[test]
+    fn cannot_deny_takes_precedence_over_can_manage() {
+        let mut ability = Ability::new();
+        ability.can(AbilityAction::Manage, AbilityResource::All);
+        ability.cannot(AbilityAction::Delete, AbilityResource::Users);
+
+        assert!(ability.allows(AbilityAction::Read, AbilityResource::Users));
+        assert!(!ability.allows(AbilityAction::Delete, AbilityResource::Users));
     }
 }
