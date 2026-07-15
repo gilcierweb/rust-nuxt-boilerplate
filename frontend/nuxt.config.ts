@@ -95,10 +95,10 @@ export default defineNuxtConfig({
     // Server-only (private)
     backendApiBase: process.env.BACKEND_API_BASE || "http://localhost:8080/api/v1",
     backendApiKey: process.env.BACKEND_API_KEY || "",
-    // Public (exposed to client)
+    // Public (exposed to client) - NEVER put secrets here
     public: {
       // @ts-ignore
-      apiBase: "/api/v1", // Always use relative URL for proxy
+      apiBase: "/api/v1", // Always use relative URL for proxy (recommended)
       // @ts-ignore
       wsBase: process.env.NUXT_PUBLIC_WS_BASE || "ws://localhost:8080/api/v1",
       // @ts-ignore
@@ -108,9 +108,9 @@ export default defineNuxtConfig({
       // @ts-ignore
       appName: process.env.NUXT_PUBLIC_APP_NAME || "App Rust Nuxt Boilerplate",
       // @ts-ignore
-      // Direct backend API URL for client-side requests (CSR) to bypass Nitro proxy
-      // When set, client-side fetches will go directly to backend instead of through Nitro
-      // Leave empty to use the default proxy behavior
+      // Optional: Direct backend URL for CSR requests (bypasses Nitro proxy).
+      // Leave empty to use relative proxy (recommended for production).
+      // WARNING: Setting this exposes backend URL in client bundle.
       apiDirectBase: process.env.NUXT_PUBLIC_API_BASE || "",
     },
   },
