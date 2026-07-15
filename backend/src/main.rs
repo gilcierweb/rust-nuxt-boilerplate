@@ -89,6 +89,25 @@ tracing_subscriber::registry()
     let mut redis_cfg = RedisConfig::from_url(&config.redis_url);
     redis_cfg.pool = Some(deadpool_redis::PoolConfig::new(config.redis_pool_size));
 
+    // Log Redis pool configuration for debugging
+    tracing::info!(
+        event = "redis.pool_config",
+        pool_size = config.redis_pool_size,
+        "Redis connection pool configured"
+    );
+
+    // Warn if pool size is too low for production workloads
+    if config.redis_pool_size < 20 && matches!(config.environment, crate::config::app_config::Environment::Production) {
+        tracing::warn!(
+            event = "redis.pool_size_low",
+            pool_size = config.redis_pool_size,
+            recommended = 50,
+            "Redis pool size may be insufficient for production. \
+             Consider increasing REDIS_POOL_SIZE to 50+ for high-concurrency workloads \
+             (rate limiting, caching, session storage, token blacklisting)."
+        );
+    }
+
     let redis_pool = redis_cfg
         .create_pool(Some(Runtime::Tokio1))
         .expect("Failed to create Redis connection pool");
