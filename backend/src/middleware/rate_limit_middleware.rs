@@ -6,12 +6,16 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
     http::Method,
     web,
+    HttpMessage,
 };
+use crate::middleware::auth::{Claims, RateLimitCategory, rate_limit_category};
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
 use std::rc::Rc;
 
-use crate::{AppState, middleware::auth::{RateLimitCategory, rate_limit_category}, repositories::container::AppContainer};
+use crate::{AppState, repositories::container::AppContainer};
+
+const CSRF_COOKIE_NAME: &str = "csrf_token";
 
 /// Rate limit configuration.
 /// 
@@ -183,11 +187,18 @@ where
             })
             .unwrap_or(true); // Default to enabled for safety
 
+        // Try to extract user_id from JWT claims (set by JwtAuth middleware)
+        // If authenticated, use user_id for rate limiting; otherwise fall back to IP
         let client_key = req
-            .connection_info()
-            .realip_remote_addr()
-            .unwrap_or("unknown")
-            .to_string();
+            .extensions()
+            .get::<Claims>()
+            .map(|claims| format!("user:{}", claims.profile_id))
+            .unwrap_or_else(|| {
+                req.connection_info()
+                    .realip_remote_addr()
+                    .unwrap_or("unknown")
+                    .to_string()
+            });
 
         Box::pin(async move {
             if !rate_limit_enabled {
