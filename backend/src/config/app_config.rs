@@ -260,43 +260,10 @@ impl AppConfig {
             jwt_access_expiry_secs: 2 * 60 * 60,
             jwt_refresh_expiry_secs: 30 * 24 * 3600,
 
-            // Production requires secrets - fail fast if missing
-            master_key: {
-                let key = required_secret("MASTER_KEY");
-                let env_check = env::var("ENVIRONMENT")
-                    .unwrap_or_else(|_| "development".to_string())
-                    .to_ascii_lowercase();
-                let requires_strict_secrets =
-                    matches!(env_check.as_str(), "production" | "staging");
-                if requires_strict_secrets && key.is_err() {
-                    panic!("MASTER_KEY must be set in staging/production");
-                }
-                match key {
-                    Ok(k) => k,
-                    Err(_) => {
-                        eprintln!("[SECURITY WARNING] Using default MASTER_KEY. Run `./scripts/generate-secrets.sh >> .env` to generate secure secrets.");
-                        "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=".to_string()
-                    }
-                }
-            },
-            blind_index_key: {
-                let key = required_secret("BLIND_INDEX_KEY");
-                let env_check = env::var("ENVIRONMENT")
-                    .unwrap_or_else(|_| "development".to_string())
-                    .to_ascii_lowercase();
-                let requires_strict_secrets =
-                    matches!(env_check.as_str(), "production" | "staging");
-                if requires_strict_secrets && key.is_err() {
-                    panic!("BLIND_INDEX_KEY must be set in staging/production");
-                }
-                match key {
-                    Ok(k) => k,
-                    Err(_) => {
-                        eprintln!("[SECURITY WARNING] Using default BLIND_INDEX_KEY. Run `./scripts/generate-secrets.sh >> .env` to generate secure secrets.");
-                        "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=".to_string()
-                    }
-                }
-            },
+            // All secrets are required - fail fast if missing in any environment
+            // Use ./scripts/generate-secrets.sh to generate secure values
+            master_key: required_secret("MASTER_KEY")?,
+            blind_index_key: required_secret("BLIND_INDEX_KEY")?,
             current_encryption_key_version: env::var("CURRENT_ENCRYPTION_KEY_VERSION")
                 .unwrap_or_else(|_| "1".to_string())
                 .parse()
@@ -308,22 +275,8 @@ impl AppConfig {
                 .filter(|value| !value.is_empty())
                 .map(str::to_owned)
                 .collect(),
-            csrf_secret_key: secret_from_env_or_file(
-                "CSRF_SECRET_KEY",
-                "default_csrf_secret_key_change_in_production",
-            ),
-            refresh_token_hash_salt: {
-                let salt = required_secret("REFRESH_TOKEN_HASH_SALT");
-                let env_check = env::var("ENVIRONMENT")
-                    .unwrap_or_else(|_| "development".to_string())
-                    .to_ascii_lowercase();
-                let requires_strict_secrets =
-                    matches!(env_check.as_str(), "production" | "staging");
-                if requires_strict_secrets && salt.is_err() {
-                    panic!("REFRESH_TOKEN_HASH_SALT must be set in staging/production");
-                }
-                salt.unwrap_or_else(|_| "refresh_token_salt_change_in_production".to_string())
-            },
+            csrf_secret_key: required_secret("CSRF_SECRET_KEY")?,
+            refresh_token_hash_salt: required_secret("REFRESH_TOKEN_HASH_SALT")?,
 
             resend_api_key: secret_from_env_or_file("RESEND_API_KEY", ""),
             email_from: env::var("EMAIL_FROM")
