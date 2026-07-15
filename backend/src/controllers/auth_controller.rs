@@ -833,7 +833,7 @@ pub async fn setup_2fa(
     let current_email = security.decrypt_user_email(&user_data)?;
 
     let totp = TOTP::new(
-        TotpAlgorithm::SHA1,
+        TotpAlgorithm::SHA256,
         6,
         1,
         30,
@@ -1087,7 +1087,7 @@ fn verify_totp(secret_base32: &str, code: &str) -> AppResult<()> {
 
     let secret = Secret::Encoded(secret_base32.to_string());
     let totp = TOTP::new(
-        TotpAlgorithm::SHA1,
+        TotpAlgorithm::SHA256,
         6,
         1,
         30,
