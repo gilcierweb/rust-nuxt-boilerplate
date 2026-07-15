@@ -37,6 +37,7 @@ pub struct AppConfig {
     pub current_encryption_key_version: u32,
     pub internal_api_keys: Vec<String>,
     pub csrf_secret_key: String,
+    pub refresh_token_hash_salt: String,
 
     // Email (Resend)
     pub resend_api_key: String,
@@ -193,6 +194,18 @@ impl AppConfig {
                 .collect(),
             csrf_secret_key: env::var("CSRF_SECRET_KEY")
                 .unwrap_or_else(|_| "default_csrf_secret_key_change_in_production".to_string()),
+            refresh_token_hash_salt: {
+                let salt = env::var("REFRESH_TOKEN_HASH_SALT");
+                let env_check = env::var("ENVIRONMENT")
+                    .unwrap_or_else(|_| "development".to_string())
+                    .to_ascii_lowercase();
+                let requires_strict_secrets =
+                    matches!(env_check.as_str(), "production" | "staging");
+                if requires_strict_secrets && salt.is_err() {
+                    panic!("REFRESH_TOKEN_HASH_SALT must be set in staging/production");
+                }
+                salt.unwrap_or_else(|_| "refresh_token_salt_change_in_production".to_string())
+            },
 
             resend_api_key: env::var("RESEND_API_KEY").unwrap_or_default(),
             email_from: env::var("EMAIL_FROM")

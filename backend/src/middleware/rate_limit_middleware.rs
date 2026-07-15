@@ -11,7 +11,7 @@ use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
 use std::rc::Rc;
 
-use crate::{AppState, repositories::container::AppContainer};
+use crate::{AppState, middleware::auth::{RateLimitCategory, rate_limit_category}, repositories::container::AppContainer};
 
 /// Rate limit configuration.
 /// 
@@ -121,40 +121,11 @@ impl<S> RateLimiterMiddleware<S> {
     }
 
     fn pick_effective_limit(base_limit: &RateLimit, method: &Method, path: &str) -> RateLimit {
-        let is_auth_path = path.starts_with("/api/v1/auth/");
-        if !is_auth_path {
-            return base_limit.clone();
+        match rate_limit_category(method, path) {
+            RateLimitCategory::AuthStrict => RATE_AUTH_STRICT.clone(),
+            RateLimitCategory::AuthSession => RATE_AUTH_SESSION.clone(),
+            RateLimitCategory::Default => base_limit.clone(),
         }
-
-        let is_auth_strict = matches!(
-            (method.as_str(), path),
-            ("POST", "/api/v1/auth/login")
-                | ("POST", "/api/v1/auth/login/")
-                | ("POST", "/api/v1/auth/register")
-                | ("POST", "/api/v1/auth/register/")
-                | ("POST", "/api/v1/auth/recover")
-                | ("POST", "/api/v1/auth/recover/")
-                | ("POST", "/api/v1/auth/reset")
-                | ("POST", "/api/v1/auth/reset/")
-        );
-
-        if is_auth_strict {
-            return RATE_AUTH_STRICT.clone();
-        }
-
-        let is_auth_session = matches!(
-            (method.as_str(), path),
-            ("POST", "/api/v1/auth/refresh")
-                | ("POST", "/api/v1/auth/refresh/")
-                | ("GET", "/api/v1/auth/session")
-                | ("GET", "/api/v1/auth/session/")
-        );
-
-        if is_auth_session {
-            return RATE_AUTH_SESSION.clone();
-        }
-
-        base_limit.clone()
     }
 }
 

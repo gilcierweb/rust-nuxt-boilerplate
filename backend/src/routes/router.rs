@@ -6,41 +6,10 @@ pub use crate::controllers::{
     audit_logs_controller, auth_controller, health_controller, roles_controller, users_controller, metrics_controller
 };
 
-use actix_web::http::Method;
 use actix_web::web;
 
 use crate::middleware::csrf_protection::CsrfProtection;
 use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
-
-fn bearer_exempt_routes() -> Vec<crate::middleware::api_access_middleware::PublicRoute> {
-    use crate::middleware::api_access_middleware::PublicRoute;
-
-    vec![
-        PublicRoute::method(Method::POST, "/api/v1/auth/login"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/login/"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/register"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/register/"),
-        PublicRoute::method(Method::GET, "/api/v1/auth/confirm"),
-        PublicRoute::method(Method::GET, "/api/v1/auth/confirm/"),
-        PublicRoute::method(Method::GET, "/api/v1/auth/session"),
-        PublicRoute::method(Method::GET, "/api/v1/auth/session/"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/refresh"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/refresh/"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/logout"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/logout/"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/recover"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/recover/"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/reset"),
-        PublicRoute::method(Method::POST, "/api/v1/auth/reset/"),
-        PublicRoute::method(Method::GET, "/api/v1/health"),
-        PublicRoute::method(Method::GET, "/api/v1/health/"),
-        PublicRoute::method(Method::GET, "/api/v1/metrics"),
-        PublicRoute::method(Method::GET, "/api/v1/metrics/"),
-        PublicRoute::method(Method::POST, "/api/v1/webhooks/stripe"),
-        PublicRoute::method(Method::POST, "/api/v1/webhooks/pix"),
-        PublicRoute::method(Method::GET, "/api/v1/ws"),
-    ]
-}
 
 pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
     let openapi = ApiDoc::openapi();
@@ -77,9 +46,6 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 "/api/v1/metrics",
                 "/api/v1/metrics/",
             ]))
-            .wrap(crate::middleware::api_access_middleware::ApiAccessGate::new(
-                bearer_exempt_routes(),
-            ))
             .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
                 redis_pool.clone(),
                 crate::middleware::rate_limit_middleware::RATE_API,
@@ -118,9 +84,8 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             .service(
                 web::scope("/admin")
                     .wrap(CsrfProtection::new(vec![]))
-                    .wrap(crate::middleware::auth_middleware::JwtAuth::new(
-                        std::sync::Arc::new(crate::config::AppConfig::from_env().unwrap()),
-                        vec![], // No public paths for admin
+                    .wrap(crate::middleware::auth::JwtAuth::new(
+                        crate::middleware::auth::JwtAuthConfig::new(vec![]),
                     ))
                     .configure(roles_controller::config)
                     .configure(users_controller::config)

@@ -3,27 +3,29 @@
 use actix_web::{
     Error, HttpMessage,
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
+    http::Method,
 };
 use futures::future::{LocalBoxFuture, Ready, ready};
 use std::{rc::Rc, sync::Arc};
 
 use crate::{
     AppState,
-    middleware::auth::{Claims, verify_token},
+    middleware::auth::{Claims, bearer_exempt_routes, verify_token},
     repositories::access_token_blacklist::AccessTokenBlacklist,
 };
 
-/// Actix-Web middleware that validates the `Authorization: Bearer <token>` header.
-/// On success, inserts `Claims` into request extensions for handlers to extract.
-pub struct JwtAuth {
-    public_paths: Vec<String>,
-    token_blacklist: Option<Arc<AccessTokenBlacklist>>,
+#[derive(Clone)]
+pub struct JwtAuthConfig {
+    pub public_paths: Vec<String>,
+    pub skip_blacklist_check: bool,
+    pub token_blacklist: Option<Arc<AccessTokenBlacklist>>,
 }
 
-impl JwtAuth {
-    pub fn new(_config: Arc<crate::config::AppConfig>, public_paths: Vec<String>) -> Self {
+impl JwtAuthConfig {
+    pub fn new(public_paths: Vec<String>) -> Self {
         Self {
             public_paths,
+            skip_blacklist_check: false,
             token_blacklist: None,
         }
     }
@@ -33,18 +35,40 @@ impl JwtAuth {
         self
     }
 
-    /// Check if the request path matches any public path pattern
+    pub fn skip_blacklist_check(mut self) -> Self {
+        self.skip_blacklist_check = true;
+        self
+    }
+
     fn is_public_path(&self, path: &str) -> bool {
         self.public_paths.iter().any(|pattern| {
             if pattern.ends_with('*') {
-                // Wildcard match for prefixes
                 let prefix = &pattern[..pattern.len() - 1];
                 path.starts_with(prefix)
             } else {
-                // Exact match
                 path == pattern || path.starts_with(&format!("{}/", pattern))
             }
         })
+    }
+}
+
+#[derive(Clone)]
+pub struct JwtAuth {
+    config: JwtAuthConfig,
+}
+
+impl JwtAuth {
+    pub fn new(config: JwtAuthConfig) -> Self {
+        Self { config }
+    }
+
+    pub fn with_defaults() -> Self {
+        Self::new(JwtAuthConfig::new(
+            bearer_exempt_routes()
+                .into_iter()
+                .map(|r| r.pattern)
+                .collect(),
+        ))
     }
 }
 
@@ -54,7 +78,7 @@ where
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<actix_web::body::EitherBody<B>>;
     type Error = Error;
     type Transform = JwtAuthMiddleware<S>;
     type InitError = ();
@@ -63,16 +87,14 @@ where
     fn new_transform(&self, service: S) -> Self::Future {
         ready(Ok(JwtAuthMiddleware {
             service: Rc::new(service),
-            public_paths: self.public_paths.clone(),
-            token_blacklist: self.token_blacklist.clone(),
+            config: self.config.clone(),
         }))
     }
 }
 
 pub struct JwtAuthMiddleware<S> {
     service: Rc<S>,
-    public_paths: Vec<String>,
-    token_blacklist: Option<Arc<AccessTokenBlacklist>>,
+    config: JwtAuthConfig,
 }
 
 impl<S, B> Service<ServiceRequest> for JwtAuthMiddleware<S>
@@ -81,7 +103,7 @@ where
     S::Future: 'static,
     B: 'static,
 {
-    type Response = ServiceResponse<B>;
+    type Response = ServiceResponse<actix_web::body::EitherBody<B>>;
     type Error = Error;
     type Future = LocalBoxFuture<'static, Result<Self::Response, Self::Error>>;
 
@@ -89,32 +111,20 @@ where
 
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let svc = self.service.clone();
-        let public_paths = self.public_paths.clone();
-        let token_blacklist = self.token_blacklist.clone();
+        let config = self.config.clone();
 
         Box::pin(async move {
-            let path = req.uri().path();
+            let path = req.uri().path().to_string();
+            let method = req.method().clone();
 
-            // Allow OPTIONS requests (CORS preflight) without auth
-            if req.method() == actix_web::http::Method::OPTIONS {
-                return svc.call(req).await;
+            if method == Method::OPTIONS {
+                return svc.call(req).await.map(ServiceResponse::map_into_left_body);
             }
 
-            // Check if path is public (no auth required)
-            let is_public = public_paths.iter().any(|pattern| {
-                if pattern.ends_with('*') {
-                    let prefix = &pattern[..pattern.len() - 1];
-                    path.starts_with(prefix)
-                } else {
-                    path == pattern || path.starts_with(&format!("{}/", pattern))
-                }
-            });
-
-            if is_public {
-                return svc.call(req).await;
+            if config.is_public_path(&path) {
+                return svc.call(req).await.map(ServiceResponse::map_into_left_body);
             }
 
-            // Extract Bearer token from Authorization header
             let token = req
                 .headers()
                 .get(actix_web::http::header::AUTHORIZATION)
@@ -126,36 +136,44 @@ where
                 None => Err(actix_web::error::ErrorUnauthorized(
                     "Missing Authorization header",
                 )),
-                Some(t) => {
-                    // Check token blacklist
-                    if let Some(blacklist) = &token_blacklist {
-                        let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(&t);
+                Some(token) => {
+                    if !config.skip_blacklist_check
+                        && let Some(blacklist) = &config.token_blacklist
+                    {
+                        let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(&token);
                         if blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
                             return Err(actix_web::error::ErrorUnauthorized("Token revoked"));
                         }
                     }
 
-                    // Get JWT secret from AppState
-                    let state = req.app_data::<actix_web::web::Data<AppState>>();
-                    let secret = state
-                        .as_ref()
+                    let secret = req
+                        .app_data::<actix_web::web::Data<AppState>>()
                         .map(|s| s.config.jwt_secret.clone())
-                        .unwrap_or_default();
+                        .or_else(|| {
+                            req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>()
+                                .map(|c| c.config.jwt_secret.clone())
+                        })
+                        .ok_or_else(|| {
+                            tracing::error!(
+                                event = "auth.jwt_config_missing",
+                                "JWT secret not available: neither AppState nor AppContainer is configured in the middleware chain"
+                            );
+                            actix_web::error::ErrorInternalServerError("Server configuration error")
+                        })?;
 
-                    match verify_token(&t, &secret) {
+                    match verify_token(&token, &secret) {
                         Ok(claims) => {
                             req.extensions_mut().insert(claims);
-                            svc.call(req).await
+                            svc.call(req).await.map(ServiceResponse::map_into_left_body)
                         }
                         Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid token")),
                     }
-                },
+                }
             }
         })
     }
 }
 
-/// Extract claims from request extensions (call after JwtAuth middleware).
 pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::errors::AppError> {
     req.extensions()
         .get::<Claims>()

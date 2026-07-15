@@ -100,7 +100,19 @@ where
         Box::pin(async move {
             let should_check = {
                 let path = req.uri().path();
-                !exclude_paths.iter().any(|p| path.starts_with(p))
+                
+                // Skip CSRF for paths that don't need it
+                let path_excluded = exclude_paths.iter().any(|p| path.starts_with(p));
+                
+                // Skip CSRF for Bearer token auth (API routes with Authorization header)
+                let has_bearer_token = req
+                    .headers()
+                    .get("authorization")
+                    .and_then(|h| h.to_str().ok())
+                    .map(|h| h.starts_with("Bearer "))
+                    .unwrap_or(false);
+                
+                !path_excluded && !has_bearer_token
             };
 
             if should_check {

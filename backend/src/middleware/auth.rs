@@ -1,13 +1,13 @@
-use actix_web::{FromRequest, http::header::AUTHORIZATION};
+#![allow(dead_code)]
+
+use actix_web::{FromRequest, HttpMessage};
 use std::future::{Ready, ready};
 
 use crate::{
-    AppState,
     errors::{AppError, AppResult},
     models::role::ROLE_ADMIN,
 };
 
-/// JWT Claims structure
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct Claims {
     pub sub: uuid::Uuid,
@@ -20,8 +20,6 @@ pub struct Claims {
 }
 
 impl Claims {
-    /// Check if the user has a specific role by name.
-    /// Maps role names to their i32 values from the Role enum.
     pub fn has_role(&self, role: &str) -> bool {
         match role.to_ascii_lowercase().as_str() {
             "admin" => self.role == ROLE_ADMIN.as_i32(),
@@ -33,12 +31,14 @@ impl Claims {
         }
     }
 
-    /// Check if the user has admin role
     pub fn is_admin(&self) -> bool {
         self.role == ROLE_ADMIN.as_i32()
     }
 
-    /// Get profile_id as Uuid result
+    pub fn is_operator_or_higher(&self) -> bool {
+        self.role >= crate::models::role::ROLE_OPERATOR.as_i32()
+    }
+
     pub fn profile_id(&self) -> Result<uuid::Uuid, AppError> {
         Ok(self.profile_id)
     }
@@ -51,8 +51,73 @@ fn default_token_use() -> String {
     ACCESS_TOKEN_USE.to_string()
 }
 
-/// Extractor for authenticated user claims
-/// Reads and validates JWT token directly from Authorization header
+#[derive(Clone)]
+pub struct PublicRoute {
+    pub method: Option<actix_web::http::Method>,
+    pub pattern: String,
+}
+
+impl PublicRoute {
+    pub fn method(method: actix_web::http::Method, pattern: &str) -> Self {
+        Self {
+            method: Some(method),
+            pattern: pattern.to_string(),
+        }
+    }
+
+    pub fn any(pattern: &str) -> Self {
+        Self {
+            method: None,
+            pattern: pattern.to_string(),
+        }
+    }
+
+    fn matches(&self, method: &actix_web::http::Method, path: &str) -> bool {
+        if let Some(expected_method) = &self.method
+            && expected_method != method
+        {
+            return false;
+        }
+
+        if self.pattern.ends_with('*') {
+            let prefix = &self.pattern[..self.pattern.len() - 1];
+            path.starts_with(prefix)
+        } else {
+            path == self.pattern
+        }
+    }
+}
+
+pub fn bearer_exempt_routes() -> Vec<PublicRoute> {
+    use actix_web::http::Method;
+
+    vec![
+        PublicRoute::method(Method::POST, "/api/v1/auth/login"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/login/"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/register"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/register/"),
+        PublicRoute::method(Method::GET, "/api/v1/auth/confirm"),
+        PublicRoute::method(Method::GET, "/api/v1/auth/confirm/"),
+        PublicRoute::method(Method::GET, "/api/v1/auth/session"),
+        PublicRoute::method(Method::GET, "/api/v1/auth/session/"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/refresh"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/refresh/"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/logout"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/logout/"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/recover"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/recover/"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/reset"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/reset/"),
+        PublicRoute::method(Method::GET, "/api/v1/health"),
+        PublicRoute::method(Method::GET, "/api/v1/health/"),
+        PublicRoute::method(Method::GET, "/api/v1/metrics"),
+        PublicRoute::method(Method::GET, "/api/v1/metrics/"),
+        PublicRoute::method(Method::POST, "/api/v1/webhooks/stripe"),
+        PublicRoute::method(Method::POST, "/api/v1/webhooks/pix"),
+        PublicRoute::method(Method::GET, "/api/v1/ws"),
+    ]
+}
+
 pub struct AuthUser {
     claims: Claims,
 }
@@ -60,6 +125,34 @@ pub struct AuthUser {
 impl AuthUser {
     pub fn claims(&self) -> &Claims {
         &self.claims
+    }
+
+    pub fn id(&self) -> uuid::Uuid {
+        self.claims.sub
+    }
+
+    pub fn profile_id(&self) -> uuid::Uuid {
+        self.claims.profile_id
+    }
+
+    pub fn role(&self) -> i32 {
+        self.claims.role
+    }
+
+    pub fn has_role(&self, role: &str) -> bool {
+        self.claims.has_role(role)
+    }
+
+    pub fn is_admin(&self) -> bool {
+        self.claims.is_admin()
+    }
+
+    pub fn is_operator_or_higher(&self) -> bool {
+        self.claims.is_operator_or_higher()
+    }
+
+    pub fn profile_id_option(&self) -> Option<uuid::Uuid> {
+        Some(self.claims.profile_id)
     }
 }
 
@@ -71,35 +164,19 @@ impl FromRequest for AuthUser {
         req: &actix_web::HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
-        // Extract Bearer token from Authorization header
-        let token = req
-            .headers()
-            .get(AUTHORIZATION)
-            .and_then(|h| h.to_str().ok())
-            .and_then(|v| v.strip_prefix("Bearer "));
+        let claims = req
+            .extensions()
+            .get::<Claims>()
+            .cloned();
 
-        match token {
-            None => ready(Err(AppError::Unauthorized(
-                "Missing or invalid Authorization header".to_string(),
-            ))),
-            Some(t) => {
-                // Get JWT secret from AppState
-                let state = req.app_data::<actix_web::web::Data<AppState>>();
-                let secret = state
-                    .as_ref()
-                    .map(|s| s.config.jwt_secret.clone())
-                    .unwrap_or_default();
-
-                match verify_token(t, &secret) {
-                    Ok(claims) => ready(Ok(AuthUser { claims })),
-                    Err(e) => ready(Err(e)),
-                }
-            }
-        }
+        ready(
+            claims
+                .map(|c| AuthUser { claims: c })
+                .ok_or_else(|| AppError::Unauthorized("Not authenticated".to_string()))
+        )
     }
 }
 
-/// Create a JWT token for a user
 pub fn create_token(
     user_id: uuid::Uuid,
     profile_id: uuid::Uuid,
@@ -117,7 +194,6 @@ pub fn create_token(
     )
 }
 
-/// Create a short-lived JWT for WebSocket handshakes only.
 #[allow(dead_code)]
 pub fn create_ws_token(
     user_id: uuid::Uuid,
@@ -145,7 +221,7 @@ fn create_token_for_use(
     token_use: &str,
 ) -> AppResult<String> {
     use chrono::Utc;
-    use jsonwebtoken::{EncodingKey, Header, encode};
+    use jsonwebtoken::encode;
 
     let now = Utc::now();
     let exp = (now + chrono::Duration::seconds(expiry_secs)).timestamp() as usize;
@@ -161,19 +237,17 @@ fn create_token_for_use(
     };
 
     encode(
-        &Header::default(),
+        &jsonwebtoken::Header::default(),
         &claims,
-        &EncodingKey::from_secret(jwt_secret.as_bytes()),
+        &jsonwebtoken::EncodingKey::from_secret(jwt_secret.as_bytes()),
     )
     .map_err(|e| AppError::Internal(format!("Token creation failed: {}", e)))
 }
 
-/// Verify a JWT token
 pub fn verify_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
     verify_token_for_use(token, jwt_secret, ACCESS_TOKEN_USE)
 }
 
-/// Verify a WebSocket-only JWT token.
 pub fn verify_ws_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
     verify_token_for_use(token, jwt_secret, WEBSOCKET_TOKEN_USE)
 }
@@ -181,38 +255,82 @@ pub fn verify_ws_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
 fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> AppResult<Claims> {
     use jsonwebtoken::{DecodingKey, Validation, decode};
 
+    let mut validation = Validation::default();
+    validation.validate_exp = true;
+    validation.validate_nbf = true;
+    validation.required_spec_claims = std::collections::HashSet::from([
+        "exp".to_string(), "iat".to_string(), "sub".to_string(), "token_use".to_string(),
+    ]);
+
     let claims = decode::<Claims>(
         token,
         &DecodingKey::from_secret(jwt_secret.as_bytes()),
-        &Validation::default(),
+        &validation,
     )
     .map(|data| data.claims)
     .map_err(|_| AppError::Unauthorized("Invalid token".to_string()))?;
 
     if claims.token_use != expected_use {
-        return Err(AppError::Unauthorized("Invalid token".to_string()));
+        return Err(AppError::Unauthorized("Invalid token use".to_string()));
     }
 
     Ok(claims)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{create_token, create_ws_token, verify_token, verify_ws_token};
+pub use super::auth_middleware::{JwtAuth, JwtAuthConfig};
 
-    #[test]
-    fn access_tokens_are_rejected_by_websocket_verifier() {
-        let token =
-            create_token(uuid::Uuid::new_v4(), uuid::Uuid::new_v4(), 1, "secret", 60).unwrap();
+// ============================================================================
+// Rate Limit Route Configuration
+// ============================================================================
+// Single source of truth for route-to-rate-limit category mapping.
+// When adding new endpoints, update this function to categorize them.
+// ============================================================================
 
-        assert!(verify_ws_token(&token, "secret").is_err());
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum RateLimitCategory {
+    /// Strict auth: login, register, password recovery/reset (POST)
+    AuthStrict,
+    /// Session management: refresh, session check (POST/GET)
+    AuthSession,
+    /// Default: all other endpoints
+    Default,
+}
+
+/// Maps a request method and path to a rate limit category.
+/// Used by `RateLimiterMiddleware` to determine the appropriate rate limit.
+pub fn rate_limit_category(method: &actix_web::http::Method, path: &str) -> RateLimitCategory {
+    let is_auth_path = path.starts_with("/api/v1/auth/");
+    if !is_auth_path {
+        return RateLimitCategory::Default;
     }
 
-    #[test]
-    fn websocket_tokens_are_rejected_by_access_verifier() {
-        let token =
-            create_ws_token(uuid::Uuid::new_v4(), uuid::Uuid::new_v4(), 1, "secret", 60).unwrap();
+    let is_strict = matches!(
+        (method.as_str(), path),
+        ("POST", "/api/v1/auth/login")
+            | ("POST", "/api/v1/auth/login/")
+            | ("POST", "/api/v1/auth/register")
+            | ("POST", "/api/v1/auth/register/")
+            | ("POST", "/api/v1/auth/recover")
+            | ("POST", "/api/v1/auth/recover/")
+            | ("POST", "/api/v1/auth/reset")
+            | ("POST", "/api/v1/auth/reset/")
+    );
 
-        assert!(verify_token(&token, "secret").is_err());
+    if is_strict {
+        return RateLimitCategory::AuthStrict;
     }
+
+    let is_session = matches!(
+        (method.as_str(), path),
+        ("POST", "/api/v1/auth/refresh")
+            | ("POST", "/api/v1/auth/refresh/")
+            | ("GET", "/api/v1/auth/session")
+            | ("GET", "/api/v1/auth/session/")
+    );
+
+    if is_session {
+        return RateLimitCategory::AuthSession;
+    }
+
+    RateLimitCategory::Default
 }

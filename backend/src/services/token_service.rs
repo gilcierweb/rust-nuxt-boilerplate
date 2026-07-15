@@ -51,13 +51,13 @@ pub fn verify_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
     Ok(token_data.claims)
 }
 
-pub fn hash_token(token: &str) -> String {
+pub fn hash_token(token: &str, salt: &str) -> String {
     use hmac::{Hmac, Mac};
     use sha2::Sha256;
 
     type HmacSha256 = Hmac<Sha256>;
 
-    let mut mac = HmacSha256::new_from_slice(b"refresh_token_salt").unwrap();
+    let mut mac = HmacSha256::new_from_slice(salt.as_bytes()).unwrap();
     mac.update(token.as_bytes());
     hex::encode(mac.finalize().into_bytes())
 }
@@ -112,8 +112,9 @@ mod tests {
     #[test]
     fn test_hash_token_deterministic() {
         let token = "test-refresh-token-12345";
-        let hash1 = hash_token(token);
-        let hash2 = hash_token(token);
+        let salt = "test_salt";
+        let hash1 = hash_token(token, salt);
+        let hash2 = hash_token(token, salt);
 
         assert_eq!(hash1, hash2);
         assert!(!hash1.is_empty());
@@ -121,8 +122,18 @@ mod tests {
 
     #[test]
     fn test_hash_token_different_inputs() {
-        let hash1 = hash_token("token1");
-        let hash2 = hash_token("token2");
+        let salt = "test_salt";
+        let hash1 = hash_token("token1", salt);
+        let hash2 = hash_token("token2", salt);
+
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_token_different_salts() {
+        let token = "test-refresh-token-12345";
+        let hash1 = hash_token(token, "salt1");
+        let hash2 = hash_token(token, "salt2");
 
         assert_ne!(hash1, hash2);
     }

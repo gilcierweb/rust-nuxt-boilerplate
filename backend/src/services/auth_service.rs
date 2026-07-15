@@ -95,6 +95,7 @@ pub fn register_user(
     conn: &mut PgConnection,
     email_input: &str,
     password: &str,
+    token_salt: &str,
 ) -> Result<(User, String), AppError> {
     validate_password_strength(password)?;
     let security = SecurityService::from_env()?;
@@ -119,7 +120,7 @@ pub fn register_user(
         protected_email.blind_index,
         protected_email.encrypted,
         hashed,
-        Some(hash_token(&confirmation_token_plain)),
+        Some(hash_token(&confirmation_token_plain, token_salt)),
         protected_email.key_version,
     );
 
@@ -144,12 +145,12 @@ pub fn register_user(
 }
 
 /// Confirm a user's email by their token.
-pub fn confirm_email(conn: &mut PgConnection, token: &str) -> Result<User, AppError> {
+pub fn confirm_email(conn: &mut PgConnection, token: &str, token_salt: &str) -> Result<User, AppError> {
     use crate::db::schema::users::dsl::*;
     use diesel::dsl::sql;
 
     let user = users
-        .filter(confirmation_token_digest.eq(hash_token(token)))
+        .filter(confirmation_token_digest.eq(hash_token(token, token_salt)))
         .filter(confirmed_at.is_null())
         .select(User::as_select())
         .first::<User>(conn)
@@ -311,16 +312,26 @@ mod tests {
     #[test]
     fn test_hash_token_consistency() {
         let token = "test-token-123";
-        let hash1 = hash_token(token);
-        let hash2 = hash_token(token);
+        let salt = "test_salt";
+        let hash1 = hash_token(token, salt);
+        let hash2 = hash_token(token, salt);
         assert_eq!(hash1, hash2);
         assert!(!hash1.is_empty());
     }
 
     #[test]
     fn test_hash_token_different_inputs() {
-        let hash1 = hash_token("token-1");
-        let hash2 = hash_token("token-2");
+        let salt = "test_salt";
+        let hash1 = hash_token("token-1", salt);
+        let hash2 = hash_token("token-2", salt);
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn test_hash_token_different_salts() {
+        let token = "test-token-123";
+        let hash1 = hash_token(token, "salt1");
+        let hash2 = hash_token(token, "salt2");
         assert_ne!(hash1, hash2);
     }
 }

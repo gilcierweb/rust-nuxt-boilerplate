@@ -124,7 +124,7 @@ pub async fn register(
     let encrypted_password = password_hash(body.password.clone());
     let now = Utc::now();
     let confirmation_token = Uuid::new_v4().to_string();
-    let confirmation_token_digest = hash_token(&confirmation_token);
+    let confirmation_token_digest = hash_token(&confirmation_token, &container.config.refresh_token_hash_salt);
     let security = SecurityService::from_config(container.config.as_ref())?;
     let protected_email = security.protect_email(&body.email)?;
     let email_fingerprint = fingerprint_value(&protected_email.blind_index);
@@ -199,7 +199,7 @@ pub async fn confirm(
     // Find user by confirmation token and confirm email
     let affected_rows = container
         .users
-        .confirm_email(&hash_token(token))
+        .confirm_email(&hash_token(token, &container.config.refresh_token_hash_salt))
         .await
         .map_err(AppError::Database)?;
 
@@ -367,7 +367,7 @@ pub async fn login(
     )?;
 
     let refresh_token_plain = generate_random_token(48);
-    let refresh_token_hash = hash_token(&refresh_token_plain);
+    let refresh_token_hash = hash_token(&refresh_token_plain, &container.config.refresh_token_hash_salt);
 
     // Store refresh token
     let ip_string = req
@@ -453,7 +453,7 @@ pub async fn refresh(
     // rotate_token atomically validates the token (exists, not revoked, not expired),
     // revokes it, and creates a new token with the same device_info and ip_address
     for refresh_token in refresh_tokens {
-        let token_hash = hash_token(&refresh_token);
+        let token_hash = hash_token(&refresh_token, &container.config.refresh_token_hash_salt);
 
         // Try to atomically rotate the token
         // rotate_token validates the token, revokes the old one, and creates a new one atomically
@@ -640,7 +640,7 @@ pub async fn logout(
 
     let mut revoked_count: usize = 0;
     for refresh_token in extract_refresh_cookies(&req) {
-        let token_hash = hash_token(&refresh_token);
+        let token_hash = hash_token(&refresh_token, &container.config.refresh_token_hash_salt);
 
         if let Ok(Some(token)) = container
             .refresh_tokens
@@ -699,7 +699,7 @@ pub async fn recover_password(
 
         container
             .users
-            .create_password_reset_token(&user.id, &hash_token(&token), now)
+            .create_password_reset_token(&user.id, &hash_token(&token, &container.config.refresh_token_hash_salt), now)
             .await
             .map_err(AppError::Database)?;
 
@@ -733,7 +733,7 @@ pub async fn reset_password(
         return Err(AppError::Validation("Passwords do not match".to_string()));
     }
 
-    let token_digest = hash_token(&body.token);
+    let token_digest = hash_token(&body.token, &container.config.refresh_token_hash_salt);
     let user = container
         .users
         .find_by_reset_token_digest(&token_digest)
@@ -1225,7 +1225,7 @@ async fn find_valid_refresh_token(
     }
 
     for refresh_token in refresh_tokens {
-        let token_hash = hash_token(&refresh_token);
+        let token_hash = hash_token(&refresh_token, &container.config.refresh_token_hash_salt);
 
         let stored = match container
             .refresh_tokens
@@ -1622,7 +1622,7 @@ mod tests {
             .returning(move |_| Ok(Some(profile.clone())));
 
         let mut mock_refresh_tokens = MockIRefreshTokenRepository::new();
-        let refresh_token_hash = hash_token(refresh_token_plain);
+        let refresh_token_hash = hash_token(refresh_token_plain, "test_refresh_token_salt");
         mock_refresh_tokens
             .expect_find_by_token_hash()
             .withf(move |value| value == &refresh_token_hash)
