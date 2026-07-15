@@ -1,5 +1,5 @@
 use crate::{
-    auth::password::{password_hash, verify},
+    auth::password::{password_hash, verify, needs_rehash, rehash_password},
     config::AppConfig,
     errors::{AppError, AppResult},
     middleware::auth::AuthUser,
@@ -306,6 +306,24 @@ pub async fn login(
             "login failed: invalid password"
         );
         return Err(AppError::Unauthorized(t!("auth.login.failed").into_owned()));
+    }
+
+    // Upgrade password hash if using outdated Argon2 parameters
+    if needs_rehash(&user.encrypted_password) {
+        let new_hash = rehash_password(&body.password);
+        if let Err(e) = container
+            .users
+            .update_password(&user.id, &new_hash)
+            .await
+        {
+            tracing::warn!(
+                event = "auth.login.rehash_failed",
+                user_id = %user.id,
+                error = %e,
+                "password rehash failed"
+            );
+            // Non-fatal: login continues with old hash
+        }
     }
 
     // Verify TOTP if 2FA is enabled
