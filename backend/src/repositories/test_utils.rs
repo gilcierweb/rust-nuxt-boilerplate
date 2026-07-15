@@ -11,6 +11,32 @@ pub mod mocks {
     use crate::services::cache_service::CacheManager;
     use std::sync::Arc;
 
+    /// Generate a deterministic base64-encoded key using a seeded RNG.
+    /// This ensures tests are reproducible while still using realistic key formats.
+    fn generate_deterministic_base64_key(byte_length: usize, seed: u64) -> String {
+        use base64::Engine;
+        use rand::SeedableRng;
+        use rand::RngCore;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+        let mut bytes = vec![0u8; byte_length];
+        rng.fill_bytes(&mut bytes);
+        base64::engine::general_purpose::STANDARD.encode(&bytes)
+    }
+
+    /// Generate a deterministic string using a seeded RNG.
+    fn generate_deterministic_string(length: usize, seed: u64) -> String {
+        use rand::SeedableRng;
+        use rand::Rng;
+        let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+        let charset: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        (0..length)
+            .map(|_| {
+                let idx = rng.gen_range(0..charset.len());
+                charset[idx] as char
+            })
+            .collect()
+    }
+
     pub fn mock_app_config() -> AppConfig {
         AppConfig {
             host: "127.0.0.1".to_string(),
@@ -29,12 +55,12 @@ pub mod mocks {
             db_statement_timeout_secs: Some(30),
             redis_url: "redis://127.0.0.1:6379".to_string(),
             redis_pool_size: 10,
-            jwt_secret: "secret_for_tests".to_string(),
+            jwt_secret: generate_deterministic_string(32, 0x9E3779B97F4A7C15),
             jwt_public_key: None,
             jwt_access_expiry_secs: 3600,
             jwt_refresh_expiry_secs: 3600,
-            master_key: "MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=".to_string(),
-            blind_index_key: "ZmVkY2JhOTg3NjU0MzIxMGZlZGNiYTk4NzY1NDMyMTA=".to_string(),
+            master_key: generate_deterministic_base64_key(32, 0xC0FFEE),
+            blind_index_key: generate_deterministic_base64_key(32, 0xDEADBEEF),
             current_encryption_key_version: 1,
             internal_api_keys: vec![],
             resend_api_key: String::new(),
@@ -65,8 +91,8 @@ pub mod mocks {
             max_audio_size_bytes: 1000,
             json_payload_limit: 1024 * 1024,
             form_payload_limit: 2 * 1024 * 1024,
-            csrf_secret_key: "test_csrf_secret_key_for_testing_purposes_only".to_string(),
-            refresh_token_hash_salt: "test_refresh_token_salt".to_string(),
+            csrf_secret_key: generate_deterministic_string(32, 0xCAFEBABE),
+            refresh_token_hash_salt: generate_deterministic_string(16, 0xFEEDFACE),
             rate_limit_enabled: true,
         }
     }
