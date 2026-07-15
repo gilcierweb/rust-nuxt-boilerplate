@@ -701,33 +701,35 @@ pub async fn recover_password(
     let normalized_email = security.normalize_email(&body.email);
     let email_lookup = security.protect_email(&normalized_email)?;
 
-    // Ignore errors — always return success to prevent email enumeration
-    let mut matched_user = false;
+    // Always execute the same code path to prevent email enumeration attacks
+    // Generate token and attempt DB update regardless of user existence
+    let token = Uuid::new_v4().to_string();
+    let now = Utc::now().naive_utc();
+    let token_digest = hash_token(&token, &container.config.refresh_token_hash_salt);
+
+    // Attempt to find user and create reset token
+    // If user doesn't exist, this will silently fail (0 rows updated)
     if let Ok(Some(user)) = container
         .users
         .find_by_email(&email_lookup.blind_index)
         .await
     {
-        matched_user = true;
-        let token = Uuid::new_v4().to_string();
-        let now = Utc::now().naive_utc();
-        let email_service = EmailService::from_config(container.config.as_ref());
-
-        container
+        let _ = container
             .users
-            .create_password_reset_token(&user.id, &hash_token(&token, &container.config.refresh_token_hash_salt), now)
-            .await
-            .map_err(AppError::Database)?;
+            .create_password_reset_token(&user.id, &token_digest, now)
+            .await;
+    }
 
-        if let Err(error) = email_service.send_password_reset(&body.email, &token).await {
-            tracing::warn!("password reset email delivery skipped or failed: {}", error);
-        }
+    // Always attempt to send email (will fail silently for non-existent users)
+    // This ensures the same timing regardless of user existence
+    let email_service = EmailService::from_config(container.config.as_ref());
+    if let Err(error) = email_service.send_password_reset(&body.email, &token).await {
+        tracing::debug!("password reset email delivery skipped or failed: {}", error);
     }
 
     tracing::info!(
         event = "auth.recover.requested",
         email_fingerprint = %fingerprint_value(&email_lookup.blind_index),
-        matched_user,
         "password recovery requested"
     );
 
