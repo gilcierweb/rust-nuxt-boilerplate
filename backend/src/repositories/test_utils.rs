@@ -120,4 +120,29 @@ pub mod mocks {
             access_token_blacklist: Arc::new(crate::repositories::access_token_blacklist::AccessTokenBlacklist::new(pool)),
         }
     }
+
+/// Create a mock container with pre-configured user repository expectations.
+pub fn mock_container_with_user(user: crate::models::user::User) -> AppContainer {
+    let mut container = mock_container();
+
+    let email_blind_index = user.email_blind_index.clone();
+    let user_id = user.id;
+    let user_for_find = user.clone();
+    let user_for_email = user.clone();
+
+    let mut mock_user_repo = MockIUserRepository::new();
+    mock_user_repo
+        .expect_find()
+        .withf(move |id| *id == user_id)
+        .times(1)
+        .returning(move |_| Ok(user_for_find.clone()));
+    mock_user_repo
+        .expect_find_by_email()
+        .withf(move |blind_index| blind_index == &email_blind_index)
+        .times(1)
+        .returning(move |_| Ok(Some(user_for_email.clone())));
+
+    container.users = Arc::new(mock_user_repo);
+    container
+}
 }

@@ -7,6 +7,8 @@ pub mod profiles_repository;
 pub mod refresh_tokens_repository;
 pub mod roles_repository;
 #[cfg(test)]
+pub mod test_repositories;
+#[cfg(test)]
 pub mod test_utils;
 pub mod traits;
 pub mod user_roles_repository;

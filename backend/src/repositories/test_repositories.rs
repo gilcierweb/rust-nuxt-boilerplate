@@ -1,88 +1,245 @@
+// Test repository infrastructure using mockall's auto-generated mocks
+//
+// This module provides test fixtures and utilities for working with repository mocks.
+// The traits are marked with #[cfg_attr(test, mockall::automock)] which
+// automatically generates MockIUserRepository, MockIProfileRepository, etc.
+// 
+// Usage in tests:
+// ```rust
+// use crate::repositories::test_utils::mocks::mock_container;
+// use crate::repositories::users_repository::MockIUserRepository;
+// use crate::models::user::{NewUser, User};
+//
+// let mut mock_repo = MockIUserRepository::new();
+// mock_repo.expect_find().returning(|_| Ok(user_fixture()));
+// ```
+
 use crate::models::role::{NewRole, Role};
 use crate::models::profile::{NewProfile, Profile};
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
 use crate::models::audit_log::{NewAuditLog, AuditLog};
-use crate::repositories::traits::roles_trait::IRoleRepository;
-use crate::repositories::traits::profiles_trait::IProfileRepository;
-use crate::repositories::traits::refresh_tokens_trait::IRefreshTokenRepository;
-use crate::repositories::traits::audit_logs_trait::IAuditLogRepository;
-use crate::repositories::traits::user_roles_trait::IUserRoleRepository;
-use crate::repositories::container::AppContainer;
-use crate::config::app_config::mock_container;
-use crate::security::SecurityService;
-use async_trait::async_trait;
-use mockall::*;
+use crate::models::user::{NewUser, User};
+use crate::models::user_role::{NewUserRole, UserRole};
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
-use chrono::Utc;
 
-mock! {
-    pub IRoleRepository {}
-    #[async_trait]
-    impl IRoleRepository for IRoleRepository {
-        async fn all(&self) -> Result<Vec<Role>, diesel::result::Error>;
-        async fn find(&self, id: &Uuid) -> Result<Role, diesel::result::Error>;
-        async fn create(&self, item: &NewRole) -> Result<Role, diesel::result::Error>;
-        async fn update(&self, id: &Uuid, item: &NewRole) -> Result<Role, diesel::result::Error>;
-        async fn destroy(&self, id: &Uuid) -> Result<usize, diesel::result::Error>;
-        async fn find_by_name(&self, name: &str) -> Result<Option<Role>, diesel::result::Error>;
+/// Create a test user fixture.
+pub fn user_fixture() -> User {
+    User {
+        id: Uuid::new_v4(),
+        email_blind_index: vec![1, 2, 3, 4],
+        email_encrypted: vec![5, 6, 7, 8],
+        encrypted_password: "$argon2id$v=19$m=65536,t=3,p=1$test$test".to_string(),
+        reset_password_token_digest: None,
+        reset_password_sent_at: None,
+        remember_created_at: None,
+        sign_in_count: 0,
+        current_sign_in_at: None,
+        last_sign_in_at: None,
+        current_sign_in_ip: None,
+        last_sign_in_ip: None,
+        confirmation_token_digest: None,
+        confirmed_at: Some(Utc::now()),
+        confirmation_sent_at: None,
+        unconfirmed_email_blind_index: None,
+        unconfirmed_email_encrypted: None,
+        failed_attempts: 0,
+        unlock_token_digest: None,
+        locked_at: None,
+        otp_secret: None,
+        otp_enabled_at: None,
+        otp_backup_codes: None,
+        encryption_key_version: 1,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
     }
 }
 
-mock! {
-    pub IProfileRepository {}
-    #[async_trait]
-    impl IProfileRepository for IProfileRepository {
-        async fn all(&self) -> Result<Vec<Profile>, diesel::result::Error>;
-        async fn find(&self, id: &Uuid) -> Result<Profile, diesel::result::Error>;
-        async fn create(&self, item: &NewProfile) -> Result<Profile, diesel::result::Error>;
-        async fn update(&self, id: &Uuid, item: &NewProfile) -> Result<Profile, diesel::result::Error>;
-        async fn destroy(&self, id: &Uuid) -> Result<usize, diesel::result::Error>;
-        async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Option<Profile>, diesel::result::Error>;
+/// Create a test user with specific ID.
+pub fn user_fixture_with_id(id: Uuid) -> User {
+    let mut user = user_fixture();
+    user.id = id;
+    user
+}
+
+/// Create a test role fixture.
+pub fn role_fixture() -> Role {
+    Role {
+        id: Uuid::new_v4(),
+        name: "test_role".to_string(),
+        resource_type: None,
+        resource_id: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
     }
 }
 
-mock! {
-    pub IRefreshTokenRepository {}
-    #[async_trait]
-    impl IRefreshTokenRepository for IRefreshTokenRepository {
-        async fn all(&self) -> Result<Vec<RefreshToken>, diesel::result::Error>;
-        async fn find(&self, id: &Uuid) -> Result<RefreshToken, diesel::result::Error>;
-        async fn create(&self, item: &NewRefreshToken) -> Result<RefreshToken, diesel::result::Error>;
-        async fn update(&self, id: &Uuid, item: &NewRefreshToken) -> Result<RefreshToken, diesel::result::Error>;
-        async fn destroy(&self, id: &Uuid) -> Result<usize, diesel::result::Error>;
-        async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Option<RefreshToken>, diesel::result::Error>;
-        async fn find_by_token_hash(&self, token_hash: &str) -> Result<Option<RefreshToken>, diesel::result::Error>;
-        async fn revoke(&self, id: &Uuid) -> Result<usize, diesel::result::Error>;
-        async fn revoke_all_for_user(&self, user_id: &Uuid) -> Result<usize, diesel::result::Error>;
-        async fn find_valid_by_user_id(&self, user_id: &Uuid) -> Result<Option<RefreshToken>, diesel::result::Error>;
+/// Create a test role with specific name.
+pub fn role_fixture_with_name(name: &str) -> Role {
+    let mut role = role_fixture();
+    role.name = name.to_string();
+    role
+}
+
+/// Create a test profile fixture.
+pub fn profile_fixture() -> Profile {
+    Profile {
+        id: Uuid::new_v4(),
+        user_id: Uuid::new_v4(),
+        first_name: Some("John".to_string()),
+        last_name: Some("Doe".to_string()),
+        full_name: Some("John Doe".to_string()),
+        nickname: None,
+        bio: None,
+        avatar: None,
+        birthday: None,
+        cpf_encrypted: None,
+        cpf_blind_index: None,
+        phone_encrypted: None,
+        phone_blind_index: None,
+        whatsapp_encrypted: None,
+        whatsapp_blind_index: None,
+        status: true,
+        social_network: serde_json::json!({}),
+        encryption_key_version: 1,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
     }
 }
 
-mock! {
-    pub IAuditLogRepository {}
-    #[async_trait]
-    impl IAuditLogRepository for IAuditLogRepository {
-        async fn all(&self) -> Result<Vec<AuditLog>, diesel::result::Error>;
-        async fn find(&self, id: &Uuid) -> Result<AuditLog, diesel::result::Error>;
-        async fn create(&self, item: &NewAuditLog) -> Result<AuditLog, diesel::result::Error>;
-        async fn update(&self, id: &Uuid, item: &NewAuditLog) -> Result<AuditLog, diesel::result::Error>;
-        async fn destroy(&self, id: &Uuid) -> Result<usize, diesel::result::Error>;
-        async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<AuditLog>, diesel::result::Error>;
-        async fn find_by_resource(&self, resource_type: &str, resource_id: &Uuid) -> Result<Vec<AuditLog>, diesel::result::Error>;
+/// Create a test profile with specific user ID.
+pub fn profile_fixture_for_user(user_id: Uuid) -> Profile {
+    let mut profile = profile_fixture();
+    profile.user_id = user_id;
+    profile
+}
+
+/// Create a test refresh token fixture.
+pub fn refresh_token_fixture() -> RefreshToken {
+    RefreshToken {
+        id: Uuid::new_v4(),
+        user_id: Uuid::new_v4(),
+        token_hash: "test_hash".to_string(),
+        device_info: Some("test-device".to_string()),
+        ip_address: Some("127.0.0.1/32".parse().unwrap()),
+        expires_at: Utc::now() + chrono::Duration::days(30),
+        revoked_at: None,
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
     }
 }
 
-mock! {
-    pub IUserRoleRepository {}
-    #[async_trait]
-    impl IUserRoleRepository for IUserRoleRepository {
-        async fn all(&self) -> Result<Vec<(Uuid, Uuid)>, diesel::result::Error>;
-        async fn find(&self, id: &Uuid) -> Result<(Uuid, Uuid), diesel::result::Error>;
-        async fn create(&self, user_id: &Uuid, role_id: &Uuid) -> Result<(), diesel::result::Error>;
-        async fn destroy(&self, user_id: &Uuid, role_id: &Uuid) -> Result<usize, diesel::result::Error>;
-        async fn find_by_user_id(&self, user_id: &Uuid) -> Result<Vec<Uuid>, diesel::result::Error>;
-        async fn find_by_role_id(&self, role_id: &Uuid) -> Result<Vec<Uuid>, diesel::result::Error>;
+/// Create a test audit log fixture.
+pub fn audit_log_fixture() -> AuditLog {
+    AuditLog {
+        id: Uuid::new_v4(),
+        actor_user_id: Some(Uuid::new_v4()),
+        actor_role_snapshot: None,
+        action: "create".to_string(),
+        resource_type: "user".to_string(),
+        resource_id: Some(Uuid::new_v4()),
+        ip_address: Some("127.0.0.1/32".parse().unwrap()),
+        user_agent: Some("test-agent".to_string()),
+        request_id: None,
+        changes: serde_json::json!({}),
+        metadata: serde_json::json!({}),
+        created_at: Utc::now(),
     }
+}
+
+/// Create a test user role fixture.
+pub fn user_role_fixture(user_id: Uuid, role_id: Uuid) -> UserRole {
+    UserRole {
+        user_id,
+        role_id,
+    }
+}
+
+/// Helper to setup common mock expectations for a user repository.
+pub fn setup_user_repo_find(
+    mock_repo: &mut crate::repositories::users_repository::MockIUserRepository,
+    user: User,
+) {
+    let user_id = user.id;
+    let user_clone = user.clone();
+    mock_repo
+        .expect_find()
+        .withf(move |id| *id == user_id)
+        .times(1)
+        .returning(move |_| Ok(user_clone.clone()));
+}
+
+/// Helper to setup common mock expectations for finding user by email blind index.
+pub fn setup_user_repo_find_by_email(
+    mock_repo: &mut crate::repositories::users_repository::MockIUserRepository,
+    user: User,
+) {
+    let email_blind_index = user.email_blind_index.clone();
+    let user_clone = user.clone();
+    mock_repo
+        .expect_find_by_email()
+        .withf(move |blind_index| blind_index == &email_blind_index)
+        .times(1)
+        .returning(move |_| Ok(Some(user_clone.clone())));
+}
+
+/// Helper to setup common mock expectations for a role repository.
+pub fn setup_role_repo_find(
+    mock_repo: &mut crate::repositories::roles_repository::MockIRoleRepository,
+    role: Role,
+) {
+    let role_id = role.id;
+    let role_clone = role.clone();
+    mock_repo
+        .expect_find()
+        .withf(move |id| *id == role_id)
+        .times(1)
+        .returning(move |_| Ok(role_clone.clone()));
+}
+
+/// Helper to setup common mock expectations for a profile repository.
+pub fn setup_profile_repo_find_by_user_id(
+    mock_repo: &mut crate::repositories::profiles_repository::MockIProfileRepository,
+    profile: Profile,
+) {
+    let user_id = profile.user_id;
+    let profile_clone = profile.clone();
+    mock_repo
+        .expect_find_by_user_id()
+        .withf(move |id| *id == user_id)
+        .times(1)
+        .returning(move |_| Ok(Some(profile_clone.clone())));
+}
+
+/// Helper to setup common mock expectations for a refresh token repository.
+pub fn setup_refresh_token_repo_find_by_hash(
+    mock_repo: &mut crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository,
+    token: RefreshToken,
+) {
+    let token_hash = token.token_hash.clone();
+    let token_clone = token.clone();
+    mock_repo
+        .expect_find_by_token_hash()
+        .withf(move |hash| hash == &token_hash)
+        .times(1)
+        .returning(move |_| Ok(Some(token_clone.clone())));
+}
+
+/// Test data module with commonly used test values.
+pub mod test_data {
+    use super::*;
+    use std::sync::LazyLock;
+
+    pub static TEST_USER_ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
+    pub static TEST_ROLE_ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
+    pub static TEST_PROFILE_ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
+    pub static TEST_TOKEN_HASH: &str = "test_token_hash_abc123";
+    pub static TEST_ACTION_CREATE: &str = "create";
+    pub static TEST_ACTION_UPDATE: &str = "update";
+    pub static TEST_ACTION_DELETE: &str = "delete";
+    pub static TEST_RESOURCE_USER: &str = "user";
+    pub static TEST_RESOURCE_PROFILE: &str = "profile";
+    pub static TEST_RESOURCE_ROLE: &str = "role";
 }
 
 #[cfg(test)]
@@ -92,204 +249,54 @@ mod tests {
     use crate::models::profile::Profile;
     use crate::models::refresh_token::RefreshToken;
     use crate::models::audit_log::AuditLog;
+    use crate::models::user::User;
     use chrono::Utc;
     use uuid::Uuid;
 
-    #[actix_rt::test]
-    async fn test_role_repository_create() {
-        let mut mock_repo = MockIRoleRepository::new();
-        let new_role = NewRole {
-            id: Uuid::new_v4(),
-            name: "test_role".to_string(),
-            description: Some("Test role description".to_string()),
-        };
-        let role = Role {
-            id: Uuid::new_v4(),
-            name: "test_role".to_string(),
-            description: Some("Test role description".to_string()),
-        };
-
-        mock_repo
-            .expect_create()
-            .withf(|item| item.name == "test_role")
-            .times(1)
-            .returning(|item| Ok(Role {
-                id: item.id,
-                name: item.name.clone(),
-                description: item.description.clone(),
-            }));
-
-        let result = mock_repo.create(&new_role).await;
-        assert!(result.is_ok());
-        let created_role = result.unwrap();
-        assert_eq!(created_role.name, "test_role");
+    #[test]
+    fn test_user_fixture() {
+        let user = user_fixture();
+        assert!(!user.id.is_nil());
+        assert_eq!(user.sign_in_count, 0);
+        assert!(user.confirmed_at.is_some());
     }
 
-    #[actix_rt::test]
-    async fn test_profile_repository_find_by_user_id() {
-        let mut mock_repo = MockIProfileRepository::new();
-        let user_id = Uuid::new_v4();
-        let profile = Profile {
-            id: Uuid::new_v4(),
-            user_id,
-            first_name: Some("John".to_string()),
-            last_name: Some("Doe".to_string()),
-            display_name: Some("John Doe".to_string()),
-            bio: None,
-            avatar_url: None,
-            cover_url: None,
-            birthday: None,
-            age_verified: false,
-            country: None,
-            state: None,
-            city: None,
-            social_network: serde_json::json!({}),
-            is_creator: false,
-            is_agency: false,
-            status: "active".to_string(),
-            created_at: Utc::now().naive_utc(),
-            updated_at: Utc::now().naive_utc(),
-        };
-
-        mock_repo
-            .expect_find_by_user_id()
-            .withf(|id| *id == user_id)
-            .times(1)
-            .returning(move |id| Ok(Some(Profile {
-                id: Uuid::new_v4(),
-                user_id: *id,
-                first_name: Some("John".to_string()),
-                last_name: Some("Doe".to_string()),
-                display_name: Some("John Doe".to_string()),
-                bio: None,
-                avatar_url: None,
-                cover_url: None,
-                birthday: None,
-                age_verified: false,
-                country: None,
-                state: None,
-                city: None,
-                social_network: serde_json::json!({}),
-                is_creator: false,
-                is_agency: false,
-                status: "active".to_string(),
-                created_at: Utc::now().naive_utc(),
-                updated_at: Utc::now().naive_utc(),
-            })));
-
-        let result = mock_repo.find_by_user_id(&user_id).await;
-        assert!(result.is_ok());
-        let profile_option = result.unwrap();
-        assert!(profile_option.is_some());
-        let found_profile = profile_option.unwrap();
-        assert_eq!(found_profile.user_id, user_id);
-        assert_eq!(found_profile.first_name, Some("John".to_string()));
+    #[test]
+    fn test_role_fixture() {
+        let role = role_fixture();
+        assert!(!role.id.is_nil());
+        assert_eq!(role.name, "test_role");
     }
 
-    #[actix_rt::test]
-    async fn test_refresh_token_repository_find_by_token_hash() {
-        let mut mock_repo = MockIRefreshTokenRepository::new();
-        let token_hash = "abc123def456";
-        let refresh_token = RefreshToken {
-            id: Uuid::new_v4(),
-            user_id: Uuid::new_v4(),
-            token_hash: token_hash.to_string(),
-            device_info: Some("test-device".to_string()),
-            ip_address: Some("127.0.0.1".to_string()),
-            expires_at: Utc::now() + chrono::Duration::days(30),
-            revoked_at: None,
-            created_at: Utc::now().naive_utc(),
-            updated_at: Utc::now().naive_utc(),
-        };
-
-        mock_repo
-            .expect_find_by_token_hash()
-            .withf(|hash| hash == token_hash)
-            .times(1)
-            .returning(move |hash| Ok(Some(RefreshToken {
-                id: Uuid::new_v4(),
-                user_id: Uuid::new_v4(),
-                token_hash: hash.clone(),
-                device_info: Some("test-device".to_string()),
-                ip_address: Some("127.0.0.1".to_string()),
-                expires_at: Utc::now() + chrono::Duration::days(30),
-                revoked_at: None,
-                created_at: Utc::now().naive_utc(),
-                updated_at: Utc::now().naive_utc(),
-            })));
-
-        let result = mock_repo.find_by_token_hash(token_hash).await;
-        assert!(result.is_ok());
-        let token_option = result.unwrap();
-        assert!(token_option.is_some());
-        let found_token = token_option.unwrap();
-        assert_eq!(found_token.token_hash, token_hash);
+    #[test]
+    fn test_profile_fixture() {
+        let profile = profile_fixture();
+        assert!(!profile.id.is_nil());
+        assert!(!profile.user_id.is_nil());
+        assert!(profile.status);
     }
 
-    #[actix_rt::test]
-    async fn test_audit_log_repository_create() {
-        let mut mock_repo = MockIAuditLogRepository::new();
-        let new_audit_log = NewAuditLog {
-            id: Uuid::new_v4(),
-            user_id: Some(Uuid::new_v4()),
-            resource_type: "user".to_string(),
-            resource_id: Uuid::new_v4(),
-            action: "create".to_string(),
-            changes: Some(serde_json::json!({})),
-            ip_address: Some("127.0.0.1".to_string()),
-            user_agent: Some("test-agent".to_string()),
-            created_at: Utc::now().naive_utc(),
-        };
-        let audit_log = AuditLog {
-            id: Uuid::new_v4(),
-            user_id: Some(Uuid::new_v4()),
-            resource_type: "user".to_string(),
-            resource_id: Uuid::new_v4(),
-            action: "create".to_string(),
-            changes: Some(serde_json::json!({})),
-            ip_address: Some("127.0.0.1".to_string()),
-            user_agent: Some("test-agent".to_string()),
-            created_at: Utc::now().naive_utc(),
-        };
-
-        mock_repo
-            .expect_create()
-            .withf(|item| {
-                item.resource_type == "user" && item.action == "create"
-            })
-            .times(1)
-            .returning(|item| Ok(AuditLog {
-                id: item.id,
-                user_id: item.user_id,
-                resource_type: item.resource_type.clone(),
-                resource_id: item.resource_id,
-                action: item.action.clone(),
-                changes: item.changes.clone(),
-                ip_address: item.ip_address.clone(),
-                user_agent: item.user_agent.clone(),
-                created_at: item.created_at,
-            }));
-
-        let result = mock_repo.create(&new_audit_log).await;
-        assert!(result.is_ok());
-        let created_log = result.unwrap();
-        assert_eq!(created_log.resource_type, "user");
-        assert_eq!(created_log.action, "create");
+    #[test]
+    fn test_refresh_token_fixture() {
+        let token = refresh_token_fixture();
+        assert!(!token.id.is_nil());
+        assert!(!token.user_id.is_nil());
+        assert!(!token.token_hash.is_empty());
     }
 
-    #[actix_rt::test]
-    async fn test_user_role_repository_create() {
-        let mut mock_repo = MockIUserRoleRepository::new();
+    #[test]
+    fn test_audit_log_fixture() {
+        let log = audit_log_fixture();
+        assert!(!log.id.is_nil());
+        assert_eq!(log.action, "create");
+    }
+
+    #[test]
+    fn test_user_role_fixture() {
         let user_id = Uuid::new_v4();
         let role_id = Uuid::new_v4();
-
-        mock_repo
-            .expect_create()
-            .withf(|uid, rid| *uid == user_id && *rid == role_id)
-            .times(1)
-            .returning(|_, _| Ok(()));
-
-        let result = mock_repo.create(&user_id, &role_id).await;
-        assert!(result.is_ok());
+        let ur = user_role_fixture(user_id, role_id);
+        assert_eq!(ur.user_id, user_id);
+        assert_eq!(ur.role_id, role_id);
     }
 }
