@@ -1,5 +1,6 @@
 use crate::db::database::DBPool;
 use diesel::prelude::*;
+use diesel::Connection;
 
 #[derive(QueryableByName)]
 #[allow(dead_code)]
@@ -36,6 +37,26 @@ impl BaseRepo {
                 Box::new(e.to_string()),
             ))
         })
+    }
+
+    /// Executes a Diesel transaction by acquiring a connection from the pool.
+    /// The transaction will be committed if the closure returns `Ok`, rolled back if `Err`.
+    pub async fn run_transaction<F, T, E>(&self, f: F) -> Result<T, E>
+    where
+        F: FnOnce(&mut PgConnection) -> Result<T, E> + Send + 'static,
+        T: Send + 'static,
+        E: From<diesel::result::Error> + Send + 'static,
+    {
+        let pool = self.pool.clone();
+        tokio::task::spawn_blocking(move || {
+            let mut conn = pool.get().expect("Failed to get DB connection from pool");
+            conn.transaction::<T, E, _>(|conn| f(conn))
+        })
+        .await
+        .unwrap_or_else(|e| Err(E::from(diesel::result::Error::DatabaseError(
+            diesel::result::DatabaseErrorKind::Unknown,
+            Box::new(e.to_string()),
+        ))))
     }
 
     /// Generic exists? — equivalent to Rails' `Model.exists?(column: value)`.

@@ -1,13 +1,13 @@
 #![allow(dead_code)]
 
+#[allow(unused_imports)]
+use crate::errors::AppResult;
 use crate::{
     errors::AppError,
     models::user::{NewUser, User},
     security::SecurityService,
     services::{token::generate_random_token, token_service::hash_token},
 };
-#[allow(unused_imports)]
-use crate::errors::AppResult;
 use argon2::{
     Argon2,
     password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
@@ -72,7 +72,7 @@ pub fn find_user_by_email(conn: &mut PgConnection, email_input: &str) -> Result<
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
                 AppError::Unauthorized("Invalid email or password".to_string())
-            }
+            },
             _ => AppError::Database(e),
         })
 }
@@ -156,7 +156,7 @@ pub fn confirm_email(conn: &mut PgConnection, token: &str) -> Result<User, AppEr
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
                 AppError::BadRequest("Invalid or already used confirmation token".to_string())
-            }
+            },
             _ => AppError::Database(e),
         })?;
 
@@ -216,10 +216,17 @@ mod tests {
         let database_url = std::env::var("DATABASE_URL_TEST")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string());
         let manager = ConnectionManager::<PgConnection>::new(database_url);
-        Arc::new(Pool::builder().max_size(1).build(manager).expect("Failed to create pool"))
+        Arc::new(
+            Pool::builder()
+                .max_size(1)
+                .build(manager)
+                .expect("Failed to create pool"),
+        )
     }
 
-    fn get_conn(pool: &Arc<Pool<ConnectionManager<PgConnection>>>) -> impl Deref<Target = PgConnection> {
+    fn get_conn(
+        pool: &Arc<Pool<ConnectionManager<PgConnection>>>,
+    ) -> impl Deref<Target = PgConnection> {
         pool.get().expect("Failed to get connection")
     }
 

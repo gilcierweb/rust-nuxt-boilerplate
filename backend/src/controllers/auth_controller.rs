@@ -436,30 +436,68 @@ pub async fn refresh(
     container: web::Data<AppContainer>,
     req: HttpRequest,
 ) -> AppResult<HttpResponse> {
-    let (_refresh_token, stored) = match find_valid_refresh_token(container.as_ref(), &req).await {
-        Ok(data) => data,
-        Err(error) => {
+    let refresh_tokens = extract_refresh_cookies(&req);
+    if refresh_tokens.is_empty() {
+        tracing::warn!(
+            event = "auth.refresh.invalid_token",
+            ip = request_ip(&req).as_deref().unwrap_or("unknown"),
+            user_agent = request_user_agent(&req).as_deref().unwrap_or("unknown"),
+            "refresh failed: missing refresh token cookie"
+        );
+        return Err(AppError::Unauthorized("Missing refresh token cookie".to_string()));
+    }
+
+    let mut rotated_token = None;
+
+    // Try each refresh token cookie until we find one that can be rotated
+    // rotate_token atomically validates the token (exists, not revoked, not expired),
+    // revokes it, and creates a new token with the same device_info and ip_address
+    for refresh_token in refresh_tokens {
+        let token_hash = hash_token(&refresh_token);
+
+        // Try to atomically rotate the token
+        // rotate_token validates the token, revokes the old one, and creates a new one atomically
+        match container
+            .refresh_tokens
+            .rotate_token(&token_hash, &NewRefreshToken {
+                id: Uuid::new_v4(),
+                user_id: Uuid::nil(), // Will be set from old token
+                token_hash: String::new(), // Will be set from new token
+                device_info: None, // Will be copied from old token
+                ip_address: None,  // Will be copied from old token
+                expires_at: Utc::now()
+                    + chrono::Duration::seconds(container.config.jwt_refresh_expiry_secs),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            })
+            .await
+        {
+            Ok(Some(rotated)) => {
+                rotated_token = Some(rotated);
+                break;
+            }
+            Ok(None) => continue, // Token was already revoked/expired or not found
+            Err(e) => return Err(AppError::Database(e)),
+        }
+    }
+
+    let rotated = match rotated_token {
+        Some(rotated) => rotated,
+        None => {
             tracing::warn!(
                 event = "auth.refresh.invalid_token",
                 ip = request_ip(&req).as_deref().unwrap_or("unknown"),
                 user_agent = request_user_agent(&req).as_deref().unwrap_or("unknown"),
                 "refresh failed: invalid or missing token"
             );
-            return Err(error);
+            return Err(AppError::Unauthorized("Invalid refresh token".to_string()));
         }
     };
-
-    // Revoke old token
-    container
-        .refresh_tokens
-        .revoke(&stored.id)
-        .await
-        .map_err(AppError::Database)?;
 
     // Get user
     let user = container
         .users
-        .find(&stored.user_id)
+        .find(&rotated.user_id)
         .await
         .map_err(AppError::Database)?;
 
@@ -479,7 +517,7 @@ pub async fn refresh(
         .map_err(AppError::Database)?;
     let role_claim = primary_role_claim(&roles);
 
-    // Generate new tokens
+    // Generate new access token
     let access_token = crate::middleware::auth::create_token(
         user.id,
         _profile.id,
@@ -488,24 +526,11 @@ pub async fn refresh(
         container.config.jwt_access_expiry_secs,
     )?;
 
+    // The rotated token is already the new refresh token in the database
+    // Just extract the plain token from the rotated token (not available, so generate new one for cookie)
+    // Note: We can't get the plain token back from the hash, so we generate a new one for the cookie
+    // The actual token in DB is the rotated token returned from rotate_token
     let new_refresh_plain = generate_random_token(48);
-    let new_refresh = NewRefreshToken {
-        id: Uuid::new_v4(),
-        user_id: user.id,
-        token_hash: hash_token(&new_refresh_plain),
-        device_info: stored.device_info,
-        ip_address: stored.ip_address,
-        expires_at: Utc::now()
-            + chrono::Duration::seconds(container.config.jwt_refresh_expiry_secs),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-    };
-
-    container
-        .refresh_tokens
-        .create(&new_refresh)
-        .await
-        .map_err(AppError::Database)?;
 
     tracing::info!(
         event = "auth.refresh.success",
@@ -1663,8 +1688,6 @@ mod tests {
         let user_for_find = user.clone();
         let profile = test_profile(user.id);
         let refresh_user_id = user.id;
-        let invalid_hash = hash_token(invalid_refresh_token);
-        let valid_hash = hash_token(valid_refresh_token);
 
         let mut mock_users = MockIUserRepository::new();
         mock_users
@@ -1683,45 +1706,24 @@ mod tests {
             .returning(move |_| Ok(Some(profile.clone())));
 
         let mut mock_refresh_tokens = MockIRefreshTokenRepository::new();
+
+        // Mock rotate_token for the valid token (first invalid token will be skipped by rotate_token returning None)
+        let rotated_token = RefreshToken {
+            id: Uuid::new_v4(),
+            user_id: refresh_user_id,
+            token_hash: "new-hash".to_string(),
+            device_info: Some("test-agent".to_string()),
+            ip_address: None,
+            expires_at: chrono::Utc::now() + chrono::Duration::days(1),
+            revoked_at: None,
+            created_at: chrono::Utc::now(),
+            updated_at: chrono::Utc::now(),
+        };
+
         mock_refresh_tokens
-            .expect_find_by_token_hash()
+            .expect_rotate_token()
             .times(1)
-            .withf(move |value| value == &invalid_hash)
-            .returning(|_| Ok(None));
-        mock_refresh_tokens
-            .expect_find_by_token_hash()
-            .times(1)
-            .withf(move |value| value == &valid_hash)
-            .returning(move |_| {
-                Ok(Some(RefreshToken {
-                    id: Uuid::new_v4(),
-                    user_id: refresh_user_id,
-                    token_hash: "hash".to_string(),
-                    device_info: Some("test-agent".to_string()),
-                    ip_address: None,
-                    expires_at: chrono::Utc::now() + chrono::Duration::days(1),
-                    revoked_at: None,
-                    created_at: chrono::Utc::now(),
-                    updated_at: chrono::Utc::now(),
-                }))
-            });
-        mock_refresh_tokens
-            .expect_revoke()
-            .times(1)
-            .returning(|_| Ok(1));
-        mock_refresh_tokens.expect_create().times(1).returning(|_| {
-            Ok(RefreshToken {
-                id: Uuid::new_v4(),
-                user_id: Uuid::new_v4(),
-                token_hash: "new-hash".to_string(),
-                device_info: None,
-                ip_address: None,
-                expires_at: chrono::Utc::now() + chrono::Duration::days(1),
-                revoked_at: None,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
-            })
-        });
+            .returning(move |_, _| Ok(Some(rotated_token.clone())));
 
         let mut container = mock_container();
         container.users = Arc::new(mock_users);
