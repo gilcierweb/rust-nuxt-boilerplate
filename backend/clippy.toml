@@ -1,0 +1,21 @@
+# Clippy Configuration
+# This file configures additional lints and their severity levels
+
+[workspace.lints.clippy]
+pedantic = "deny"
+nursery = "deny"
+cargo = "deny"
+complexity = "deny"
+correctness = "deny"
+perf = "deny"
+style = "deny"
+suspicious = "deny"
+
+# Allow specific lints that are too noisy or not applicable
+# module_name_repetitions = "allow"  # e.g., User::new_user
+# too_many_arguments = "allow"      # e.g., constructor functions
+
+# Allow specific lints for test code
+unwrap_used = "allow"
+expect_used = "allow"
+panic = "allow"
