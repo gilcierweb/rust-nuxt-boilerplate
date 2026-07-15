@@ -207,6 +207,18 @@ fn ensure_role(conn: &mut PgConnection, role_name: &str) -> SeedResult<Uuid> {
         .get_result(conn)?)
 }
 
+/// Find a role by name, returning a descriptive error if not found.
+/// This should only be called after ensure_role has been run for the role.
+fn find_role_id(role_ids: &[(String, Uuid)], role_name: &str) -> SeedResult<Uuid> {
+    role_ids
+        .iter()
+        .find(|(name, _)| name == role_name)
+        .map(|(_, id)| *id)
+        .ok_or_else(|| {
+            format!("Role '{}' not found after creation - this should not happen", role_name).into()
+        })
+}
+
 fn ensure_permission(
     conn: &mut PgConnection,
     permission_code: &str,
@@ -455,21 +467,13 @@ fn main() -> SeedResult<()> {
             permission_ids.insert(code.to_string(), id);
         }
 
-        let admin_role_id = role_ids
-            .iter()
-            .find(|(name, _)| name == "admin")
-            .map(|(_, id)| *id)
-            .expect("admin role must exist");
+        let admin_role_id = find_role_id(&role_ids, "admin")?;
 
         for permission_id in permission_ids.values() {
             ensure_role_permission(conn, admin_role_id, *permission_id)?;
         }
 
-        let manager_role_id = role_ids
-            .iter()
-            .find(|(name, _)| name == "manager")
-            .map(|(_, id)| *id)
-            .expect("manager role must exist");
+        let manager_role_id = find_role_id(&role_ids, "manager")?;
 
         let manager_permissions = [
             "users:read",
@@ -487,11 +491,7 @@ fn main() -> SeedResult<()> {
             }
         }
 
-        let viewer_role_id = role_ids
-            .iter()
-            .find(|(name, _)| name == "viewer")
-            .map(|(_, id)| *id)
-            .expect("viewer role must exist");
+        let viewer_role_id = find_role_id(&role_ids, "viewer")?;
 
         let viewer_permissions = ["users:read", "roles:read", "audit_logs:read", "profiles:read"];
 
