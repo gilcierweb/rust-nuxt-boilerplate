@@ -9,7 +9,7 @@ use futures::future::{LocalBoxFuture, Ready, ready};
 
 use crate::{errors::AppError, repositories::container::AppContainer};
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct RequireApiKey {
     exempt_paths: Vec<String>,
 }
@@ -18,14 +18,6 @@ impl RequireApiKey {
     pub fn new(exempt_paths: Vec<&str>) -> Self {
         Self {
             exempt_paths: exempt_paths.into_iter().map(str::to_owned).collect(),
-        }
-    }
-}
-
-impl Default for RequireApiKey {
-    fn default() -> Self {
-        Self {
-            exempt_paths: vec![],
         }
     }
 }

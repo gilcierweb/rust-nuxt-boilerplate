@@ -320,7 +320,6 @@ impl IUserRepository for UsersRepository {
         user_id: &Uuid,
         ip: Option<ipnet::IpNet>,
     ) -> diesel::QueryResult<usize> {
-        let ip_clone = ip.clone();
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
         use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
@@ -331,7 +330,7 @@ impl IUserRepository for UsersRepository {
                         sign_in_count.eq(sign_in_count + 1),
                         current_sign_in_at.eq(Some(chrono::Utc::now().naive_utc())),
                         last_sign_in_at.eq(current_sign_in_at),
-                        current_sign_in_ip.eq(ip_clone.clone()),
+                        current_sign_in_ip.eq(ip),
                         last_sign_in_ip.eq(current_sign_in_ip),
                         failed_attempts.eq(0),
                         locked_at.eq::<Option<chrono::NaiveDateTime>>(None),

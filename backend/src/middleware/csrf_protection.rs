@@ -150,20 +150,19 @@ where
             let mut res = svc.call(req).await?;
 
             // Set CSRF token cookie if not already present
-            let config_opt = res.request().app_data::<AppConfig>().cloned();
-            if let Some(config) = config_opt {
-                if !res.response().headers().contains_key("set-cookie") {
-                    // Generate CSRF token using HMAC with secret key
-                    let csrf_token = generate_csrf_token(&config.csrf_secret_key);
-                    let cookie = build_csrf_cookie(&config, &csrf_token);
+            if let Some(config) = res.request().app_data::<AppConfig>().cloned()
+                && !res.response().headers().contains_key("set-cookie")
+            {
+                // Generate CSRF token using HMAC with secret key
+                let csrf_token = generate_csrf_token(&config.csrf_secret_key);
+                let cookie = build_csrf_cookie(&config, &csrf_token);
 
-                    res.response_mut()
-                        .headers_mut()
-                        .append(
-                            actix_web::http::header::SET_COOKIE,
-                            cookie.to_string().parse().unwrap(),
-                        );
-                }
+                res.response_mut()
+                    .headers_mut()
+                    .append(
+                        actix_web::http::header::SET_COOKIE,
+                        cookie.to_string().parse().unwrap(),
+                    );
             }
 
             Ok(res.map_into_boxed_body())

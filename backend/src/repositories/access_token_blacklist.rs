@@ -51,8 +51,6 @@ impl AccessTokenBlacklist {
 }
 
 /// Helper to hash a token for storage in blacklist
-
-/// Helper to hash a token for storage in blacklist
 pub fn hash_token_for_blacklist(token: &str) -> String {
     use sha2::{Digest, Sha256};
     let mut hasher = Sha256::new();

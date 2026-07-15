@@ -1177,7 +1177,6 @@ fn clear_refresh_cookie_for_path(config: &AppConfig, path: &str) -> Cookie<'stat
 fn extract_refresh_cookies(req: &HttpRequest) -> Vec<String> {
     req.headers()
         .get_all(actix_web::http::header::COOKIE)
-        .into_iter()
         .filter_map(|value| value.to_str().ok())
         .flat_map(|header| header.split(';'))
         .filter_map(|part| {

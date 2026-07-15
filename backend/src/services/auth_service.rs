@@ -193,7 +193,7 @@ pub fn record_successful_login(
         .set((
             sign_in_count.eq(user.sign_in_count + 1),
             last_sign_in_at.eq(user.current_sign_in_at),
-            last_sign_in_ip.eq(user.current_sign_in_ip.clone()),
+            last_sign_in_ip.eq(user.current_sign_in_ip),
             current_sign_in_at.eq(Some(now)),
             current_sign_in_ip.eq(ip_net),
             failed_attempts.eq(0),

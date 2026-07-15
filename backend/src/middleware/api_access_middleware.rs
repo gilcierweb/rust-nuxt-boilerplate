@@ -28,10 +28,10 @@ impl PublicRoute {
     }
 
     fn matches(&self, method: &Method, path: &str) -> bool {
-        if let Some(expected_method) = &self.method {
-            if expected_method != method {
-                return false;
-            }
+        if let Some(expected_method) = &self.method
+            && expected_method != method
+        {
+            return false;
         }
 
         if self.pattern.ends_with('*') {
@@ -136,15 +136,15 @@ where
             }
 
             // Check token blacklist
-            if let Some(token) = token {
-                if let Some(container) = req.app_data::<web::Data<AppContainer>>() {
-                    let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
-                    if container.access_token_blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
-                        let response = AppError::Unauthorized(t!("middleware.token_revoked").into_owned())
-                            .error_response()
-                            .map_into_right_body();
-                        return Ok(req.into_response(response));
-                    }
+            if let Some(token) = token
+                && let Some(container) = req.app_data::<web::Data<AppContainer>>()
+            {
+                let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
+                if container.access_token_blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
+                    let response = AppError::Unauthorized(t!("middleware.token_revoked").into_owned())
+                        .error_response()
+                        .map_into_right_body();
+                    return Ok(req.into_response(response));
                 }
             }
 

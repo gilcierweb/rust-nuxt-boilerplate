@@ -65,73 +65,69 @@ where
 
         Box::pin(async move {
             let path = req.uri().path();
-            
+
             // Only verify Stripe webhook endpoints
             if enabled && path.starts_with("/api/v1/webhooks/stripe") {
                 // Get Stripe webhook secret from config
-                let config = req
-                    .app_data::<AppConfig>()
-                    .cloned();
+                if let Some(cfg) = req.app_data::<AppConfig>().cloned()
+                    && !cfg.stripe_webhook_secret.is_empty()
+                {
+                    // Verify Stripe signature
+                    let stripe_signature = req
+                        .headers()
+                        .get("stripe-signature")
+                        .and_then(|h| h.to_str().ok())
+                        .map(|s| s.to_string());
 
-                if let Some(cfg) = config {
-                    if !cfg.stripe_webhook_secret.is_empty() {
-                        // Verify Stripe signature
-                        let stripe_signature = req
-                            .headers()
-                            .get("stripe-signature")
-                            .and_then(|h| h.to_str().ok())
-                            .map(|s| s.to_string());
+                    if stripe_signature.is_none() {
+                        let response = HttpResponse::BadRequest()
+                            .json(serde_json::json!({
+                                "error": {
+                                    "code": "STRIPE_SIGNATURE_MISSING",
+                                    "message": "Missing Stripe signature header"
+                                }
+                            }))
+                            .map_into_boxed_body();
 
-                        if stripe_signature.is_none() {
-                            let response = HttpResponse::BadRequest()
-                                .json(serde_json::json!({
-                                    "error": {
-                                        "code": "STRIPE_SIGNATURE_MISSING",
-                                        "message": "Missing Stripe signature header"
-                                    }
-                                }))
-                                .map_into_boxed_body();
-
-                            let (req, _) = req.into_parts();
-                            return Ok(ServiceResponse::new(req, response));
-                        }
-
-                        // Read the request body for verification
-                        let (req, mut body) = req.into_parts();
-                        let mut body_bytes = Vec::new();
-                        use futures::StreamExt;
-                        while let Some(chunk) = body.next().await {
-                            if let Ok(bytes) = chunk {
-                                body_bytes.extend_from_slice(&bytes);
-                            }
-                        }
-
-                        // Verify the signature
-                        let signature = stripe_signature.unwrap();
-                        let body_bytes = Bytes::from(body_bytes);
-                        let is_valid = verify_stripe_signature(
-                            &body_bytes,
-                            &signature,
-                            &cfg.stripe_webhook_secret,
-                        );
-
-                        if !is_valid {
-                            let response = HttpResponse::Forbidden()
-                                .json(serde_json::json!({
-                                    "error": {
-                                        "code": "STRIPE_SIGNATURE_INVALID",
-                                        "message": "Invalid Stripe webhook signature"
-                                    }
-                                }))
-                                .map_into_boxed_body();
-
-                            return Ok(ServiceResponse::new(req, response));
-                        }
-
-                        // Reconstruct the request with the body
-                        let req = ServiceRequest::from_parts(req, body_bytes.into());
-                        return svc.call(req).await;
+                        let (req, _) = req.into_parts();
+                        return Ok(ServiceResponse::new(req, response));
                     }
+
+                    // Read the request body for verification
+                    let (req, mut body) = req.into_parts();
+                    let mut body_bytes = Vec::new();
+                    use futures::StreamExt;
+                    while let Some(chunk) = body.next().await {
+                        if let Ok(bytes) = chunk {
+                            body_bytes.extend_from_slice(&bytes);
+                        }
+                    }
+
+                    // Verify the signature
+                    let signature = stripe_signature.unwrap();
+                    let body_bytes = Bytes::from(body_bytes);
+                    let is_valid = verify_stripe_signature(
+                        &body_bytes,
+                        &signature,
+                        &cfg.stripe_webhook_secret,
+                    );
+
+                    if !is_valid {
+                        let response = HttpResponse::Forbidden()
+                            .json(serde_json::json!({
+                                "error": {
+                                    "code": "STRIPE_SIGNATURE_INVALID",
+                                    "message": "Invalid Stripe webhook signature"
+                                }
+                            }))
+                            .map_into_boxed_body();
+
+                        return Ok(ServiceResponse::new(req, response));
+                    }
+
+                    // Reconstruct the request with the body
+                    let req = ServiceRequest::from_parts(req, body_bytes.into());
+                    return svc.call(req).await;
                 }
             }
 
