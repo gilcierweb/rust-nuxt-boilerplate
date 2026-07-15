@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use crate::{
-    errors::{ApiError, AppError, AppResult},
+    errors::{AppError, AppResult},
     middleware::{auth::AuthUser, auth_middleware::extract_claims},
     models::role::ROLE_ADMIN,
     repositories::container::AppContainer,
@@ -10,12 +10,12 @@ use actix_web::HttpRequest;
 
 /// Guard: ensure authenticated user has a specific role.
 /// Usage in handlers: `require_role(&req, "creator")?;`
-pub fn require_role(req: &HttpRequest, role: &str) -> Result<(), ApiError> {
+pub fn require_role(req: &HttpRequest, role: &str) -> Result<(), AppError> {
     let claims = extract_claims(req)?;
     if claims.has_role(role) || claims.is_admin() {
         Ok(())
     } else {
-        Err(ApiError::Forbidden(format!(
+        Err(AppError::Forbidden(format!(
             "Role '{}' required for this action",
             role
         )))
@@ -26,13 +26,13 @@ pub fn require_role(req: &HttpRequest, role: &str) -> Result<(), ApiError> {
 pub fn require_owner_or_admin(
     req: &HttpRequest,
     owner_profile_id: uuid::Uuid,
-) -> Result<(), ApiError> {
+) -> Result<(), AppError> {
     let claims = extract_claims(req)?;
     let requester = claims.profile_id()?;
     if requester == owner_profile_id || claims.is_admin() {
         Ok(())
     } else {
-        Err(ApiError::Forbidden(
+        Err(AppError::Forbidden(
             "You don't have permission to access this resource".to_string(),
         ))
     }

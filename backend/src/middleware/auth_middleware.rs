@@ -156,9 +156,9 @@ where
 }
 
 /// Extract claims from request extensions (call after JwtAuth middleware).
-pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::errors::ApiError> {
+pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::errors::AppError> {
     req.extensions()
         .get::<Claims>()
         .cloned()
-        .ok_or_else(|| crate::errors::ApiError::Unauthorized("Not authenticated".to_string()))
+        .ok_or_else(|| crate::errors::AppError::Unauthorized("Not authenticated".to_string()))
 }
