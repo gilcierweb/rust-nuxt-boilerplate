@@ -218,6 +218,42 @@ pub async fn confirm(
     })))
 }
 
+/// Get user roles with Redis caching to avoid N+1 queries
+/// Cache TTL: 5 minutes (roles rarely change)
+async fn get_cached_user_roles(
+    container: &AppContainer,
+    user_id: &Uuid,
+) -> AppResult<Vec<String>> {
+    let cache_key = format!("user_roles:{}", user_id);
+
+    // Try to get from cache first
+    if let Some(cached_roles) = container.cache.get::<Vec<String>>(&cache_key).await {
+        return Ok(cached_roles);
+    }
+
+    // Cache miss - fetch from database
+    let roles = container
+        .users
+        .get_user_roles(user_id)
+        .await
+        .map_err(AppError::Database)?;
+
+    // Cache for 5 minutes
+    let _ = container
+        .cache
+        .set_with_ttl(&cache_key, &roles, std::time::Duration::from_secs(300))
+        .await;
+
+    Ok(roles)
+}
+
+/// Invalidate cached user roles (call when roles change)
+#[allow(dead_code)]
+pub async fn invalidate_user_roles_cache(container: &AppContainer, user_id: &Uuid) {
+    let cache_key = format!("user_roles:{}", user_id);
+    let _ = container.cache.delete(&cache_key).await;
+}
+
 // POST /api/v1/auth/login
 #[utoipa::path(
     post,
@@ -368,12 +404,8 @@ pub async fn login(
         .ok_or(AppError::Internal(
             t!("users.profile_not_found").into_owned(),
         ))?;
-    // Get user roles and generate token with role claim
-    let roles = container
-        .users
-        .get_user_roles(&user.id)
-        .await
-        .map_err(AppError::Database)?;
+    // Get user roles (with caching) and generate token with role claim
+    let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
 
     // Generate tokens
@@ -528,11 +560,7 @@ pub async fn refresh(
         .ok_or(AppError::Internal(
             t!("users.profile_not_found").into_owned(),
         ))?;
-    let roles = container
-        .users
-        .get_user_roles(&user.id)
-        .await
-        .map_err(AppError::Database)?;
+    let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
 
     // Generate new access token
@@ -591,11 +619,7 @@ async fn session_impl(
             t!("users.profile_not_found").into_owned(),
         ))?;
 
-    let roles = container
-        .users
-        .get_user_roles(&user.id)
-        .await
-        .map_err(AppError::Database)?;
+    let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
     let access_token = crate::middleware::auth::create_token(
         user.id,
