@@ -113,7 +113,56 @@ tracing_subscriber::registry()
     let cors_origins = std::env::var("FRONTEND_URL")
         .unwrap_or_else(|_| "http://localhost:3000,http://localhost:3001,http://localhost:4000,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:4000".to_string());
 
-    let cors_origins_list: Vec<String> = cors_origins.split(',').map(|s| s.to_string()).collect();
+    // Validate CORS origins: reject wildcards when credentials are supported
+    let cors_origins_list: Vec<String> = cors_origins
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    // Security check: reject wildcard origins when supports_credentials() is true
+    for origin in &cors_origins_list {
+        if origin == "*" {
+            tracing::error!(
+                event = "security.cors_wildcard_rejected",
+                origin = %origin,
+                "CORS wildcard '*' rejected: cannot use supports_credentials() with wildcard origin. \
+                 Set FRONTEND_URL to specific origins (e.g., https://yourdomain.com)"
+            );
+            panic!(
+                "CORS configuration error: wildcard '*' origin is not allowed with supports_credentials(). \
+                 Set FRONTEND_URL environment variable to specific origins."
+            );
+        }
+        // Validate origin format: must start with http:// or https://
+        if !origin.starts_with("http://") && !origin.starts_with("https://") {
+            tracing::warn!(
+                event = "security.cors_invalid_origin",
+                origin = %origin,
+                "CORS origin rejected: must start with http:// or https://"
+            );
+            continue;
+        }
+    }
+
+    // Filter to only valid origins
+    let valid_origins: Vec<String> = cors_origins_list
+        .into_iter()
+        .filter(|o| o.starts_with("http://") || o.starts_with("https://"))
+        .collect();
+
+    if valid_origins.is_empty() {
+        tracing::warn!(
+            event = "security.cors_no_valid_origins",
+            "No valid CORS origins configured. CORS will deny all cross-origin requests."
+        );
+    } else {
+        tracing::info!(
+            event = "security.cors_configured",
+            origins = ?valid_origins,
+            "CORS origins configured"
+        );
+    }
 
     let host = config.host.clone();
     let port = config.port;
@@ -136,7 +185,7 @@ tracing_subscriber::registry()
             .supports_credentials()
             .max_age(3600);
 
-        for origin in &cors_origins_list {
+        for origin in &valid_origins {
             cors = cors.allowed_origin(origin);
         }
 
