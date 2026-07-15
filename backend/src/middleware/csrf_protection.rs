@@ -184,6 +184,8 @@ where
 
 fn generate_csrf_token(secret_key: &str) -> String {
     use hmac::{Hmac, Mac};
+    use rand::RngCore;
+    use rand::rngs::OsRng;
     use sha2::Sha256;
     use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -194,11 +196,20 @@ fn generate_csrf_token(secret_key: &str) -> String {
         .unwrap()
         .as_secs();
 
+    // Generate cryptographically secure random nonce (16 bytes)
+    let mut nonce = [0u8; 16];
+    OsRng.fill_bytes(&mut nonce);
+
     let mut mac = HmacSha256::new_from_slice(secret_key.as_bytes())
         .expect("HMAC can take key of any size");
+    
+    // Include timestamp and random nonce for uniqueness
     mac.update(&timestamp.to_be_bytes());
+    mac.update(&nonce);
 
     let result = mac.finalize();
+    // Encode as timestamp:nonce:hmac for verification if needed
+    // For now, just return the HMAC hex
     format!("{:x}", result.into_bytes())
 }
 
