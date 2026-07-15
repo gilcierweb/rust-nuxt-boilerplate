@@ -89,9 +89,11 @@ redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
 local current = redis.call('ZCARD', key)
 
 if current < max_requests then
-    -- Add current request
-    redis.call('ZADD', key, now, now .. ':' .. math.random(1000000))
+    -- Add current request with unique member using atomic INCR counter
+    local seq = redis.call('INCR', key .. ':seq')
+    redis.call('ZADD', key, now, now .. ':' .. seq)
     redis.call('EXPIRE', key, window)
+    redis.call('EXPIRE', key .. ':seq', window)
     return 1
 else
     -- Rate limited, still set expiry for cleanup
