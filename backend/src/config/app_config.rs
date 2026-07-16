@@ -456,6 +456,34 @@ impl AppConfig {
             );
         }
 
+        // CORS origin validation (FRONTEND_URL)
+        // Must not contain wildcard "*" when using credentials
+        // Each origin must start with http:// or https://
+        let cors_origins: Vec<String> = self
+            .frontend_url
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
+        if cors_origins.is_empty() {
+            errors.push("FRONTEND_URL must contain at least one valid origin".to_string());
+        }
+
+        for origin in &cors_origins {
+            if origin == "*" {
+                errors.push(
+                    "CORS configuration error: wildcard '*' origin is not allowed with supports_credentials(). Set FRONTEND_URL to specific origins (e.g., https://yourdomain.com)".to_string()
+                );
+            }
+            if !origin.starts_with("http://") && !origin.starts_with("https://") {
+                errors.push(format!(
+                    "CORS origin '{}' rejected: must start with http:// or https://",
+                    origin
+                ));
+            }
+        }
+
         errors
     }
 
