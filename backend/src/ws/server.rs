@@ -16,9 +16,36 @@ use crate::errors::{AppError, AppResult};
 const WS_PROTOCOL: &str = "justfans-ws";
 const WS_AUTH_PROTOCOL_PREFIX: &str = "auth.";
 
+/// WebSocket connection limits configuration.
+///
+/// # Defaults
+/// - `max_connections_per_ip`: 10 — prevents a single IP from exhausting file descriptors
+/// - `max_global_connections`: 10_000 — hard cap on total concurrent WebSocket connections
+/// - `heartbeat_interval_secs`: 30 — ping interval in seconds
+/// - `client_timeout_secs`: 60 — max time without a pong before disconnecting
+#[derive(Clone, Debug)]
+pub struct WsLimits {
+    pub max_connections_per_ip: usize,
+    pub max_global_connections: usize,
+    pub heartbeat_interval_secs: u64,
+    pub client_timeout_secs: u64,
+}
+
+impl Default for WsLimits {
+    fn default() -> Self {
+        Self {
+            max_connections_per_ip: 10,
+            max_global_connections: 10_000,
+            heartbeat_interval_secs: 30,
+            client_timeout_secs: 60,
+        }
+    }
+}
+
 /// Shared state for WebSocket connections
 pub type WsConnections = Arc<TokioMutex<HashMap<String, ConnectionInfo>>>;
 pub type WsPresence = Arc<TokioMutex<HashMap<Uuid, PresenceInfo>>>;
+pub type WsIpCounters = Arc<TokioMutex<HashMap<String, usize>>>;
 
 #[derive(Clone, Debug)]
 pub struct ConnectionInfo {
@@ -26,6 +53,7 @@ pub struct ConnectionInfo {
     pub username: String,
     pub room: Option<String>,
     pub addr: Recipient<WsMessage>,
+    pub ip: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -39,21 +67,58 @@ pub struct PresenceInfo {
 pub struct WsState {
     pub connections: WsConnections,
     pub presence: WsPresence,
+    ip_counters: WsIpCounters,
+    pub limits: WsLimits,
 }
 
 impl WsState {
     pub fn new() -> Self {
+        Self::with_limits(WsLimits::default())
+    }
+
+    pub fn with_limits(limits: WsLimits) -> Self {
         Self {
             connections: Arc::new(TokioMutex::new(HashMap::new())),
             presence: Arc::new(TokioMutex::new(HashMap::new())),
+            ip_counters: Arc::new(TokioMutex::new(HashMap::new())),
+            limits,
         }
     }
 
+    /// Check whether a new connection from `ip` is allowed under current limits.
+    /// Returns `Ok(())` if allowed, or `Err(message)` if rejected.
+    pub async fn check_connection_limits(&self, ip: &str) -> Result<(), &'static str> {
+        let conns = self.connections.lock().await;
+        let total = conns.len();
+        drop(conns);
+
+        if total >= self.limits.max_global_connections {
+            return Err("Global WebSocket connection limit reached");
+        }
+
+        let counters = self.ip_counters.lock().await;
+        let per_ip = counters.get(ip).copied().unwrap_or(0);
+        drop(counters);
+
+        if per_ip >= self.limits.max_connections_per_ip {
+            return Err("Per-IP WebSocket connection limit reached");
+        }
+
+        Ok(())
+    }
+
     pub async fn add_connection(&self, conn_id: String, info: ConnectionInfo) {
+        let ip = info.ip.clone();
+
         let should_broadcast_online = {
             let mut conns = self.connections.lock().await;
             let is_new_connection = conns.insert(conn_id, info.clone()).is_none();
             drop(conns);
+
+            if is_new_connection {
+                let mut counters = self.ip_counters.lock().await;
+                *counters.entry(ip).or_insert(0) += 1;
+            }
 
             if !is_new_connection {
                 false
@@ -75,18 +140,29 @@ impl WsState {
     }
 
     pub async fn remove_connection(&self, conn_id: &str) {
-        let removed_profile_id = {
+        let removed = {
             let mut conns = self.connections.lock().await;
-            conns.remove(conn_id).map(|info| info.profile_id)
+            conns.remove(conn_id)
         };
 
-        let Some(profile_id) = removed_profile_id else {
+        let Some(info) = removed else {
             return;
         };
 
+        {
+            let mut counters = self.ip_counters.lock().await;
+            if let Some(count) = counters.get_mut(&info.ip) {
+                if *count > 1 {
+                    *count -= 1;
+                } else {
+                    counters.remove(&info.ip);
+                }
+            }
+        }
+
         let last_seen_at = {
             let mut presence = self.presence.lock().await;
-            let Some(entry) = presence.get_mut(&profile_id) else {
+            let Some(entry) = presence.get_mut(&info.profile_id) else {
                 return;
             };
 
@@ -104,7 +180,7 @@ impl WsState {
         };
 
         if let Some(seen_at) = last_seen_at {
-            self.broadcast_presence_change(profile_id, false, Some(seen_at)).await;
+            self.broadcast_presence_change(info.profile_id, false, Some(seen_at)).await;
         }
     }
 
@@ -154,6 +230,10 @@ impl WsState {
 
     pub async fn is_user_online(&self, profile_id: Uuid) -> bool {
         self.get_presence(profile_id).await.active_connections > 0
+    }
+
+    pub async fn total_connections(&self) -> usize {
+        self.connections.lock().await.len()
     }
 
     async fn broadcast_presence_change(
@@ -242,6 +322,7 @@ pub struct WebSocketActor {
     pub username: String,
     pub room: Option<String>,
     pub ws_state: web::Data<WsState>,
+    pub last_pong: chrono::DateTime<chrono::Utc>,
 }
 
 impl Actor for WebSocketActor {
@@ -253,6 +334,7 @@ impl Actor for WebSocketActor {
             username: self.username.clone(),
             room: self.room.clone(),
             addr: ctx.address().recipient(),
+            ip: "unknown".to_string(),
         };
         let ws_state = self.ws_state.clone();
         let conn_id = self.conn_id.clone();
@@ -261,6 +343,31 @@ impl Actor for WebSocketActor {
         };
         ctx.spawn(actix::fut::wrap_future(fut));
 
+        // Start heartbeat
+        let interval = self.ws_state.limits.heartbeat_interval_secs;
+        ctx.run_interval(
+            std::time::Duration::from_secs(interval),
+            |act, ctx| {
+                let timeout = act.ws_state.limits.client_timeout_secs;
+                let elapsed = Utc::now()
+                    .signed_duration_since(act.last_pong)
+                    .num_seconds() as u64;
+
+                if elapsed > timeout {
+                    tracing::warn!(
+                        connection_id = %act.conn_id,
+                        "WebSocket heartbeat timeout (no pong for {}s)",
+                        elapsed
+                    );
+                    ctx.close(None);
+                    ctx.stop();
+                    return;
+                }
+
+                ctx.ping(b"");
+            },
+        );
+
         tracing::info!(
             "WebSocket connected: {} (profile: {})",
             self.conn_id,
@@ -268,13 +375,13 @@ impl Actor for WebSocketActor {
         );
     }
 
-    fn stopped(&mut self, ctx: &mut Self::Context) {
+    fn stopped(&mut self, _ctx: &mut Self::Context) {
         let ws_state = self.ws_state.clone();
         let conn_id = self.conn_id.clone();
         let fut = async move {
             ws_state.remove_connection(&conn_id).await;
         };
-        ctx.spawn(actix::fut::wrap_future(fut));
+        actix::spawn(fut);
         tracing::info!("WebSocket disconnected: {}", self.conn_id);
     }
 }
@@ -294,6 +401,9 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketActor {
     fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
+            Ok(ws::Message::Pong(_)) => {
+                self.last_pong = Utc::now();
+            }
             Ok(ws::Message::Text(text)) => self.handle_message(&text, ctx),
             Ok(ws::Message::Binary(_)) => {}
             Ok(ws::Message::Close(reason)) => {
@@ -312,12 +422,12 @@ impl WebSocketActor {
                 "join_room" => {
                     if let Some(room) = msg.data.get("room").and_then(|v| v.as_str()) {
                         self.room = Some(room.to_string());
-                        // Update connection info
                         let conn_info = ConnectionInfo {
                             profile_id: self.profile_id,
                             username: self.username.clone(),
                             room: self.room.clone(),
                             addr: ctx.address().recipient(),
+                            ip: "unknown".to_string(),
                         };
                         let ws_state = self.ws_state.clone();
                         let conn_id = self.conn_id.clone();
@@ -342,6 +452,7 @@ impl WebSocketActor {
                         username: self.username.clone(),
                         room: None,
                         addr: ctx.address().recipient(),
+                        ip: "unknown".to_string(),
                     };
                     let ws_state = self.ws_state.clone();
                     let conn_id = self.conn_id.clone();
@@ -465,10 +576,26 @@ pub async fn ws_handler(
         }
     };
 
+    let ip = req
+        .peer_addr()
+        .map(|addr| addr.ip().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    if let Err(reason) = ws_state.check_connection_limits(&ip).await {
+        tracing::warn!(
+            connection_id = %conn_id,
+            ip = %ip,
+            reason = %reason,
+            "WebSocket connection rejected"
+        );
+        return Err(AppError::Forbidden(reason.to_string()));
+    }
+
     tracing::info!(
-        "WebSocket connection: {} (profile: {})",
+        "WebSocket connection: {} (profile: {}, ip: {})",
         conn_id,
-        profile_id
+        profile_id,
+        ip
     );
 
     let ws_actor = WebSocketActor {
@@ -477,6 +604,7 @@ pub async fn ws_handler(
         username: profile_id.to_string(),
         room: None,
         ws_state,
+        last_pong: Utc::now(),
     };
 
     ws::WsResponseBuilder::new(ws_actor, &req, stream)
@@ -619,6 +747,7 @@ mod tests {
                 username: "test_user".to_string(),
                 room: room.map(|r| r.to_string()),
                 addr: dummy_recipient(),
+                ip: "127.0.0.1".to_string(),
             }
         }
 
@@ -680,6 +809,151 @@ mod tests {
             assert_eq!(presence.active_connections, 0);
             assert!(presence.last_seen_at.is_some());
             assert!(!state.is_user_online(profile_id).await);
+        }
+    }
+
+    #[cfg(test)]
+    mod connection_limits_tests {
+        use super::super::*;
+
+        fn make_info(ip: &str) -> ConnectionInfo {
+            ConnectionInfo {
+                profile_id: Uuid::new_v4(),
+                username: "test".to_string(),
+                room: None,
+                addr: {
+                    struct Dummy;
+                    impl actix::Actor for Dummy {
+                        type Context = actix::Context<Self>;
+                    }
+                    impl actix::Handler<WsMessage> for Dummy {
+                        type Result = ();
+                        fn handle(&mut self, _: WsMessage, _: &mut Self::Context) {}
+                    }
+                    let addr: actix::Addr<Dummy> = Dummy.start();
+                    addr.recipient()
+                },
+                ip: ip.to_string(),
+            }
+        }
+
+        #[actix_web::test]
+        async fn allows_connection_under_ip_limit() {
+            let limits = WsLimits {
+                max_connections_per_ip: 2,
+                max_global_connections: 100,
+                heartbeat_interval_secs: 30,
+                client_timeout_secs: 60,
+            };
+            let state = WsState::with_limits(limits);
+            assert!(state.check_connection_limits("10.0.0.1").await.is_ok());
+        }
+
+        #[actix_web::test]
+        async fn rejects_connection_over_ip_limit() {
+            let limits = WsLimits {
+                max_connections_per_ip: 2,
+                max_global_connections: 100,
+                heartbeat_interval_secs: 30,
+                client_timeout_secs: 60,
+            };
+            let state = WsState::with_limits(limits);
+
+            let info1 = make_info("10.0.0.1");
+            let info2 = make_info("10.0.0.1");
+            state.add_connection("c1".to_string(), info1).await;
+            state.add_connection("c2".to_string(), info2).await;
+
+            assert!(state.check_connection_limits("10.0.0.1").await.is_err());
+        }
+
+        #[actix_web::test]
+        async fn different_ips_have_separate_limits() {
+            let limits = WsLimits {
+                max_connections_per_ip: 1,
+                max_global_connections: 100,
+                heartbeat_interval_secs: 30,
+                client_timeout_secs: 60,
+            };
+            let state = WsState::with_limits(limits);
+
+            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
+
+            assert!(state.check_connection_limits("10.0.0.2").await.is_ok());
+        }
+
+        #[actix_web::test]
+        async fn rejects_when_global_limit_reached() {
+            let limits = WsLimits {
+                max_connections_per_ip: 100,
+                max_global_connections: 2,
+                heartbeat_interval_secs: 30,
+                client_timeout_secs: 60,
+            };
+            let state = WsState::with_limits(limits);
+
+            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
+            state.add_connection("c2".to_string(), make_info("10.0.0.2")).await;
+
+            assert!(state.check_connection_limits("10.0.0.3").await.is_err());
+        }
+
+        #[actix_web::test]
+        async fn remove_decrements_ip_counter() {
+            let limits = WsLimits {
+                max_connections_per_ip: 2,
+                max_global_connections: 100,
+                heartbeat_interval_secs: 30,
+                client_timeout_secs: 60,
+            };
+            let state = WsState::with_limits(limits);
+
+            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
+            state.add_connection("c2".to_string(), make_info("10.0.0.1")).await;
+            assert!(state.check_connection_limits("10.0.0.1").await.is_err());
+
+            state.remove_connection("c1").await;
+            assert!(state.check_connection_limits("10.0.0.1").await.is_ok());
+        }
+
+        #[actix_web::test]
+        async fn remove_last_connection_cleans_ip_counter() {
+            let limits = WsLimits {
+                max_connections_per_ip: 10,
+                max_global_connections: 100,
+                heartbeat_interval_secs: 30,
+                client_timeout_secs: 60,
+            };
+            let state = WsState::with_limits(limits);
+
+            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
+            state.remove_connection("c1").await;
+
+            let counters = state.ip_counters.lock().await;
+            assert!(!counters.contains_key("10.0.0.1"));
+        }
+
+        #[actix_web::test]
+        async fn total_connections_tracked() {
+            let limits = WsLimits::default();
+            let state = WsState::with_limits(limits);
+
+            assert_eq!(state.total_connections().await, 0);
+            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
+            state.add_connection("c2".to_string(), make_info("10.0.0.2")).await;
+            assert_eq!(state.total_connections().await, 2);
+
+            state.remove_connection("c1").await;
+            assert_eq!(state.total_connections().await, 1);
+        }
+
+        #[actix_web::test]
+        async fn default_limits_are_sane() {
+            let limits = WsLimits::default();
+            assert!(limits.max_connections_per_ip > 0);
+            assert!(limits.max_global_connections > 0);
+            assert!(limits.heartbeat_interval_secs > 0);
+            assert!(limits.client_timeout_secs > limits.heartbeat_interval_secs);
         }
     }
 }
