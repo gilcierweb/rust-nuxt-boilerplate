@@ -65,6 +65,10 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
     )
     .service(
         web::scope("/api/v1")
+            // 0. API version guard (first) — version negotiation + deprecation headers
+            .wrap(crate::middleware::api_version::ApiVersionGuard::new(
+                crate::middleware::api_version::ApiVersionConfig::new(),
+            ))
             // Middleware order (outermost first, executes first on request):
             // 1. Rate limiting (global) - first line of defense
             .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
