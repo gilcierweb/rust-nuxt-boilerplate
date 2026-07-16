@@ -592,6 +592,7 @@ dependencies = [
  "bigdecimal",
  "chrono",
  "claims",
+ "deadpool",
  "deadpool-redis",
  "derive_more",
  "diesel",

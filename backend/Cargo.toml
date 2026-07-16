@@ -96,6 +96,7 @@ rust_decimal = { version = "1.38", features = ["serde"] }
 
 ammonia = "4.1.2"
 faker-rust = "0.1.0"
+deadpool = { version = "0.13.0", features = ["managed"] }
 
 [dev-dependencies]
 actix-rt = "2.9"

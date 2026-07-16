@@ -9,10 +9,10 @@
 //! - Migrations applied: `diesel migration run --database-url $DATABASE_URL_TEST`
 
 use actix_web::{App, test, web};
+use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
-use diesel::r2d2::{ConnectionManager, Pool};
-use diesel::PgConnection;
-use diesel::RunQueryDsl;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde_json::Value;
 use std::sync::Arc;
 
@@ -21,37 +21,36 @@ use std::sync::Arc;
 // ---------------------------------------------------------------------------
 
 struct TestDb {
-    pool: Arc<Pool<ConnectionManager<PgConnection>>>,
+    pool: Pool<AsyncDieselConnectionManager<AsyncPgConnection>>,
 }
 
 impl TestDb {
-    fn new() -> Self {
+    async fn new() -> Self {
         let database_url = std::env::var("DATABASE_URL_TEST")
             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string());
 
-        let manager = ConnectionManager::<PgConnection>::new(database_url);
-        let pool = Arc::new(
-            Pool::builder()
-                .max_size(4)
-                .build(manager)
-                .expect("Failed to create pool"),
-        );
+        let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(database_url);
+        let pool = Pool::builder(manager)
+            .max_size(4)
+            .build()
+            .expect("Failed to create pool");
         Self { pool }
     }
 
-    fn pool(&self) -> Arc<Pool<ConnectionManager<PgConnection>>> {
-        self.pool.clone()
+    fn pool(&self) -> &Pool<AsyncDieselConnectionManager<AsyncPgConnection>> {
+        &self.pool
     }
 
-    fn drop_all_tables(&self) {
-        let mut conn = self.pool.get().expect("Failed to get connection");
+    async fn drop_all_tables(&self) {
+        let mut conn = self.pool.get().await.expect("Failed to get connection");
         diesel::sql_query("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
-            .execute(&mut conn)
+            .execute(&mut *conn)
+            .await
             .expect("Failed to drop all tables");
     }
 
-    fn create_auth_schema(&self) {
-        let mut conn = self.pool.get().expect("Failed to get connection");
+    async fn create_auth_schema(&self) {
+        let mut conn = self.pool.get().await.expect("Failed to get connection");
         diesel::sql_query(
             r#"
             CREATE TABLE IF NOT EXISTS users (
@@ -107,7 +106,8 @@ impl TestDb {
             ON CONFLICT DO NOTHING;
             "#,
         )
-        .execute(&mut conn)
+        .execute(&mut *conn)
+        .await
         .expect("Failed to create test schema");
     }
 }
@@ -214,15 +214,15 @@ fn extract_cookie(response: &actix_web::dev::ServiceResponse<impl actix_web::bod
 
 #[actix_web::test]
 async fn test_full_auth_cycle() {
-    let db = TestDb::new();
-    db.drop_all_tables();
-    db.create_auth_schema();
+    let db = TestDb::new().await;
+    db.drop_all_tables().await;
+    db.create_auth_schema().await;
 
     let config = Arc::new(test_config());
     let r_pool = redis_pool();
 
     let state = web::Data::new(backend::AppState {
-        db: db.pool().as_ref().clone(),
+        db: db.pool().clone(),
         redis: r_pool.clone(),
         config: config.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
@@ -230,7 +230,7 @@ async fn test_full_auth_cycle() {
     });
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
-        db.pool().as_ref().clone(),
+        db.pool().clone(),
         r_pool.clone(),
         (*config).clone(),
     ));
@@ -386,20 +386,20 @@ async fn test_full_auth_cycle() {
     println!("After logout: {}", resp.status());
     assert!(resp.status().is_client_error(), "token should be invalid after logout");
 
-    db.drop_all_tables();
+    db.drop_all_tables().await;
 }
 
 #[actix_web::test]
 async fn test_login_invalid_credentials() {
-    let db = TestDb::new();
-    db.drop_all_tables();
-    db.create_auth_schema();
+    let db = TestDb::new().await;
+    db.drop_all_tables().await;
+    db.create_auth_schema().await;
 
     let config = Arc::new(test_config());
     let r_pool = redis_pool();
 
     let state = web::Data::new(backend::AppState {
-        db: db.pool().as_ref().clone(),
+        db: db.pool().clone(),
         redis: r_pool.clone(),
         config: config.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
@@ -407,7 +407,7 @@ async fn test_login_invalid_credentials() {
     });
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
-        db.pool().as_ref().clone(),
+        db.pool().clone(),
         r_pool.clone(),
         (*config).clone(),
     ));
@@ -444,17 +444,17 @@ async fn test_login_invalid_credentials() {
     println!("Invalid login: {}", resp.status());
     assert!(resp.status().is_client_error());
 
-    db.drop_all_tables();
+    db.drop_all_tables().await;
 }
 
 #[actix_web::test]
 async fn test_health_endpoint() {
-    let db = TestDb::new();
+    let db = TestDb::new().await;
     let r_pool = redis_pool();
 
     let config = Arc::new(test_config());
     let state = web::Data::new(backend::AppState {
-        db: db.pool().as_ref().clone(),
+        db: db.pool().clone(),
         redis: r_pool.clone(),
         config: config.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),

@@ -3,8 +3,8 @@ use crate::db::schema::audit_logs as audit_logs_table;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::audit_logs_trait::IAuditLogRepository;
-use async_trait::async_trait;
-use diesel::prelude::*;
+use diesel::{QueryDsl, SelectableHelper};
+use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 pub struct AuditLogsRepository {
@@ -22,18 +22,31 @@ impl AuditLogsRepository {
 #[cfg(test)]
 pub use crate::repositories::traits::audit_logs_trait::MockIAuditLogRepository;
 
-#[async_trait]
+#[async_trait::async_trait]
 impl IAuditLogRepository for AuditLogsRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<AuditLog>> {
         self.base
-            .run(|conn| audit_logs_table::table.load::<AuditLog>(conn))
+            .run(|conn| {
+                Box::pin(async move {
+                    audit_logs_table::table
+                        .load::<AuditLog>(conn)
+                        .await
+                })
+            })
             .await
     }
 
     async fn find(&self, id: &Uuid) -> diesel::QueryResult<AuditLog> {
         let id = *id;
         self.base
-            .run(move |conn| audit_logs_table::table.find(id).first::<AuditLog>(conn))
+            .run(move |conn| {
+                Box::pin(async move {
+                    audit_logs_table::table
+                        .find(id)
+                        .first::<AuditLog>(conn)
+                        .await
+                })
+            })
             .await
     }
 
@@ -41,9 +54,13 @@ impl IAuditLogRepository for AuditLogsRepository {
         let item = item.clone();
         self.base
             .run(move |conn| {
-                diesel::insert_into(audit_logs_table::table)
-                    .values(&item)
-                    .get_result(conn)
+                Box::pin(async move {
+                    diesel::insert_into(audit_logs_table::table)
+                        .values(&item)
+                        .returning(AuditLog::as_returning())
+                        .get_result(conn)
+                        .await
+                })
             })
             .await
     }
@@ -53,9 +70,13 @@ impl IAuditLogRepository for AuditLogsRepository {
         let item = item.clone();
         self.base
             .run(move |conn| {
-                diesel::update(audit_logs_table::table.find(id))
-                    .set(&item)
-                    .get_result(conn)
+                Box::pin(async move {
+                    diesel::update(audit_logs_table::table.find(id))
+                        .set(&item)
+                        .returning(AuditLog::as_returning())
+                        .get_result(conn)
+                        .await
+                })
             })
             .await
     }
@@ -63,7 +84,13 @@ impl IAuditLogRepository for AuditLogsRepository {
     async fn destroy(&self, id: &Uuid) -> diesel::QueryResult<usize> {
         let id = *id;
         self.base
-            .run(move |conn| diesel::delete(audit_logs_table::table.find(id)).execute(conn))
+            .run(move |conn| {
+                Box::pin(async move {
+                    diesel::delete(audit_logs_table::table.find(id))
+                        .execute(conn)
+                        .await
+                })
+            })
             .await
     }
 }

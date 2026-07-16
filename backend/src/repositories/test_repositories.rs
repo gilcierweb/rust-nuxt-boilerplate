@@ -14,13 +14,13 @@
 // mock_repo.expect_find().returning(|_| Ok(user_fixture()));
 // ```
 
-use crate::models::role::{NewRole, Role};
-use crate::models::profile::{NewProfile, Profile};
-use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
-use crate::models::audit_log::{NewAuditLog, AuditLog};
-use crate::models::user::{NewUser, User};
-use crate::models::user_role::{NewUserRole, UserRole};
-use chrono::{DateTime, Utc};
+use crate::models::role::Role;
+use crate::models::profile::Profile;
+use crate::models::refresh_token::RefreshToken;
+use crate::models::audit_log::AuditLog;
+use crate::models::user::User;
+use crate::models::user_role::UserRole;
+use chrono::Utc;
 use uuid::Uuid;
 
 /// Create a test user fixture.
@@ -245,12 +245,6 @@ pub mod test_data {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::role::Role;
-    use crate::models::profile::Profile;
-    use crate::models::refresh_token::RefreshToken;
-    use crate::models::audit_log::AuditLog;
-    use crate::models::user::User;
-    use chrono::Utc;
     use uuid::Uuid;
 
     #[test]

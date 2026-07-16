@@ -146,12 +146,12 @@ mod tests {
 
     use crate::middleware::auth::create_token;
     use crate::models::audit_log::AuditLog;
-    use crate::models::role::ROLE_ADMIN;
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::test_utils::mocks::mock_container;
 
     use super::test_config;
 
+    #[allow(dead_code)]
     async fn test_extract_authorities(
         req: &ServiceRequest,
     ) -> Result<HashSet<String>, actix_web::Error> {

@@ -3,7 +3,8 @@ use crate::db::schema::refresh_tokens as refresh_tokens_table;
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::refresh_tokens_trait::IRefreshTokenRepository;
-use diesel::prelude::*;
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 pub struct RefreshTokensRepository {
@@ -24,47 +25,58 @@ pub use crate::repositories::traits::refresh_tokens_trait::MockIRefreshTokenRepo
 #[async_trait::async_trait]
 impl IRefreshTokenRepository for RefreshTokensRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<RefreshToken>> {
-        use diesel::{QueryDsl, RunQueryDsl, SelectableHelper};
         self.base
             .run(|conn| {
-                refresh_tokens_table::table
-                    .select(RefreshToken::as_select())
-                    .load::<RefreshToken>(conn)
+                Box::pin(async move {
+                    refresh_tokens_table::table
+                        .select(RefreshToken::as_select())
+                        .load::<RefreshToken>(conn)
+                        .await
+                })
             })
             .await
     }
 
     async fn find(&self, tid: &Uuid) -> diesel::QueryResult<RefreshToken> {
         let tid = *tid;
-        use diesel::{QueryDsl, RunQueryDsl, SelectableHelper};
         self.base
             .run(move |conn| {
-                refresh_tokens_table::table
-                    .find(tid)
-                    .select(RefreshToken::as_select())
-                    .first::<RefreshToken>(conn)
+                Box::pin(async move {
+                    refresh_tokens_table::table
+                        .find(tid)
+                        .select(RefreshToken::as_select())
+                        .first::<RefreshToken>(conn)
+                        .await
+                })
             })
             .await
     }
 
     async fn create(&self, item: &NewRefreshToken) -> diesel::QueryResult<RefreshToken> {
-        use diesel::{RunQueryDsl, SelectableHelper};
         let item = item.clone();
         self.base
             .run(move |conn| {
-                diesel::insert_into(refresh_tokens_table::table)
-                    .values(&item)
-                    .returning(RefreshToken::as_returning())
-                    .get_result(conn)
+                Box::pin(async move {
+                    diesel::insert_into(refresh_tokens_table::table)
+                        .values(&item)
+                        .returning(RefreshToken::as_returning())
+                        .get_result(conn)
+                        .await
+                })
             })
             .await
     }
 
     async fn destroy(&self, tid: &Uuid) -> diesel::QueryResult<usize> {
         let tid = *tid;
-        use diesel::{QueryDsl, RunQueryDsl};
         self.base
-            .run(move |conn| diesel::delete(refresh_tokens_table::table.find(tid)).execute(conn))
+            .run(move |conn| {
+                Box::pin(async move {
+                    diesel::delete(refresh_tokens_table::table.find(tid))
+                        .execute(conn)
+                        .await
+                })
+            })
             .await
     }
 
@@ -74,16 +86,16 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
     ) -> diesel::QueryResult<Option<RefreshToken>> {
         let hash = token_hash_str.to_string();
         use crate::db::schema::refresh_tokens::dsl::*;
-        use diesel::{
-            ExpressionMethods, OptionalExtension, QueryDsl, RunQueryDsl, SelectableHelper,
-        };
         self.base
             .run(move |conn| {
-                refresh_tokens_table::table
-                    .filter(token_hash.eq(hash))
-                    .select(RefreshToken::as_select())
-                    .first::<RefreshToken>(conn)
-                    .optional()
+                Box::pin(async move {
+                    refresh_tokens_table::table
+                        .filter(token_hash.eq(hash))
+                        .select(RefreshToken::as_select())
+                        .first::<RefreshToken>(conn)
+                        .await
+                        .optional()
+                })
             })
             .await
     }
@@ -95,23 +107,23 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         use crate::services::token_service::verify_token_hash;
         use chrono::Utc;
         use crate::db::schema::refresh_tokens::dsl::*;
-        use diesel::{
-            ExpressionMethods, QueryDsl, RunQueryDsl, SelectableHelper,
-        };
 
         let token = plaintext_token.to_string();
         self.base
             .run(move |conn| {
-                let now = Utc::now();
-                let candidates: Vec<RefreshToken> = refresh_tokens_table::table
-                    .filter(revoked_at.is_null())
-                    .filter(expires_at.gt(now))
-                    .select(RefreshToken::as_select())
-                    .load::<RefreshToken>(conn)?;
+                Box::pin(async move {
+                    let now = Utc::now();
+                    let candidates: Vec<RefreshToken> = refresh_tokens_table::table
+                        .filter(revoked_at.is_null())
+                        .filter(expires_at.gt(now))
+                        .select(RefreshToken::as_select())
+                        .load::<RefreshToken>(conn)
+                        .await?;
 
-                Ok(candidates
-                    .into_iter()
-                    .find(|t| verify_token_hash(&token, &t.token_hash)))
+                    Ok(candidates
+                        .into_iter()
+                        .find(|t| verify_token_hash(&token, &t.token_hash)))
+                })
             })
             .await
     }
@@ -119,12 +131,14 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
     async fn revoke(&self, tid: &Uuid) -> diesel::QueryResult<usize> {
         let tid = *tid;
         use crate::db::schema::refresh_tokens::dsl::*;
-        use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
         self.base
             .run(move |conn| {
-                diesel::update(refresh_tokens_table::table.find(tid))
-                    .set(revoked_at.eq(Some(chrono::Utc::now())))
-                    .execute(conn)
+                Box::pin(async move {
+                    diesel::update(refresh_tokens_table::table.find(tid))
+                        .set(revoked_at.eq(Some(chrono::Utc::now())))
+                        .execute(conn)
+                        .await
+                })
             })
             .await
     }
@@ -132,12 +146,14 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
     async fn revoke_all_for_user(&self, uid: &Uuid) -> diesel::QueryResult<usize> {
         let uid = *uid;
         use crate::db::schema::refresh_tokens::dsl::*;
-        use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
         self.base
             .run(move |conn| {
-                diesel::update(refresh_tokens_table::table.filter(user_id.eq(uid)))
-                    .set(revoked_at.eq(Some(chrono::Utc::now())))
-                    .execute(conn)
+                Box::pin(async move {
+                    diesel::update(refresh_tokens_table::table.filter(user_id.eq(uid)))
+                        .set(revoked_at.eq(Some(chrono::Utc::now())))
+                        .execute(conn)
+                        .await
+                })
             })
             .await
     }
@@ -152,41 +168,42 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         use crate::db::schema::refresh_tokens::dsl::*;
         use crate::services::token_service::verify_token_hash;
         use chrono::Utc;
-        use diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 
-        // Use a transaction to ensure atomicity: revoke old token AND create new token
         self.base
             .run_transaction(move |conn| {
-                let now = Utc::now();
+                Box::pin(async move {
+                    let now = Utc::now();
 
-                // Find all valid tokens and verify the plaintext against each
-                let candidates: Vec<RefreshToken> = refresh_tokens_table::table
-                    .filter(revoked_at.is_null())
-                    .filter(expires_at.gt(now))
-                    .select(RefreshToken::as_select())
-                    .load::<RefreshToken>(conn)?;
+                    let candidates: Vec<RefreshToken> = refresh_tokens_table::table
+                        .filter(revoked_at.is_null())
+                        .filter(expires_at.gt(now))
+                        .select(RefreshToken::as_select())
+                        .load::<RefreshToken>(conn)
+                        .await?;
 
-                let existing_token = candidates
-                    .into_iter()
-                    .find(|t| verify_token_hash(&plaintext, &t.token_hash));
+                    let existing_token = candidates
+                        .into_iter()
+                        .find(|t| verify_token_hash(&plaintext, &t.token_hash));
 
-                let existing_token = match existing_token {
-                    Some(t) => t,
-                    None => return Ok(None),
-                };
+                    let existing_token = match existing_token {
+                        Some(t) => t,
+                        None => return Ok(None),
+                    };
 
-                // Revoke the old token
-                diesel::update(refresh_tokens_table::table.find(existing_token.id))
-                    .set(revoked_at.eq(Some(Utc::now())))
-                    .execute(conn)?;
+                    diesel::update(refresh_tokens_table::table.find(existing_token.id))
+                        .set(revoked_at.eq(Some(Utc::now())))
+                        .execute(conn)
+                        .await?;
 
-                // Create the new token
-                let created_token: RefreshToken = diesel::insert_into(refresh_tokens_table::table)
-                    .values(&new_token)
-                    .returning(RefreshToken::as_returning())
-                    .get_result(conn)?;
+                    let created_token: RefreshToken =
+                        diesel::insert_into(refresh_tokens_table::table)
+                            .values(&new_token)
+                            .returning(RefreshToken::as_returning())
+                            .get_result(conn)
+                            .await?;
 
-                Ok(Some(created_token))
+                    Ok(Some(created_token))
+                })
             })
             .await
     }
