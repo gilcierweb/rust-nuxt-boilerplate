@@ -3,7 +3,8 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub use crate::controllers::{
-    audit_logs_controller, auth_controller, health_controller, roles_controller, users_controller, metrics_controller
+    audit_logs_controller, auth_controller, health_controller, roles_controller,
+    upload_controller, users_controller, metrics_controller,
 };
 
 use actix_web::web;
@@ -141,7 +142,8 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     ))
                     .configure(roles_controller::config)
                     .configure(users_controller::config)
-                    .configure(audit_logs_controller::config),
+                    .configure(audit_logs_controller::config)
+                    .service(upload_controller::upload_file),
             )
             // Health check
             .route("/health", web::get().to(health_controller::health_check))

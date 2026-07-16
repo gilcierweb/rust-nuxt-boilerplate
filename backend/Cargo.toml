@@ -95,6 +95,9 @@ bigdecimal = { version = "0.4.10", features = ["serde"] }
 rust_decimal = { version = "1.38", features = ["serde"] }
 
 ammonia = "4.1.2"
+actix-multipart = "0.7"
+infer = "0.19"
+mime = "0.3"
 faker-rust = "0.1.0"
 deadpool = { version = "0.13.0", features = ["managed"] }
 
