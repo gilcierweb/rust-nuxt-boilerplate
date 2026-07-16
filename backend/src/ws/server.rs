@@ -417,128 +417,116 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketActor {
 
 impl WebSocketActor {
     fn handle_message(&mut self, text: &str, ctx: &mut ws::WebsocketContext<Self>) {
-        match serde_json::from_str::<ClientMessage>(text) {
-            Ok(msg) => match msg.action.as_str() {
-                "join_room" => {
-                    if let Some(room) = msg.data.get("room").and_then(|v| v.as_str()) {
-                        self.room = Some(room.to_string());
-                        let conn_info = ConnectionInfo {
-                            profile_id: self.profile_id,
-                            username: self.username.clone(),
-                            room: self.room.clone(),
-                            addr: ctx.address().recipient(),
-                            ip: "unknown".to_string(),
-                        };
-                        let ws_state = self.ws_state.clone();
-                        let conn_id = self.conn_id.clone();
-                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
-                            ws_state.add_connection(conn_id, conn_info).await;
-                        }));
+        use crate::ws::validation::{validate_client_message, WsClientAction};
 
-                        let response = WsMessage::new(
-                            "joined_room",
-                            serde_json::json!({
-                                "room": room,
-                                "user": self.username,
-                            }),
-                        );
-                        ctx.text(serde_json::to_string(&response).unwrap_or_default());
-                    }
-                }
-                "leave_room" => {
-                    self.room = None;
-                    let conn_info = ConnectionInfo {
-                        profile_id: self.profile_id,
-                        username: self.username.clone(),
-                        room: None,
-                        addr: ctx.address().recipient(),
-                        ip: "unknown".to_string(),
-                    };
+        let action = match validate_client_message(text) {
+            Ok(a) => a,
+            Err(err) => {
+                tracing::warn!(
+                    connection_id = %self.conn_id,
+                    error_code = %err.error.code,
+                    "Invalid WebSocket message"
+                );
+                ctx.text(err.to_json());
+                return;
+            }
+        };
+
+        match action {
+            WsClientAction::JoinRoom { room } => {
+                self.room = Some(room.clone());
+                let conn_info = ConnectionInfo {
+                    profile_id: self.profile_id,
+                    username: self.username.clone(),
+                    room: self.room.clone(),
+                    addr: ctx.address().recipient(),
+                    ip: "unknown".to_string(),
+                };
+                let ws_state = self.ws_state.clone();
+                let conn_id = self.conn_id.clone();
+                ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                    ws_state.add_connection(conn_id, conn_info).await;
+                }));
+
+                let response = WsMessage::new(
+                    "joined_room",
+                    serde_json::json!({
+                        "room": room,
+                        "user": self.username,
+                    }),
+                );
+                ctx.text(serde_json::to_string(&response).unwrap_or_default());
+            }
+            WsClientAction::LeaveRoom => {
+                self.room = None;
+                let conn_info = ConnectionInfo {
+                    profile_id: self.profile_id,
+                    username: self.username.clone(),
+                    room: None,
+                    addr: ctx.address().recipient(),
+                    ip: "unknown".to_string(),
+                };
+                let ws_state = self.ws_state.clone();
+                let conn_id = self.conn_id.clone();
+                ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                    ws_state.add_connection(conn_id, conn_info).await;
+                }));
+            }
+            WsClientAction::Chat { content } => {
+                if let Some(room) = &self.room {
+                    let chat_msg = WsMessage::chat(&content, &self.username);
                     let ws_state = self.ws_state.clone();
-                    let conn_id = self.conn_id.clone();
+                    let room = room.to_string();
                     ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
-                        ws_state.add_connection(conn_id, conn_info).await;
+                        ws_state.broadcast_to_room(&room, chat_msg).await;
                     }));
                 }
-                "chat" => {
-                    if let (Some(room), Some(content)) =
-                        (&self.room, msg.data.get("content").and_then(|v| v.as_str()))
-                    {
-                        let chat_msg = WsMessage::chat(content, &self.username);
-                        let ws_state = self.ws_state.clone();
-                        let room = room.to_string();
-                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
-                            ws_state.broadcast_to_room(&room, chat_msg).await;
-                        }));
-                    }
-                }
-                "typing" => {
-                    if let Some(room) = &self.room {
-                        let typing_msg = WsMessage::new(
-                            "typing",
-                            serde_json::json!({
-                                "user": self.username,
-                                "room": room,
-                            }),
-                        );
-                        let ws_state = self.ws_state.clone();
-                        let room = room.clone();
-                        let profile_id = self.profile_id;
-                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
-                            ws_state.broadcast_to_room_except(&room, profile_id, typing_msg).await;
-                        }));
-                    }
-                }
-                "stop_typing" => {
-                    if let Some(room) = &self.room {
-                        let stop_typing_msg = WsMessage::new(
-                            "stop_typing",
-                            serde_json::json!({
-                                "user": self.username,
-                                "room": room,
-                            }),
-                        );
-                        let ws_state = self.ws_state.clone();
-                        let room = room.clone();
-                        let profile_id = self.profile_id;
-                        ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
-                            ws_state.broadcast_to_room_except(&room, profile_id, stop_typing_msg).await;
-                        }));
-                    }
-                }
-                "ping" => {
-                    let pong = WsMessage::new(
-                        "pong",
+            }
+            WsClientAction::Typing => {
+                if let Some(room) = &self.room {
+                    let typing_msg = WsMessage::new(
+                        "typing",
                         serde_json::json!({
-                            "timestamp": chrono::Utc::now().timestamp(),
+                            "user": self.username,
+                            "room": room,
                         }),
                     );
-                    ctx.text(serde_json::to_string(&pong).unwrap_or_default());
+                    let ws_state = self.ws_state.clone();
+                    let room = room.clone();
+                    let profile_id = self.profile_id;
+                    ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                        ws_state.broadcast_to_room_except(&room, profile_id, typing_msg).await;
+                    }));
                 }
-                _ => {
-                    tracing::warn!(
-                        connection_id = %self.conn_id,
-                        action = %msg.action,
-                        "Unknown WebSocket action"
+            }
+            WsClientAction::StopTyping => {
+                if let Some(room) = &self.room {
+                    let stop_typing_msg = WsMessage::new(
+                        "stop_typing",
+                        serde_json::json!({
+                            "user": self.username,
+                            "room": room,
+                        }),
                     );
+                    let ws_state = self.ws_state.clone();
+                    let room = room.clone();
+                    let profile_id = self.profile_id;
+                    ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
+                        ws_state.broadcast_to_room_except(&room, profile_id, stop_typing_msg).await;
+                    }));
                 }
-            },
-            Err(e) => {
-                tracing::error!(
-                    connection_id = %self.conn_id,
-                    error = %e,
-                    "Failed to parse WebSocket message"
+            }
+            WsClientAction::Ping => {
+                let pong = WsMessage::new(
+                    "pong",
+                    serde_json::json!({
+                        "timestamp": chrono::Utc::now().timestamp(),
+                    }),
                 );
+                ctx.text(serde_json::to_string(&pong).unwrap_or_default());
             }
         }
     }
-}
-
-/// Client message structure
-#[derive(Debug, Deserialize)]
-struct ClientMessage {
-    action: String,
-    data: serde_json::Value,
 }
 
 /// WebSocket upgrade handler

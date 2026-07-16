@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 pub mod server;
+pub mod validation;
 
 pub use server::WsState;
 
