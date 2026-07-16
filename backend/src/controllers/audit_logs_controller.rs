@@ -5,9 +5,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::{
-    authz::{
-        ability::{AbilityAction, AbilityResource, authorize},
-    },
+    authz::ability::{AbilityAction, AbilityResource, authorize},
     errors::{AppError, AppResult},
     models::audit_log::NewAuditLog,
     repositories::container::AppContainer,
@@ -130,6 +128,13 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 }
 
 #[cfg(test)]
+pub fn test_config(cfg: &mut web::ServiceConfig) {
+    use crate::middleware::test_authorities::TestAuthorities;
+
+    cfg.service(web::scope("/admin").wrap(TestAuthorities).configure(config));
+}
+
+#[cfg(test)]
 mod tests {
     use std::collections::HashSet;
     use std::sync::Arc;
@@ -141,10 +146,11 @@ mod tests {
 
     use crate::middleware::auth::create_token;
     use crate::models::audit_log::AuditLog;
+    use crate::models::role::ROLE_ADMIN;
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::test_utils::mocks::mock_container;
 
-    use super::config;
+    use super::test_config;
 
     async fn test_extract_authorities(
         req: &ServiceRequest,
@@ -174,13 +180,9 @@ mod tests {
     async fn list_audit_logs_returns_forbidden_without_read_authority() {
         let container = mock_container();
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).service(
-                web::scope("/admin")
-                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
-                        test_extract_authorities,
-                    ))
-                    .configure(config),
-            ),
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(test_config),
         )
         .await;
 
@@ -219,13 +221,9 @@ mod tests {
         container.domain_audit_logs = Arc::new(repo);
 
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).service(
-                web::scope("/admin")
-                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
-                        test_extract_authorities,
-                    ))
-                    .configure(config),
-            ),
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(test_config),
         )
         .await;
 

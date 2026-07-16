@@ -5,8 +5,10 @@ pub mod auth_middleware;
 pub mod csrf_protection;
 pub mod metrics_middleware;
 pub mod rate_limit_middleware;
-pub mod request_id;
 pub mod request_log_middleware;
 pub mod require_role_middleware;
 pub mod security_headers;
 pub mod stripe_webhook_verifier;
+
+#[cfg(test)]
+pub mod test_authorities;

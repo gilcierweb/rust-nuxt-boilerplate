@@ -11,7 +11,6 @@ use diesel::delete;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel::PgConnection;
-use diesel::sql_types::*;
 use diesel::sql_query;
 
 use std::env;
@@ -21,7 +20,6 @@ mod schema;
 
 use self::schema::refresh_tokens as refresh_tokens_table;
 
-type PgPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 type CleanupResult<T> = Result<T, Box<dyn std::error::Error + Send + Sync>>;
 
 fn main() -> CleanupResult<()> {

@@ -194,10 +194,9 @@ where
             .get::<Claims>()
             .map(|claims| format!("user:{}", claims.profile_id))
             .unwrap_or_else(|| {
-                req.connection_info()
-                    .realip_remote_addr()
-                    .unwrap_or("unknown")
-                    .to_string()
+                req.peer_addr()
+                    .map(|addr| addr.ip().to_string())
+                    .unwrap_or_else(|| "unknown".to_string())
             });
 
         Box::pin(async move {

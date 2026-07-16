@@ -1,6 +1,8 @@
 #![allow(dead_code)]
 
-use actix_web::{FromRequest, HttpMessage};
+use actix_web::{FromRequest, HttpMessage, HttpRequest};
+use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::future::{Ready, ready};
 
 use crate::{
@@ -8,7 +10,7 @@ use crate::{
     models::role::ROLE_ADMIN,
 };
 
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: uuid::Uuid,
     pub profile_id: uuid::Uuid,
@@ -161,7 +163,7 @@ impl FromRequest for AuthUser {
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(
-        req: &actix_web::HttpRequest,
+        req: &HttpRequest,
         _payload: &mut actix_web::dev::Payload,
     ) -> Self::Future {
         let claims = req
@@ -258,8 +260,11 @@ fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> Ap
     let mut validation = Validation::default();
     validation.validate_exp = true;
     validation.validate_nbf = true;
-    validation.required_spec_claims = std::collections::HashSet::from([
-        "exp".to_string(), "iat".to_string(), "sub".to_string(), "token_use".to_string(),
+    validation.required_spec_claims = HashSet::from([
+        "exp".to_string(),
+        "iat".to_string(),
+        "sub".to_string(),
+        "token_use".to_string(),
     ]);
 
     let claims = decode::<Claims>(
@@ -279,25 +284,13 @@ fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> Ap
 
 pub use super::auth_middleware::{JwtAuth, JwtAuthConfig};
 
-// ============================================================================
-// Rate Limit Route Configuration
-// ============================================================================
-// Single source of truth for route-to-rate-limit category mapping.
-// When adding new endpoints, update this function to categorize them.
-// ============================================================================
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RateLimitCategory {
-    /// Strict auth: login, register, password recovery/reset (POST)
     AuthStrict,
-    /// Session management: refresh, session check (POST/GET)
     AuthSession,
-    /// Default: all other endpoints
     Default,
 }
 
-/// Maps a request method and path to a rate limit category.
-/// Used by `RateLimiterMiddleware` to determine the appropriate rate limit.
 pub fn rate_limit_category(method: &actix_web::http::Method, path: &str) -> RateLimitCategory {
     let is_auth_path = path.starts_with("/api/v1/auth/");
     if !is_auth_path {
@@ -333,4 +326,30 @@ pub fn rate_limit_category(method: &actix_web::http::Method, path: &str) -> Rate
     }
 
     RateLimitCategory::Default
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_claims_has_role() {
+        let claims = Claims {
+            sub: uuid::Uuid::new_v4(),
+            profile_id: uuid::Uuid::new_v4(),
+            role: 1,
+            token_use: "access".to_string(),
+            exp: 0,
+            iat: 0,
+        };
+        assert!(claims.is_admin());
+        assert!(!claims.has_role("operator"));
+    }
+
+    #[test]
+    fn test_bearer_exempt_routes() {
+        let routes = bearer_exempt_routes();
+        assert!(routes.iter().any(|r| r.pattern == "/api/v1/auth/login"));
+        assert!(routes.iter().any(|r| r.pattern == "/api/v1/health"));
+    }
 }

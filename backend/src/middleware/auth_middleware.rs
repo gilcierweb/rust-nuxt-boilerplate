@@ -5,11 +5,13 @@ use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
     http::Method,
 };
+use actix_web_grants::authorities::AttachAuthorities;
 use futures::future::{LocalBoxFuture, Ready, ready};
 use std::{rc::Rc, sync::Arc};
 
 use crate::{
     AppState,
+    authz::grants_extractor::build_authorities_for_claims,
     middleware::auth::{Claims, bearer_exempt_routes, verify_token},
     repositories::access_token_blacklist::AccessTokenBlacklist,
 };
@@ -163,7 +165,14 @@ where
 
                     match verify_token(&token, &secret) {
                         Ok(claims) => {
-                            req.extensions_mut().insert(claims);
+                            req.extensions_mut().insert(claims.clone());
+
+                            let authorities = build_authorities_for_claims(
+                                &claims,
+                                req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>(),
+                            ).await;
+
+                            req.attach(authorities);
                             svc.call(req).await.map(ServiceResponse::map_into_left_body)
                         }
                         Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid token")),

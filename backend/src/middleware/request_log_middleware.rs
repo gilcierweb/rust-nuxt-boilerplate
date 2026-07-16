@@ -7,8 +7,7 @@ use actix_web::{
     http::header::{HeaderName, HeaderValue},
 };
 use futures::future::{LocalBoxFuture, Ready, ready};
-
-use super::request_id::RequestId;
+use uuid::Uuid;
 
 pub struct RequestLogMiddleware;
 
@@ -57,8 +56,16 @@ where
             .and_then(|value| value.to_str().ok())
             .unwrap_or("unknown")
             .to_string();
-        // Get request ID from extensions (set by RequestIdMiddleware) or generate one
-        let request_id = RequestId::from_req_or_new(&req);
+
+        // Extract request ID from header or generate one — NO extensions access
+        let request_id = req
+            .headers()
+            .get("x-request-id")
+            .and_then(|value| value.to_str().ok())
+            .filter(|value| !value.trim().is_empty())
+            .map(|value| value.trim().to_string())
+            .unwrap_or_else(|| Uuid::new_v4().to_string());
+
         let started_at = Instant::now();
 
         Box::pin(async move {
@@ -67,6 +74,7 @@ where
 
             match result {
                 Ok(mut response) => {
+                    // Add request ID to response headers
                     if let Ok(header_value) = HeaderValue::from_str(&request_id) {
                         response
                             .headers_mut()
@@ -109,14 +117,12 @@ mod tests {
     use actix_web::{App, HttpResponse, http::StatusCode, test, web};
 
     use super::RequestLogMiddleware;
-    use crate::middleware::request_id::RequestIdMiddleware;
 
     #[actix_web::test]
     async fn preserves_existing_request_id_header() {
         let app = test::init_service(
             App::new()
                 .wrap(RequestLogMiddleware)
-                .wrap(RequestIdMiddleware)
                 .route(
                     "/ok",
                     web::get().to(|| async { HttpResponse::Ok().finish() }),
@@ -145,7 +151,6 @@ mod tests {
         let app = test::init_service(
             App::new()
                 .wrap(RequestLogMiddleware)
-                .wrap(RequestIdMiddleware)
                 .route(
                     "/ok",
                     web::get().to(|| async { HttpResponse::Ok().finish() }),

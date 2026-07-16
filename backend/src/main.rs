@@ -110,7 +110,12 @@ async fn main() -> std::io::Result<()> {
         registry.init();
     }
 
-    dotenvy::dotenv().ok();
+    // Load .env from project root (parent of backend directory)
+    let env_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .expect("CARGO_MANIFEST_DIR parent")
+        .join(".env");
+    dotenvy::from_path(env_path).ok();
     let config = AppConfig::from_env().expect("Failed to load configuration");
     config.validate_or_panic();
     let config = Arc::new(config);
@@ -228,7 +233,6 @@ async fn main() -> std::io::Result<()> {
             .app_data(web::PayloadConfig::new(config_form_limit))
             .wrap(cors)
             .wrap(actix_web::middleware::Compress::default())
-            .wrap(backend::middleware::request_id::RequestIdMiddleware)
             .wrap(backend::middleware::security_headers::SecurityHeaders)
             .wrap(backend::middleware::metrics_middleware::MetricsMiddleware)
             .wrap(backend::middleware::request_log_middleware::RequestLogMiddleware)

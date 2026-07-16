@@ -5,7 +5,7 @@ use actix_web::{Error, dev::ServiceRequest, web};
 use crate::{
     AppState,
     authz::ability::{build_ability, build_authorities},
-    middleware::auth::verify_token,
+    middleware::auth::{Claims, verify_token},
     repositories::access_token_blacklist::hash_token_for_blacklist,
     repositories::container::AppContainer,
 };
@@ -47,8 +47,16 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
         }
     };
 
-    let Some(container) = req.app_data::<web::Data<AppContainer>>() else {
-        return Ok(build_authorities(claims.role, &[]));
+    let container = req.app_data::<web::Data<AppContainer>>();
+    Ok(build_authorities_for_claims(&claims, container).await)
+}
+
+pub async fn build_authorities_for_claims(
+    claims: &Claims,
+    container: Option<&web::Data<AppContainer>>,
+) -> HashSet<String> {
+    let Some(container) = container else {
+        return build_authorities(claims.role, &[]);
     };
 
     let roles = match container.users.get_user_roles(&claims.sub).await {
@@ -61,25 +69,22 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
 
     match container.users.get_user_permissions(&claims.sub).await {
         Ok(permission_codes) if !permission_codes.is_empty() => {
-            // When permission records are available, they are authoritative.
             let mut authorities = HashSet::new();
             for role in &roles {
                 authorities.insert(format!("ROLE_{}", role.to_uppercase()));
             }
             authorities.extend(permission_codes);
-            Ok(authorities)
+            authorities
         }
         Ok(_) => {
-            // Fallback while permissions are not yet seeded for a role.
             let mut authorities = HashSet::new();
             for role in &roles {
                 authorities.insert(format!("ROLE_{}", role.to_uppercase()));
             }
             authorities.extend(build_ability(claims.role, &roles).authorities());
-            Ok(authorities)
+            authorities
         }
         Err(error) => {
-            // Fallback for environments where permission tables are not migrated yet.
             tracing::warn!(
                 "grants extractor: failed to load user permissions, using ability fallback: {}",
                 error
@@ -90,7 +95,7 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
                 authorities.insert(format!("ROLE_{}", role.to_uppercase()));
             }
             authorities.extend(build_ability(claims.role, &roles).authorities());
-            Ok(authorities)
+            authorities
         }
     }
 }

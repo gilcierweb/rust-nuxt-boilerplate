@@ -433,9 +433,8 @@ pub async fn login(
 
     // Store refresh token
     let ip_string = req
-        .connection_info()
-        .realip_remote_addr()
-        .map(|s| s.to_string());
+        .peer_addr()
+        .map(|addr| addr.ip().to_string());
 
     let ip: Option<ipnet::IpNet> = ip_string
         .as_ref()
@@ -1156,7 +1155,7 @@ fn generate_random_token(length: usize) -> String {
 }
 
 fn request_ip(req: &HttpRequest) -> Option<String> {
-    req.connection_info().realip_remote_addr().map(str::to_owned)
+    req.peer_addr().map(|addr| addr.ip().to_string())
 }
 
 fn request_user_agent(req: &HttpRequest) -> Option<String> {

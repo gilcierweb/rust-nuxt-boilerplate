@@ -176,11 +176,17 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 }
 
 #[cfg(test)]
+pub fn test_config(cfg: &mut web::ServiceConfig) {
+    use crate::middleware::test_authorities::TestAuthorities;
+
+    cfg.service(web::scope("/admin").wrap(TestAuthorities).configure(config));
+}
+
+#[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
     use std::sync::Arc;
 
-    use actix_web::{App, body::to_bytes, dev::ServiceRequest, http::StatusCode, test, web};
+    use actix_web::{App, body::to_bytes, http::StatusCode, test, web};
     use chrono::Utc;
     use serde_json::Value;
     use uuid::Uuid;
@@ -189,45 +195,13 @@ mod tests {
     use crate::repositories::roles_repository::MockIRoleRepository;
     use crate::repositories::test_utils::mocks::mock_container;
 
-    use super::config;
-
-    async fn test_extract_authorities(
-        req: &ServiceRequest,
-    ) -> Result<HashSet<String>, actix_web::Error> {
-        let authorities = req
-            .headers()
-            .get(actix_web::http::header::AUTHORIZATION)
-            .and_then(|value| value.to_str().ok())
-            .map(|value| value.trim())
-            .map(|value| {
-                if value == "Bearer customer" {
-                    HashSet::from(["ROLE_CUSTOMER".to_string(), "roles:read".to_string()])
-                } else if value == "Bearer admin" {
-                    HashSet::from([
-                        "ROLE_ADMIN".to_string(),
-                        "roles:read".to_string(),
-                        "roles:create".to_string(),
-                    ])
-                } else {
-                    HashSet::new()
-                }
-            })
-            .unwrap_or_default();
-
-        Ok(authorities)
-    }
+    use super::test_config;
 
     #[actix_web::test]
     async fn list_roles_returns_forbidden_without_authority() {
         let container = mock_container();
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).service(
-                web::scope("/admin")
-                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
-                        test_extract_authorities,
-                    ))
-                    .configure(config),
-            ),
+            App::new().app_data(web::Data::new(container)).configure(test_config),
         )
         .await;
 
@@ -244,19 +218,13 @@ mod tests {
     async fn create_role_returns_forbidden_for_customer_without_create_authority() {
         let container = mock_container();
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).service(
-                web::scope("/admin")
-                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
-                        test_extract_authorities,
-                    ))
-                    .configure(config),
-            ),
+            App::new().app_data(web::Data::new(container)).configure(test_config),
         )
         .await;
 
         let req = test::TestRequest::post()
             .uri("/admin/roles")
-            .insert_header((actix_web::http::header::AUTHORIZATION, "Bearer customer"))
+            .insert_header(("x-test-authorities", "ROLE_CUSTOMER"))
             .set_json(serde_json::json!({
                 "name": "customer",
                 "resource_type": null,
@@ -288,19 +256,13 @@ mod tests {
         container.roles = Arc::new(roles_repo);
 
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).service(
-                web::scope("/admin")
-                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
-                        test_extract_authorities,
-                    ))
-                    .configure(config),
-            ),
+            App::new().app_data(web::Data::new(container)).configure(test_config),
         )
         .await;
 
         let req = test::TestRequest::get()
             .uri("/admin/roles")
-            .insert_header((actix_web::http::header::AUTHORIZATION, "Bearer admin"))
+            .insert_header(("x-test-authorities", "ROLE_ADMIN,roles:read"))
             .to_request();
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
@@ -327,19 +289,13 @@ mod tests {
         container.roles = Arc::new(roles_repo);
 
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).service(
-                web::scope("/admin")
-                    .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
-                        test_extract_authorities,
-                    ))
-                    .configure(config),
-            ),
+            App::new().app_data(web::Data::new(container)).configure(test_config),
         )
         .await;
 
         let req = test::TestRequest::post()
             .uri("/admin/roles")
-            .insert_header((actix_web::http::header::AUTHORIZATION, "Bearer admin"))
+            .insert_header(("x-test-authorities", "ROLE_ADMIN,roles:create"))
             .set_json(serde_json::json!({
                 "name": "admin",
                 "resource_type": null,

@@ -64,9 +64,13 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
     )
     .service(
         web::scope("/api/v1")
-            .wrap(actix_web_grants::GrantsMiddleware::with_extractor(
-                crate::authz::grants_extractor::extract_authorities,
+            // Middleware order (outermost first, executes first on request):
+            // 1. Rate limiting (global) - first line of defense
+            .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
+                redis_pool.clone(),
+                crate::middleware::rate_limit_middleware::RATE_API,
             ))
+            // 2. API Key auth - for service-to-service
             .wrap(crate::middleware::api_key_middleware::RequireApiKey::new(vec![
                 "/api/v1/webhooks/*",
                 "/api/v1/ws",
@@ -91,11 +95,10 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 "/api/v1/metrics",
                 "/api/v1/metrics/",
             ]))
-            .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
-                redis_pool.clone(),
-                crate::middleware::rate_limit_middleware::RATE_API,
-            ))
-            // Auth routes
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+            )
+            // Auth routes - no RBAC needed
             .service(
                 web::scope("/auth")
                     .wrap(CsrfProtection::new(vec![]))
@@ -126,6 +129,10 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .route("/pix", web::post().to(auth_controller::pix_webhook)),
             )
             // Admin domain routes
+            // Middleware order (outermost first on request):
+            // 1. CsrfProtection (outermost) - checks CSRF for browser forms
+            // 2. JwtAuth - validates JWT, inserts Claims and AuthDetails in extensions
+            // 3. Admin handlers use AuthDetails from extensions for RBAC
             .service(
                 web::scope("/admin")
                     .wrap(CsrfProtection::new(vec![]))
