@@ -12,42 +12,42 @@ use crate::config::AppConfig;
 
 const CSRF_COOKIE_NAME: &str = "csrf_token";
 
+/// CSRF token expiry: 15 minutes.
+/// After this, the token is rejected even if the cookie hasn't expired.
+const CSRF_TOKEN_EXPIRY_SECS: u64 = 15 * 60;
+
+/// Grace period after rotation: old token is still accepted for 30 seconds.
+/// This prevents race conditions from concurrent state-changing requests.
+const CSRF_ROTATION_GRACE_SECS: u64 = 30;
+
 pub struct CsrfProtection {
     exclude_paths: Vec<String>,
 }
 
 impl CsrfProtection {
     pub fn new(exclude_paths: Vec<String>) -> Self {
-        // Default public auth endpoints that should be excluded from CSRF
-        // These are endpoints called without prior session
         let mut defaults = vec![
-            // Login/Register
             "/api/v1/auth/login".to_string(),
             "/api/v1/auth/login/".to_string(),
             "/api/v1/auth/register".to_string(),
             "/api/v1/auth/register/".to_string(),
-            // Password recovery
             "/api/v1/auth/recover".to_string(),
             "/api/v1/auth/recover/".to_string(),
             "/api/v1/auth/reset".to_string(),
             "/api/v1/auth/reset/".to_string(),
-            // Token refresh and logout (can be called without prior session)
             "/api/v1/auth/refresh".to_string(),
             "/api/v1/auth/refresh/".to_string(),
             "/api/v1/auth/logout".to_string(),
             "/api/v1/auth/logout/".to_string(),
-            // Email confirmation
             "/api/v1/auth/confirm".to_string(),
             "/api/v1/auth/confirm/".to_string(),
-            // Webhooks (have their own verification mechanisms)
             "/api/v1/webhooks".to_string(),
             "/api/v1/webhooks/".to_string(),
         ];
-        
-        // Add any additional paths passed by the caller
+
         defaults.extend(exclude_paths);
-        
-        Self { 
+
+        Self {
             exclude_paths: defaults
         }
     }
@@ -100,81 +100,99 @@ where
         Box::pin(async move {
             let should_check = {
                 let path = req.uri().path();
-                
-                // Skip CSRF for paths that don't need it
                 let path_excluded = exclude_paths.iter().any(|p| path.starts_with(p));
-                
-                // Skip CSRF for Bearer token auth (API routes with Authorization header)
+
                 let has_bearer_token = req
                     .headers()
                     .get("authorization")
                     .and_then(|h| h.to_str().ok())
                     .map(|h| h.starts_with("Bearer "))
                     .unwrap_or(false);
-                
+
                 !path_excluded && !has_bearer_token
             };
 
-            if should_check {
+            let is_state_changing = {
                 let method = req.method();
-
-                if method == Method::POST
+                method == Method::POST
                     || method == Method::PUT
                     || method == Method::PATCH
                     || method == Method::DELETE
-                {
-                    // Get CSRF token from header
-                    let header_token = req
-                        .headers()
-                        .get("csrf-token")
-                        .and_then(|h| h.to_str().ok())
-                        .map(|s| s.to_string());
+            };
 
-                    // Get CSRF token from cookie
-                    let cookie_token = req
-                        .cookie(CSRF_COOKIE_NAME)
-                        .map(|c| c.value().to_string());
+            if should_check && is_state_changing {
+                let header_token = req
+                    .headers()
+                    .get("csrf-token")
+                    .and_then(|h| h.to_str().ok())
+                    .map(|s| s.to_string());
 
-                    let is_valid = match (&header_token, &cookie_token) {
-                        (Some(header), Some(cookie)) => {
-                            // Validate that header matches cookie
-                            header == cookie
-                        }
-                        _ => false,
-                    };
+                let cookie_token = req
+                    .cookie(CSRF_COOKIE_NAME)
+                    .map(|c| c.value().to_string());
 
-                    if !is_valid {
-                        let response = HttpResponse::Forbidden()
-                            .json(serde_json::json!({
-                                "error": {
-                                    "code": "CSRF_TOKEN_INVALID",
-                                    "message": "CSRF token invalid or missing"
-                                }
-                            }))
-                            .map_into_boxed_body();
+                let secret_key = req
+                    .app_data::<AppConfig>()
+                    .map(|c| c.csrf_secret_key.clone())
+                    .or_else(|| {
+                        req.app_data::<actix_web::web::Data<crate::AppState>>()
+                            .map(|s| s.config.csrf_secret_key.clone())
+                    });
 
-                        let (req, _) = req.into_parts();
-                        return Ok(ServiceResponse::new(req, response));
+                let is_valid = match (&header_token, &cookie_token, &secret_key) {
+                    (Some(header), Some(cookie), Some(key)) => {
+                        header == cookie && validate_csrf_token(header, key)
                     }
+                    _ => false,
+                };
+
+                if !is_valid {
+                    let response = HttpResponse::Forbidden()
+                        .json(serde_json::json!({
+                            "error": {
+                                "code": "CSRF_TOKEN_INVALID",
+                                "message": "CSRF token invalid or missing"
+                            }
+                        }))
+                        .map_into_boxed_body();
+
+                    let (req, _) = req.into_parts();
+                    return Ok(ServiceResponse::new(req, response));
                 }
             }
 
             let mut res = svc.call(req).await?;
 
-            // Set CSRF token cookie if not already present
-            if let Some(config) = res.request().app_data::<AppConfig>().cloned()
+            // Rotate CSRF token on successful state-changing requests
+            if should_check && is_state_changing {
+                if let Some(config) = res.request().app_data::<AppConfig>().cloned() {
+                    let new_token = generate_csrf_token(&config.csrf_secret_key);
+                    let cookie = build_csrf_cookie(&config, &new_token);
+
+                    res.response_mut()
+                        .headers_mut()
+                        .append(
+                            actix_web::http::header::SET_COOKIE,
+                            cookie.to_string().parse().unwrap(),
+                        );
+                }
+            }
+
+            // Set CSRF token cookie on GET responses if not already present
+            if !is_state_changing
                 && !res.response().headers().contains_key("set-cookie")
             {
-                // Generate CSRF token using HMAC with secret key
-                let csrf_token = generate_csrf_token(&config.csrf_secret_key);
-                let cookie = build_csrf_cookie(&config, &csrf_token);
+                if let Some(config) = res.request().app_data::<AppConfig>().cloned() {
+                    let csrf_token = generate_csrf_token(&config.csrf_secret_key);
+                    let cookie = build_csrf_cookie(&config, &csrf_token);
 
-                res.response_mut()
-                    .headers_mut()
-                    .append(
-                        actix_web::http::header::SET_COOKIE,
-                        cookie.to_string().parse().unwrap(),
-                    );
+                    res.response_mut()
+                        .headers_mut()
+                        .append(
+                            actix_web::http::header::SET_COOKIE,
+                            cookie.to_string().parse().unwrap(),
+                        );
+                }
             }
 
             Ok(res.map_into_boxed_body())
@@ -182,6 +200,7 @@ where
     }
 }
 
+/// Generate a CSRF token with embedded timestamp: `{timestamp}.{nonce}.{hmac}`
 fn generate_csrf_token(secret_key: &str) -> String {
     use hmac::{Hmac, Mac};
     use rand::RngCore;
@@ -196,21 +215,76 @@ fn generate_csrf_token(secret_key: &str) -> String {
         .unwrap()
         .as_secs();
 
-    // Generate cryptographically secure random nonce (16 bytes)
     let mut nonce = [0u8; 16];
     OsRng.fill_bytes(&mut nonce);
 
     let mut mac = HmacSha256::new_from_slice(secret_key.as_bytes())
         .expect("HMAC can take key of any size");
-    
-    // Include timestamp and random nonce for uniqueness
+
     mac.update(&timestamp.to_be_bytes());
     mac.update(&nonce);
 
     let result = mac.finalize();
-    // Encode as timestamp:nonce:hmac for verification if needed
-    // For now, just return the HMAC hex
-    format!("{:x}", result.into_bytes())
+    let sig = hex::encode(result.into_bytes());
+
+    format!("{}.{}.{}", timestamp, hex::encode(nonce), sig)
+}
+
+/// Validate a CSRF token: check HMAC integrity and expiry.
+/// Also accepts tokens within the grace period after rotation.
+fn validate_csrf_token(token: &str, secret_key: &str) -> bool {
+    use hmac::{Hmac, Mac};
+    use sha2::Sha256;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    type HmacSha256 = Hmac<Sha256>;
+
+    let parts: Vec<&str> = token.split('.').collect();
+    if parts.len() != 3 {
+        return false;
+    }
+
+    let timestamp_str = parts[0];
+    let nonce_str = parts[1];
+    let sig_str = parts[2];
+
+    let timestamp = match timestamp_str.parse::<u64>() {
+        Ok(ts) => ts,
+        Err(_) => return false,
+    };
+
+    let nonce = match hex::decode(nonce_str) {
+        Ok(n) => n,
+        Err(_) => return false,
+    };
+
+    let sig = match hex::decode(sig_str) {
+        Ok(s) => s,
+        Err(_) => return false,
+    };
+
+    if nonce.len() != 16 {
+        return false;
+    }
+
+    // Recompute HMAC and compare
+    let mut mac = HmacSha256::new_from_slice(secret_key.as_bytes())
+        .expect("HMAC can take key of any size");
+    mac.update(&timestamp.to_be_bytes());
+    mac.update(&nonce);
+
+    if mac.verify_slice(&sig).is_err() {
+        return false;
+    }
+
+    // Check token expiry (with grace period for rotation)
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+
+    let max_age = CSRF_TOKEN_EXPIRY_SECS + CSRF_ROTATION_GRACE_SECS;
+    now.saturating_sub(timestamp) <= max_age
 }
 
 fn build_csrf_cookie(config: &AppConfig, token: &str) -> Cookie<'static> {
@@ -226,12 +300,13 @@ fn build_csrf_cookie(config: &AppConfig, token: &str) -> Cookie<'static> {
     };
 
     let mut cookie = Cookie::build(CSRF_COOKIE_NAME, token.to_owned())
-        .http_only(false) // Must be readable by JavaScript for CSRF
+        .http_only(false)
         .path("/")
         .same_site(same_site)
-        .max_age(actix_web::cookie::time::Duration::hours(24));
+        .max_age(actix_web::cookie::time::Duration::minutes(
+            (CSRF_TOKEN_EXPIRY_SECS / 60) as i64,
+        ));
 
-    // Don't set Secure flag in development (HTTP)
     if is_production_like(config) {
         cookie = cookie.secure(true);
     }
@@ -253,6 +328,124 @@ mod tests {
     #[test]
     fn test_csrf_token_generation() {
         let token = generate_csrf_token("test-secret");
-        assert_eq!(token.len(), 64); // HMAC-SHA256 hex = 64 chars
+        let parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts.len(), 3);
+
+        let timestamp = parts[0].parse::<u64>().unwrap();
+        assert!(timestamp > 0);
+
+        assert_eq!(parts[1].len(), 32); // 16 bytes hex
+        assert_eq!(parts[2].len(), 64); // 32 bytes hex (HMAC-SHA256)
+    }
+
+    #[test]
+    fn test_csrf_token_validate_valid() {
+        let token = generate_csrf_token("test-secret");
+        assert!(validate_csrf_token(&token, "test-secret"));
+    }
+
+    #[test]
+    fn test_csrf_token_validate_wrong_secret() {
+        let token = generate_csrf_token("test-secret");
+        assert!(!validate_csrf_token(&token, "wrong-secret"));
+    }
+
+    #[test]
+    fn test_csrf_token_validate_tampered() {
+        let token = generate_csrf_token("test-secret");
+        let mut parts: Vec<&str> = token.split('.').collect();
+        // Tamper with the nonce
+        parts[1] = "00000000000000000000000000000000";
+        let tampered = parts.join(".");
+        assert!(!validate_csrf_token(&tampered, "test-secret"));
+    }
+
+    #[test]
+    fn test_csrf_token_validate_expired() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        // Create a token with timestamp that exceeds max age
+        let expired_timestamp = now - CSRF_TOKEN_EXPIRY_SECS - CSRF_ROTATION_GRACE_SECS - 100;
+
+        use hmac::{Hmac, Mac};
+        use sha2::Sha256;
+        type HmacSha256 = Hmac<Sha256>;
+
+        let mut nonce = [0u8; 16];
+        rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut nonce);
+
+        let mut mac = HmacSha256::new_from_slice(b"test-secret").unwrap();
+        mac.update(&expired_timestamp.to_be_bytes());
+        mac.update(&nonce);
+        let sig = hex::encode(mac.finalize().into_bytes());
+
+        let token = format!(
+            "{}.{}.{}",
+            expired_timestamp,
+            hex::encode(nonce),
+            sig
+        );
+
+        assert!(!validate_csrf_token(&token, "test-secret"));
+    }
+
+    #[test]
+    fn test_csrf_token_validate_malformed() {
+        assert!(!validate_csrf_token("not-a-token", "secret"));
+        assert!(!validate_csrf_token("abc.def", "secret"));
+        assert!(!validate_csrf_token("abc.def.ghi.jkl", "secret"));
+        assert!(!validate_csrf_token("not_a_number.abc.def", "secret"));
+    }
+
+    #[test]
+    fn test_csrf_token_different_each_call() {
+        let t1 = generate_csrf_token("test-secret");
+        let t2 = generate_csrf_token("test-secret");
+        assert_ne!(t1, t2);
+    }
+
+    #[test]
+    fn test_csrf_token_grace_period() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        use hmac::{Hmac, Mac};
+        use sha2::Sha256;
+        type HmacSha256 = Hmac<Sha256>;
+
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+
+        // Token that expired just within grace period
+        let token_time = now - CSRF_TOKEN_EXPIRY_SECS - 5; // within grace
+
+        let mut nonce = [0u8; 16];
+        rand::RngCore::fill_bytes(&mut rand::rngs::OsRng, &mut nonce);
+
+        let mut mac = HmacSha256::new_from_slice(b"test-secret").unwrap();
+        mac.update(&token_time.to_be_bytes());
+        mac.update(&nonce);
+        let sig = hex::encode(mac.finalize().into_bytes());
+
+        let token = format!(
+            "{}.{}.{}",
+            token_time,
+            hex::encode(nonce),
+            sig
+        );
+
+        // Should still be valid within grace period
+        assert!(validate_csrf_token(&token, "test-secret"));
+    }
+
+    #[test]
+    fn test_csrf_token_expiry_constants() {
+        assert_eq!(CSRF_TOKEN_EXPIRY_SECS, 900); // 15 minutes
+        assert_eq!(CSRF_ROTATION_GRACE_SECS, 30); // 30 seconds
     }
 }
