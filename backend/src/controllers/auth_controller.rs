@@ -1,7 +1,7 @@
 use crate::{
     config::AppConfig,
     errors::{AppError, AppResult},
-    middleware::auth::AuthUser,
+    middleware::auth::{AuthUser, create_token_with_kid},
     models::profile::NewProfile,
     models::refresh_token::{NewRefreshToken, RefreshToken},
     models::role::{ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER},
@@ -420,12 +420,15 @@ pub async fn login(
     let role_claim = primary_role_claim(&roles);
 
     // Generate tokens
-    let access_token = crate::middleware::auth::create_token(
+    let active_kid = container.config.jwt_secrets.first().map(|k| k.kid.as_str());
+    let access_token = create_token_with_kid(
         user.id,
         profile.id,
         role_claim,
         &container.config.jwt_secret,
         container.config.jwt_access_expiry_secs,
+        "access",
+        active_kid,
     )?;
 
     let refresh_token_plain = generate_random_token(48);
@@ -574,12 +577,15 @@ pub async fn refresh(
     let role_claim = primary_role_claim(&roles);
 
     // Generate new access token
-    let access_token = crate::middleware::auth::create_token(
+    let active_kid = container.config.jwt_secrets.first().map(|k| k.kid.as_str());
+    let access_token = create_token_with_kid(
         user.id,
         _profile.id,
         role_claim,
         &container.config.jwt_secret,
         container.config.jwt_access_expiry_secs,
+        "access",
+        active_kid,
     )?;
 
     // The rotated token is already the new refresh token in the database
@@ -631,12 +637,15 @@ async fn session_impl(
 
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
-    let access_token = crate::middleware::auth::create_token(
+    let active_kid = container.config.jwt_secrets.first().map(|k| k.kid.as_str());
+    let access_token = create_token_with_kid(
         user.id,
         profile.id,
         role_claim,
         &container.config.jwt_secret,
         container.config.jwt_access_expiry_secs,
+        "access",
+        active_kid,
     )?;
 
     Ok(HttpResponse::Ok()

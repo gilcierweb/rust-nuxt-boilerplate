@@ -12,7 +12,7 @@ use std::{rc::Rc, sync::Arc};
 use crate::{
     AppState,
     authz::grants_extractor::build_authorities_for_claims,
-    middleware::auth::{Claims, bearer_exempt_routes, verify_token},
+    middleware::auth::{Claims, ACCESS_TOKEN_USE, bearer_exempt_routes, verify_token_with_secrets},
     repositories::access_token_blacklist::AccessTokenBlacklist,
 };
 
@@ -148,12 +148,12 @@ where
                         }
                     }
 
-                    let secret = req
+                    let secrets = req
                         .app_data::<actix_web::web::Data<AppState>>()
-                        .map(|s| s.config.jwt_secret.clone())
+                        .map(|s| s.config.jwt_secrets.clone())
                         .or_else(|| {
                             req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>()
-                                .map(|c| c.config.jwt_secret.clone())
+                                .map(|c| c.config.jwt_secrets.clone())
                         })
                         .ok_or_else(|| {
                             tracing::error!(
@@ -163,7 +163,7 @@ where
                             actix_web::error::ErrorInternalServerError("Server configuration error")
                         })?;
 
-                    match verify_token(&token, &secret) {
+                    match verify_token_with_secrets(&token, &secrets, ACCESS_TOKEN_USE) {
                         Ok(claims) => {
                             req.extensions_mut().insert(claims.clone());
 

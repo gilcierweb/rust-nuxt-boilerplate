@@ -202,6 +202,12 @@ mod tests {
             csrf_secret_key: "test-csrf-key-32-chars-long!!!!!".to_string(),
             refresh_token_hash_salt: "test-salt-for-refresh-tokens-16b!".to_string(),
             rate_limit_enabled: false,
+            jwt_secrets: vec![crate::config::app_config::JwtSecretKey {
+                kid: "test-key-1".to_string(),
+                secret: "test-secret-key-for-unit-tests-32b!".to_string(),
+                created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
+                expires_at: None,
+            }],
         }
     }
 

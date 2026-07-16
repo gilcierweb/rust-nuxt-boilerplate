@@ -100,6 +100,22 @@ fn required_secret(name: &str) -> Result<String, env::VarError> {
     Err(env::VarError::NotPresent)
 }
 
+/// A single JWT signing secret with metadata for rotation support.
+#[derive(Debug, Clone)]
+pub struct JwtSecretKey {
+    pub kid: String,
+    pub secret: String,
+    pub created_at: chrono::NaiveDateTime,
+    pub expires_at: Option<chrono::NaiveDateTime>,
+}
+
+impl JwtSecretKey {
+    pub fn is_active(&self) -> bool {
+        let now = chrono::Utc::now().naive_utc();
+        self.expires_at.map_or(true, |exp| exp > now)
+    }
+}
+
 /// All configuration values loaded from environment variables or secret files.
 /// In production, use Docker secrets or a secrets manager like Vault.
 #[derive(Debug, Clone)]
@@ -128,6 +144,7 @@ pub struct AppConfig {
 
     // JWT
     pub jwt_secret: String,
+    pub jwt_secrets: Vec<JwtSecretKey>,
     pub jwt_public_key: Option<String>,
     pub jwt_access_expiry_secs: i64,  // 15 minutes
     pub jwt_refresh_expiry_secs: i64, // 30 days
@@ -256,6 +273,32 @@ impl AppConfig {
                 .unwrap_or(10),
 
             jwt_secret: required_secret("JWT_SECRET")?,
+            jwt_secrets: {
+                let primary = required_secret("JWT_SECRET")?;
+                let now = chrono::Utc::now().naive_utc();
+                let mut secrets = vec![JwtSecretKey {
+                    kid: env::var("JWT_KID").unwrap_or_else(|_| "primary".to_string()),
+                    secret: primary,
+                    created_at: now,
+                    expires_at: None,
+                }];
+
+                // Support additional rotation secrets via JWT_SECRETS=old_kid:old_secret,prev_kid:prev_secret
+                if let Ok(extra) = env::var("JWT_SECRETS") {
+                    for entry in extra.split(',').filter(|s| !s.trim().is_empty()) {
+                        if let Some((kid, secret)) = entry.trim().split_once(':') {
+                            secrets.push(JwtSecretKey {
+                                kid: kid.to_string(),
+                                secret: secret.to_string(),
+                                created_at: now,
+                                expires_at: None,
+                            });
+                        }
+                    }
+                }
+
+                secrets
+            },
             jwt_public_key: env::var("JWT_PUBLIC_KEY").ok(),
             jwt_access_expiry_secs: 2 * 60 * 60,
             jwt_refresh_expiry_secs: 30 * 24 * 3600,
@@ -374,6 +417,18 @@ impl AppConfig {
                 "JWT_SECRET must be at least 32 bytes, got {}",
                 self.jwt_secret.len()
             ));
+        }
+        if self.jwt_secrets.is_empty() {
+            errors.push("JWT_SECRETS must contain at least one active key".to_string());
+        }
+        for key in &self.jwt_secrets {
+            if key.secret.len() < 32 {
+                errors.push(format!(
+                    "JWT secret '{}' must be at least 32 bytes, got {}",
+                    key.kid,
+                    key.secret.len()
+                ));
+            }
         }
 
         // Master key validation (must be valid base64, decodes to ≥32 bytes)

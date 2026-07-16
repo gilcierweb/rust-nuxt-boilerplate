@@ -1,5 +1,6 @@
 use crate::config::AppConfig;
 use crate::config::app_config::Environment;
+use crate::config::app_config::JwtSecretKey;
 
 use super::key_manager::KeyManager;
 
@@ -48,6 +49,16 @@ pub fn test_config() -> AppConfig {
         redis_url: "redis://127.0.0.1:6379".to_string(),
         redis_pool_size: 10,
         jwt_secret: generate_deterministic_string(32, 0x1234567890ABCDEF),
+        jwt_secrets: {
+            let secret = generate_deterministic_string(32, 0x1234567890ABCDEF);
+            let now = chrono::Utc::now().naive_utc();
+            vec![JwtSecretKey {
+                kid: "test-primary".to_string(),
+                secret,
+                created_at: now,
+                expires_at: None,
+            }]
+        },
         jwt_public_key: None,
         jwt_access_expiry_secs: 3600,
         jwt_refresh_expiry_secs: 3600,

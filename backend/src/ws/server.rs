@@ -443,12 +443,16 @@ pub async fn ws_handler(
     let profile_id = match token {
         Some(t) => {
             let state = req.app_data::<web::Data<AppState>>();
-            let secret = state
+            let secrets = state
                 .as_ref()
-                .map(|s| s.config.jwt_secret.clone())
+                .map(|s| s.config.jwt_secrets.clone())
                 .unwrap_or_default();
 
-            match crate::middleware::auth::verify_ws_token(&t, &secret) {
+            match crate::middleware::auth::verify_token_with_secrets(
+                &t,
+                &secrets,
+                crate::middleware::auth::WEBSOCKET_TOKEN_USE,
+            ) {
                 Ok(claims) => claims.profile_id,
                 Err(_) => {
                     tracing::warn!("WebSocket auth failed");

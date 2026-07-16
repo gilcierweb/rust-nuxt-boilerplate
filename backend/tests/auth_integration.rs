@@ -157,7 +157,7 @@ fn test_config() -> backend::config::AppConfig {
         db_statement_timeout_secs: Some(30),
         redis_url,
         redis_pool_size: 5,
-        jwt_secret,
+        jwt_secret: jwt_secret.clone(),
         jwt_public_key: None,
         jwt_access_expiry_secs: 3600,
         jwt_refresh_expiry_secs: 3600,
@@ -196,6 +196,12 @@ fn test_config() -> backend::config::AppConfig {
         csrf_secret_key: csrf_key,
         refresh_token_hash_salt: "test-salt-for-refresh-tokens-16b!".to_string(),
         rate_limit_enabled: false,
+        jwt_secrets: vec![backend::config::app_config::JwtSecretKey {
+            kid: "test-key-1".to_string(),
+            secret: jwt_secret,
+            created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
+            expires_at: None,
+        }],
     }
 }
 

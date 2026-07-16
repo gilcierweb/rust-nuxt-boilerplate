@@ -46,8 +46,8 @@ impl Claims {
     }
 }
 
-const ACCESS_TOKEN_USE: &str = "access";
-const WEBSOCKET_TOKEN_USE: &str = "ws";
+pub const ACCESS_TOKEN_USE: &str = "access";
+pub const WEBSOCKET_TOKEN_USE: &str = "ws";
 
 fn default_token_use() -> String {
     ACCESS_TOKEN_USE.to_string()
@@ -222,6 +222,18 @@ fn create_token_for_use(
     expiry_secs: i64,
     token_use: &str,
 ) -> AppResult<String> {
+    create_token_with_kid(user_id, profile_id, role, jwt_secret, expiry_secs, token_use, None)
+}
+
+pub fn create_token_with_kid(
+    user_id: uuid::Uuid,
+    profile_id: uuid::Uuid,
+    role: i32,
+    jwt_secret: &str,
+    expiry_secs: i64,
+    token_use: &str,
+    kid: Option<&str>,
+) -> AppResult<String> {
     use chrono::Utc;
     use jsonwebtoken::encode;
 
@@ -238,8 +250,13 @@ fn create_token_for_use(
         iat,
     };
 
+    let mut header = jsonwebtoken::Header::default();
+    if let Some(k) = kid {
+        header.kid = Some(k.to_string());
+    }
+
     encode(
-        &jsonwebtoken::Header::default(),
+        &header,
         &claims,
         &jsonwebtoken::EncodingKey::from_secret(jwt_secret.as_bytes()),
     )
@@ -252,6 +269,45 @@ pub fn verify_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
 
 pub fn verify_ws_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
     verify_token_for_use(token, jwt_secret, WEBSOCKET_TOKEN_USE)
+}
+
+pub fn verify_token_with_secrets(
+    token: &str,
+    secrets: &[crate::config::app_config::JwtSecretKey],
+    expected_use: &str,
+) -> AppResult<Claims> {
+    let token_header = {
+        let parts: Vec<&str> = token.split('.').collect();
+        if parts.len() != 3 {
+            return Err(AppError::Unauthorized("Invalid token format".to_string()));
+        }
+        use base64::Engine;
+        let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(parts[0])
+            .map_err(|_| AppError::Unauthorized("Invalid token header".to_string()))?;
+        serde_json::from_slice::<jsonwebtoken::Header>(&decoded)
+            .map_err(|_| AppError::Unauthorized("Invalid token header".to_string()))?
+    };
+
+    let kid = token_header.kid.as_deref();
+
+    // If kid is present, try to find matching secret first
+    if let Some(k) = kid {
+        if let Some(secret_key) = secrets.iter().find(|s| s.kid == k && s.is_active()) {
+            if let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use) {
+                return Ok(claims);
+            }
+        }
+    }
+
+    // Fallback: try all active secrets
+    for secret_key in secrets.iter().filter(|s| s.is_active()) {
+        if let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use) {
+            return Ok(claims);
+        }
+    }
+
+    Err(AppError::Unauthorized("Invalid token".to_string()))
 }
 
 fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> AppResult<Claims> {
@@ -351,5 +407,177 @@ mod tests {
         let routes = bearer_exempt_routes();
         assert!(routes.iter().any(|r| r.pattern == "/api/v1/auth/login"));
         assert!(routes.iter().any(|r| r.pattern == "/api/v1/health"));
+    }
+
+    #[test]
+    fn create_token_with_kid_sets_header_kid() {
+        use crate::config::app_config::JwtSecretKey;
+        use chrono::Utc;
+
+        let sub = uuid::Uuid::new_v4();
+        let profile_id = uuid::Uuid::new_v4();
+
+        let secret = JwtSecretKey {
+            kid: "key-2026-01".to_string(),
+            secret: "test-secret-for-kid".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+
+        let token = create_token_with_kid(
+            sub,
+            profile_id,
+            0,
+            &secret.secret,
+            3600,
+            "access",
+            Some(&secret.kid),
+        )
+        .unwrap();
+
+        let parts: Vec<&str> = token.split('.').collect();
+        assert_eq!(parts.len(), 3);
+
+        use base64::Engine;
+        let header_bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(parts[0])
+            .unwrap();
+        let header: jsonwebtoken::Header = serde_json::from_slice(&header_bytes).unwrap();
+        assert_eq!(header.kid.as_deref(), Some("key-2026-01"));
+    }
+
+    #[test]
+    fn verify_token_with_secrets_matches_kid() {
+        use crate::config::app_config::JwtSecretKey;
+        use chrono::Utc;
+
+        let sub = uuid::Uuid::new_v4();
+        let profile_id = uuid::Uuid::new_v4();
+
+        let secret_active = JwtSecretKey {
+            kid: "active-key".to_string(),
+            secret: "active-secret-value".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+        let secret_expired = JwtSecretKey {
+            kid: "expired-key".to_string(),
+            secret: "expired-secret-value".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: Some(Utc::now().naive_utc()),
+        };
+
+        let secrets = vec![secret_expired, secret_active.clone()];
+
+        let token = create_token_with_kid(
+            sub,
+            profile_id,
+            0,
+            &secret_active.secret,
+            3600,
+            "access",
+            Some(&secret_active.kid),
+        )
+        .unwrap();
+        let verified = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        assert_eq!(verified.sub, sub);
+        assert_eq!(verified.profile_id, profile_id);
+    }
+
+    #[test]
+    fn verify_token_with_secrets_falls_back_to_other_secrets() {
+        use crate::config::app_config::JwtSecretKey;
+        use chrono::Utc;
+
+        let sub = uuid::Uuid::new_v4();
+        let profile_id = uuid::Uuid::new_v4();
+
+        let secret1 = JwtSecretKey {
+            kid: "key-1".to_string(),
+            secret: "secret-number-one".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+        let secret2 = JwtSecretKey {
+            kid: "key-2".to_string(),
+            secret: "secret-number-two".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+
+        let secrets = vec![secret1.clone(), secret2];
+
+        let token = create_token_with_kid(
+            sub,
+            profile_id,
+            0,
+            &secret1.secret,
+            3600,
+            "access",
+            Some(&secret1.kid),
+        )
+        .unwrap();
+        let verified = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        assert_eq!(verified.sub, sub);
+    }
+
+    #[test]
+    fn verify_token_with_secrets_rejects_expired_keys() {
+        use crate::config::app_config::JwtSecretKey;
+        use chrono::Utc;
+
+        let sub = uuid::Uuid::new_v4();
+        let profile_id = uuid::Uuid::new_v4();
+
+        let expired = JwtSecretKey {
+            kid: "expired".to_string(),
+            secret: "expired-secret".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: Some(Utc::now().naive_utc()),
+        };
+
+        let secrets = vec![expired.clone()];
+        let token = create_token_with_kid(
+            sub,
+            profile_id,
+            0,
+            &expired.secret,
+            3600,
+            "access",
+            Some(&expired.kid),
+        )
+        .unwrap();
+        let result = verify_token_with_secrets(&token, &secrets, "access");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_token_with_secrets_rejects_wrong_use() {
+        use crate::config::app_config::JwtSecretKey;
+        use chrono::Utc;
+
+        let sub = uuid::Uuid::new_v4();
+        let profile_id = uuid::Uuid::new_v4();
+
+        let secret = JwtSecretKey {
+            kid: "key-1".to_string(),
+            secret: "some-secret".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+
+        let secrets = vec![secret.clone()];
+        let token = create_token_with_kid(
+            sub,
+            profile_id,
+            0,
+            &secret.secret,
+            3600,
+            "access",
+            Some(&secret.kid),
+        )
+        .unwrap();
+        let result = verify_token_with_secrets(&token, &secrets, "websocket");
+        assert!(result.is_err());
     }
 }
