@@ -3,7 +3,7 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub use crate::controllers::{
-    audit_logs_controller, auth_controller, health_controller, jwks_controller,
+    audit_logs_controller, auth_controller, health_controller,
     roles_controller, upload_controller, users_controller, metrics_controller,
 };
 
@@ -148,8 +148,6 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // Health check
             .route("/health", web::get().to(health_controller::health_check))
             .route("/metrics", web::get().to(metrics_controller::metrics))
-            // JWKS endpoint (public, no auth)
-            .service(jwks_controller::jwks)
             // WebSocket route (inside /api/v1 scope)
             .service(web::resource("/ws").route(web::get().to(crate::ws::server::ws_handler))),
     );
