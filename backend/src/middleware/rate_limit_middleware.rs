@@ -43,39 +43,55 @@ impl RateLimit {
 // ============================================================================
 // Rate Limit Configurations
 // ============================================================================
-// These constants define the rate limits for different parts of the API.
-// All limits are enforced using Redis-backed sliding window counters.
+// Anonymous and authenticated users have separate rate limit buckets.
+// Authenticated users get higher limits since they are trusted identities.
+// Redis keys already use different prefixes (user:{id} vs IP), ensuring
+// no collision between the two groups.
 // ============================================================================
 
-/// Authentication endpoints (login, register, password reset)
+/// Authentication endpoints (login, register, password reset) — anonymous
 /// Limit: 100 requests per minute (per IP)
-/// Use case: Standard auth operations with moderate protection
 pub const RATE_AUTH: RateLimit = RateLimit::new(100, 60, "rl:auth");
 
-/// Strict authentication endpoints (login POST, register POST, password recovery)
+/// Authentication endpoints — authenticated
+/// Limit: 200 requests per minute (per user)
+pub const RATE_AUTH_AUTHENTICATED: RateLimit = RateLimit::new(200, 60, "rl:auth");
+
+/// Strict authentication endpoints (login POST, register POST, password recovery) — anonymous
 /// Limit: 10 requests per minute (per IP)
-/// Use case: Write operations that are susceptible to brute force attacks
 pub const RATE_AUTH_STRICT: RateLimit = RateLimit::new(10, 60, "rl:auth_strict");
 
-/// General API endpoints
+/// Strict authentication endpoints — authenticated
+/// Limit: 20 requests per minute (per user)
+pub const RATE_AUTH_STRICT_AUTHENTICATED: RateLimit = RateLimit::new(20, 60, "rl:auth_strict");
+
+/// General API endpoints — anonymous
 /// Limit: 120 requests per minute (per IP)
-/// Use case: Standard API operations with relaxed limits
 pub const RATE_API: RateLimit = RateLimit::new(120, 60, "rl:api");
 
-/// Session management endpoints (refresh, session check)
+/// General API endpoints — authenticated
+/// Limit: 600 requests per minute (per user)
+pub const RATE_API_AUTHENTICATED: RateLimit = RateLimit::new(600, 60, "rl:api");
+
+/// Session management endpoints (refresh, session check) — anonymous
 /// Limit: 300 requests per minute (per IP)
-/// Use case: High-frequency session operations with minimal restriction
 pub const RATE_AUTH_SESSION: RateLimit = RateLimit::new(300, 60, "rl:auth_session");
+
+/// Session management endpoints — authenticated
+/// Limit: 600 requests per minute (per user)
+pub const RATE_AUTH_SESSION_AUTHENTICATED: RateLimit = RateLimit::new(600, 60, "rl:auth_session");
 
 /// File upload endpoints
 /// Limit: 10 requests per hour (per IP)
-/// Use case: Resource-intensive operations requiring strict limits
 pub const RATE_UPLOAD: RateLimit = RateLimit::new(10, 3600, "rl:upload");
 
-/// Messaging endpoints
+/// Messaging endpoints — anonymous
 /// Limit: 60 requests per minute (per IP)
-/// Use case: User messaging with spam prevention
 pub const RATE_MESSAGES: RateLimit = RateLimit::new(60, 60, "rl:msg");
+
+/// Messaging endpoints — authenticated
+/// Limit: 120 requests per minute (per user)
+pub const RATE_MESSAGES_AUTHENTICATED: RateLimit = RateLimit::new(120, 60, "rl:msg");
 
 /// Lua script for atomic sliding window rate limiting
 /// Uses sorted sets to track request timestamps
@@ -153,11 +169,39 @@ impl<S> RateLimiterMiddleware<S> {
         }
     }
 
-    fn pick_effective_limit(base_limit: &RateLimit, method: &Method, path: &str) -> RateLimit {
+    fn pick_effective_limit(
+        base_limit: &RateLimit,
+        method: &Method,
+        path: &str,
+        is_authenticated: bool,
+    ) -> RateLimit {
         match rate_limit_category(method, path) {
-            RateLimitCategory::AuthStrict => RATE_AUTH_STRICT.clone(),
-            RateLimitCategory::AuthSession => RATE_AUTH_SESSION.clone(),
-            RateLimitCategory::Default => base_limit.clone(),
+            RateLimitCategory::AuthStrict => {
+                if is_authenticated {
+                    RATE_AUTH_STRICT_AUTHENTICATED.clone()
+                } else {
+                    RATE_AUTH_STRICT.clone()
+                }
+            }
+            RateLimitCategory::AuthSession => {
+                if is_authenticated {
+                    RATE_AUTH_SESSION_AUTHENTICATED.clone()
+                } else {
+                    RATE_AUTH_SESSION.clone()
+                }
+            }
+            RateLimitCategory::Default => {
+                if is_authenticated {
+                    match base_limit.key_prefix {
+                        "rl:auth" => RATE_AUTH_AUTHENTICATED.clone(),
+                        "rl:msg" => RATE_MESSAGES_AUTHENTICATED.clone(),
+                        "rl:api" => RATE_API_AUTHENTICATED.clone(),
+                        _ => base_limit.clone(),
+                    }
+                } else {
+                    base_limit.clone()
+                }
+            }
         }
     }
 }
@@ -189,6 +233,7 @@ where
 
         // Try to extract user_id from JWT claims (set by JwtAuth middleware)
         // If authenticated, use user_id for rate limiting; otherwise fall back to IP
+        let is_authenticated = req.extensions().get::<Claims>().is_some();
         let client_key = req
             .extensions()
             .get::<Claims>()
@@ -206,7 +251,7 @@ where
             }
 
             let effective_limit =
-                RateLimiterMiddleware::<S>::pick_effective_limit(&limit, req.method(), req.path());
+                RateLimiterMiddleware::<S>::pick_effective_limit(&limit, req.method(), req.path(), is_authenticated);
             let key = format!("{}:{}", effective_limit.key_prefix, client_key);
 
             let allowed = async {
@@ -256,5 +301,107 @@ where
             let res = svc.call(req).await?;
             Ok(res.map_into_boxed_body())
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use actix_web::http::Method;
+
+    #[test]
+    fn anonymous_gets_base_api_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::GET, "/api/v1/users", false);
+        assert_eq!(limit.max_requests, 120);
+        assert_eq!(limit.key_prefix, "rl:api");
+    }
+
+    #[test]
+    fn authenticated_gets_higher_api_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::GET, "/api/v1/users", true);
+        assert_eq!(limit.max_requests, 600);
+        assert_eq!(limit.key_prefix, "rl:api");
+    }
+
+    #[test]
+    fn anonymous_gets_base_auth_strict_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/login", false);
+        assert_eq!(limit.max_requests, 10);
+        assert_eq!(limit.key_prefix, "rl:auth_strict");
+    }
+
+    #[test]
+    fn authenticated_gets_higher_auth_strict_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/login", true);
+        assert_eq!(limit.max_requests, 20);
+        assert_eq!(limit.key_prefix, "rl:auth_strict");
+    }
+
+    #[test]
+    fn anonymous_gets_base_session_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/refresh", false);
+        assert_eq!(limit.max_requests, 300);
+        assert_eq!(limit.key_prefix, "rl:auth_session");
+    }
+
+    #[test]
+    fn authenticated_gets_higher_session_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/refresh", true);
+        assert_eq!(limit.max_requests, 600);
+        assert_eq!(limit.key_prefix, "rl:auth_session");
+    }
+
+    #[test]
+    fn authenticated_user_with_auth_base_gets_auth_authenticated_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_AUTH, &Method::GET, "/api/v1/other", true);
+        assert_eq!(limit.max_requests, 200);
+        assert_eq!(limit.key_prefix, "rl:auth");
+    }
+
+    #[test]
+    fn authenticated_user_with_msg_base_gets_messages_authenticated_limit() {
+        let limit =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_MESSAGES, &Method::POST, "/api/v1/other", true);
+        assert_eq!(limit.max_requests, 120);
+        assert_eq!(limit.key_prefix, "rl:msg");
+    }
+
+    #[test]
+    fn upload_limit_unchanged_for_both() {
+        let anon =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_UPLOAD, &Method::POST, "/api/v1/admin/upload", false);
+        let auth =
+            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_UPLOAD, &Method::POST, "/api/v1/admin/upload", true);
+        assert_eq!(anon.max_requests, 10);
+        assert_eq!(auth.max_requests, 10);
+    }
+
+    #[test]
+    fn rate_limit_constants_are_ordered_correctly() {
+        assert!(RATE_AUTH_STRICT.max_requests < RATE_AUTH.max_requests);
+        assert!(RATE_AUTH.max_requests < RATE_AUTH_AUTHENTICATED.max_requests);
+        assert!(RATE_AUTH_STRICT_AUTHENTICATED.max_requests < RATE_AUTH_AUTHENTICATED.max_requests);
+        assert!(RATE_API.max_requests < RATE_API_AUTHENTICATED.max_requests);
+    }
+
+    #[test]
+    fn authenticated_limits_are_stricter_than_anonymous_for_strict() {
+        assert!(RATE_AUTH_STRICT.max_requests < RATE_AUTH_STRICT_AUTHENTICATED.max_requests);
+    }
+
+    #[test]
+    fn key_prefixes_are_shared_between_anonymous_and_authenticated() {
+        assert_eq!(RATE_AUTH.key_prefix, RATE_AUTH_AUTHENTICATED.key_prefix);
+        assert_eq!(RATE_AUTH_STRICT.key_prefix, RATE_AUTH_STRICT_AUTHENTICATED.key_prefix);
+        assert_eq!(RATE_API.key_prefix, RATE_API_AUTHENTICATED.key_prefix);
+        assert_eq!(RATE_AUTH_SESSION.key_prefix, RATE_AUTH_SESSION_AUTHENTICATED.key_prefix);
+        assert_eq!(RATE_MESSAGES.key_prefix, RATE_MESSAGES_AUTHENTICATED.key_prefix);
     }
 }
