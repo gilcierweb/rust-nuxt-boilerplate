@@ -23,10 +23,13 @@ pub trait IRefreshTokenRepository: Send + Sync {
     async fn find_valid_by_token(&self, plaintext_token: &str) -> QueryResult<Option<RefreshToken>>;
 
     /// Atomically revoke an existing token and create a new one in a single transaction.
-    /// Returns the new token on success, or None if the token was not found or already revoked.
+    /// Takes the old token plaintext, expiry seconds, and hash salt.
+    /// Returns the new RefreshToken (with hash) and the new plain token for the cookie.
+    /// Returns None if the old token was not found, already revoked, or expired.
     async fn rotate_token(
         &self,
-        old_token_hash: &str,
-        new_token: &NewRefreshToken,
-    ) -> QueryResult<Option<RefreshToken>>;
+        old_token_plaintext: &str,
+        expires_in_seconds: i64,
+        salt: &str,
+    ) -> QueryResult<Option<(RefreshToken, String)>>;
 }

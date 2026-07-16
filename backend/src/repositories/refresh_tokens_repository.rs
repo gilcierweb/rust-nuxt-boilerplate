@@ -1,8 +1,11 @@
 use crate::DBPool;
 use crate::db::schema::refresh_tokens as refresh_tokens_table;
+use crate::db::schema::refresh_tokens::dsl::{expires_at, revoked_at};
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::refresh_tokens_trait::IRefreshTokenRepository;
+use crate::services::token_service::{generate_random_token, hash_token, verify_token_hash};
+use chrono::Utc;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
@@ -160,20 +163,20 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
 
     async fn rotate_token(
         &self,
-        token_hash_str: &str,
-        new_token: &NewRefreshToken,
-    ) -> diesel::QueryResult<Option<RefreshToken>> {
-        let plaintext = token_hash_str.to_string();
-        let new_token = new_token.clone();
-        use crate::db::schema::refresh_tokens::dsl::*;
-        use crate::services::token_service::verify_token_hash;
-        use chrono::Utc;
+        old_token_plaintext: &str,
+        expires_in_secs: i64,
+        hash_salt: &str,
+    ) -> diesel::QueryResult<Option<(RefreshToken, String)>> {
+        let plaintext = old_token_plaintext.to_string();
+        let expires_secs = expires_in_secs;
+        let salt = hash_salt.to_string();
 
         self.base
             .run_transaction(move |conn| {
                 Box::pin(async move {
                     let now = Utc::now();
 
+                    // Find the old valid token by verifying against stored hashes
                     let candidates: Vec<RefreshToken> = refresh_tokens_table::table
                         .filter(revoked_at.is_null())
                         .filter(expires_at.gt(now))
@@ -190,10 +193,28 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                         None => return Ok(None),
                     };
 
+                    // Immediately revoke the old token
                     diesel::update(refresh_tokens_table::table.find(existing_token.id))
-                        .set(revoked_at.eq(Some(Utc::now())))
+                        .set(revoked_at.eq(Some(now)))
                         .execute(conn)
                         .await?;
+
+                    // Generate new plain token and hash it with the provided salt
+                    let new_token_plain = generate_random_token(48);
+                    let new_token_hash = hash_token(&new_token_plain, &salt);
+                    let new_expires_at = now + chrono::Duration::seconds(expires_secs);
+
+                    // Create new token preserving user_id, device_info, and ip_address from old token
+                    let new_token = NewRefreshToken {
+                        id: Uuid::new_v4(),
+                        user_id: existing_token.user_id,
+                        token_hash: new_token_hash,
+                        device_info: existing_token.device_info,
+                        ip_address: existing_token.ip_address,
+                        expires_at: new_expires_at,
+                        created_at: now,
+                        updated_at: now,
+                    };
 
                     let created_token: RefreshToken =
                         diesel::insert_into(refresh_tokens_table::table)
@@ -202,7 +223,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                             .get_result(conn)
                             .await?;
 
-                    Ok(Some(created_token))
+                    Ok(Some((created_token, new_token_plain)))
                 })
             })
             .await

@@ -511,32 +511,27 @@ pub async fn refresh(
         return Err(AppError::Unauthorized("Missing refresh token cookie".to_string()));
     }
 
-    let mut rotated_token = None;
+    let mut rotated_result = None;
 
     // Try each refresh token cookie until we find one that can be rotated
     // rotate_token atomically validates the token (exists, not revoked, not expired),
-    // revokes it, and creates a new token with the same device_info and ip_address
+    // revokes it, and creates a new token preserving device_info and ip_address
     for refresh_token in refresh_tokens {
         // Try to atomically rotate the token using plaintext verification
         // rotate_token verifies the plaintext token against stored Argon2id hashes,
-        // revokes the old one, and creates a new one atomically
+        // immediately revokes the old one, generates a new token, hashes it,
+        // stores it, and returns both the stored RefreshToken and new plain token
         match container
             .refresh_tokens
-            .rotate_token(&refresh_token, &NewRefreshToken {
-                id: Uuid::new_v4(),
-                user_id: Uuid::nil(), // Will be set from old token
-                token_hash: String::new(), // Will be set from new token
-                device_info: None, // Will be copied from old token
-                ip_address: None,  // Will be copied from old token
-                expires_at: Utc::now()
-                    + chrono::Duration::seconds(container.config.jwt_refresh_expiry_secs),
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-            })
+            .rotate_token(
+                &refresh_token,
+                container.config.jwt_refresh_expiry_secs,
+                &container.config.refresh_token_hash_salt,
+            )
             .await
         {
-            Ok(Some(rotated)) => {
-                rotated_token = Some(rotated);
+            Ok(Some((rotated, new_plain))) => {
+                rotated_result = Some((rotated, new_plain));
                 break;
             }
             Ok(None) => continue, // Token was already revoked/expired or not found
@@ -544,7 +539,7 @@ pub async fn refresh(
         }
     }
 
-    let rotated = match rotated_token {
+    let (rotated, new_refresh_plain) = match rotated_result {
         Some(rotated) => rotated,
         None => {
             tracing::warn!(
@@ -587,12 +582,6 @@ pub async fn refresh(
         "access",
         active_kid,
     )?;
-
-    // The rotated token is already the new refresh token in the database
-    // Just extract the plain token from the rotated token (not available, so generate new one for cookie)
-    // Note: We can't get the plain token back from the hash, so we generate a new one for the cookie
-    // The actual token in DB is the rotated token returned from rotate_token
-    let new_refresh_plain = generate_random_token(48);
 
     tracing::info!(
         event = "auth.refresh.success",
@@ -1988,7 +1977,7 @@ mod tests {
         mock_refresh_tokens
             .expect_rotate_token()
             .times(1)
-            .returning(move |_, _| Ok(Some(rotated_token.clone())));
+            .returning(move |_, _, _| Ok(Some((rotated_token.clone(), "new-plain-token".to_string()))));
 
         let mut container = mock_container();
         container.users = Arc::new(mock_users);
