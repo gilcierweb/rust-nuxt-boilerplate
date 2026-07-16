@@ -47,6 +47,21 @@ pub fn strip_html(input: &str) -> String {
         .to_string()
 }
 
+pub fn sanitize_for_email(input: &str) -> String {
+    ammonia::Builder::new()
+        .tags(HashSet::new())
+        .clean(input)
+        .to_string()
+}
+
+pub fn sanitize_for_html_email(input: &str) -> String {
+    let allowed: HashSet<&str> = ["b", "i", "strong", "em", "br"].into_iter().collect();
+    ammonia::Builder::new()
+        .tags(allowed)
+        .clean(input)
+        .to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -138,5 +153,51 @@ mod tests {
     #[test]
     fn strip_html_empty_input() {
         assert_eq!(strip_html(""), "");
+    }
+
+    #[test]
+    fn sanitize_for_email_strips_all_tags() {
+        let input = "<script>alert('xss')</script>user@example.com";
+        let result = sanitize_for_email(input);
+        assert_eq!(result, "user@example.com");
+        assert!(!result.contains("<script>"));
+    }
+
+    #[test]
+    fn sanitize_for_email_strips_img_onerror() {
+        let input = "<img src=x onerror=alert(1)>user@example.com";
+        let result = sanitize_for_email(input);
+        assert!(!result.contains("<img"));
+        assert!(result.contains("user@example.com"));
+    }
+
+    #[test]
+    fn sanitize_for_email_preserves_plain_text() {
+        let result = sanitize_for_email("hello world");
+        assert_eq!(result, "hello world");
+    }
+
+    #[test]
+    fn sanitize_for_html_email_allows_safe_tags() {
+        let input = "<b>bold</b> and <i>italic</i> user";
+        let result = sanitize_for_html_email(input);
+        assert!(result.contains("<b>bold</b>"));
+        assert!(result.contains("<i>italic</i>"));
+    }
+
+    #[test]
+    fn sanitize_for_html_email_strips_script() {
+        let input = "<script>alert(1)</script><b>safe</b>";
+        let result = sanitize_for_html_email(input);
+        assert!(!result.contains("<script>"));
+        assert!(result.contains("<b>safe</b>"));
+    }
+
+    #[test]
+    fn sanitize_for_html_email_strips_event_handlers() {
+        let input = "<b onclick=alert(1)>text</b>";
+        let result = sanitize_for_html_email(input);
+        assert!(!result.contains("onclick"));
+        assert!(result.contains("text"));
     }
 }
