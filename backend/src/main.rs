@@ -80,6 +80,8 @@ fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    let boot_start = std::time::Instant::now();
+
     rust_i18n::set_locale("pt-BR");
 
     // Initialize OpenTelemetry (optional)
@@ -166,6 +168,9 @@ async fn main() -> std::io::Result<()> {
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
         ws: backend::ws::WsState::new(),
     });
+
+    // Record cold-start duration (time from boot_start to AppState ready)
+    state.metrics.record_cold_start(boot_start.elapsed());
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
         db_pool_for_container,
