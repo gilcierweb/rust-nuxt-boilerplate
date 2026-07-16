@@ -9,6 +9,10 @@ default-run = "backend"
 name = "seed"
 path = "src/bin/seed.rs"
 
+[[bin]]
+name = "cleanup_refresh_tokens"
+path = "src/bin/cleanup_refresh_tokens.rs"
+
 [package.metadata.i18n]
 available-locales = ["pt-BR", "en", "es"]
 default-locale = "pt-BR"
