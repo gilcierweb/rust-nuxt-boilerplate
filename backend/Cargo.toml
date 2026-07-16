@@ -106,3 +106,4 @@ deadpool = { version = "0.13.0", features = ["managed"] }
 actix-rt = "2.9"
 mockall = "0.12"
 claims = "0.7"
+serial_test = "2.0"

@@ -135,8 +135,10 @@ impl Default for TelemetryConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serial_test::serial;
 
     #[test]
+    #[serial]
     fn from_env_defaults() {
         unsafe {
             std::env::remove_var(ENV_OTEL_ENABLED);
@@ -151,6 +153,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn disabled_when_env_false() {
         unsafe { std::env::set_var(ENV_OTEL_ENABLED, "false") };
         let config = TelemetryConfig::from_env();
@@ -160,6 +163,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn disabled_when_env_zero() {
         unsafe { std::env::set_var(ENV_OTEL_ENABLED, "0") };
         let config = TelemetryConfig::from_env();
@@ -168,6 +172,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn always_on_sampler() {
         unsafe { std::env::set_var(ENV_OTEL_SAMPLER, "always_on") };
         let config = TelemetryConfig::from_env();
@@ -176,6 +181,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn always_off_sampler() {
         unsafe { std::env::set_var(ENV_OTEL_SAMPLER, "always_off") };
         let config = TelemetryConfig::from_env();
@@ -184,6 +190,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn ratio_based_custom() {
         unsafe {
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
@@ -198,6 +205,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn ratio_based_clamped_max() {
         unsafe {
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
@@ -212,6 +220,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn ratio_based_clamped_min() {
         unsafe {
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
@@ -226,6 +235,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn ratio_based_invalid_falls_back() {
         unsafe {
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
@@ -240,6 +250,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn unknown_sampler_falls_back_to_parent_based() {
         unsafe { std::env::set_var(ENV_OTEL_SAMPLER, "unknown_sampler") };
         let config = TelemetryConfig::from_env();
@@ -248,6 +259,7 @@ mod tests {
     }
 
     #[test]
+    #[serial]
     fn custom_endpoint() {
         unsafe { std::env::set_var(ENV_OTEL_ENDPOINT, "http://collector:4318") };
         let config = TelemetryConfig::from_env();
