@@ -29,21 +29,17 @@ async fn not_found() -> Result<HttpResponse, actix_web::Error> {
     Ok(HttpResponse::NotFound().json(response))
 }
 
-/// Initialize OpenTelemetry tracer provider.
+/// Initialize OpenTelemetry tracer provider with configurable sampling.
 ///
-/// Reads `OTEL_EXPORTER_OTLP_ENDPOINT` env var (default: `http://localhost:4317`).
+/// Uses `TelemetryConfig` to read `OTEL_SAMPLER`, `OTEL_SAMPLER_RATIO`,
+/// `OTEL_EXPORTER_OTLP_ENDPOINT`, and `OTEL_ENABLED` env vars.
 /// Returns None if OTEL is disabled or initialization fails.
 fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
     use opentelemetry_otlp::WithExportConfig;
 
-    let endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
-        .unwrap_or_else(|_| "http://localhost:4317".to_string());
+    let telemetry = backend::config::telemetry::TelemetryConfig::from_env();
 
-    // Disable OTEL by setting OTEL_ENABLED=false
-    if std::env::var("OTEL_ENABLED")
-        .map(|v| v == "false" || v == "0")
-        .unwrap_or(false)
-    {
+    if !telemetry.enabled {
         tracing::info!("OpenTelemetry disabled via OTEL_ENABLED=false");
         return None;
     }
@@ -55,10 +51,9 @@ fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
         ])
         .build();
 
-    // Build span exporter
     let exporter = match opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
-        .with_endpoint(&endpoint)
+        .with_endpoint(&telemetry.endpoint)
         .build()
     {
         Ok(exporter) => exporter,
@@ -68,13 +63,15 @@ fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
         }
     };
 
-    // Create tracer provider
+    let sampler = telemetry.build_sampler();
+
     let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
         .with_resource(resource)
+        .with_sampler(sampler)
         .build();
 
-    tracing::info!(endpoint = %endpoint, "OpenTelemetry tracing initialized");
+    telemetry.log_config();
     Some(provider)
 }
 
