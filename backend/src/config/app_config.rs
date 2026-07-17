@@ -134,7 +134,7 @@ pub struct AppConfig {
     pub db_pool_max_lifetime_secs: Option<u64>,
     pub db_pool_idle_timeout_secs: Option<u64>,
     pub db_pool_connection_timeout_secs: u64,
-    pub db_statement_timeout_secs: Option<u64>,
+    pub db_statement_timeout_secs: u64,
 
     // Redis
     pub redis_url: String,
@@ -220,6 +220,11 @@ const REDIS_POOL_DEFAULT_STAGING: usize = 30;
 /// token blacklisting, and WebSocket Pub/Sub under load.
 pub const REDIS_POOL_MIN_PRODUCTION: usize = 50;
 
+/// Default PostgreSQL statement timeout in seconds. Applied via `SET statement_timeout`
+/// on each connection acquired from the pool. Prevents long-running queries from
+/// blocking connections indefinitely and exhausting the pool.
+pub const DB_STATEMENT_TIMEOUT_DEFAULT_SECS: u64 = 30;
+
 impl AppConfig {
     pub fn from_env() -> Result<Self, env::VarError> {
         // Parse environment first so we can use it for environment-aware defaults
@@ -280,7 +285,8 @@ impl AppConfig {
                 .unwrap_or(10),
             db_statement_timeout_secs: env::var("DB_STATEMENT_TIMEOUT_SECS")
                 .ok()
-                .and_then(|s| s.parse::<u64>().ok()),
+                .and_then(|s| s.parse::<u64>().ok())
+                .unwrap_or(DB_STATEMENT_TIMEOUT_DEFAULT_SECS),
 
             redis_url: env::var("REDIS_URL")
                 .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),

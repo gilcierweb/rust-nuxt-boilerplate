@@ -25,16 +25,12 @@ impl Database {
             async move {
                 let mut conn =
                     <AsyncPgConnection as diesel_async::AsyncConnection>::establish(&url).await?;
-                if let Some(timeout) = timeout {
-                    let timeout_ms = (timeout * 1000) as i32;
-                    use diesel_async::RunQueryDsl;
-                    diesel::sql_query(format!("SET statement_timeout = {}", timeout_ms))
-                        .execute(&mut conn)
-                        .await
-                        .map_err(|e| {
-                            diesel::result::ConnectionError::BadConnection(e.to_string())
-                        })?;
-                }
+                let timeout_ms = (timeout * 1000) as i32;
+                use diesel_async::RunQueryDsl;
+                diesel::sql_query(format!("SET statement_timeout = {}", timeout_ms))
+                    .execute(&mut conn)
+                    .await
+                    .map_err(|e| diesel::result::ConnectionError::BadConnection(e.to_string()))?;
                 Ok(conn)
             }
             .boxed()

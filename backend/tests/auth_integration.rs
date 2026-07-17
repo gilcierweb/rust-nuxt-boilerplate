@@ -154,7 +154,7 @@ fn test_config() -> backend::config::AppConfig {
         db_pool_max_lifetime_secs: Some(1800),
         db_pool_idle_timeout_secs: Some(600),
         db_pool_connection_timeout_secs: 10,
-        db_statement_timeout_secs: Some(30),
+        db_statement_timeout_secs: 30,
         redis_url,
         redis_pool_size: 5,
         jwt_secret: jwt_secret.clone(),
