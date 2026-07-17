@@ -120,6 +120,18 @@ impl TelemetryConfig {
             "OpenTelemetry sampling configuration loaded"
         );
     }
+
+    /// Returns true if the sampler captures 100% of traces.
+    ///
+    /// `AlwaysOn` and `ParentBased` (which wraps `AlwaysOn` for root spans)
+    /// both result in full trace coverage. In production at scale this will
+    /// overwhelm the OTLP endpoint and incur high egress costs.
+    pub fn is_full_coverage(&self) -> bool {
+        matches!(
+            self.sampler,
+            SamplerType::AlwaysOn | SamplerType::ParentBased
+        )
+    }
 }
 
 impl Default for TelemetryConfig {

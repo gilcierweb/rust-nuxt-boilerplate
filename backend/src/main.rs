@@ -65,6 +65,29 @@ fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
 
     let sampler = telemetry.build_sampler();
 
+    // Warn if sampling 100% of traces in production — will overwhelm OTLP endpoint
+    if telemetry.is_full_coverage() {
+        let env_var = std::env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
+        if env_var.eq_ignore_ascii_case("production") {
+            tracing::error!(
+                event = "otel.full_coverage_production",
+                sampler = ?telemetry.sampler,
+                "OpenTelemetry is sampling 100% of traces in PRODUCTION. \
+                 This will overwhelm the OTLP endpoint and incur high egress costs. \
+                 Set OTEL_SAMPLER=ratio_based and OTEL_SAMPLER_RATIO=0.1 (or similar) \
+                 to reduce trace volume."
+            );
+        } else if env_var.eq_ignore_ascii_case("staging") {
+            tracing::warn!(
+                event = "otel.full_coverage_staging",
+                sampler = ?telemetry.sampler,
+                "OpenTelemetry is sampling 100% of traces in staging. \
+                 Consider OTEL_SAMPLER=ratio_based OTEL_SAMPLER_RATIO=0.5 \
+                 to better simulate production conditions."
+            );
+        }
+    }
+
     let provider = opentelemetry_sdk::trace::SdkTracerProvider::builder()
         .with_batch_exporter(exporter)
         .with_resource(resource)
