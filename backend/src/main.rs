@@ -196,6 +196,13 @@ async fn main() -> std::io::Result<()> {
         (*config).clone(),
     ));
 
+    // Start background audit log chain verifier (hourly by default)
+    let audit_repo_for_verifier = container.domain_audit_logs.clone();
+    actix::spawn(async move {
+        backend::services::audit_log_verifier::run_audit_log_verifier(audit_repo_for_verifier)
+            .await;
+    });
+
     // Parse CORS origins from config (validation done in AppConfig::validate())
     let cors_origins: Vec<String> = config
         .frontend_url
