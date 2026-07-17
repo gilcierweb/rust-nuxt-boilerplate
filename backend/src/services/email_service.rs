@@ -1,10 +1,8 @@
 #![allow(dead_code)]
 
-use crate::config::app_config::AppConfig;
-use crate::config::app_config::Environment;
-use crate::config::app_config::JwtSecretKey;
+use crate::config::app_config::{AppConfig, Environment, JwtSecretKey};
+use crate::services::http_client::{HttpClient, HttpClientConfig, HttpClientError};
 use crate::utils::sanitize::{sanitize_for_email, sanitize_for_html_email};
-use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -110,7 +108,7 @@ pub enum EmailError {
     #[error("Failed to send email: {0}")]
     SendFailed(String),
     #[error("HTTP error: {0}")]
-    HttpError(#[from] reqwest::Error),
+    HttpError(#[from] HttpClientError),
 }
 
 pub type EmailResult = Result<(), EmailError>;
@@ -131,7 +129,7 @@ struct ResendEmailResponse {
 }
 
 pub struct EmailService {
-    client: Client,
+    client: HttpClient,
     api_key: String,
     from_email: String,
     from_name: String,
@@ -145,10 +143,15 @@ impl EmailService {
         let from_name = "Boilerplate App".to_string();
         let base_url = "https://api.resend.com".to_string();
 
-        let client = Client::builder()
-            .timeout(std::time::Duration::from_secs(10))
-            .build()
-            .expect("Failed to create HTTP client");
+        let http_config = HttpClientConfig {
+            timeout: std::time::Duration::from_secs(10),
+            max_retries: 3,
+            retry_base_delay: std::time::Duration::from_millis(100),
+            circuit_breaker_threshold: 5,
+            circuit_breaker_timeout: std::time::Duration::from_secs(60),
+        };
+
+        let client = HttpClient::new(http_config).expect("Failed to create HTTP client");
 
         Self {
             client,
@@ -213,19 +216,22 @@ impl EmailService {
 
         let url = format!("{}/emails", self.base_url);
 
-        let request = self
+        let response = self
             .client
             .post(&url)
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .await
+            .header("Authorization", &format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
-            .json(&request);
-
-        let request = crate::traced_http::inject_traceparent(request);
-
-        let response = request.send().await?;
+            .json(&request)
+            .send()
+            .await
+            .map_err(|e| EmailError::HttpError(e))?;
 
         let status = response.status();
-        let response_text = response.text().await?;
+        let response_text = response
+            .text()
+            .await
+            .map_err(|e| EmailError::HttpError(HttpClientError::HttpError(e)))?;
 
         if status.is_success() {
             let _resend_response: ResendEmailResponse = serde_json::from_str(&response_text)
