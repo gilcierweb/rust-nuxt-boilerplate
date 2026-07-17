@@ -163,6 +163,14 @@ pub struct MetricsRegistry {
     per_status: Mutex<HashMap<u16, u64>>,
     per_route_status: Mutex<HashMap<(String, String, u16), RouteMetric>>,
 
+    // JWT verification counters
+    jwt_direct_match: AtomicU64,
+    jwt_fallback_match: AtomicU64,
+    jwt_fallback_miss: AtomicU64,
+    jwt_unknown_kid: AtomicU64,
+    jwt_expired_kid: AtomicU64,
+    jwt_rejected: AtomicU64,
+
     // Performance baselines
     cold_start: Mutex<ColdStartMetric>,
     db_query_timing: Mutex<ProbeMetrics>,
@@ -279,6 +287,56 @@ impl MetricsRegistry {
 
     pub fn redis_count(&self) -> u64 {
         self.redis_op_timing.lock().map(|t| t.count).unwrap_or(0)
+    }
+
+    // ---- JWT verification metrics ----
+
+    pub fn record_jwt_direct_match(&self) {
+        self.jwt_direct_match.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_jwt_fallback_match(&self) {
+        self.jwt_fallback_match.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_jwt_fallback_miss(&self) {
+        self.jwt_fallback_miss.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_jwt_unknown_kid(&self) {
+        self.jwt_unknown_kid.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_jwt_expired_kid(&self) {
+        self.jwt_expired_kid.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_jwt_rejected(&self) {
+        self.jwt_rejected.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn jwt_direct_match_count(&self) -> u64 {
+        self.jwt_direct_match.load(Ordering::Relaxed)
+    }
+
+    pub fn jwt_fallback_match_count(&self) -> u64 {
+        self.jwt_fallback_match.load(Ordering::Relaxed)
+    }
+
+    pub fn jwt_fallback_miss_count(&self) -> u64 {
+        self.jwt_fallback_miss.load(Ordering::Relaxed)
+    }
+
+    pub fn jwt_unknown_kid_count(&self) -> u64 {
+        self.jwt_unknown_kid.load(Ordering::Relaxed)
+    }
+
+    pub fn jwt_expired_kid_count(&self) -> u64 {
+        self.jwt_expired_kid.load(Ordering::Relaxed)
+    }
+
+    pub fn jwt_rejected_count(&self) -> u64 {
+        self.jwt_rejected.load(Ordering::Relaxed)
     }
 
     // ---- System resources (memory / CPU) ----
@@ -476,6 +534,43 @@ impl MetricsRegistry {
             output.push_str("# TYPE redis_op_duration_avg_ms gauge\n");
             output.push_str(&format!("redis_op_duration_avg_ms {:.3}\n", avg));
         }
+
+        // --- JWT verification counters ---
+        output
+            .push_str("# HELP jwt_verify_direct_total JWT verifications with direct kid match.\n");
+        output.push_str("# TYPE jwt_verify_direct_total counter\n");
+        output.push_str(&format!(
+            "jwt_verify_direct_total {}\n",
+            self.jwt_direct_match_count()
+        ));
+
+        output.push_str("# HELP jwt_verify_fallback_total JWT verifications via fallback (kid mismatch or missing).\n");
+        output.push_str("# TYPE jwt_verify_fallback_total counter\n");
+        output.push_str(&format!(
+            "jwt_verify_fallback_total {}\n",
+            self.jwt_fallback_match_count()
+        ));
+
+        output.push_str("# HELP jwt_verify_rejected_total JWT verifications that failed (no matching secret).\n");
+        output.push_str("# TYPE jwt_verify_rejected_total counter\n");
+        output.push_str(&format!(
+            "jwt_verify_rejected_total {}\n",
+            self.jwt_rejected_count()
+        ));
+
+        output.push_str("# HELP jwt_verify_unknown_kid_total JWT verifications with unknown kid (falling back).\n");
+        output.push_str("# TYPE jwt_verify_unknown_kid_total counter\n");
+        output.push_str(&format!(
+            "jwt_verify_unknown_kid_total {}\n",
+            self.jwt_unknown_kid_count()
+        ));
+
+        output.push_str("# HELP jwt_verify_expired_kid_total JWT verifications with expired/inactive kid (falling back).\n");
+        output.push_str("# TYPE jwt_verify_expired_kid_total counter\n");
+        output.push_str(&format!(
+            "jwt_verify_expired_kid_total {}\n",
+            self.jwt_expired_kid_count()
+        ));
 
         // --- System resources (memory / CPU) ---
         output.push_str("# HELP process_used_memory_bytes Used memory in bytes.\n");

@@ -152,7 +152,7 @@ impl WsRedisState {
             .cmd("HSET")
             .arg(&conn_key)
             .arg("profile_id")
-            .arg(&profile_id.to_string())
+            .arg(profile_id.to_string())
             .cmd("HSET")
             .arg(&conn_key)
             .arg("ip")
@@ -556,10 +556,10 @@ pub async fn run_pubsub_listener(state: Arc<WsRedisState>) -> AppResult<()> {
 
     let mut on_message = pubsub.on_message();
     while let Some(msg) = on_message.next().await {
-        if let Ok(payload) = msg.get_payload::<String>() {
-            if let Err(e) = state.handle_pubsub_message(&payload).await {
-                error!("Error handling Pub/Sub message: {}", e);
-            }
+        if let Ok(payload) = msg.get_payload::<String>()
+            && let Err(e) = state.handle_pubsub_message(&payload).await
+        {
+            error!("Error handling Pub/Sub message: {}", e);
         }
     }
 

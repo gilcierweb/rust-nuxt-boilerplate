@@ -49,6 +49,23 @@ impl Claims {
 pub const ACCESS_TOKEN_USE: &str = "access";
 pub const WEBSOCKET_TOKEN_USE: &str = "ws";
 
+/// Outcome of JWT verification with multi-key fallback, for observability.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum JwtVerifyOutcome {
+    /// Token verified with direct kid match (best case).
+    DirectMatch,
+    /// Token verified via fallback (kid mismatch or missing — possible rotation).
+    FallbackMatch,
+    /// Token rejected: kid not found and fallback also failed.
+    Rejected,
+}
+
+/// Result of `verify_token_with_secrets` including outcome metadata.
+pub struct JwtVerifyResult {
+    pub claims: Claims,
+    pub outcome: JwtVerifyOutcome,
+}
+
 fn default_token_use() -> String {
     ACCESS_TOKEN_USE.to_string()
 }
@@ -277,7 +294,7 @@ pub fn verify_token_with_secrets(
     token: &str,
     secrets: &[crate::config::app_config::JwtSecretKey],
     expected_use: &str,
-) -> AppResult<Claims> {
+) -> AppResult<JwtVerifyResult> {
     let token_header = {
         let parts: Vec<&str> = token.split('.').collect();
         if parts.len() != 3 {
@@ -292,21 +309,92 @@ pub fn verify_token_with_secrets(
     };
 
     let kid = token_header.kid.as_deref();
+    let active_count = secrets.iter().filter(|s| s.is_active()).count();
 
     // If kid is present, try to find matching secret first
-    if let Some(k) = kid
-        && let Some(secret_key) = secrets.iter().find(|s| s.kid == k && s.is_active())
-        && let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use)
-    {
-        return Ok(claims);
+    if let Some(k) = kid {
+        if let Some(secret_key) = secrets.iter().find(|s| s.kid == k && s.is_active()) {
+            match verify_token_for_use(token, &secret_key.secret, expected_use) {
+                Ok(claims) => {
+                    tracing::debug!(
+                        event = "auth.jwt_verify",
+                        kid = k,
+                        matched_kid = k,
+                        strategy = "direct",
+                        "JWT verified with direct kid match"
+                    );
+                    return Ok(JwtVerifyResult {
+                        claims,
+                        outcome: JwtVerifyOutcome::DirectMatch,
+                    });
+                },
+                Err(_) => {
+                    tracing::warn!(
+                        event = "auth.jwt_verify_failed",
+                        kid = k,
+                        matched_kid = %secret_key.kid,
+                        strategy = "direct",
+                        "JWT kid matched but token verification failed (wrong secret or tampered token)"
+                    );
+                    return Err(AppError::Unauthorized("Invalid token".to_string()));
+                },
+            }
+        }
+
+        // kid present but no matching active key — check if key exists but is expired
+        if secrets.iter().any(|s| s.kid == k) {
+            tracing::warn!(
+                event = "auth.jwt_kid_expired",
+                kid = k,
+                strategy = "fallback",
+                active_secrets = active_count,
+                "JWT kid exists but key is expired/inactive, falling back to all active secrets"
+            );
+        } else {
+            tracing::warn!(
+                event = "auth.jwt_unknown_kid",
+                kid = k,
+                strategy = "fallback",
+                active_secrets = active_count,
+                "JWT kid not found in any secret key, falling back to all active secrets"
+            );
+        }
     }
 
     // Fallback: try all active secrets
     for secret_key in secrets.iter().filter(|s| s.is_active()) {
         if let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use) {
-            return Ok(claims);
+            if kid.is_some() {
+                tracing::warn!(
+                    event = "auth.jwt_fallback_match",
+                    token_kid = kid.unwrap_or_default(),
+                    matched_kid = %secret_key.kid,
+                    strategy = "fallback",
+                    "JWT verified via fallback (kid mismatch) — possible key rotation or token issued with unknown key"
+                );
+            } else {
+                tracing::info!(
+                    event = "auth.jwt_fallback_match",
+                    token_kid = "",
+                    matched_kid = %secret_key.kid,
+                    strategy = "fallback",
+                    "JWT verified via fallback (no kid in token header)"
+                );
+            }
+            return Ok(JwtVerifyResult {
+                claims,
+                outcome: JwtVerifyOutcome::FallbackMatch,
+            });
         }
     }
+
+    tracing::warn!(
+        event = "auth.jwt_rejected",
+        token_kid = kid.unwrap_or_default(),
+        strategy = "all_failed",
+        active_secrets = active_count,
+        "JWT verification failed: no matching secret found"
+    );
 
     Err(AppError::Unauthorized("Invalid token".to_string()))
 }
@@ -480,9 +568,10 @@ mod tests {
             Some(&secret_active.kid),
         )
         .unwrap();
-        let verified = verify_token_with_secrets(&token, &secrets, "access").unwrap();
-        assert_eq!(verified.sub, sub);
-        assert_eq!(verified.profile_id, profile_id);
+        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        assert_eq!(result.claims.sub, sub);
+        assert_eq!(result.claims.profile_id, profile_id);
+        assert_eq!(result.outcome, JwtVerifyOutcome::DirectMatch);
     }
 
     #[test]
@@ -518,8 +607,9 @@ mod tests {
             Some(&secret1.kid),
         )
         .unwrap();
-        let verified = verify_token_with_secrets(&token, &secrets, "access").unwrap();
-        assert_eq!(verified.sub, sub);
+        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        assert_eq!(result.claims.sub, sub);
+        assert_eq!(result.outcome, JwtVerifyOutcome::DirectMatch);
     }
 
     #[test]
@@ -580,5 +670,63 @@ mod tests {
         .unwrap();
         let result = verify_token_with_secrets(&token, &secrets, "websocket");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn verify_token_with_secrets_unknown_kid_falls_back() {
+        use crate::config::app_config::JwtSecretKey;
+        use chrono::Utc;
+
+        let sub = uuid::Uuid::new_v4();
+        let profile_id = uuid::Uuid::new_v4();
+
+        let secret = JwtSecretKey {
+            kid: "real-key".to_string(),
+            secret: "real-secret".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+
+        let secrets = vec![secret.clone()];
+
+        // Token issued with a kid that doesn't exist in secrets — fallback to all
+        let token = create_token_with_kid(
+            sub,
+            profile_id,
+            0,
+            &secret.secret,
+            3600,
+            "access",
+            Some("unknown-kid"),
+        )
+        .unwrap();
+        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        assert_eq!(result.claims.sub, sub);
+        assert_eq!(result.outcome, JwtVerifyOutcome::FallbackMatch);
+    }
+
+    #[test]
+    fn verify_token_with_secrets_no_kid_header_falls_back() {
+        use crate::config::app_config::JwtSecretKey;
+        use chrono::Utc;
+
+        let sub = uuid::Uuid::new_v4();
+        let profile_id = uuid::Uuid::new_v4();
+
+        let secret = JwtSecretKey {
+            kid: "key-no-header".to_string(),
+            secret: "some-secret".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+
+        let secrets = vec![secret.clone()];
+
+        // Token with no kid in header
+        let token = create_token_with_kid(sub, profile_id, 0, &secret.secret, 3600, "access", None)
+            .unwrap();
+        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        assert_eq!(result.claims.sub, sub);
+        assert_eq!(result.outcome, JwtVerifyOutcome::FallbackMatch);
     }
 }

@@ -255,7 +255,22 @@ pub async fn ws_handler(
                 &secrets,
                 crate::middleware::auth::WEBSOCKET_TOKEN_USE,
             ) {
-                Ok(claims) => claims.profile_id,
+                Ok(result) => {
+                    if let Some(m) = state.as_ref().map(|s| s.metrics.clone()) {
+                        match result.outcome {
+                            crate::middleware::auth::JwtVerifyOutcome::DirectMatch => {
+                                m.record_jwt_direct_match()
+                            },
+                            crate::middleware::auth::JwtVerifyOutcome::FallbackMatch => {
+                                m.record_jwt_fallback_match()
+                            },
+                            crate::middleware::auth::JwtVerifyOutcome::Rejected => {
+                                m.record_jwt_rejected()
+                            },
+                        }
+                    }
+                    result.claims.profile_id
+                },
                 Err(_) => {
                     tracing::warn!("WebSocket auth failed");
                     return Err(AppError::Unauthorized("Invalid token".to_string()));

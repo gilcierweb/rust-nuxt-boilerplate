@@ -199,7 +199,7 @@ impl EmailService {
         let log_subject = safe_subject.clone();
 
         let html = html_body
-            .map(|h| sanitize_for_html_email(h))
+            .map(sanitize_for_html_email)
             .unwrap_or_else(|| self.wrap_html(&safe_subject, &safe_body));
 
         let request = ResendEmailRequest {
@@ -396,8 +396,7 @@ impl EmailService {
     pub async fn send_password_changed_notification(&self, to: &str) -> EmailResult {
         let subject = "Your password has been changed";
         let body = "Your password was successfully changed. If you didn't make this change, please contact support immediately.";
-        let html = format!(
-            r#"<!DOCTYPE html>
+        let html = r#"<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -414,10 +413,9 @@ impl EmailService {
         This email was sent by Boilerplate App
     </p>
 </body>
-</html>"#
-        );
+</html>"#;
 
-        self.send_email_with_html(to, subject, body, Some(&html))
+        self.send_email_with_html(to, subject, body, Some(html))
             .await
     }
 

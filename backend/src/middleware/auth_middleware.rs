@@ -12,7 +12,9 @@ use std::{rc::Rc, sync::Arc};
 use crate::{
     AppState,
     authz::grants_extractor::build_authorities_for_claims,
-    middleware::auth::{ACCESS_TOKEN_USE, Claims, bearer_exempt_routes, verify_token_with_secrets},
+    middleware::auth::{
+        ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, bearer_exempt_routes, verify_token_with_secrets,
+    },
     repositories::access_token_blacklist::AccessTokenBlacklist,
 };
 
@@ -167,11 +169,23 @@ where
                         })?;
 
                     match verify_token_with_secrets(&token, &secrets, ACCESS_TOKEN_USE) {
-                        Ok(claims) => {
-                            req.extensions_mut().insert(claims.clone());
+                        Ok(result) => {
+                            let metrics = req
+                                .app_data::<actix_web::web::Data<AppState>>()
+                                .map(|s| s.metrics.clone());
+                            if let Some(m) = metrics {
+                                match result.outcome {
+                                    JwtVerifyOutcome::DirectMatch => m.record_jwt_direct_match(),
+                                    JwtVerifyOutcome::FallbackMatch => {
+                                        m.record_jwt_fallback_match()
+                                    },
+                                    JwtVerifyOutcome::Rejected => m.record_jwt_rejected(),
+                                }
+                            }
+                            req.extensions_mut().insert(result.claims.clone());
 
                             let authorities = build_authorities_for_claims(
-                                &claims,
+                                &result.claims,
                                 req.app_data::<actix_web::web::Data<
                                     crate::repositories::container::AppContainer,
                                 >>(),
@@ -181,7 +195,15 @@ where
                             req.attach(authorities);
                             svc.call(req).await.map(ServiceResponse::map_into_left_body)
                         },
-                        Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid token")),
+                        Err(_) => {
+                            let metrics = req
+                                .app_data::<actix_web::web::Data<AppState>>()
+                                .map(|s| s.metrics.clone());
+                            if let Some(m) = metrics {
+                                m.record_jwt_rejected();
+                            }
+                            Err(actix_web::error::ErrorUnauthorized("Invalid token"))
+                        },
                     }
                 },
             }
