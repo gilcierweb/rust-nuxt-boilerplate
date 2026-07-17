@@ -133,11 +133,11 @@ fn test_config() -> backend::config::AppConfig {
     let csrf_key = jwt_secret.clone();
     let master_key = std::env::var("MASTER_KEY").unwrap_or_else(|_| {
         use base64::Engine;
-        base64::engine::general_purpose::STANDARD.encode(&[0xABu8; 32])
+        base64::engine::general_purpose::STANDARD.encode([0xABu8; 32])
     });
     let blind_index_key = std::env::var("BLIND_INDEX_KEY").unwrap_or_else(|_| {
         use base64::Engine;
-        base64::engine::general_purpose::STANDARD.encode(&[0xCDu8; 32])
+        base64::engine::general_purpose::STANDARD.encode([0xCDu8; 32])
     });
 
     backend::config::AppConfig {

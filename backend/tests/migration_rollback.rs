@@ -175,19 +175,19 @@ fn migration_names_are_chronological() {
     // Verify chronological ordering (timestamp prefix)
     let mut prev_timestamp: Option<i64> = None;
     for name in &names {
-        if let Some(ts_str) = name.split('_').next() {
-            if let Ok(ts) = ts_str.parse::<i64>() {
-                if let Some(prev) = prev_timestamp {
-                    assert!(
-                        ts > prev,
-                        "Migration '{}' timestamp {} is not greater than previous {}",
-                        name,
-                        ts,
-                        prev
-                    );
-                }
-                prev_timestamp = Some(ts);
+        if let Some(ts_str) = name.split('_').next()
+            && let Ok(ts) = ts_str.parse::<i64>()
+        {
+            if let Some(prev) = prev_timestamp {
+                assert!(
+                    ts > prev,
+                    "Migration '{}' timestamp {} is not greater than previous {}",
+                    name,
+                    ts,
+                    prev
+                );
             }
+            prev_timestamp = Some(ts);
         }
     }
 

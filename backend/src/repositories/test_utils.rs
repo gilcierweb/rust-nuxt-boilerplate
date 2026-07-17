@@ -146,7 +146,7 @@ pub mod mocks {
             .returning(move |_| Ok(user_for_find.clone()));
         mock_user_repo
             .expect_find_by_email()
-            .withf(move |blind_index| blind_index == &email_blind_index)
+            .withf(move |blind_index| blind_index == email_blind_index)
             .times(1)
             .returning(move |_| Ok(Some(user_for_email.clone())));
 

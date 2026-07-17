@@ -1699,7 +1699,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/login")
-            .set_json(&json!({
+            .set_json(json!({
                 "email": "nonexistent@example.com",
                 "password": "Password123"
             }))
@@ -1738,7 +1738,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/login")
-            .set_json(&json!({
+            .set_json(json!({
                 "email": "user@example.com",
                 "password": "WrongPassword2"
             }))
@@ -1805,7 +1805,7 @@ mod tests {
         let req = test::TestRequest::post()
             .uri("/login")
             .insert_header(("User-Agent", "test-agent"))
-            .set_json(&json!({
+            .set_json(json!({
                 "email": "user@example.com",
                 "password": "CorrectPassword1"
             }))
@@ -1891,7 +1891,7 @@ mod tests {
         let refresh_token_plain_owned = refresh_token_plain.to_string();
         mock_refresh_tokens
             .expect_find_valid_by_token()
-            .withf(move |value| value == &refresh_token_plain_owned)
+            .withf(move |value| value == refresh_token_plain_owned)
             .times(1)
             .returning(move |_| {
                 Ok(Some(RefreshToken {
@@ -2022,7 +2022,6 @@ mod tests {
         let cookies: Vec<_> = resp
             .headers()
             .get_all(actix_web::http::header::SET_COOKIE)
-            .into_iter()
             .filter_map(|value| value.to_str().ok())
             .collect();
         assert!(cookies.iter().any(|cookie| cookie.contains("Path=/")));
@@ -2144,7 +2143,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/recover")
-            .set_json(&json!({
+            .set_json(json!({
                 "email": "user@example.com"
             }))
             .to_request();
@@ -2178,7 +2177,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/recover")
-            .set_json(&json!({
+            .set_json(json!({
                 "email": "missing@example.com"
             }))
             .to_request();
@@ -2214,7 +2213,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/reset")
-            .set_json(&json!({
+            .set_json(json!({
                 "token": "plain-reset-token",
                 "password": "Password123",
                 "password_confirmation": "Password123"
@@ -2269,7 +2268,7 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/reset")
-            .set_json(&json!({
+            .set_json(json!({
                 "token": "plain-reset-token",
                 "password": "Password123",
                 "password_confirmation": "Password123"

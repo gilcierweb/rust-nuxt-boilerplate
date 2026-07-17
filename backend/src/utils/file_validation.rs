@@ -244,15 +244,14 @@ pub fn validate_upload(
         .ok_or_else(|| FileValidationError::UnsupportedMimeType(declared_mime.to_string()))?;
 
     // Validate magic bytes match declared MIME type
-    if !data_prefix.is_empty() {
-        if let Some(detected_mime) = detect_mime_from_bytes(data_prefix) {
-            if detected_mime != declared_mime {
-                return Err(FileValidationError::MimeTypeMismatch {
-                    declared: declared_mime.to_string(),
-                    detected: detected_mime.to_string(),
-                });
-            }
-        }
+    if !data_prefix.is_empty()
+        && let Some(detected_mime) = detect_mime_from_bytes(data_prefix)
+        && detected_mime != declared_mime
+    {
+        return Err(FileValidationError::MimeTypeMismatch {
+            declared: declared_mime.to_string(),
+            detected: detected_mime.to_string(),
+        });
     }
 
     // Check size limit

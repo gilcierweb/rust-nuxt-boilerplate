@@ -83,7 +83,7 @@ pub async fn upload_file(
 
     while let Some(item) = payload.next().await {
         let mut field = item.map_err(|e| AppError::BadRequest(e.to_string()))?;
-        let content_disposition = field.content_disposition().clone();
+        let content_disposition = field.content_disposition();
         let field_name = content_disposition
             .as_ref()
             .and_then(|cd| cd.get_name())

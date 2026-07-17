@@ -188,7 +188,7 @@ impl WsState {
 
     pub async fn broadcast_to_room(&self, room: &str, message: WsMessage) {
         let conns = self.connections.lock().await;
-        for (_, info) in conns.iter() {
+        for info in conns.values() {
             if info.room.as_ref() == Some(&room.to_string()) {
                 let _ = info.addr.try_send(message.clone());
             }
@@ -202,7 +202,7 @@ impl WsState {
         message: WsMessage,
     ) {
         let conns = self.connections.lock().await;
-        for (_, info) in conns.iter() {
+        for info in conns.values() {
             if info.room.as_ref() == Some(&room.to_string())
                 && info.profile_id != excluded_profile_id
             {
@@ -257,7 +257,7 @@ impl WsState {
 
     async fn broadcast_to_all(&self, message: WsMessage) {
         let conns = self.connections.lock().await;
-        for (_, info) in conns.iter() {
+        for info in conns.values() {
             let _ = info.addr.try_send(message.clone());
         }
     }

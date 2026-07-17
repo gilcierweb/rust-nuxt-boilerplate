@@ -162,29 +162,31 @@ where
             let mut res = svc.call(req).await?;
 
             // Rotate CSRF token on successful state-changing requests
-            if should_check && is_state_changing {
-                if let Some(config) = res.request().app_data::<AppConfig>().cloned() {
-                    let new_token = generate_csrf_token(&config.csrf_secret_key);
-                    let cookie = build_csrf_cookie(&config, &new_token);
+            if should_check
+                && is_state_changing
+                && let Some(config) = res.request().app_data::<AppConfig>().cloned()
+            {
+                let new_token = generate_csrf_token(&config.csrf_secret_key);
+                let cookie = build_csrf_cookie(&config, &new_token);
 
-                    res.response_mut().headers_mut().append(
-                        actix_web::http::header::SET_COOKIE,
-                        cookie.to_string().parse().unwrap(),
-                    );
-                }
+                res.response_mut().headers_mut().append(
+                    actix_web::http::header::SET_COOKIE,
+                    cookie.to_string().parse().unwrap(),
+                );
             }
 
             // Set CSRF token cookie on GET responses if not already present
-            if !is_state_changing && !res.response().headers().contains_key("set-cookie") {
-                if let Some(config) = res.request().app_data::<AppConfig>().cloned() {
-                    let csrf_token = generate_csrf_token(&config.csrf_secret_key);
-                    let cookie = build_csrf_cookie(&config, &csrf_token);
+            if !is_state_changing
+                && !res.response().headers().contains_key("set-cookie")
+                && let Some(config) = res.request().app_data::<AppConfig>().cloned()
+            {
+                let csrf_token = generate_csrf_token(&config.csrf_secret_key);
+                let cookie = build_csrf_cookie(&config, &csrf_token);
 
-                    res.response_mut().headers_mut().append(
-                        actix_web::http::header::SET_COOKIE,
-                        cookie.to_string().parse().unwrap(),
-                    );
-                }
+                res.response_mut().headers_mut().append(
+                    actix_web::http::header::SET_COOKIE,
+                    cookie.to_string().parse().unwrap(),
+                );
             }
 
             Ok(res.map_into_boxed_body())

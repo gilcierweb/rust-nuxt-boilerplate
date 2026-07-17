@@ -72,12 +72,12 @@ mod tests {
 
     fn valid_master_key() -> String {
         use base64::Engine;
-        base64::engine::general_purpose::STANDARD.encode(&[0u8; 32])
+        base64::engine::general_purpose::STANDARD.encode([0u8; 32])
     }
 
     fn valid_blind_index_key() -> String {
         use base64::Engine;
-        base64::engine::general_purpose::STANDARD.encode(&[1u8; 32])
+        base64::engine::general_purpose::STANDARD.encode([1u8; 32])
     }
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
     #[test]
     fn short_master_key_is_rejected() {
         use base64::Engine;
-        let short_key = base64::engine::general_purpose::STANDARD.encode(&[0u8; 16]);
+        let short_key = base64::engine::general_purpose::STANDARD.encode([0u8; 16]);
         let result = KeyManager::from_base64_keys(&short_key, &valid_blind_index_key());
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -106,7 +106,7 @@ mod tests {
     #[test]
     fn short_blind_index_key_is_rejected() {
         use base64::Engine;
-        let short_key = base64::engine::general_purpose::STANDARD.encode(&[0u8; 16]);
+        let short_key = base64::engine::general_purpose::STANDARD.encode([0u8; 16]);
         let result = KeyManager::from_base64_keys(&valid_master_key(), &short_key);
         assert!(result.is_err());
         let err = result.unwrap_err();
@@ -134,8 +134,8 @@ mod tests {
     #[test]
     fn derive_encryption_key_different_master_keys_differ() {
         use base64::Engine;
-        let master1 = base64::engine::general_purpose::STANDARD.encode(&[0u8; 32]);
-        let master2 = base64::engine::general_purpose::STANDARD.encode(&[1u8; 32]);
+        let master1 = base64::engine::general_purpose::STANDARD.encode([0u8; 32]);
+        let master2 = base64::engine::general_purpose::STANDARD.encode([1u8; 32]);
         let bik = valid_blind_index_key();
 
         let km1 = KeyManager::from_base64_keys(&master1, &bik).unwrap();

@@ -13,6 +13,12 @@ pub struct StripeWebhookVerifier {
     enabled: bool,
 }
 
+impl Default for StripeWebhookVerifier {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StripeWebhookVerifier {
     pub fn new() -> Self {
         Self { enabled: true }

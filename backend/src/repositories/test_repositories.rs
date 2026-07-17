@@ -177,7 +177,7 @@ pub fn setup_user_repo_find_by_email(
     let user_clone = user.clone();
     mock_repo
         .expect_find_by_email()
-        .withf(move |blind_index| blind_index == &email_blind_index)
+        .withf(move |blind_index| blind_index == email_blind_index)
         .times(1)
         .returning(move |_| Ok(Some(user_clone.clone())));
 }
@@ -219,7 +219,7 @@ pub fn setup_refresh_token_repo_find_by_hash(
     let token_clone = token.clone();
     mock_repo
         .expect_find_by_token_hash()
-        .withf(move |hash| hash == &token_hash)
+        .withf(move |hash| hash == token_hash)
         .times(1)
         .returning(move |_| Ok(Some(token_clone.clone())));
 }

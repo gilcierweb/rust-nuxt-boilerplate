@@ -116,23 +116,20 @@ impl<S> ApiVersionGuardMiddleware<S> {
             return Some(version);
         }
 
-        if let Some(accept) = req.headers().get(header::ACCEPT) {
-            if let Ok(accept_str) = accept.to_str() {
-                if let Some(version) = Self::parse_version_from_accept(accept_str) {
-                    return Some(version);
-                }
-            }
+        if let Some(accept) = req.headers().get(header::ACCEPT)
+            && let Ok(accept_str) = accept.to_str()
+            && let Some(version) = Self::parse_version_from_accept(accept_str)
+        {
+            return Some(version);
         }
 
         if let Some(header_val) = req
             .headers()
             .get(header::HeaderName::from_static("x-api-version"))
+            && let Ok(val_str) = header_val.to_str()
+            && let Ok(v) = u16::from_str(val_str.trim())
         {
-            if let Ok(val_str) = header_val.to_str() {
-                if let Ok(v) = u16::from_str(val_str.trim()) {
-                    return Some(v);
-                }
-            }
+            return Some(v);
         }
 
         None
@@ -156,10 +153,10 @@ impl<S> ApiVersionGuardMiddleware<S> {
     fn parse_version_from_accept(accept: &str) -> Option<u16> {
         for part in accept.split(',') {
             let part = part.trim();
-            if let Some(media) = part.strip_prefix("application/vnd.app-boilerplate.v") {
-                if let Some(num_str) = media.strip_suffix("+json") {
-                    return u16::from_str(num_str).ok();
-                }
+            if let Some(media) = part.strip_prefix("application/vnd.app-boilerplate.v")
+                && let Some(num_str) = media.strip_suffix("+json")
+            {
+                return u16::from_str(num_str).ok();
             }
         }
         None
@@ -206,10 +203,10 @@ where
                                 header::HeaderValue::from_static("true"),
                             );
 
-                            if let Some(sunset) = &deprecated_info.sunset {
-                                if let Ok(val) = header::HeaderValue::from_str(sunset) {
-                                    headers.insert(HEADER_SUNSET, val);
-                                }
+                            if let Some(sunset) = &deprecated_info.sunset
+                                && let Ok(val) = header::HeaderValue::from_str(sunset)
+                            {
+                                headers.insert(HEADER_SUNSET, val);
                             }
 
                             if let Some(docs) = &deprecated_info.docs_url {

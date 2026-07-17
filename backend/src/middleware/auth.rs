@@ -294,12 +294,11 @@ pub fn verify_token_with_secrets(
     let kid = token_header.kid.as_deref();
 
     // If kid is present, try to find matching secret first
-    if let Some(k) = kid {
-        if let Some(secret_key) = secrets.iter().find(|s| s.kid == k && s.is_active()) {
-            if let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use) {
-                return Ok(claims);
-            }
-        }
+    if let Some(k) = kid
+        && let Some(secret_key) = secrets.iter().find(|s| s.kid == k && s.is_active())
+        && let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use)
+    {
+        return Ok(claims);
     }
 
     // Fallback: try all active secrets

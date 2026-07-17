@@ -428,15 +428,21 @@ mod tests {
 
     #[test]
     fn rate_limit_constants_are_ordered_correctly() {
-        assert!(RATE_AUTH_STRICT.max_requests < RATE_AUTH.max_requests);
-        assert!(RATE_AUTH.max_requests < RATE_AUTH_AUTHENTICATED.max_requests);
-        assert!(RATE_AUTH_STRICT_AUTHENTICATED.max_requests < RATE_AUTH_AUTHENTICATED.max_requests);
-        assert!(RATE_API.max_requests < RATE_API_AUTHENTICATED.max_requests);
+        const {
+            assert!(RATE_AUTH_STRICT.max_requests < RATE_AUTH.max_requests);
+            assert!(RATE_AUTH.max_requests < RATE_AUTH_AUTHENTICATED.max_requests);
+            assert!(
+                RATE_AUTH_STRICT_AUTHENTICATED.max_requests < RATE_AUTH_AUTHENTICATED.max_requests
+            );
+            assert!(RATE_API.max_requests < RATE_API_AUTHENTICATED.max_requests);
+        }
     }
 
     #[test]
     fn authenticated_limits_are_stricter_than_anonymous_for_strict() {
-        assert!(RATE_AUTH_STRICT.max_requests < RATE_AUTH_STRICT_AUTHENTICATED.max_requests);
+        const {
+            assert!(RATE_AUTH_STRICT.max_requests < RATE_AUTH_STRICT_AUTHENTICATED.max_requests);
+        }
     }
 
     #[test]

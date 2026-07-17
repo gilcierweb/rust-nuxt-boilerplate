@@ -66,3 +66,10 @@ impl Database {
         Self::from_config(&config)
     }
 }
+
+impl Default for Database {
+    fn default() -> Self {
+        let config = AppConfig::from_env().expect("Failed to load configuration");
+        Self::from_config(&config)
+    }
+}

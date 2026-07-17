@@ -323,10 +323,10 @@ async fn main() -> std::io::Result<()> {
     };
 
     // Shutdown OpenTelemetry provider to flush pending traces
-    if let Some(provider) = otel_provider {
-        if let Err(e) = provider.shutdown() {
-            tracing::warn!(error = %e, "Failed to shutdown OpenTelemetry provider");
-        }
+    if let Some(provider) = otel_provider
+        && let Err(e) = provider.shutdown()
+    {
+        tracing::warn!(error = %e, "Failed to shutdown OpenTelemetry provider");
     }
 
     result

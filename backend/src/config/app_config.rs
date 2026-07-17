@@ -33,11 +33,10 @@ use base64::Engine as _;
 /// export JWT_SECRET_FILE=/run/secrets/jwt_secret
 /// ```
 fn secret_from_env_or_file(name: &str, default: &str) -> String {
-    // First, check for direct environment variable
-    if let Ok(value) = env::var(name) {
-        if !value.is_empty() {
-            return value;
-        }
+    if let Ok(value) = env::var(name)
+        && !value.is_empty()
+    {
+        return value;
     }
 
     // Second, check for file-based secret (Docker secrets pattern)
@@ -68,11 +67,10 @@ fn secret_from_env_or_file(name: &str, default: &str) -> String {
 /// Read a required secret from environment or file.
 /// Returns error if not found in either location.
 fn required_secret(name: &str) -> Result<String, env::VarError> {
-    // Check direct environment variable first
-    if let Ok(value) = env::var(name) {
-        if !value.is_empty() {
-            return Ok(value);
-        }
+    if let Ok(value) = env::var(name)
+        && !value.is_empty()
+    {
+        return Ok(value);
     }
 
     // Check file-based secret
@@ -112,7 +110,7 @@ pub struct JwtSecretKey {
 impl JwtSecretKey {
     pub fn is_active(&self) -> bool {
         let now = chrono::Utc::now().naive_utc();
-        self.expires_at.map_or(true, |exp| exp > now)
+        self.expires_at.is_none_or(|exp| exp > now)
     }
 }
 

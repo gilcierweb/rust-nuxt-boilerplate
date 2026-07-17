@@ -57,7 +57,7 @@ pub async fn verify_audit_log_chain(
 
     // Sort by created_at ascending (oldest first)
     let mut sorted = audit_logs.to_vec();
-    sorted.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+    sorted.sort_by_key(|a| a.created_at);
 
     let mut verified = 0;
     let mut prev_hash: Option<String> = None;

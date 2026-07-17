@@ -9,6 +9,12 @@ pub struct EmailService {
     from_name: String,
 }
 
+impl Default for EmailService {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EmailService {
     pub fn from_config(config: &AppConfig) -> Self {
         Self {
