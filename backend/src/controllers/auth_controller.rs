@@ -229,7 +229,7 @@ pub async fn confirm(
 }
 
 /// Get user roles with Redis caching to avoid N+1 queries
-/// Cache TTL: 5 minutes (roles rarely change)
+/// Cache TTL: 60 seconds (short window minimizes stale role propagation)
 async fn get_cached_user_roles(container: &AppContainer, user_id: &Uuid) -> AppResult<Vec<String>> {
     let cache_key = format!("user_roles:{}", user_id);
 
@@ -245,20 +245,31 @@ async fn get_cached_user_roles(container: &AppContainer, user_id: &Uuid) -> AppR
         .await
         .map_err(AppError::Database)?;
 
-    // Cache for 5 minutes
+    // Cache for 60 seconds
     let _ = container
         .cache
-        .set_with_ttl(&cache_key, &roles, std::time::Duration::from_secs(300))
+        .set_with_ttl(&cache_key, &roles, std::time::Duration::from_secs(60))
         .await;
 
     Ok(roles)
 }
 
-/// Invalidate cached user roles (call when roles change)
-#[allow(dead_code)]
+/// Invalidate cached user roles (call when roles change for a specific user)
 pub async fn invalidate_user_roles_cache(container: &AppContainer, user_id: &Uuid) {
     let cache_key = format!("user_roles:{}", user_id);
     let _ = container.cache.delete(&cache_key).await;
+}
+
+/// Invalidate role cache for all users assigned to a given role.
+///
+/// Called from role CRUD endpoints (create, update, delete) to ensure
+/// stale role data does not persist beyond the 60-second TTL window.
+pub async fn invalidate_role_cache(container: &AppContainer, role_id: &Uuid) {
+    if let Ok(user_roles) = container.user_roles.find_by_role(role_id).await {
+        for ur in user_roles {
+            invalidate_user_roles_cache(container, &ur.user_id).await;
+        }
+    }
 }
 
 // POST /api/v1/auth/login

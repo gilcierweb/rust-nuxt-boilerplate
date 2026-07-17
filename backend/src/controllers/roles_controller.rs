@@ -7,6 +7,7 @@ use validator::Validate;
 
 use crate::{
     authz::ability::{AbilityAction, AbilityResource, authorize},
+    controllers::auth_controller::invalidate_role_cache,
     errors::{AppError, AppResult},
     models::role::NewRole,
     repositories::container::AppContainer,
@@ -129,6 +130,7 @@ pub async fn update_role(
         .validate()
         .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
 
+    let role_id = id.into_inner();
     let new_role = NewRole {
         name: payload.name,
         resource_type: payload.resource_type,
@@ -137,9 +139,13 @@ pub async fn update_role(
 
     let updated = container
         .roles
-        .update(&id.into_inner(), &new_role)
+        .update(&role_id, &new_role)
         .await
         .map_err(|error| map_repo_error(error, "Role"))?;
+
+    // Invalidate cached roles for all users assigned to this role
+    invalidate_role_cache(&container, &role_id).await;
+
     Ok(HttpResponse::Ok().json(updated))
 }
 
@@ -150,14 +156,18 @@ pub async fn delete_role(
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::Roles, AbilityAction::Delete)?;
+    let role_id = id.into_inner();
     let affected = container
         .roles
-        .destroy(&id.into_inner())
+        .destroy(&role_id)
         .await
         .map_err(AppError::Database)?;
     if affected == 0 {
         return Err(AppError::NotFound("Role".to_string()));
     }
+
+    // Invalidate cached roles for all users who had this role
+    invalidate_role_cache(&container, &role_id).await;
 
     Ok(HttpResponse::Ok().json(serde_json::json!({ "deleted": true })))
 }
