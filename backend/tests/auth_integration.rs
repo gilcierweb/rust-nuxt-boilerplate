@@ -322,13 +322,11 @@ async fn test_full_auth_cycle() {
     if status.is_success() {
         let user_id = body["user_id"].as_str().unwrap();
         let mut conn = db.pool().get().await.expect("Failed to get connection");
-        diesel::sql_query(
-            "UPDATE users SET confirmed_at = NOW() WHERE id = $1",
-        )
-        .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(user_id).unwrap())
-        .execute(&mut *conn)
-        .await
-        .expect("Failed to confirm user email");
+        diesel::sql_query("UPDATE users SET confirmed_at = NOW() WHERE id = $1")
+            .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(user_id).unwrap())
+            .execute(&mut *conn)
+            .await
+            .expect("Failed to confirm user email");
     }
 
     // --- Step 2: Login ---
