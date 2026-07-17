@@ -8,8 +8,8 @@
 //! - Redis running at REDIS_URL_TEST (default: redis://127.0.0.1:6379)
 //! - Migrations applied: `diesel migration run --database-url $DATABASE_URL_TEST`
 
-use actix_web::{App, test, web, HttpMessage};
-use backend::middleware::auth::{Claims, ACCESS_TOKEN_USE};
+use actix_web::{App, HttpMessage, test, web};
+use backend::middleware::auth::{ACCESS_TOKEN_USE, Claims};
 use chrono::Utc;
 use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
