@@ -1,0 +1,13 @@
+[advisories]
+# rsa 0.9.10: Marvin Attack timing sidechannel
+# No fixed version available - transitive dep of jsonwebtoken
+# Will be resolved when jsonwebtoken updates its rsa dependency
+ignore = ["RUSTSEC-2023-0071"]
+
+# proc-macro-error2: unmaintained but functional
+# Will be resolved when dependencies update
+# ignore = ["RUSTSEC-2026-0173"]
+
+# rustls-pemfile: unmaintained but functional
+# Will be resolved when dependencies update
+# ignore = ["RUSTSEC-2025-0134"]
