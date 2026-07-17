@@ -54,10 +54,8 @@ impl TestDb {
     }
 
     async fn create_auth_schema(&self) {
-        let mut conn = self.pool.get().await.expect("Failed to get connection");
-        diesel::sql_query(
-            r#"
-            CREATE TABLE IF NOT EXISTS users (
+        let statements = [
+            r#"CREATE TABLE IF NOT EXISTS users (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 email_encrypted BYTEA NOT NULL,
                 email_blind_index BYTEA NOT NULL,
@@ -71,8 +69,8 @@ impl TestDb {
                 encryption_key_version INTEGER DEFAULT 1,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS profiles (
+            )"#,
+            r#"CREATE TABLE IF NOT EXISTS profiles (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
                 first_name TEXT, last_name TEXT, slug TEXT UNIQUE,
@@ -80,39 +78,43 @@ impl TestDb {
                 phone_encrypted BYTEA, phone_blind_index BYTEA,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS roles (
+            )"#,
+            r#"CREATE TABLE IF NOT EXISTS roles (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 name VARCHAR(50) NOT NULL, resource_type VARCHAR(50), resource_id UUID
-            );
-            CREATE TABLE IF NOT EXISTS users_roles (
+            )"#,
+            r#"CREATE TABLE IF NOT EXISTS users_roles (
                 user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
                 PRIMARY KEY (user_id, role_id)
-            );
-            CREATE TABLE IF NOT EXISTS refresh_tokens (
+            )"#,
+            r#"CREATE TABLE IF NOT EXISTS refresh_tokens (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 token_hash TEXT NOT NULL, device_info TEXT, ip_address TEXT,
                 expires_at TIMESTAMPTZ NOT NULL, revoked_at TIMESTAMPTZ,
                 created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-            CREATE TABLE IF NOT EXISTS audit_logs (
+            )"#,
+            r#"CREATE TABLE IF NOT EXISTS audit_logs (
                 id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
                 actor_id UUID, actor_role_snapshot TEXT, action VARCHAR(100) NOT NULL,
                 resource_type VARCHAR(100), resource_id UUID, metadata JSONB,
                 ip_address TEXT, user_agent TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            );
-            INSERT INTO roles (id, name) VALUES
+            )"#,
+            r#"INSERT INTO roles (id, name) VALUES
                 ('a0000000-0000-0000-0000-000000000001', 'admin'),
                 ('a0000000-0000-0000-0000-000000000002', 'operator'),
                 ('a0000000-0000-0000-0000-000000000003', 'viewer')
-            ON CONFLICT DO NOTHING;
-            "#,
-        )
-        .execute(&mut *conn)
-        .await
-        .expect("Failed to create test schema");
+            ON CONFLICT DO NOTHING"#,
+        ];
+
+        for sql in &statements {
+            let mut conn = self.pool.get().await.expect("Failed to get connection");
+            diesel::sql_query(*sql)
+                .execute(&mut *conn)
+                .await
+                .expect("Failed to create test schema");
+        }
     }
 }
 
