@@ -122,15 +122,9 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - name: Ensure pnpm in PATH
         run: |
-          echo "$PNPM_HOME" >> $GITHUB_PATH
-          pnpm --version
+          corepack enable
+          corepack prepare pnpm@9 --activate
 
       - name: Cache pnpm modules
         uses: actions/cache@v4
