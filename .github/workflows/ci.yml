@@ -127,6 +127,11 @@ jobs:
           version: 9
           run_install: false
 
+      - name: Ensure pnpm in PATH
+        run: |
+          echo "$PNPM_HOME" >> $GITHUB_PATH
+          pnpm --version
+
       - name: Cache pnpm modules
         uses: actions/cache@v4
         with:
