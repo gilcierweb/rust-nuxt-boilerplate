@@ -53,6 +53,7 @@ impl TestDb {
             .expect("Failed to create schema");
     }
 
+    #[allow(dead_code)]
     async fn create_auth_schema(&self) {
         let statements = [
             r#"CREATE TABLE IF NOT EXISTS users (
