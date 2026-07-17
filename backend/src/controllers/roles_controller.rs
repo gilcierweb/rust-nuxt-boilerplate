@@ -49,13 +49,7 @@ fn normalize_role_payload(payload: &mut RoleWriteRequest) {
         .resource_type
         .as_ref()
         .map(|value| sanitize_input(&strip_html(value)))
-        .and_then(|value| {
-            if value.trim().is_empty() {
-                None
-            } else {
-                Some(value)
-            }
-        });
+        .filter(|value| !value.trim().is_empty());
 }
 
 #[get("/roles")]
