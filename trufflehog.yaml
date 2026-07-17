@@ -1,0 +1,40 @@
+# TruffleHog configuration
+# Exclude build artifacts and git directories
+
+exclude:
+  paths:
+    - target/
+    - .git/
+    - node_modules/
+    - frontend/.nuxt/
+    - frontend/.output/
+    - backend/target/
+    - "*.lock"
+
+# Only scan source files
+include_detectors:
+  - AWS
+  - AWS_ID
+  - AWS_SECRET
+  - AWS_SESSION_TOKEN
+  - Azure
+  - Cloudflare
+  - Databricks
+  - DigitalOcean
+  - Docker
+  - GitHub
+  - GitLab
+  - Google
+  - Heroku
+  - JWT
+  - Kubernetes
+  - Mailgun
+  - MongoDB
+  - MySQL
+  - OpenAI
+  - PostgreSQL
+  - Redis
+  - SendGrid
+  - Slack
+  - Stripe
+  - Twilio

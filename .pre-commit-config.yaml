@@ -1,0 +1,119 @@
+# Pre-commit hooks configuration
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  # General hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: forbid-new-submodules
+
+  # Rust formatting
+  - repo: https://github.com/rust-lang/rustfmt
+    rev: v1.7.4
+    hooks:
+      - id: rustfmt
+        types: [rust]
+        args: [--check]
+
+  # Rust clippy
+  - repo: local
+    hooks:
+      - id: cargo-clippy
+        name: cargo clippy
+        entry: cargo clippy --all-targets --all-features -- -D warnings
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # Cargo fmt
+  - repo: local
+    hooks:
+      - id: cargo-fmt
+        name: cargo fmt check
+        entry: cargo fmt --all -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # Cargo audit
+  - repo: local
+    hooks:
+      - id: cargo-audit
+        name: cargo audit
+        entry: cargo audit
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # TruffleHog secret scanning
+  - repo: https://github.com/trufflesecurity/trufflehog
+    rev: v3.81.0
+    hooks:
+      - id: trufflehog
+        name: TruffleHog Secret Scan
+        entry: trufflehog filesystem --directory=. --fail --no-verification
+        language: system
+        types: [file]
+        pass_filenames: false
+        exclude: ^(target/|\.git/|node_modules/|frontend/node_modules/)
+
+  # Gitleaks secret scanning
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.18.0
+    hooks:
+      - id: gitleaks
+        name: Gitleaks Secret Scan
+        entry: gitleaks detect --source=. --no-banner --report-format=sarif --report-path=gitleaks-report.sarif
+        language: system
+        types: [file]
+        pass_filenames: false
+        exclude: ^(target/|\.git/|node_modules/|frontend/node_modules/)
+
+  # Frontend formatting
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0
+    hooks:
+      - id: prettier
+        name: Prettier formatting
+        types_or: [javascript, typescript, vue, json, yaml, markdown]
+        exclude: ^(frontend/node_modules/)
+
+  # ESLint
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: pnpm run lint
+        language: system
+        types_or: [javascript, typescript, vue]
+        pass_filenames: false
+        working_directory: frontend
+
+  # TypeScript typecheck
+  - repo: local
+    hooks:
+      - id: tsc-check
+        name: TypeScript typecheck
+        entry: pnpm run typecheck
+        language: system
+        types_or: [typescript]
+        pass_filenames: false
+        working_directory: frontend
+
+  # SQL formatting
+  - repo: https://github.com/sqlfluff/sqlfluff
+    rev: 3.2.0
+    hooks:
+      - id: sqlfluff
+        name: SQLFluff lint
+        types: [sql]
+        args: [lint]
+        exclude: ^(target/|\.git/|node_modules/|frontend/node_modules/)

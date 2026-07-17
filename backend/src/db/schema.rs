@@ -18,6 +18,7 @@ diesel::table! {
         changes -> Jsonb,
         metadata -> Jsonb,
         created_at -> Timestamptz,
+        #[max_length = 64]
         prev_hash -> Nullable<Varchar>,
         #[max_length = 64]
         hash -> Varchar,

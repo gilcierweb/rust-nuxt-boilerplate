@@ -1,0 +1,15 @@
+target/
+.git/
+node_modules/
+frontend/.nuxt/
+frontend/.output/
+backend/target/
+.*\.lock
+.*\.zip
+.*\.rmeta
+.*\.o
+.*\.so
+.*\.dylib
+.*\.dll
+.*\.exe
+docs/
