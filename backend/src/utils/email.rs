@@ -25,7 +25,7 @@ fn is_basic_valid(email: &str) -> bool {
     match (local, domain) {
         (Some(l), Some(d)) => {
             !l.is_empty() && !d.is_empty() && d.contains('.') // domínio básico válido
-        }
+        },
         _ => false,
     }
 }

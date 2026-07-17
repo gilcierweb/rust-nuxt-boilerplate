@@ -124,21 +124,27 @@ mod tests {
     #[actix_web::test]
     async fn send_email_returns_ok() {
         let service = EmailService::new();
-        let result = service.send_email("test@example.com", "Subject", "Body").await;
+        let result = service
+            .send_email("test@example.com", "Subject", "Body")
+            .await;
         assert!(result.is_ok());
     }
 
     #[actix_web::test]
     async fn send_confirmation_returns_ok() {
         let service = EmailService::new();
-        let result = service.send_confirmation("test@example.com", "token123").await;
+        let result = service
+            .send_confirmation("test@example.com", "token123")
+            .await;
         assert!(result.is_ok());
     }
 
     #[actix_web::test]
     async fn send_password_reset_returns_ok() {
         let service = EmailService::new();
-        let result = service.send_password_reset("test@example.com", "token123").await;
+        let result = service
+            .send_password_reset("test@example.com", "token123")
+            .await;
         assert!(result.is_ok());
     }
 
@@ -146,7 +152,11 @@ mod tests {
     async fn send_email_sanitizes_script_tag_in_to() {
         let service = EmailService::new();
         let result = service
-            .send_email("<script>alert('xss')</script>@example.com", "Subject", "Body")
+            .send_email(
+                "<script>alert('xss')</script>@example.com",
+                "Subject",
+                "Body",
+            )
             .await;
         assert!(result.is_ok());
     }

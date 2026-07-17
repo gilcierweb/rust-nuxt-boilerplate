@@ -62,7 +62,10 @@ mod tests {
     #[test]
     fn falls_back_to_field_name_for_unknown_field() {
         rust_i18n::set_locale("en");
-        assert_eq!(resolve_field_label("unknown_field_xyz"), "unknown_field_xyz");
+        assert_eq!(
+            resolve_field_label("unknown_field_xyz"),
+            "unknown_field_xyz"
+        );
     }
 
     #[test]

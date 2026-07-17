@@ -20,7 +20,8 @@ pub trait IRefreshTokenRepository: Send + Sync {
 
     /// Find a valid (non-revoked, non-expired) refresh token by verifying the plaintext token
     /// against stored Argon2id hashes. Used for Argon2id token verification.
-    async fn find_valid_by_token(&self, plaintext_token: &str) -> QueryResult<Option<RefreshToken>>;
+    async fn find_valid_by_token(&self, plaintext_token: &str)
+    -> QueryResult<Option<RefreshToken>>;
 
     /// Atomically revoke an existing token and create a new one in a single transaction.
     /// Takes the old token plaintext, expiry seconds, and hash salt.

@@ -135,7 +135,8 @@ impl WsState {
         };
 
         if should_broadcast_online {
-            self.broadcast_presence_change(info.profile_id, true, None).await;
+            self.broadcast_presence_change(info.profile_id, true, None)
+                .await;
         }
     }
 
@@ -180,7 +181,8 @@ impl WsState {
         };
 
         if let Some(seen_at) = last_seen_at {
-            self.broadcast_presence_change(info.profile_id, false, Some(seen_at)).await;
+            self.broadcast_presence_change(info.profile_id, false, Some(seen_at))
+                .await;
         }
     }
 
@@ -345,28 +347,25 @@ impl Actor for WebSocketActor {
 
         // Start heartbeat
         let interval = self.ws_state.limits.heartbeat_interval_secs;
-        ctx.run_interval(
-            std::time::Duration::from_secs(interval),
-            |act, ctx| {
-                let timeout = act.ws_state.limits.client_timeout_secs;
-                let elapsed = Utc::now()
-                    .signed_duration_since(act.last_pong)
-                    .num_seconds() as u64;
+        ctx.run_interval(std::time::Duration::from_secs(interval), |act, ctx| {
+            let timeout = act.ws_state.limits.client_timeout_secs;
+            let elapsed = Utc::now()
+                .signed_duration_since(act.last_pong)
+                .num_seconds() as u64;
 
-                if elapsed > timeout {
-                    tracing::warn!(
-                        connection_id = %act.conn_id,
-                        "WebSocket heartbeat timeout (no pong for {}s)",
-                        elapsed
-                    );
-                    ctx.close(None);
-                    ctx.stop();
-                    return;
-                }
+            if elapsed > timeout {
+                tracing::warn!(
+                    connection_id = %act.conn_id,
+                    "WebSocket heartbeat timeout (no pong for {}s)",
+                    elapsed
+                );
+                ctx.close(None);
+                ctx.stop();
+                return;
+            }
 
-                ctx.ping(b"");
-            },
-        );
+            ctx.ping(b"");
+        });
 
         tracing::info!(
             "WebSocket connected: {} (profile: {})",
@@ -403,21 +402,21 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketActor {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Pong(_)) => {
                 self.last_pong = Utc::now();
-            }
+            },
             Ok(ws::Message::Text(text)) => self.handle_message(&text, ctx),
-            Ok(ws::Message::Binary(_)) => {}
+            Ok(ws::Message::Binary(_)) => {},
             Ok(ws::Message::Close(reason)) => {
                 ctx.close(reason);
                 ctx.stop();
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 }
 
 impl WebSocketActor {
     fn handle_message(&mut self, text: &str, ctx: &mut ws::WebsocketContext<Self>) {
-        use crate::ws::validation::{validate_client_message, WsClientAction};
+        use crate::ws::validation::{WsClientAction, validate_client_message};
 
         let action = match validate_client_message(text) {
             Ok(a) => a,
@@ -429,7 +428,7 @@ impl WebSocketActor {
                 );
                 ctx.text(err.to_json());
                 return;
-            }
+            },
         };
 
         match action {
@@ -456,7 +455,7 @@ impl WebSocketActor {
                     }),
                 );
                 ctx.text(serde_json::to_string(&response).unwrap_or_default());
-            }
+            },
             WsClientAction::LeaveRoom => {
                 self.room = None;
                 let conn_info = ConnectionInfo {
@@ -471,7 +470,7 @@ impl WebSocketActor {
                 ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
                     ws_state.add_connection(conn_id, conn_info).await;
                 }));
-            }
+            },
             WsClientAction::Chat { content } => {
                 if let Some(room) = &self.room {
                     let chat_msg = WsMessage::chat(&content, &self.username);
@@ -481,7 +480,7 @@ impl WebSocketActor {
                         ws_state.broadcast_to_room(&room, chat_msg).await;
                     }));
                 }
-            }
+            },
             WsClientAction::Typing => {
                 if let Some(room) = &self.room {
                     let typing_msg = WsMessage::new(
@@ -495,10 +494,12 @@ impl WebSocketActor {
                     let room = room.clone();
                     let profile_id = self.profile_id;
                     ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
-                        ws_state.broadcast_to_room_except(&room, profile_id, typing_msg).await;
+                        ws_state
+                            .broadcast_to_room_except(&room, profile_id, typing_msg)
+                            .await;
                     }));
                 }
-            }
+            },
             WsClientAction::StopTyping => {
                 if let Some(room) = &self.room {
                     let stop_typing_msg = WsMessage::new(
@@ -512,10 +513,12 @@ impl WebSocketActor {
                     let room = room.clone();
                     let profile_id = self.profile_id;
                     ctx.spawn(actix::fut::wrap_future::<_, Self>(async move {
-                        ws_state.broadcast_to_room_except(&room, profile_id, stop_typing_msg).await;
+                        ws_state
+                            .broadcast_to_room_except(&room, profile_id, stop_typing_msg)
+                            .await;
                     }));
                 }
-            }
+            },
             WsClientAction::Ping => {
                 let pong = WsMessage::new(
                     "pong",
@@ -524,7 +527,7 @@ impl WebSocketActor {
                     }),
                 );
                 ctx.text(serde_json::to_string(&pong).unwrap_or_default());
-            }
+            },
         }
     }
 }
@@ -556,12 +559,12 @@ pub async fn ws_handler(
                 Err(_) => {
                     tracing::warn!("WebSocket auth failed");
                     return Err(AppError::Unauthorized("Invalid token".to_string()));
-                }
+                },
             }
-        }
+        },
         None => {
             return Err(AppError::Unauthorized("Missing token".to_string()));
-        }
+        },
     };
 
     let ip = req
@@ -745,7 +748,9 @@ mod tests {
             let profile_id = Uuid::new_v4();
             let conn_id = "conn-1".to_string();
 
-            state.add_connection(conn_id.clone(), make_conn_info(profile_id, None)).await;
+            state
+                .add_connection(conn_id.clone(), make_conn_info(profile_id, None))
+                .await;
             {
                 let conns = state.connections.lock().await;
                 assert!(conns.contains_key(&conn_id));
@@ -763,8 +768,12 @@ mod tests {
             let state = WsState::new();
             let profile_id = Uuid::new_v4();
 
-            state.add_connection("c1".to_string(), make_conn_info(profile_id, None)).await;
-            state.add_connection("c2".to_string(), make_conn_info(profile_id, None)).await;
+            state
+                .add_connection("c1".to_string(), make_conn_info(profile_id, None))
+                .await;
+            state
+                .add_connection("c2".to_string(), make_conn_info(profile_id, None))
+                .await;
 
             let presence = state.get_presence(profile_id).await;
             assert_eq!(presence.active_connections, 2);
@@ -776,8 +785,12 @@ mod tests {
             let state = WsState::new();
             let profile_id = Uuid::new_v4();
 
-            state.add_connection("c1".to_string(), make_conn_info(profile_id, None)).await;
-            state.add_connection("c2".to_string(), make_conn_info(profile_id, None)).await;
+            state
+                .add_connection("c1".to_string(), make_conn_info(profile_id, None))
+                .await;
+            state
+                .add_connection("c2".to_string(), make_conn_info(profile_id, None))
+                .await;
             state.remove_connection("c1").await;
 
             let presence = state.get_presence(profile_id).await;
@@ -790,7 +803,9 @@ mod tests {
             let state = WsState::new();
             let profile_id = Uuid::new_v4();
 
-            state.add_connection("c1".to_string(), make_conn_info(profile_id, None)).await;
+            state
+                .add_connection("c1".to_string(), make_conn_info(profile_id, None))
+                .await;
             state.remove_connection("c1").await;
 
             let presence = state.get_presence(profile_id).await;
@@ -865,7 +880,9 @@ mod tests {
             };
             let state = WsState::with_limits(limits);
 
-            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
+            state
+                .add_connection("c1".to_string(), make_info("10.0.0.1"))
+                .await;
 
             assert!(state.check_connection_limits("10.0.0.2").await.is_ok());
         }
@@ -880,8 +897,12 @@ mod tests {
             };
             let state = WsState::with_limits(limits);
 
-            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
-            state.add_connection("c2".to_string(), make_info("10.0.0.2")).await;
+            state
+                .add_connection("c1".to_string(), make_info("10.0.0.1"))
+                .await;
+            state
+                .add_connection("c2".to_string(), make_info("10.0.0.2"))
+                .await;
 
             assert!(state.check_connection_limits("10.0.0.3").await.is_err());
         }
@@ -896,8 +917,12 @@ mod tests {
             };
             let state = WsState::with_limits(limits);
 
-            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
-            state.add_connection("c2".to_string(), make_info("10.0.0.1")).await;
+            state
+                .add_connection("c1".to_string(), make_info("10.0.0.1"))
+                .await;
+            state
+                .add_connection("c2".to_string(), make_info("10.0.0.1"))
+                .await;
             assert!(state.check_connection_limits("10.0.0.1").await.is_err());
 
             state.remove_connection("c1").await;
@@ -914,7 +939,9 @@ mod tests {
             };
             let state = WsState::with_limits(limits);
 
-            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
+            state
+                .add_connection("c1".to_string(), make_info("10.0.0.1"))
+                .await;
             state.remove_connection("c1").await;
 
             let counters = state.ip_counters.lock().await;
@@ -927,8 +954,12 @@ mod tests {
             let state = WsState::with_limits(limits);
 
             assert_eq!(state.total_connections().await, 0);
-            state.add_connection("c1".to_string(), make_info("10.0.0.1")).await;
-            state.add_connection("c2".to_string(), make_info("10.0.0.2")).await;
+            state
+                .add_connection("c1".to_string(), make_info("10.0.0.1"))
+                .await;
+            state
+                .add_connection("c2".to_string(), make_info("10.0.0.2"))
+                .await;
             assert_eq!(state.total_connections().await, 2);
 
             state.remove_connection("c1").await;

@@ -6,7 +6,10 @@ use serde_json::json;
 /// The hash is computed from the canonical JSON representation of the audit log
 /// content plus the previous hash (if any). This creates an immutable chain
 /// where any modification to any entry will invalidate all subsequent hashes.
-pub fn compute_audit_log_hash(item: &NewAuditLog, prev_hash: Option<&str>) -> (Option<String>, String) {
+pub fn compute_audit_log_hash(
+    item: &NewAuditLog,
+    prev_hash: Option<&str>,
+) -> (Option<String>, String) {
     // Create a deterministic representation of the audit log for hashing
     let mut canonical = json!({
         "actor_user_id": item.actor_user_id,
@@ -29,7 +32,8 @@ pub fn compute_audit_log_hash(item: &NewAuditLog, prev_hash: Option<&str>) -> (O
     }
 
     // Canonicalize JSON (sorted keys, no whitespace)
-    let canonical_str = serde_json::to_string(&canonical).expect("Failed to serialize canonical audit log");
+    let canonical_str =
+        serde_json::to_string(&canonical).expect("Failed to serialize canonical audit log");
 
     // Compute SHA-256
     use sha2::{Digest, Sha256};
@@ -74,8 +78,8 @@ pub async fn verify_audit_log_chain(
             "prev_hash": log.prev_hash,
         });
 
-        let canonical_str = serde_json::to_string(&canonical)
-            .map_err(|e| format!("Serialization error: {}", e))?;
+        let canonical_str =
+            serde_json::to_string(&canonical).map_err(|e| format!("Serialization error: {}", e))?;
 
         use sha2::{Digest, Sha256};
         let mut hasher = Sha256::new();

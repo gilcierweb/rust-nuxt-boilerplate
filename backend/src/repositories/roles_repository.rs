@@ -26,9 +26,7 @@ pub use crate::repositories::traits::roles_trait::MockIRoleRepository;
 impl IRoleRepository for RolesRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<Role>> {
         self.base
-            .run(|conn| {
-                Box::pin(async move { roles_table::table.load::<Role>(conn).await })
-            })
+            .run(|conn| Box::pin(async move { roles_table::table.load::<Role>(conn).await }))
             .await
     }
 
@@ -36,12 +34,7 @@ impl IRoleRepository for RolesRepository {
         let id = *id;
         self.base
             .run(move |conn| {
-                Box::pin(async move {
-                    roles_table::table
-                        .find(id)
-                        .first::<Role>(conn)
-                        .await
-                })
+                Box::pin(async move { roles_table::table.find(id).first::<Role>(conn).await })
             })
             .await
     }

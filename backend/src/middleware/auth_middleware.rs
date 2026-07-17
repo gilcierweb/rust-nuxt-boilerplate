@@ -12,7 +12,7 @@ use std::{rc::Rc, sync::Arc};
 use crate::{
     AppState,
     authz::grants_extractor::build_authorities_for_claims,
-    middleware::auth::{Claims, ACCESS_TOKEN_USE, bearer_exempt_routes, verify_token_with_secrets},
+    middleware::auth::{ACCESS_TOKEN_USE, Claims, bearer_exempt_routes, verify_token_with_secrets},
     repositories::access_token_blacklist::AccessTokenBlacklist,
 };
 
@@ -142,7 +142,10 @@ where
                     if !config.skip_blacklist_check
                         && let Some(blacklist) = &config.token_blacklist
                     {
-                        let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(&token);
+                        let token_hash =
+                            crate::repositories::access_token_blacklist::hash_token_for_blacklist(
+                                &token,
+                            );
                         if blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
                             return Err(actix_web::error::ErrorUnauthorized("Token revoked"));
                         }
@@ -169,15 +172,18 @@ where
 
                             let authorities = build_authorities_for_claims(
                                 &claims,
-                                req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>(),
-                            ).await;
+                                req.app_data::<actix_web::web::Data<
+                                    crate::repositories::container::AppContainer,
+                                >>(),
+                            )
+                            .await;
 
                             req.attach(authorities);
                             svc.call(req).await.map(ServiceResponse::map_into_left_body)
-                        }
+                        },
                         Err(_) => Err(actix_web::error::ErrorUnauthorized("Invalid token")),
                     }
-                }
+                },
             }
         })
     }

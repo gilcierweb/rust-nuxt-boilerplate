@@ -82,10 +82,7 @@ mod tests {
 
     #[test]
     fn invalid_base64_key_is_rejected() {
-        let result = KeyManager::from_base64_keys(
-            "not-base64",
-            &valid_blind_index_key(),
-        );
+        let result = KeyManager::from_base64_keys("not-base64", &valid_blind_index_key());
 
         assert!(result.is_err());
     }
@@ -118,7 +115,8 @@ mod tests {
 
     #[test]
     fn derive_encryption_key_deterministic() {
-        let km = KeyManager::from_base64_keys(&valid_master_key(), &valid_blind_index_key()).unwrap();
+        let km =
+            KeyManager::from_base64_keys(&valid_master_key(), &valid_blind_index_key()).unwrap();
         let key1 = km.derive_encryption_key(1).unwrap();
         let key2 = km.derive_encryption_key(1).unwrap();
         assert_eq!(key1, key2);
@@ -126,7 +124,8 @@ mod tests {
 
     #[test]
     fn derive_encryption_key_different_versions_differ() {
-        let km = KeyManager::from_base64_keys(&valid_master_key(), &valid_blind_index_key()).unwrap();
+        let km =
+            KeyManager::from_base64_keys(&valid_master_key(), &valid_blind_index_key()).unwrap();
         let key_v1 = km.derive_encryption_key(1).unwrap();
         let key_v2 = km.derive_encryption_key(2).unwrap();
         assert_ne!(key_v1, key_v2);
@@ -149,7 +148,8 @@ mod tests {
 
     #[test]
     fn blind_index_key_accessor_returns_correct_key() {
-        let km = KeyManager::from_base64_keys(&valid_master_key(), &valid_blind_index_key()).unwrap();
+        let km =
+            KeyManager::from_base64_keys(&valid_master_key(), &valid_blind_index_key()).unwrap();
         use base64::Engine;
         let expected = base64::engine::general_purpose::STANDARD
             .decode(valid_blind_index_key())

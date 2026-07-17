@@ -1,7 +1,7 @@
 use actix_web::{
-    cookie::{Cookie, SameSite},
     Error as ActixError, HttpResponse,
     body::BoxBody,
+    cookie::{Cookie, SameSite},
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
     http::Method,
 };
@@ -48,7 +48,7 @@ impl CsrfProtection {
         defaults.extend(exclude_paths);
 
         Self {
-            exclude_paths: defaults
+            exclude_paths: defaults,
         }
     }
 }
@@ -127,9 +127,7 @@ where
                     .and_then(|h| h.to_str().ok())
                     .map(|s| s.to_string());
 
-                let cookie_token = req
-                    .cookie(CSRF_COOKIE_NAME)
-                    .map(|c| c.value().to_string());
+                let cookie_token = req.cookie(CSRF_COOKIE_NAME).map(|c| c.value().to_string());
 
                 let secret_key = req
                     .app_data::<AppConfig>()
@@ -142,7 +140,7 @@ where
                 let is_valid = match (&header_token, &cookie_token, &secret_key) {
                     (Some(header), Some(cookie), Some(key)) => {
                         header == cookie && validate_csrf_token(header, key)
-                    }
+                    },
                     _ => false,
                 };
 
@@ -169,29 +167,23 @@ where
                     let new_token = generate_csrf_token(&config.csrf_secret_key);
                     let cookie = build_csrf_cookie(&config, &new_token);
 
-                    res.response_mut()
-                        .headers_mut()
-                        .append(
-                            actix_web::http::header::SET_COOKIE,
-                            cookie.to_string().parse().unwrap(),
-                        );
+                    res.response_mut().headers_mut().append(
+                        actix_web::http::header::SET_COOKIE,
+                        cookie.to_string().parse().unwrap(),
+                    );
                 }
             }
 
             // Set CSRF token cookie on GET responses if not already present
-            if !is_state_changing
-                && !res.response().headers().contains_key("set-cookie")
-            {
+            if !is_state_changing && !res.response().headers().contains_key("set-cookie") {
                 if let Some(config) = res.request().app_data::<AppConfig>().cloned() {
                     let csrf_token = generate_csrf_token(&config.csrf_secret_key);
                     let cookie = build_csrf_cookie(&config, &csrf_token);
 
-                    res.response_mut()
-                        .headers_mut()
-                        .append(
-                            actix_web::http::header::SET_COOKIE,
-                            cookie.to_string().parse().unwrap(),
-                        );
+                    res.response_mut().headers_mut().append(
+                        actix_web::http::header::SET_COOKIE,
+                        cookie.to_string().parse().unwrap(),
+                    );
                 }
             }
 
@@ -218,8 +210,8 @@ fn generate_csrf_token(secret_key: &str) -> String {
     let mut nonce = [0u8; 16];
     OsRng.fill_bytes(&mut nonce);
 
-    let mut mac = HmacSha256::new_from_slice(secret_key.as_bytes())
-        .expect("HMAC can take key of any size");
+    let mut mac =
+        HmacSha256::new_from_slice(secret_key.as_bytes()).expect("HMAC can take key of any size");
 
     mac.update(&timestamp.to_be_bytes());
     mac.update(&nonce);
@@ -268,8 +260,8 @@ fn validate_csrf_token(token: &str, secret_key: &str) -> bool {
     }
 
     // Recompute HMAC and compare
-    let mut mac = HmacSha256::new_from_slice(secret_key.as_bytes())
-        .expect("HMAC can take key of any size");
+    let mut mac =
+        HmacSha256::new_from_slice(secret_key.as_bytes()).expect("HMAC can take key of any size");
     mac.update(&timestamp.to_be_bytes());
     mac.update(&nonce);
 
@@ -317,7 +309,8 @@ fn build_csrf_cookie(config: &AppConfig, token: &str) -> Cookie<'static> {
 fn is_production_like(config: &AppConfig) -> bool {
     matches!(
         config.environment,
-        crate::config::app_config::Environment::Staging | crate::config::app_config::Environment::Production
+        crate::config::app_config::Environment::Staging
+            | crate::config::app_config::Environment::Production
     )
 }
 
@@ -384,12 +377,7 @@ mod tests {
         mac.update(&nonce);
         let sig = hex::encode(mac.finalize().into_bytes());
 
-        let token = format!(
-            "{}.{}.{}",
-            expired_timestamp,
-            hex::encode(nonce),
-            sig
-        );
+        let token = format!("{}.{}.{}", expired_timestamp, hex::encode(nonce), sig);
 
         assert!(!validate_csrf_token(&token, "test-secret"));
     }
@@ -411,9 +399,9 @@ mod tests {
 
     #[test]
     fn test_csrf_token_grace_period() {
-        use std::time::{SystemTime, UNIX_EPOCH};
         use hmac::{Hmac, Mac};
         use sha2::Sha256;
+        use std::time::{SystemTime, UNIX_EPOCH};
         type HmacSha256 = Hmac<Sha256>;
 
         let now = SystemTime::now()
@@ -432,12 +420,7 @@ mod tests {
         mac.update(&nonce);
         let sig = hex::encode(mac.finalize().into_bytes());
 
-        let token = format!(
-            "{}.{}.{}",
-            token_time,
-            hex::encode(nonce),
-            sig
-        );
+        let token = format!("{}.{}.{}", token_time, hex::encode(nonce), sig);
 
         // Should still be valid within grace period
         assert!(validate_csrf_token(&token, "test-secret"));

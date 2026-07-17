@@ -6,7 +6,7 @@ use crate::models::user::User;
 #[allow(unused_imports)]
 use crate::security::SecurityService;
 use chrono::Utc;
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
+use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -53,8 +53,8 @@ pub fn verify_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
 
 pub fn hash_token(_token: &str, _salt: &str) -> String {
     use argon2::Argon2;
-    use rand::rngs::OsRng;
     use rand::RngCore;
+    use rand::rngs::OsRng;
 
     // Generate a random 16-byte salt for Argon2id
     let mut salt_bytes = [0u8; 16];

@@ -105,15 +105,15 @@ impl Ability {
                             out.insert(authority_for(resource, action));
                         }
                     }
-                }
+                },
                 (AbilityAction::Manage, resource) => {
                     for action in crud_actions() {
                         out.insert(authority_for(resource, action));
                     }
-                }
+                },
                 (action, resource) => {
                     out.insert(authority_for(resource, action));
-                }
+                },
             }
         }
 
@@ -201,11 +201,7 @@ mod tests {
                 AbilityAction::Delete,
             ] {
                 let auth = authority_for(resource, action);
-                assert!(
-                    authorities.contains(&auth),
-                    "Missing authority: {}",
-                    auth
-                );
+                assert!(authorities.contains(&auth), "Missing authority: {}", auth);
             }
         }
     }
@@ -217,9 +213,18 @@ mod tests {
 
         let authorities = ability.authorities();
         assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
-        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Create)));
-        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Update)));
-        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Delete)));
+        assert!(authorities.contains(&authority_for(
+            AbilityResource::Users,
+            AbilityAction::Create
+        )));
+        assert!(authorities.contains(&authority_for(
+            AbilityResource::Users,
+            AbilityAction::Update
+        )));
+        assert!(authorities.contains(&authority_for(
+            AbilityResource::Users,
+            AbilityAction::Delete
+        )));
         assert!(!authorities.contains(&authority_for(AbilityResource::Roles, AbilityAction::Read)));
     }
 

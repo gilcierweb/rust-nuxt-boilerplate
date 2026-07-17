@@ -145,7 +145,7 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
 
     // Stripe signature format: t=timestamp,v1=signature,v0=signature
     let parts: Vec<&str> = signature.split(',').collect();
-    
+
     let mut timestamp: Option<i64> = None;
     let mut signatures: Vec<&str> = Vec::new();
 
@@ -156,9 +156,9 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
                     if let Ok(ts) = value.parse::<i64>() {
                         timestamp = Some(ts);
                     }
-                }
+                },
                 "v1" | "v0" => signatures.push(value),
-                _ => {}
+                _ => {},
             }
         }
     }
@@ -169,7 +169,7 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_secs() as i64;
-        
+
         if (now - ts).abs() > 300 {
             return false;
         }
@@ -178,8 +178,12 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
     }
 
     // Verify signature
-    let signed_payload = format!("{}.{}", timestamp.unwrap_or(0), String::from_utf8_lossy(payload));
-    
+    let signed_payload = format!(
+        "{}.{}",
+        timestamp.unwrap_or(0),
+        String::from_utf8_lossy(payload)
+    );
+
     let Ok(mac) = HmacSha256::new_from_slice(secret.as_bytes()) else {
         return false;
     };
@@ -224,9 +228,9 @@ mod tests {
                         if let Ok(ts) = value.parse::<i64>() {
                             timestamp = Some(ts);
                         }
-                    }
+                    },
                     "v1" | "v0" => signatures.push(value),
-                    _ => {}
+                    _ => {},
                 }
             }
         }
@@ -245,7 +249,11 @@ mod tests {
             .as_secs() as i64;
         let sig = make_valid_signature(payload, secret, now);
 
-        assert!(verify_stripe_signature(&Bytes::from_static(payload), &sig, secret));
+        assert!(verify_stripe_signature(
+            &Bytes::from_static(payload),
+            &sig,
+            secret
+        ));
     }
 
     #[test]
@@ -255,7 +263,11 @@ mod tests {
         let old_timestamp = 1000000; // way in the past
         let sig = make_valid_signature(payload, secret, old_timestamp);
 
-        assert!(!verify_stripe_signature(&Bytes::from_static(payload), &sig, secret));
+        assert!(!verify_stripe_signature(
+            &Bytes::from_static(payload),
+            &sig,
+            secret
+        ));
     }
 
     #[test]
@@ -267,7 +279,11 @@ mod tests {
             .as_secs() as i64;
         let sig = make_valid_signature(payload, "wrong_secret", now);
 
-        assert!(!verify_stripe_signature(&Bytes::from_static(payload), &sig, "correct_secret"));
+        assert!(!verify_stripe_signature(
+            &Bytes::from_static(payload),
+            &sig,
+            "correct_secret"
+        ));
     }
 
     #[test]
@@ -280,18 +296,30 @@ mod tests {
             .as_secs() as i64;
         let sig = make_valid_signature(payload, secret, now);
 
-        assert!(!verify_stripe_signature(&Bytes::from_static(b"tampered"), &sig, secret));
+        assert!(!verify_stripe_signature(
+            &Bytes::from_static(b"tampered"),
+            &sig,
+            secret
+        ));
     }
 
     #[test]
     fn verify_stripe_signature_rejects_missing_timestamp() {
         let sig = "v1=abc123";
-        assert!(!verify_stripe_signature(&Bytes::from_static(b"test"), sig, "secret"));
+        assert!(!verify_stripe_signature(
+            &Bytes::from_static(b"test"),
+            sig,
+            "secret"
+        ));
     }
 
     #[test]
     fn verify_stripe_signature_rejects_empty_signatures() {
         let sig = "t=1234567890";
-        assert!(!verify_stripe_signature(&Bytes::from_static(b"test"), sig, "secret"));
+        assert!(!verify_stripe_signature(
+            &Bytes::from_static(b"test"),
+            sig,
+            "secret"
+        ));
     }
 }

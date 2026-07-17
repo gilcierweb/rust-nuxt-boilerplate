@@ -10,10 +10,10 @@ use std::io::BufReader;
 use std::sync::Arc;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use backend::AppState;
 use backend::config::AppConfig;
 use backend::db::database::Database;
 use backend::errors::AppError;
-use backend::AppState;
 
 i18n!("locales");
 
@@ -60,7 +60,7 @@ fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
         Err(e) => {
             tracing::warn!(error = %e, "Failed to create OTLP span exporter");
             return None;
-        }
+        },
     };
 
     let sampler = telemetry.build_sampler();
@@ -96,7 +96,7 @@ async fn main() -> std::io::Result<()> {
                 .with_thread_ids(true)
                 .with_file(true)
                 .with_line_number(true)
-                .pretty()
+                .pretty(),
         );
 
     // Add OpenTelemetry layer if provider is available
@@ -140,7 +140,12 @@ async fn main() -> std::io::Result<()> {
     );
 
     // Warn if pool size is too low for production workloads
-    if config.redis_pool_size < 20 && matches!(config.environment, backend::config::app_config::Environment::Production) {
+    if config.redis_pool_size < 20
+        && matches!(
+            config.environment,
+            backend::config::app_config::Environment::Production
+        )
+    {
         tracing::warn!(
             event = "redis.pool_size_low",
             pool_size = config.redis_pool_size,
@@ -253,7 +258,8 @@ async fn main() -> std::io::Result<()> {
     let server = HttpServer::new(app);
 
     let result = match config.environment {
-        backend::config::app_config::Environment::Staging | backend::config::app_config::Environment::Production => {
+        backend::config::app_config::Environment::Staging
+        | backend::config::app_config::Environment::Production => {
             // Initialize TLS crypto provider - falls back to default if already initialized
             let _ = rustls::crypto::CryptoProvider::get_default();
 
@@ -308,11 +314,12 @@ async fn main() -> std::io::Result<()> {
                 .bind_rustls_0_23((host.clone(), https_port), tls_config)?
                 .run()
                 .await
-        }
-        backend::config::app_config::Environment::Development | backend::config::app_config::Environment::Test => {
+        },
+        backend::config::app_config::Environment::Development
+        | backend::config::app_config::Environment::Test => {
             println!("Running in HTTP on http://localhost:{}", port);
             server.bind((host, port))?.run().await
-        }
+        },
     };
 
     // Shutdown OpenTelemetry provider to flush pending traces

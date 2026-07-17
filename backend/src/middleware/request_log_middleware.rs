@@ -93,7 +93,7 @@ where
                     );
 
                     Ok(response)
-                }
+                },
                 Err(error) => {
                     tracing::error!(
                         target: "http.request",
@@ -106,7 +106,7 @@ where
                         "request_failed"
                     );
                     Err(error)
-                }
+                },
             }
         })
     }
@@ -120,14 +120,10 @@ mod tests {
 
     #[actix_web::test]
     async fn preserves_existing_request_id_header() {
-        let app = test::init_service(
-            App::new()
-                .wrap(RequestLogMiddleware)
-                .route(
-                    "/ok",
-                    web::get().to(|| async { HttpResponse::Ok().finish() }),
-                ),
-        )
+        let app = test::init_service(App::new().wrap(RequestLogMiddleware).route(
+            "/ok",
+            web::get().to(|| async { HttpResponse::Ok().finish() }),
+        ))
         .await;
 
         let request = test::TestRequest::get()
@@ -148,14 +144,10 @@ mod tests {
 
     #[actix_web::test]
     async fn generates_request_id_when_missing() {
-        let app = test::init_service(
-            App::new()
-                .wrap(RequestLogMiddleware)
-                .route(
-                    "/ok",
-                    web::get().to(|| async { HttpResponse::Ok().finish() }),
-                ),
-        )
+        let app = test::init_service(App::new().wrap(RequestLogMiddleware).route(
+            "/ok",
+            web::get().to(|| async { HttpResponse::Ok().finish() }),
+        ))
         .await;
 
         let request = test::TestRequest::get().uri("/ok").to_request();

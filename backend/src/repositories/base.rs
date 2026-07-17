@@ -1,5 +1,5 @@
 use crate::db::database::DBPool;
-use diesel::{result::QueryResult, sql_query, QueryableByName};
+use diesel::{QueryableByName, result::QueryResult, sql_query};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use futures::future::BoxFuture;
 
@@ -56,11 +56,11 @@ impl BaseRepo {
                     .await
                     .map_err(E::from)?;
                 Ok(val)
-            }
+            },
             Err(e) => {
                 let _ = diesel::sql_query("ROLLBACK").execute(&mut *conn).await;
                 Err(e)
-            }
+            },
         }
     }
 

@@ -3,7 +3,7 @@
 // This module provides test fixtures and utilities for working with repository mocks.
 // The traits are marked with #[cfg_attr(test, mockall::automock)] which
 // automatically generates MockIUserRepository, MockIProfileRepository, etc.
-// 
+//
 // Usage in tests:
 // ```rust
 // use crate::repositories::test_utils::mocks::mock_container;
@@ -14,10 +14,10 @@
 // mock_repo.expect_find().returning(|_| Ok(user_fixture()));
 // ```
 
-use crate::models::role::Role;
+use crate::models::audit_log::AuditLog;
 use crate::models::profile::Profile;
 use crate::models::refresh_token::RefreshToken;
-use crate::models::audit_log::AuditLog;
+use crate::models::role::Role;
 use crate::models::user::User;
 use crate::models::user_role::UserRole;
 use chrono::Utc;
@@ -151,10 +151,7 @@ pub fn audit_log_fixture() -> AuditLog {
 
 /// Create a test user role fixture.
 pub fn user_role_fixture(user_id: Uuid, role_id: Uuid) -> UserRole {
-    UserRole {
-        user_id,
-        role_id,
-    }
+    UserRole { user_id, role_id }
 }
 
 /// Helper to setup common mock expectations for a user repository.

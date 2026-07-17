@@ -9,8 +9,7 @@ use std::time::Duration;
 
 /// Default histogram bucket boundaries in milliseconds, covering 1ms to 10s.
 const LATENCY_BUCKETS_MS: &[f64] = &[
-    1.0, 2.5, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0,
-    5000.0, 10000.0,
+    1.0, 2.5, 5.0, 10.0, 25.0, 50.0, 100.0, 250.0, 500.0, 1000.0, 2500.0, 5000.0, 10000.0,
 ];
 
 /// A simple cumulative histogram for latency measurements.
@@ -206,11 +205,18 @@ impl MetricsRegistry {
             cs.duration_ms = duration.as_secs_f64() * 1000.0;
             cs.recorded = true;
         }
-        tracing::info!(cold_start_ms = format!("{:.3}", duration.as_secs_f64() * 1000.0), "Server cold start");
+        tracing::info!(
+            cold_start_ms = format!("{:.3}", duration.as_secs_f64() * 1000.0),
+            "Server cold start"
+        );
     }
 
     pub fn cold_start_ms(&self) -> Option<f64> {
-        self.cold_start.lock().ok().filter(|cs| cs.recorded).map(|cs| cs.duration_ms)
+        self.cold_start
+            .lock()
+            .ok()
+            .filter(|cs| cs.recorded)
+            .map(|cs| cs.duration_ms)
     }
 
     // ---- DB query timing ----
@@ -223,11 +229,17 @@ impl MetricsRegistry {
     }
 
     pub fn db_query_p95_ms(&self) -> Option<f64> {
-        self.db_query_timing.lock().ok().and_then(|t| t.histogram.p95())
+        self.db_query_timing
+            .lock()
+            .ok()
+            .and_then(|t| t.histogram.p95())
     }
 
     pub fn db_query_p99_ms(&self) -> Option<f64> {
-        self.db_query_timing.lock().ok().and_then(|t| t.histogram.p99())
+        self.db_query_timing
+            .lock()
+            .ok()
+            .and_then(|t| t.histogram.p99())
     }
 
     pub fn db_query_avg_ms(&self) -> Option<f64> {
@@ -248,11 +260,17 @@ impl MetricsRegistry {
     }
 
     pub fn redis_p95_ms(&self) -> Option<f64> {
-        self.redis_op_timing.lock().ok().and_then(|t| t.histogram.p95())
+        self.redis_op_timing
+            .lock()
+            .ok()
+            .and_then(|t| t.histogram.p95())
     }
 
     pub fn redis_p99_ms(&self) -> Option<f64> {
-        self.redis_op_timing.lock().ok().and_then(|t| t.histogram.p99())
+        self.redis_op_timing
+            .lock()
+            .ok()
+            .and_then(|t| t.histogram.p99())
     }
 
     pub fn redis_avg_ms(&self) -> Option<f64> {
@@ -290,15 +308,24 @@ impl MetricsRegistry {
     }
 
     pub fn used_memory_bytes(&self) -> u64 {
-        self.system_measures.lock().map(|m| m.used_memory_bytes).unwrap_or(0)
+        self.system_measures
+            .lock()
+            .map(|m| m.used_memory_bytes)
+            .unwrap_or(0)
     }
 
     pub fn total_memory_bytes(&self) -> u64 {
-        self.system_measures.lock().map(|m| m.total_memory_bytes).unwrap_or(0)
+        self.system_measures
+            .lock()
+            .map(|m| m.total_memory_bytes)
+            .unwrap_or(0)
     }
 
     pub fn cpu_usage_percent(&self) -> f32 {
-        self.system_measures.lock().map(|m| m.cpu_usage_percent).unwrap_or(0.0)
+        self.system_measures
+            .lock()
+            .map(|m| m.cpu_usage_percent)
+            .unwrap_or(0.0)
     }
 
     // ---- Prometheus render (now with histogram, baselines, system metrics) ----
@@ -321,7 +348,9 @@ impl MetricsRegistry {
             self.total_errors.load(Ordering::Relaxed)
         ));
 
-        output.push_str("# HELP http_requests_by_status_total Total HTTP requests grouped by status.\n");
+        output.push_str(
+            "# HELP http_requests_by_status_total Total HTTP requests grouped by status.\n",
+        );
         output.push_str("# TYPE http_requests_by_status_total counter\n");
         if let Ok(per_status) = self.per_status.lock() {
             let mut entries = per_status.iter().collect::<Vec<_>>();
@@ -363,7 +392,9 @@ impl MetricsRegistry {
                 if let Some(p95) = metric.histogram.p95() {
                     output.push_str(&format!(
                         "http_request_duration_p95_ms{{method=\"{}\",path=\"{}\"}} {:.3}\n",
-                        escape_label(method), escape_label(path), p95
+                        escape_label(method),
+                        escape_label(path),
+                        p95
                     ));
                 }
             }
@@ -376,7 +407,9 @@ impl MetricsRegistry {
                 if let Some(p99) = metric.histogram.p99() {
                     output.push_str(&format!(
                         "http_request_duration_p99_ms{{method=\"{}\",path=\"{}\"}} {:.3}\n",
-                        escape_label(method), escape_label(path), p99
+                        escape_label(method),
+                        escape_label(path),
+                        p99
                     ));
                 }
             }
@@ -392,22 +425,31 @@ impl MetricsRegistry {
         // --- DB query timing ---
         output.push_str("# HELP db_query_duration_count Total DB queries executed.\n");
         output.push_str("# TYPE db_query_duration_count counter\n");
-        output.push_str(&format!("db_query_duration_count {}\n", self.db_query_count()));
+        output.push_str(&format!(
+            "db_query_duration_count {}\n",
+            self.db_query_count()
+        ));
 
-        output.push_str("# HELP db_query_duration_p95_ms 95th percentile DB query latency in milliseconds.\n");
+        output.push_str(
+            "# HELP db_query_duration_p95_ms 95th percentile DB query latency in milliseconds.\n",
+        );
         output.push_str("# TYPE db_query_duration_p95_ms gauge\n");
         if let Some(p95) = self.db_query_p95_ms() {
             output.push_str(&format!("db_query_duration_p95_ms {:.3}\n", p95));
         }
 
-        output.push_str("# HELP db_query_duration_p99_ms 99th percentile DB query latency in milliseconds.\n");
+        output.push_str(
+            "# HELP db_query_duration_p99_ms 99th percentile DB query latency in milliseconds.\n",
+        );
         output.push_str("# TYPE db_query_duration_p99_ms gauge\n");
         if let Some(p99) = self.db_query_p99_ms() {
             output.push_str(&format!("db_query_duration_p99_ms {:.3}\n", p99));
         }
 
         if let Some(avg) = self.db_query_avg_ms() {
-            output.push_str("# HELP db_query_duration_avg_ms Average DB query latency in milliseconds.\n");
+            output.push_str(
+                "# HELP db_query_duration_avg_ms Average DB query latency in milliseconds.\n",
+            );
             output.push_str("# TYPE db_query_duration_avg_ms gauge\n");
             output.push_str(&format!("db_query_duration_avg_ms {:.3}\n", avg));
         }
@@ -438,15 +480,24 @@ impl MetricsRegistry {
         // --- System resources (memory / CPU) ---
         output.push_str("# HELP process_used_memory_bytes Used memory in bytes.\n");
         output.push_str("# TYPE process_used_memory_bytes gauge\n");
-        output.push_str(&format!("process_used_memory_bytes {}\n", self.used_memory_bytes()));
+        output.push_str(&format!(
+            "process_used_memory_bytes {}\n",
+            self.used_memory_bytes()
+        ));
 
         output.push_str("# HELP process_total_memory_bytes Total system memory in bytes.\n");
         output.push_str("# TYPE process_total_memory_bytes gauge\n");
-        output.push_str(&format!("process_total_memory_bytes {}\n", self.total_memory_bytes()));
+        output.push_str(&format!(
+            "process_total_memory_bytes {}\n",
+            self.total_memory_bytes()
+        ));
 
         output.push_str("# HELP process_cpu_usage_percent CPU usage percentage.\n");
         output.push_str("# TYPE process_cpu_usage_percent gauge\n");
-        output.push_str(&format!("process_cpu_usage_percent {:.2}\n", self.cpu_usage_percent()));
+        output.push_str(&format!(
+            "process_cpu_usage_percent {:.2}\n",
+            self.cpu_usage_percent()
+        ));
 
         output
     }
@@ -561,9 +612,24 @@ mod tests {
     #[test]
     fn render_prometheus_includes_status_and_route_counters() {
         let registry = MetricsRegistry::new();
-        registry.record("GET", "/api/v1/admin/users/1", 200, Duration::from_millis(15));
-        registry.record("GET", "/api/v1/admin/users/2", 200, Duration::from_millis(10));
-        registry.record("POST", "/api/v1/admin/users", 503, Duration::from_millis(50));
+        registry.record(
+            "GET",
+            "/api/v1/admin/users/1",
+            200,
+            Duration::from_millis(15),
+        );
+        registry.record(
+            "GET",
+            "/api/v1/admin/users/2",
+            200,
+            Duration::from_millis(10),
+        );
+        registry.record(
+            "POST",
+            "/api/v1/admin/users",
+            503,
+            Duration::from_millis(50),
+        );
 
         let rendered = registry.render_prometheus();
 
@@ -596,8 +662,14 @@ mod tests {
         let p95 = metric.histogram.p95().unwrap();
         let p99 = metric.histogram.p99().unwrap();
 
-        assert_eq!(p95, 1.0, "P95 should be 1ms (95th percentile falls in the fast group)");
-        assert_eq!(p99, 100.0, "P99 should be 100ms (top 1% falls in the slow group)");
+        assert_eq!(
+            p95, 1.0,
+            "P95 should be 1ms (95th percentile falls in the fast group)"
+        );
+        assert_eq!(
+            p99, 100.0,
+            "P99 should be 100ms (top 1% falls in the slow group)"
+        );
     }
 
     #[test]
@@ -655,8 +727,16 @@ mod tests {
         let p99 = registry.redis_p99_ms().unwrap();
 
         // P95 should be 0.5ms, P99 should be 10ms
-        assert!((p95 - 0.5).abs() < 0.01, "P95 should be ~0.5ms, got {}", p95);
-        assert!((p99 - 10.0).abs() < 0.01, "P99 should be ~10ms, got {}", p99);
+        assert!(
+            (p95 - 0.5).abs() < 0.01,
+            "P95 should be ~0.5ms, got {}",
+            p95
+        );
+        assert!(
+            (p99 - 10.0).abs() < 0.01,
+            "P99 should be ~10ms, got {}",
+            p99
+        );
 
         let rendered = registry.render_prometheus();
         assert!(rendered.contains("redis_op_duration_count 100"));

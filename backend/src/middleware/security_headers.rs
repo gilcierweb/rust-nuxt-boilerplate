@@ -73,10 +73,7 @@ where
             );
 
             // Prevent clickjacking
-            headers.insert(
-                header::X_FRAME_OPTIONS,
-                HeaderValue::from_static("DENY"),
-            );
+            headers.insert(header::X_FRAME_OPTIONS, HeaderValue::from_static("DENY"));
 
             // Control referrer information
             headers.insert(
@@ -101,7 +98,7 @@ where
             headers.insert(
                 header::CONTENT_SECURITY_POLICY,
                 HeaderValue::from_static(
-                    "default-src 'none'; frame-ancestors 'none'; form-action 'none'"
+                    "default-src 'none'; frame-ancestors 'none'; form-action 'none'",
                 ),
             );
 
@@ -113,25 +110,21 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use actix_web::{test, web, App, HttpResponse};
+    use actix_web::{App, HttpResponse, test, web};
 
     #[actix_web::test]
     async fn security_headers_are_added() {
-        let app = test::init_service(
-            App::new()
-                .wrap(SecurityHeaders)
-                .route("/test", web::get().to(|| async { HttpResponse::Ok().finish() })),
-        )
+        let app = test::init_service(App::new().wrap(SecurityHeaders).route(
+            "/test",
+            web::get().to(|| async { HttpResponse::Ok().finish() }),
+        ))
         .await;
 
         let req = test::TestRequest::get().uri("/test").to_request();
         let resp = test::call_service(&app, req).await;
 
         let headers = resp.headers();
-        assert_eq!(
-            headers.get("X-Content-Type-Options").unwrap(),
-            "nosniff"
-        );
+        assert_eq!(headers.get("X-Content-Type-Options").unwrap(), "nosniff");
         assert_eq!(headers.get("X-Frame-Options").unwrap(), "DENY");
         assert_eq!(
             headers.get("Referrer-Policy").unwrap(),

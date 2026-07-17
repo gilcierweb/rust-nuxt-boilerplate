@@ -141,11 +141,18 @@ where
             if let Some(token) = token
                 && let Some(container) = req.app_data::<web::Data<AppContainer>>()
             {
-                let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
-                if container.access_token_blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
-                    let response = AppError::Unauthorized(t!("middleware.token_revoked").into_owned())
-                        .error_response()
-                        .map_into_right_body();
+                let token_hash =
+                    crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
+                if container
+                    .access_token_blacklist
+                    .is_blacklisted(&token_hash)
+                    .await
+                    .unwrap_or(false)
+                {
+                    let response =
+                        AppError::Unauthorized(t!("middleware.token_revoked").into_owned())
+                            .error_response()
+                            .map_into_right_body();
                     return Ok(req.into_response(response));
                 }
             }

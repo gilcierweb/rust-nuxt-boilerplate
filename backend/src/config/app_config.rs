@@ -50,7 +50,7 @@ fn secret_from_env_or_file(name: &str, default: &str) -> String {
                     tracing::debug!(secret = %name, "Loaded secret from file");
                     return trimmed;
                 }
-            }
+            },
             Err(e) => {
                 tracing::warn!(
                     secret = %name,
@@ -58,7 +58,7 @@ fn secret_from_env_or_file(name: &str, default: &str) -> String {
                     error = %e,
                     "Failed to read secret file, falling back to default"
                 );
-            }
+            },
         }
     }
 
@@ -85,7 +85,7 @@ fn required_secret(name: &str) -> Result<String, env::VarError> {
                     tracing::debug!(secret = %name, "Loaded secret from file");
                     return Ok(trimmed);
                 }
-            }
+            },
             Err(e) => {
                 tracing::warn!(
                     secret = %name,
@@ -93,7 +93,7 @@ fn required_secret(name: &str) -> Result<String, env::VarError> {
                     error = %e,
                     "Failed to read secret file"
                 );
-            }
+            },
         }
     }
 
@@ -200,8 +200,8 @@ pub struct AppConfig {
     pub max_audio_size_bytes: u64, // 500 MB
 
     // Request payload limits
-    pub json_payload_limit: usize,    // JSON body size limit (bytes)
-    pub form_payload_limit: usize,    // Form body size limit (bytes)
+    pub json_payload_limit: usize, // JSON body size limit (bytes)
+    pub form_payload_limit: usize, // Form body size limit (bytes)
 
     // Rate limiting
     pub rate_limit_enabled: bool,
@@ -324,7 +324,8 @@ impl AppConfig {
             resend_api_key: secret_from_env_or_file("RESEND_API_KEY", ""),
             email_from: env::var("EMAIL_FROM")
                 .unwrap_or_else(|_| "noreply@boilerplate-rust-nuxt.com".to_string()),
-            email_from_name: env::var("EMAIL_FROM_NAME").unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
+            email_from_name: env::var("EMAIL_FROM_NAME")
+                .unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
 
             bunny_storage_zone: env::var("BUNNY_STORAGE_ZONE").unwrap_or_default(),
             bunny_storage_key: env::var("BUNNY_STORAGE_KEY").unwrap_or_default(),
@@ -356,7 +357,8 @@ impl AppConfig {
             max_subscription_price_cents: 50_000,
             min_withdrawal_amount_cents: 2_000,
 
-            totp_issuer: env::var("TOTP_ISSUER").unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
+            totp_issuer: env::var("TOTP_ISSUER")
+                .unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
 
             max_video_size_bytes: 10 * 1024 * 1024 * 1024, // 10 GB
             max_photo_size_bytes: 50 * 1024 * 1024,        // 50 MB
@@ -433,30 +435,30 @@ impl AppConfig {
 
         // Master key validation (must be valid base64, decodes to ≥32 bytes)
         match base64::engine::general_purpose::STANDARD.decode(&self.master_key) {
-            Ok(bytes) if bytes.len() >= 32 => {}
+            Ok(bytes) if bytes.len() >= 32 => {},
             Ok(bytes) => {
                 errors.push(format!(
                     "MASTER_KEY must decode to at least 32 bytes, got {}",
                     bytes.len()
                 ));
-            }
+            },
             Err(_) => {
                 errors.push("MASTER_KEY must be valid base64".to_string());
-            }
+            },
         }
 
         // Blind index key validation (must be valid base64, decodes to ≥32 bytes)
         match base64::engine::general_purpose::STANDARD.decode(&self.blind_index_key) {
-            Ok(bytes) if bytes.len() >= 32 => {}
+            Ok(bytes) if bytes.len() >= 32 => {},
             Ok(bytes) => {
                 errors.push(format!(
                     "BLIND_INDEX_KEY must decode to at least 32 bytes, got {}",
                     bytes.len()
                 ));
-            }
+            },
             Err(_) => {
                 errors.push("BLIND_INDEX_KEY must be valid base64".to_string());
-            }
+            },
         }
 
         // CSRF secret key validation
@@ -483,9 +485,7 @@ impl AppConfig {
         }
 
         // Redis URL validation
-        if !self.redis_url.starts_with("redis://")
-            && !self.redis_url.starts_with("rediss://")
-        {
+        if !self.redis_url.starts_with("redis://") && !self.redis_url.starts_with("rediss://") {
             errors.push("REDIS_URL must start with redis:// or rediss://".to_string());
         }
 

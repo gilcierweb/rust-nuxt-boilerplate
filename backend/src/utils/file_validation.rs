@@ -39,21 +39,21 @@ impl std::fmt::Display for FileValidationError {
                     "File size {} bytes exceeds maximum of {} bytes",
                     actual, max
                 )
-            }
+            },
             Self::UnsupportedMimeType(mime) => {
                 write!(f, "Unsupported file type: {}", mime)
-            }
+            },
             Self::MimeTypeMismatch { declared, detected } => {
                 write!(
                     f,
                     "Declared type {} does not match detected type {}",
                     declared, detected
                 )
-            }
+            },
             Self::EmptyFile => write!(f, "Uploaded file is empty"),
             Self::PathTraversalAttempt => {
                 write!(f, "Filename contains path traversal characters")
-            }
+            },
             Self::NoFileExtension => write!(f, "Filename has no extension"),
             Self::UnsafeFilename => write!(f, "Filename contains unsafe characters"),
         }
@@ -83,16 +83,17 @@ fn allowed_video_types() -> &'static [&'static str] {
 }
 
 fn allowed_audio_types() -> &'static [&'static str] {
-    &["audio/mpeg", "audio/wav", "audio/ogg", "audio/mp4", "audio/webm"]
+    &[
+        "audio/mpeg",
+        "audio/wav",
+        "audio/ogg",
+        "audio/mp4",
+        "audio/webm",
+    ]
 }
 
 fn allowed_document_types() -> &'static [&'static str] {
-    &[
-        "application/pdf",
-        "image/jpeg",
-        "image/png",
-        "image/webp",
-    ]
+    &["application/pdf", "image/jpeg", "image/png", "image/webp"]
 }
 
 /// Returns the maximum file size in bytes for a given category.
@@ -176,19 +177,14 @@ pub fn sanitize_filename(original_filename: &str) -> Result<String, FileValidati
         .ok_or(FileValidationError::NoFileExtension)?;
 
     // Validate extension contains only safe characters
-    if !ext
-        .chars()
-        .all(|c| c.is_ascii_alphanumeric())
-    {
+    if !ext.chars().all(|c| c.is_ascii_alphanumeric()) {
         return Err(FileValidationError::UnsafeFilename);
     }
 
     // Block double extensions that could be used to disguise file types
     let dangerous_double_exts = [
-        "php", "php3", "php4", "php5", "phtml", "phps",
-        "cgi", "pl", "py", "rb", "sh", "bash",
-        "jsp", "jspx", "asp", "aspx", "cer", "cfm",
-        "htaccess", "htpasswd", "shtml",
+        "php", "php3", "php4", "php5", "phtml", "phps", "cgi", "pl", "py", "rb", "sh", "bash",
+        "jsp", "jspx", "asp", "aspx", "cer", "cfm", "htaccess", "htpasswd", "shtml",
     ];
     if dangerous_double_exts
         .iter()
@@ -244,10 +240,8 @@ pub fn validate_upload(
     let base_name = strip_path_components(original_filename);
     let safe_filename = sanitize_filename(base_name)?;
 
-    let category =
-        detect_category(declared_mime).ok_or_else(|| {
-            FileValidationError::UnsupportedMimeType(declared_mime.to_string())
-        })?;
+    let category = detect_category(declared_mime)
+        .ok_or_else(|| FileValidationError::UnsupportedMimeType(declared_mime.to_string()))?;
 
     // Validate magic bytes match declared MIME type
     if !data_prefix.is_empty() {
@@ -379,18 +373,9 @@ mod tests {
 
     #[test]
     fn detect_category_works() {
-        assert_eq!(
-            detect_category("image/jpeg"),
-            Some(FileCategory::Photo)
-        );
-        assert_eq!(
-            detect_category("video/mp4"),
-            Some(FileCategory::Video)
-        );
-        assert_eq!(
-            detect_category("audio/mpeg"),
-            Some(FileCategory::Audio)
-        );
+        assert_eq!(detect_category("image/jpeg"), Some(FileCategory::Photo));
+        assert_eq!(detect_category("video/mp4"), Some(FileCategory::Video));
+        assert_eq!(detect_category("audio/mpeg"), Some(FileCategory::Audio));
         assert_eq!(
             detect_category("application/pdf"),
             Some(FileCategory::Document)
@@ -428,13 +413,7 @@ mod tests {
     fn validate_upload_rejects_unsupported_type() {
         let limits = test_limits();
         assert!(matches!(
-            validate_upload(
-                "malware.exe",
-                "application/x-msdownload",
-                100,
-                &[],
-                &limits
-            ),
+            validate_upload("malware.exe", "application/x-msdownload", 100, &[], &limits),
             Err(FileValidationError::UnsupportedMimeType(_))
         ));
     }
@@ -443,13 +422,7 @@ mod tests {
     fn validate_upload_rejects_path_traversal() {
         let limits = test_limits();
         assert!(matches!(
-            validate_upload(
-                "../../../etc/passwd",
-                "image/jpeg",
-                100,
-                &[],
-                &limits
-            ),
+            validate_upload("../../../etc/passwd", "image/jpeg", 100, &[], &limits),
             Err(FileValidationError::PathTraversalAttempt)
         ));
     }

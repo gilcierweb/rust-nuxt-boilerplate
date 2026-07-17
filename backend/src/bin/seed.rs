@@ -8,7 +8,7 @@ use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel::sql_types::{Text, Uuid as SqlUuid};
-use faker_rust::{name};
+use faker_rust::name;
 use ipnet::IpNet;
 use rand::RngCore;
 use std::collections::HashMap;
@@ -215,7 +215,11 @@ fn find_role_id(role_ids: &[(String, Uuid)], role_name: &str) -> SeedResult<Uuid
         .find(|(name, _)| name == role_name)
         .map(|(_, id)| *id)
         .ok_or_else(|| {
-            format!("Role '{}' not found after creation - this should not happen", role_name).into()
+            format!(
+                "Role '{}' not found after creation - this should not happen",
+                role_name
+            )
+            .into()
         })
 }
 
@@ -395,7 +399,11 @@ fn ensure_audit_log(
 }
 
 fn print_counts(conn: &mut PgConnection) -> SeedResult<()> {
-    use schema::{audit_logs::table as audit_logs_table, profiles::table as profiles_table, refresh_tokens::table as refresh_tokens_table, roles::table as roles_table, users::table as users_table, users_roles::table as users_roles_table};
+    use schema::{
+        audit_logs::table as audit_logs_table, profiles::table as profiles_table,
+        refresh_tokens::table as refresh_tokens_table, roles::table as roles_table,
+        users::table as users_table, users_roles::table as users_roles_table,
+    };
 
     let users_count: i64 = users_table.select(count_star()).first(conn)?;
     let roles_count: i64 = roles_table.select(count_star()).first(conn)?;
@@ -419,11 +427,7 @@ fn print_test_users() {
     println!("\nTest users:");
     for index in 1..=10 {
         let role = if index == 1 { "admin" } else { "user" };
-        println!(
-            "- {} | password123 | role={}",
-            test_user_email(index),
-            role
-        );
+        println!("- {} | password123 | role={}", test_user_email(index), role);
     }
 }
 
@@ -433,14 +437,7 @@ fn main() -> SeedResult<()> {
     let mut conn = pool.get()?;
 
     conn.transaction(|conn| {
-        let role_names = [
-            "admin",
-            "manager",
-            "editor",
-            "viewer",
-            "support",
-            "finance",
-        ];
+        let role_names = ["admin", "manager", "editor", "viewer", "support", "finance"];
         let mut role_ids = Vec::with_capacity(role_names.len());
         for role_name in role_names {
             role_ids.push((role_name.to_string(), ensure_role(conn, role_name)?));
@@ -493,7 +490,12 @@ fn main() -> SeedResult<()> {
 
         let viewer_role_id = find_role_id(&role_ids, "viewer")?;
 
-        let viewer_permissions = ["users:read", "roles:read", "audit_logs:read", "profiles:read"];
+        let viewer_permissions = [
+            "users:read",
+            "roles:read",
+            "audit_logs:read",
+            "profiles:read",
+        ];
 
         for permission_code in viewer_permissions {
             if let Some(permission_id) = permission_ids.get(permission_code) {

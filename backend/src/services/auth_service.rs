@@ -55,9 +55,18 @@ pub fn needs_rehash(hash: &str) -> bool {
 
     let params = &parsed.params;
 
-    let m_cost = params.get("m").and_then(|v| v.to_string().parse::<u32>().ok()).unwrap_or(0);
-    let t_cost = params.get("t").and_then(|v| v.to_string().parse::<u32>().ok()).unwrap_or(0);
-    let p_cost = params.get("p").and_then(|v| v.to_string().parse::<u32>().ok()).unwrap_or(0);
+    let m_cost = params
+        .get("m")
+        .and_then(|v| v.to_string().parse::<u32>().ok())
+        .unwrap_or(0);
+    let t_cost = params
+        .get("t")
+        .and_then(|v| v.to_string().parse::<u32>().ok())
+        .unwrap_or(0);
+    let p_cost = params
+        .get("p")
+        .and_then(|v| v.to_string().parse::<u32>().ok())
+        .unwrap_or(0);
 
     m_cost != ARGON2_M_COST || t_cost != ARGON2_T_COST || p_cost != ARGON2_P_COST
 }
@@ -178,7 +187,11 @@ pub fn register_user(
 }
 
 /// Confirm a user's email by their token.
-pub fn confirm_email(conn: &mut PgConnection, token: &str, token_salt: &str) -> Result<User, AppError> {
+pub fn confirm_email(
+    conn: &mut PgConnection,
+    token: &str,
+    token_salt: &str,
+) -> Result<User, AppError> {
     use crate::db::schema::users::dsl::*;
     use diesel::dsl::sql;
 

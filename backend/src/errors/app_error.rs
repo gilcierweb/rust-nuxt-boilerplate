@@ -72,42 +72,42 @@ impl AppError {
                 } else {
                     message.clone()
                 }
-            }
+            },
             AppError::BadRequest(message) => {
                 if message.trim().is_empty() {
                     t!("errors.bad_request").into_owned()
                 } else {
                     message.clone()
                 }
-            }
+            },
             AppError::Unauthorized(message) => {
                 if message.trim().is_empty() {
                     t!("errors.unauthorized").into_owned()
                 } else {
                     message.clone()
                 }
-            }
+            },
             AppError::Forbidden(message) => {
                 if message.trim().is_empty() {
                     t!("errors.forbidden").into_owned()
                 } else {
                     message.clone()
                 }
-            }
+            },
             AppError::NotFound(resource) => {
                 if resource.trim().is_empty() {
                     t!("errors.not_found", resource = "Resource").into_owned()
                 } else {
                     t!("errors.not_found", resource = resource.as_str()).into_owned()
                 }
-            }
+            },
             AppError::Conflict(message) => {
                 if message.trim().is_empty() {
                     t!("errors.conflict").into_owned()
                 } else {
                     message.clone()
                 }
-            }
+            },
             AppError::TooManyRequests(_) => t!("errors.too_many_requests").into_owned(),
             AppError::RateLimited(_) => t!("errors.rate_limited").into_owned(),
         }

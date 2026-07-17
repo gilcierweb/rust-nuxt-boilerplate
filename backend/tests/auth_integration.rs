@@ -113,8 +113,8 @@ impl TestDb {
 }
 
 fn redis_pool() -> deadpool_redis::Pool {
-    let redis_url = std::env::var("REDIS_URL_TEST")
-        .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+    let redis_url =
+        std::env::var("REDIS_URL_TEST").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
     let mut cfg = RedisConfig::from_url(&redis_url);
     cfg.pool = Some(deadpool_redis::PoolConfig::new(5));
     cfg.create_pool(Some(Runtime::Tokio1))
@@ -126,8 +126,8 @@ fn test_config() -> backend::config::AppConfig {
 
     let database_url = std::env::var("DATABASE_URL_TEST")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string());
-    let redis_url = std::env::var("REDIS_URL_TEST")
-        .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+    let redis_url =
+        std::env::var("REDIS_URL_TEST").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
     let jwt_secret = std::env::var("JWT_SECRET")
         .unwrap_or_else(|_| "test-jwt-secret-key-for-integration-tests-32b!".to_string());
     let csrf_key = jwt_secret.clone();
@@ -205,8 +205,16 @@ fn test_config() -> backend::config::AppConfig {
     }
 }
 
-fn extract_cookie(response: &actix_web::dev::ServiceResponse<impl actix_web::body::MessageBody>, name: &str) -> Option<String> {
-    response.headers().get("set-cookie")?.to_str().ok()?.lines()
+fn extract_cookie(
+    response: &actix_web::dev::ServiceResponse<impl actix_web::body::MessageBody>,
+    name: &str,
+) -> Option<String> {
+    response
+        .headers()
+        .get("set-cookie")?
+        .to_str()
+        .ok()?
+        .lines()
         .find(|line| line.starts_with(&format!("{}=", name)))
         .and_then(|line| {
             let value = line.split(';').next()?;
@@ -248,13 +256,11 @@ async fn test_full_auth_cycle() {
             .app_data(state)
             .app_data(container)
             .app_data(ws_state)
-            .app_data(
-                web::JsonConfig::default()
-                    .limit(1024 * 1024)
-                    .error_handler(|_error, _request| {
-                        backend::errors::AppError::BadRequest("bad request".to_string()).into()
-                    }),
-            )
+            .app_data(web::JsonConfig::default().limit(1024 * 1024).error_handler(
+                |_error, _request| {
+                    backend::errors::AppError::BadRequest("bad request".to_string()).into()
+                },
+            ))
             .service(
                 web::scope("/api/v1")
                     .service(
@@ -274,7 +280,10 @@ async fn test_full_auth_cycle() {
                             .service(backend::controllers::auth_controller::enable_2fa)
                             .service(backend::controllers::auth_controller::disable_2fa),
                     )
-                    .route("/health", web::get().to(backend::controllers::health_controller::health_check)),
+                    .route(
+                        "/health",
+                        web::get().to(backend::controllers::health_controller::health_check),
+                    ),
             ),
     )
     .await;
@@ -390,7 +399,10 @@ async fn test_full_auth_cycle() {
     )
     .await;
     println!("After logout: {}", resp.status());
-    assert!(resp.status().is_client_error(), "token should be invalid after logout");
+    assert!(
+        resp.status().is_client_error(),
+        "token should be invalid after logout"
+    );
 
     db.drop_all_tables().await;
 }
@@ -422,16 +434,13 @@ async fn test_login_invalid_credentials() {
         App::new()
             .app_data(state)
             .app_data(container)
-            .app_data(
-                web::JsonConfig::default()
-                    .limit(1024 * 1024)
-                    .error_handler(|_error, _request| {
-                        backend::errors::AppError::BadRequest("bad request".to_string()).into()
-                    }),
-            )
+            .app_data(web::JsonConfig::default().limit(1024 * 1024).error_handler(
+                |_error, _request| {
+                    backend::errors::AppError::BadRequest("bad request".to_string()).into()
+                },
+            ))
             .service(
-                web::scope("/api/v1/auth")
-                    .service(backend::controllers::auth_controller::login),
+                web::scope("/api/v1/auth").service(backend::controllers::auth_controller::login),
             ),
     )
     .await;
@@ -470,13 +479,17 @@ async fn test_health_endpoint() {
     let app = test::init_service(
         App::new()
             .app_data(state)
-            .service(
-                web::scope("/api/v1")
-                    .route("/health", web::get().to(backend::controllers::health_controller::health_check)),
-            ),
+            .service(web::scope("/api/v1").route(
+                "/health",
+                web::get().to(backend::controllers::health_controller::health_check),
+            )),
     )
     .await;
 
-    let resp = test::call_service(&app, test::TestRequest::get().uri("/api/v1/health").to_request()).await;
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::get().uri("/api/v1/health").to_request(),
+    )
+    .await;
     assert!(resp.status().is_success());
 }

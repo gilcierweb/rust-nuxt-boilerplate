@@ -8,7 +8,9 @@ use crate::{
     models::user::{NewUser, User},
     repositories::container::AppContainer,
     security::SecurityService,
-    services::auth_service::{hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password},
+    services::auth_service::{
+        hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password,
+    },
     services::email_service::EmailService,
     services::token_service::hash_token,
     utils::validation::first_validation_error_message,
@@ -124,7 +126,10 @@ pub async fn register(
     let encrypted_password = hash_password(&body.password)?;
     let now = Utc::now();
     let confirmation_token = Uuid::new_v4().to_string();
-    let confirmation_token_digest = hash_token(&confirmation_token, &container.config.refresh_token_hash_salt);
+    let confirmation_token_digest = hash_token(
+        &confirmation_token,
+        &container.config.refresh_token_hash_salt,
+    );
     let security = SecurityService::from_config(container.config.as_ref())?;
     let protected_email = security.protect_email(&body.email)?;
     let email_fingerprint = fingerprint_value(&protected_email.blind_index);
@@ -153,7 +158,7 @@ pub async fn register(
             return Err(AppError::Conflict(
                 t!("auth.register.email_exists").into_owned(),
             ));
-        }
+        },
         Err(e) => return Err(AppError::Database(e)),
     };
 
@@ -199,12 +204,18 @@ pub async fn confirm(
     // Find user by confirmation token and confirm email
     let affected_rows = container
         .users
-        .confirm_email(&hash_token(token, &container.config.refresh_token_hash_salt))
+        .confirm_email(&hash_token(
+            token,
+            &container.config.refresh_token_hash_salt,
+        ))
         .await
         .map_err(AppError::Database)?;
 
     if affected_rows == 0 {
-        tracing::warn!(event = "auth.confirm.invalid_token", "email confirmation failed");
+        tracing::warn!(
+            event = "auth.confirm.invalid_token",
+            "email confirmation failed"
+        );
         return Err(AppError::BadRequest(
             t!("auth.reset.token_invalid").into_owned(),
         ));
@@ -219,10 +230,7 @@ pub async fn confirm(
 
 /// Get user roles with Redis caching to avoid N+1 queries
 /// Cache TTL: 5 minutes (roles rarely change)
-async fn get_cached_user_roles(
-    container: &AppContainer,
-    user_id: &Uuid,
-) -> AppResult<Vec<String>> {
+async fn get_cached_user_roles(container: &AppContainer, user_id: &Uuid) -> AppResult<Vec<String>> {
     let cache_key = format!("user_roles:{}", user_id);
 
     // Try to get from cache first
@@ -296,7 +304,7 @@ pub async fn login(
                 "login failed: user not found"
             );
             return Err(AppError::Unauthorized(t!("auth.login.failed").into_owned()));
-        }
+        },
         Err(e) => return Err(AppError::Database(e)),
     };
 
@@ -356,13 +364,9 @@ pub async fn login(
                 );
                 // Non-fatal: continue with old hash
                 user.encrypted_password.clone()
-            }
+            },
         };
-        if let Err(e) = container
-            .users
-            .update_password(&user.id, &new_hash)
-            .await
-        {
+        if let Err(e) = container.users.update_password(&user.id, &new_hash).await {
             tracing::warn!(
                 event = "auth.login.rehash_failed",
                 user_id = %user.id,
@@ -387,7 +391,7 @@ pub async fn login(
                     "requires_otp": true,
                     "message": t!("auth.2fa.setup_required")
                 })));
-            }
+            },
             Some(code) => {
                 let secret = user.otp_secret.as_ref().ok_or(AppError::Internal(
                     t!("auth.2fa.invalid_secret").into_owned(),
@@ -402,7 +406,7 @@ pub async fn login(
                     );
                     return Err(error);
                 }
-            }
+            },
         }
     }
 
@@ -432,12 +436,13 @@ pub async fn login(
     )?;
 
     let refresh_token_plain = generate_random_token(48);
-    let refresh_token_hash = hash_token(&refresh_token_plain, &container.config.refresh_token_hash_salt);
+    let refresh_token_hash = hash_token(
+        &refresh_token_plain,
+        &container.config.refresh_token_hash_salt,
+    );
 
     // Store refresh token
-    let ip_string = req
-        .peer_addr()
-        .map(|addr| addr.ip().to_string());
+    let ip_string = req.peer_addr().map(|addr| addr.ip().to_string());
 
     let ip: Option<ipnet::IpNet> = ip_string
         .as_ref()
@@ -508,7 +513,9 @@ pub async fn refresh(
             user_agent = request_user_agent(&req).as_deref().unwrap_or("unknown"),
             "refresh failed: missing refresh token cookie"
         );
-        return Err(AppError::Unauthorized("Missing refresh token cookie".to_string()));
+        return Err(AppError::Unauthorized(
+            "Missing refresh token cookie".to_string(),
+        ));
     }
 
     let mut rotated_result = None;
@@ -533,7 +540,7 @@ pub async fn refresh(
             Ok(Some((rotated, new_plain))) => {
                 rotated_result = Some((rotated, new_plain));
                 break;
-            }
+            },
             Ok(None) => continue, // Token was already revoked/expired or not found
             Err(e) => return Err(AppError::Database(e)),
         }
@@ -549,7 +556,7 @@ pub async fn refresh(
                 "refresh failed: invalid or missing token"
             );
             return Err(AppError::Unauthorized("Invalid refresh token".to_string()));
-        }
+        },
     };
 
     // Get user
@@ -681,7 +688,8 @@ pub async fn logout(
 
     // Blacklist the access token if present
     if let Some(token) = &access_token {
-        let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
+        let token_hash =
+            crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
         let ttl = container.config.jwt_access_expiry_secs as u64;
         if let Err(e) = container.access_token_blacklist.add(&token_hash, ttl).await {
             tracing::warn!("Failed to blacklist access token: {}", e);
@@ -1342,7 +1350,7 @@ pub async fn stripe_webhook(
             return HttpResponse::BadRequest().json(serde_json::json!({
                 "error": "Invalid payload encoding"
             }));
-        }
+        },
     };
 
     let payload_json: serde_json::Value = match serde_json::from_str(payload_str) {
@@ -1356,7 +1364,7 @@ pub async fn stripe_webhook(
             return HttpResponse::BadRequest().json(serde_json::json!({
                 "error": "Invalid JSON payload"
             }));
-        }
+        },
     };
 
     // Extract event ID for idempotency
@@ -1409,7 +1417,7 @@ pub async fn stripe_webhook(
             // - Find or create user
             // - Create subscription record
             // - Send welcome email
-        }
+        },
         "invoice.paid" => {
             tracing::info!(
                 event = "stripe_webhook.invoice_paid",
@@ -1419,7 +1427,7 @@ pub async fn stripe_webhook(
             // TODO: Implement actual business logic
             // - Update subscription status to active
             // - Extend user access period
-        }
+        },
         "invoice.payment_failed" => {
             tracing::warn!(
                 event = "stripe_webhook.payment_failed",
@@ -1430,7 +1438,7 @@ pub async fn stripe_webhook(
             // - Mark subscription as past_due
             // - Send payment failure notification
             // - Retry payment or suspend access
-        }
+        },
         "customer.subscription.updated" => {
             tracing::info!(
                 event = "stripe_webhook.subscription_updated",
@@ -1440,7 +1448,7 @@ pub async fn stripe_webhook(
             // TODO: Implement actual business logic
             // - Update subscription plan/period
             // - Sync features/limits
-        }
+        },
         "customer.subscription.deleted" => {
             tracing::info!(
                 event = "stripe_webhook.subscription_deleted",
@@ -1451,7 +1459,7 @@ pub async fn stripe_webhook(
             // - Mark subscription as cancelled
             // - Revoke access
             // - Send cancellation email
-        }
+        },
         _ => {
             tracing::info!(
                 event = "stripe_webhook.unhandled_event",
@@ -1459,7 +1467,7 @@ pub async fn stripe_webhook(
                 event_type = %event_type,
                 "Unhandled Stripe webhook event type"
             );
-        }
+        },
     }
 
     HttpResponse::Ok().json(serde_json::json!({
@@ -1492,7 +1500,7 @@ pub async fn pix_webhook(
             return HttpResponse::BadRequest().json(serde_json::json!({
                 "error": "Invalid payload encoding"
             }));
-        }
+        },
     };
 
     let payload_json: serde_json::Value = match serde_json::from_str(payload_str) {
@@ -1506,7 +1514,7 @@ pub async fn pix_webhook(
             return HttpResponse::BadRequest().json(serde_json::json!({
                 "error": "Invalid JSON payload"
             }));
-        }
+        },
     };
 
     // Extract transaction ID for idempotency
@@ -1567,7 +1575,7 @@ pub async fn pix_webhook(
             // - Find associated order/subscription
             // - Update payment status
             // - Grant access
-        }
+        },
         "pix.refund" | "payment.refunded" => {
             tracing::info!(
                 event = "pix_webhook.payment_refunded",
@@ -1577,7 +1585,7 @@ pub async fn pix_webhook(
             // TODO: Implement actual business logic
             // - Process refund
             // - Revoke access if needed
-        }
+        },
         _ => {
             tracing::info!(
                 event = "pix_webhook.unhandled_event",
@@ -1585,7 +1593,7 @@ pub async fn pix_webhook(
                 event_type = %event_type,
                 "Unhandled Pix webhook event type"
             );
-        }
+        },
     }
 
     HttpResponse::Ok().json(serde_json::json!({
@@ -1981,7 +1989,9 @@ mod tests {
         mock_refresh_tokens
             .expect_rotate_token()
             .times(1)
-            .returning(move |_, _, _| Ok(Some((rotated_token.clone(), "new-plain-token".to_string()))));
+            .returning(move |_, _, _| {
+                Ok(Some((rotated_token.clone(), "new-plain-token".to_string())))
+            });
 
         let mut container = mock_container();
         container.users = Arc::new(mock_users);

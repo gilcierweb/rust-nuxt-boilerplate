@@ -23,7 +23,11 @@ impl AccessTokenBlacklist {
     ///
     /// The TTL is critical — Redis automatically expires keys after the specified duration.
     /// Always set TTL to prevent unbounded memory growth.
-    pub async fn add(&self, token_hash: &str, ttl_seconds: u64) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn add(
+        &self,
+        token_hash: &str,
+        ttl_seconds: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut conn = self.redis.get().await?;
         let key = format!("{}{}", self.prefix, token_hash);
         redis::cmd("SET")
@@ -37,7 +41,10 @@ impl AccessTokenBlacklist {
     }
 
     /// Check if a token is blacklisted
-    pub async fn is_blacklisted(&self, token_hash: &str) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn is_blacklisted(
+        &self,
+        token_hash: &str,
+    ) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
         let mut conn = self.redis.get().await?;
         let key = format!("{}{}", self.prefix, token_hash);
         let exists: bool = conn.exists(&key).await?;
@@ -45,7 +52,10 @@ impl AccessTokenBlacklist {
     }
 
     #[allow(dead_code)]
-    pub async fn remove(&self, token_hash: &str) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn remove(
+        &self,
+        token_hash: &str,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut conn = self.redis.get().await?;
         let key = format!("{}{}", self.prefix, token_hash);
         let _: usize = conn.del(&key).await?;
@@ -111,10 +121,7 @@ impl AccessTokenBlacklist {
 
             for key in &keys {
                 // Check TTL — -1 means no expiry set (bug), -2 means key doesn't exist
-                let ttl: i64 = redis::cmd("TTL")
-                    .arg(key)
-                    .query_async(&mut conn)
-                    .await?;
+                let ttl: i64 = redis::cmd("TTL").arg(key).query_async(&mut conn).await?;
 
                 // Remove if no TTL set (should never happen) or already expired
                 if ttl == -1 || ttl == 0 {

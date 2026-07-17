@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 
+use crate::middleware::auth::{Claims, RateLimitCategory, rate_limit_category};
 use actix_web::{
-    Error, HttpResponse,
+    Error, HttpMessage, HttpResponse,
     body::BoxBody,
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
     http::Method,
     web,
-    HttpMessage,
 };
-use crate::middleware::auth::{Claims, RateLimitCategory, rate_limit_category};
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
 use std::rc::Rc;
@@ -18,7 +17,7 @@ use crate::{AppState, repositories::container::AppContainer};
 const CSRF_COOKIE_NAME: &str = "csrf_token";
 
 /// Rate limit configuration.
-/// 
+///
 /// # Fields
 /// * `max_requests` - Maximum number of requests allowed within the window
 /// * `window_secs` - Time window in seconds for the rate limit
@@ -182,14 +181,14 @@ impl<S> RateLimiterMiddleware<S> {
                 } else {
                     RATE_AUTH_STRICT.clone()
                 }
-            }
+            },
             RateLimitCategory::AuthSession => {
                 if is_authenticated {
                     RATE_AUTH_SESSION_AUTHENTICATED.clone()
                 } else {
                     RATE_AUTH_SESSION.clone()
                 }
-            }
+            },
             RateLimitCategory::Default => {
                 if is_authenticated {
                     match base_limit.key_prefix {
@@ -201,7 +200,7 @@ impl<S> RateLimiterMiddleware<S> {
                 } else {
                     base_limit.clone()
                 }
-            }
+            },
         }
     }
 }
@@ -250,8 +249,12 @@ where
                 return Ok(res.map_into_boxed_body());
             }
 
-            let effective_limit =
-                RateLimiterMiddleware::<S>::pick_effective_limit(&limit, req.method(), req.path(), is_authenticated);
+            let effective_limit = RateLimiterMiddleware::<S>::pick_effective_limit(
+                &limit,
+                req.method(),
+                req.path(),
+                is_authenticated,
+            );
             let key = format!("{}:{}", effective_limit.key_prefix, client_key);
 
             let allowed = async {
@@ -311,74 +314,114 @@ mod tests {
 
     #[test]
     fn anonymous_gets_base_api_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::GET, "/api/v1/users", false);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::GET,
+            "/api/v1/users",
+            false,
+        );
         assert_eq!(limit.max_requests, 120);
         assert_eq!(limit.key_prefix, "rl:api");
     }
 
     #[test]
     fn authenticated_gets_higher_api_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::GET, "/api/v1/users", true);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::GET,
+            "/api/v1/users",
+            true,
+        );
         assert_eq!(limit.max_requests, 600);
         assert_eq!(limit.key_prefix, "rl:api");
     }
 
     #[test]
     fn anonymous_gets_base_auth_strict_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/login", false);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::POST,
+            "/api/v1/auth/login",
+            false,
+        );
         assert_eq!(limit.max_requests, 10);
         assert_eq!(limit.key_prefix, "rl:auth_strict");
     }
 
     #[test]
     fn authenticated_gets_higher_auth_strict_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/login", true);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::POST,
+            "/api/v1/auth/login",
+            true,
+        );
         assert_eq!(limit.max_requests, 20);
         assert_eq!(limit.key_prefix, "rl:auth_strict");
     }
 
     #[test]
     fn anonymous_gets_base_session_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/refresh", false);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::POST,
+            "/api/v1/auth/refresh",
+            false,
+        );
         assert_eq!(limit.max_requests, 300);
         assert_eq!(limit.key_prefix, "rl:auth_session");
     }
 
     #[test]
     fn authenticated_gets_higher_session_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_API, &Method::POST, "/api/v1/auth/refresh", true);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::POST,
+            "/api/v1/auth/refresh",
+            true,
+        );
         assert_eq!(limit.max_requests, 600);
         assert_eq!(limit.key_prefix, "rl:auth_session");
     }
 
     #[test]
     fn authenticated_user_with_auth_base_gets_auth_authenticated_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_AUTH, &Method::GET, "/api/v1/other", true);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_AUTH,
+            &Method::GET,
+            "/api/v1/other",
+            true,
+        );
         assert_eq!(limit.max_requests, 200);
         assert_eq!(limit.key_prefix, "rl:auth");
     }
 
     #[test]
     fn authenticated_user_with_msg_base_gets_messages_authenticated_limit() {
-        let limit =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_MESSAGES, &Method::POST, "/api/v1/other", true);
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_MESSAGES,
+            &Method::POST,
+            "/api/v1/other",
+            true,
+        );
         assert_eq!(limit.max_requests, 120);
         assert_eq!(limit.key_prefix, "rl:msg");
     }
 
     #[test]
     fn upload_limit_unchanged_for_both() {
-        let anon =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_UPLOAD, &Method::POST, "/api/v1/admin/upload", false);
-        let auth =
-            RateLimiterMiddleware::<()>::pick_effective_limit(&RATE_UPLOAD, &Method::POST, "/api/v1/admin/upload", true);
+        let anon = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_UPLOAD,
+            &Method::POST,
+            "/api/v1/admin/upload",
+            false,
+        );
+        let auth = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_UPLOAD,
+            &Method::POST,
+            "/api/v1/admin/upload",
+            true,
+        );
         assert_eq!(anon.max_requests, 10);
         assert_eq!(auth.max_requests, 10);
     }
@@ -399,9 +442,18 @@ mod tests {
     #[test]
     fn key_prefixes_are_shared_between_anonymous_and_authenticated() {
         assert_eq!(RATE_AUTH.key_prefix, RATE_AUTH_AUTHENTICATED.key_prefix);
-        assert_eq!(RATE_AUTH_STRICT.key_prefix, RATE_AUTH_STRICT_AUTHENTICATED.key_prefix);
+        assert_eq!(
+            RATE_AUTH_STRICT.key_prefix,
+            RATE_AUTH_STRICT_AUTHENTICATED.key_prefix
+        );
         assert_eq!(RATE_API.key_prefix, RATE_API_AUTHENTICATED.key_prefix);
-        assert_eq!(RATE_AUTH_SESSION.key_prefix, RATE_AUTH_SESSION_AUTHENTICATED.key_prefix);
-        assert_eq!(RATE_MESSAGES.key_prefix, RATE_MESSAGES_AUTHENTICATED.key_prefix);
+        assert_eq!(
+            RATE_AUTH_SESSION.key_prefix,
+            RATE_AUTH_SESSION_AUTHENTICATED.key_prefix
+        );
+        assert_eq!(
+            RATE_MESSAGES.key_prefix,
+            RATE_MESSAGES_AUTHENTICATED.key_prefix
+        );
     }
 }

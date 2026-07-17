@@ -7,10 +7,10 @@
 //! Usage: cargo run --bin cleanup_refresh_tokens
 
 use chrono::Utc;
+use diesel::PgConnection;
 use diesel::delete;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use diesel::PgConnection;
 use diesel::sql_query;
 
 use std::env;
@@ -27,8 +27,9 @@ fn main() -> CleanupResult<()> {
     dotenvy::dotenv().ok();
     tracing_subscriber::fmt::init();
 
-    let database_url = env::var("DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/boilerplate_dev".to_string());
+    let database_url = env::var("DATABASE_URL").unwrap_or_else(|_| {
+        "postgres://postgres:postgres@localhost:5432/boilerplate_dev".to_string()
+    });
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = r2d2::Pool::builder()
@@ -42,7 +43,8 @@ fn main() -> CleanupResult<()> {
 
     // 1. Delete expired tokens (expires_at < NOW)
     let deleted_expired = delete(
-        refresh_tokens_table::table.filter(refresh_tokens_table::expires_at.lt(Utc::now().naive_utc()))
+        refresh_tokens_table::table
+            .filter(refresh_tokens_table::expires_at.lt(Utc::now().naive_utc())),
     )
     .execute(&mut conn)?;
     println!("  ✅ Deleted {} expired tokens", deleted_expired);
@@ -55,7 +57,10 @@ fn main() -> CleanupResult<()> {
             .filter(refresh_tokens_table::revoked_at.lt(thirty_days_ago.naive_utc())),
     )
     .execute(&mut conn)?;
-    println!("  ✅ Deleted {} revoked tokens (older than 30 days)", deleted_revoked);
+    println!(
+        "  ✅ Deleted {} revoked tokens (older than 30 days)",
+        deleted_revoked
+    );
 
     // 3. Delete excess valid tokens per user (keep only 5 most recent valid tokens per user)
     let deleted_per_user = sql_query(
@@ -73,10 +78,17 @@ fn main() -> CleanupResult<()> {
         "#,
     )
     .execute(&mut conn)?;
-    println!("  ✅ Deleted {} excess valid tokens (keeping 5 most recent per user)", deleted_per_user);
+    println!(
+        "  ✅ Deleted {} excess valid tokens (keeping 5 most recent per user)",
+        deleted_per_user
+    );
 
     let total = deleted_expired + deleted_revoked + deleted_per_user;
-    println!("\n✨ Cleanup complete at {}: {} total tokens removed", Utc::now(), total);
+    println!(
+        "\n✨ Cleanup complete at {}: {} total tokens removed",
+        Utc::now(),
+        total
+    );
 
     Ok(())
 }

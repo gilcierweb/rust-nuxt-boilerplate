@@ -16,7 +16,8 @@ fn migrations_dir() -> std::path::PathBuf {
 #[test]
 fn all_migrations_have_up_sql() {
     let dir = migrations_dir();
-    let entries = fs::read_dir(&dir).unwrap_or_else(|_| panic!("Migrations dir not found: {:?}", dir));
+    let entries =
+        fs::read_dir(&dir).unwrap_or_else(|_| panic!("Migrations dir not found: {:?}", dir));
 
     let mut migration_count = 0;
     for entry in entries {
@@ -33,11 +34,7 @@ fn all_migrations_have_up_sql() {
         }
 
         let up_sql = migration_path.join("up.sql");
-        assert!(
-            up_sql.exists(),
-            "Missing up.sql for migration: {}",
-            name
-        );
+        assert!(up_sql.exists(), "Missing up.sql for migration: {}", name);
         assert!(
             fs::metadata(&up_sql).unwrap().len() > 0,
             "up.sql is empty for migration: {}",
@@ -87,7 +84,11 @@ fn all_migrations_have_down_sql() {
         migration_count += 1;
     }
 
-    assert_eq!(migration_count, 10, "Expected 10 migrations (found {})", migration_count);
+    assert_eq!(
+        migration_count, 10,
+        "Expected 10 migrations (found {})",
+        migration_count
+    );
     println!("All {} migrations have valid down.sql", migration_count);
 }
 
@@ -211,7 +212,10 @@ fn migration_count_matches_expected() {
 fn diesel_toml_exists() {
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let diesel_toml = Path::new(&manifest_dir).join("diesel.toml");
-    assert!(diesel_toml.exists(), "diesel.toml not found in project root");
+    assert!(
+        diesel_toml.exists(),
+        "diesel.toml not found in project root"
+    );
 }
 
 #[test]

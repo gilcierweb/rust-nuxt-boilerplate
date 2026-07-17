@@ -27,7 +27,7 @@ impl Claims {
             "admin" => self.role == ROLE_ADMIN.as_i32(),
             "operator" | "moderator" | "support" | "creator" | "agency" => {
                 self.role == crate::models::role::ROLE_OPERATOR.as_i32()
-            }
+            },
             "viewer" | "fan" => self.role == crate::models::role::ROLE_VIEWER.as_i32(),
             _ => false,
         }
@@ -162,19 +162,13 @@ impl FromRequest for AuthUser {
     type Error = AppError;
     type Future = Ready<Result<Self, Self::Error>>;
 
-    fn from_request(
-        req: &HttpRequest,
-        _payload: &mut actix_web::dev::Payload,
-    ) -> Self::Future {
-        let claims = req
-            .extensions()
-            .get::<Claims>()
-            .cloned();
+    fn from_request(req: &HttpRequest, _payload: &mut actix_web::dev::Payload) -> Self::Future {
+        let claims = req.extensions().get::<Claims>().cloned();
 
         ready(
             claims
                 .map(|c| AuthUser { claims: c })
-                .ok_or_else(|| AppError::Unauthorized("Not authenticated".to_string()))
+                .ok_or_else(|| AppError::Unauthorized("Not authenticated".to_string())),
         )
     }
 }
@@ -222,7 +216,15 @@ fn create_token_for_use(
     expiry_secs: i64,
     token_use: &str,
 ) -> AppResult<String> {
-    create_token_with_kid(user_id, profile_id, role, jwt_secret, expiry_secs, token_use, None)
+    create_token_with_kid(
+        user_id,
+        profile_id,
+        role,
+        jwt_secret,
+        expiry_secs,
+        token_use,
+        None,
+    )
 }
 
 pub fn create_token_with_kid(

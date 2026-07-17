@@ -27,11 +27,7 @@ impl IUserRoleRepository for UserRolesRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<UserRole>> {
         self.base
             .run(|conn| {
-                Box::pin(async move {
-                    users_roles_table::table
-                        .load::<UserRole>(conn)
-                        .await
-                })
+                Box::pin(async move { users_roles_table::table.load::<UserRole>(conn).await })
             })
             .await
     }

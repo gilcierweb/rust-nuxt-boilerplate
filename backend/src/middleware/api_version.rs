@@ -61,14 +61,10 @@ struct VersionErrorBody {
 }
 
 // Pre-allocated header names for custom headers.
-const HEADER_DEPRECATION: header::HeaderName =
-    header::HeaderName::from_static("deprecation");
-const HEADER_SUNSET: header::HeaderName =
-    header::HeaderName::from_static("sunset");
-const HEADER_X_API_WARN: header::HeaderName =
-    header::HeaderName::from_static("x-api-warn");
-const HEADER_X_API_VERSION: header::HeaderName =
-    header::HeaderName::from_static("x-api-version");
+const HEADER_DEPRECATION: header::HeaderName = header::HeaderName::from_static("deprecation");
+const HEADER_SUNSET: header::HeaderName = header::HeaderName::from_static("sunset");
+const HEADER_X_API_WARN: header::HeaderName = header::HeaderName::from_static("x-api-warn");
+const HEADER_X_API_VERSION: header::HeaderName = header::HeaderName::from_static("x-api-version");
 const HEADER_X_API_SUPPORTED: header::HeaderName =
     header::HeaderName::from_static("x-api-supported");
 
@@ -128,7 +124,10 @@ impl<S> ApiVersionGuardMiddleware<S> {
             }
         }
 
-        if let Some(header_val) = req.headers().get(header::HeaderName::from_static("x-api-version")) {
+        if let Some(header_val) = req
+            .headers()
+            .get(header::HeaderName::from_static("x-api-version"))
+        {
             if let Ok(val_str) = header_val.to_str() {
                 if let Ok(v) = u16::from_str(val_str.trim()) {
                     return Some(v);
@@ -220,17 +219,15 @@ where
                                 }
                             }
 
-                            let warn_msg = format!(
-                                "API v{} is deprecated. Migrate to latest version.",
-                                v
-                            );
+                            let warn_msg =
+                                format!("API v{} is deprecated. Migrate to latest version.", v);
                             if let Ok(val) = header::HeaderValue::from_str(&warn_msg) {
                                 headers.insert(HEADER_X_API_WARN, val);
                             }
                         }
 
                         Ok(res.map_into_boxed_body())
-                    }
+                    },
                     Some(v) => {
                         let supported_list: Vec<String> =
                             config.supported.iter().map(|s| format!("v{}", s)).collect();
@@ -257,15 +254,14 @@ where
                             .map_into_boxed_body();
 
                         Ok(ServiceResponse::new(http_req, response))
-                    }
+                    },
                     None => {
                         let mut res = svc.call(req).await?;
-                        res.response_mut().headers_mut().insert(
-                            HEADER_X_API_VERSION,
-                            header::HeaderValue::from_static("1"),
-                        );
+                        res.response_mut()
+                            .headers_mut()
+                            .insert(HEADER_X_API_VERSION, header::HeaderValue::from_static("1"));
                         Ok(res.map_into_boxed_body())
-                    }
+                    },
                 }
             } else {
                 let res = svc.call(req).await?;
@@ -369,7 +365,10 @@ mod tests {
         assert!(config.deprecated.contains_key(&1));
         let info = config.deprecated.get(&1).unwrap();
         assert_eq!(info.sunset.as_deref(), Some("2025-12-31"));
-        assert_eq!(info.docs_url.as_deref(), Some("https://docs.example.com/migration"));
+        assert_eq!(
+            info.docs_url.as_deref(),
+            Some("https://docs.example.com/migration")
+        );
     }
 
     #[test]

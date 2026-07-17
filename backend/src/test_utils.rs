@@ -10,9 +10,9 @@
 //!
 //! For containerized tests in CI, consider using testcontainers in the future.
 
-use diesel::r2d2::{ConnectionManager, Pool};
 use diesel::PgConnection;
 use diesel::RunQueryDsl;
+use diesel::r2d2::{ConnectionManager, Pool};
 use std::sync::Arc;
 
 /// Test database context for integration tests.

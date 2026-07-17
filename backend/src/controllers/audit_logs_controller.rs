@@ -41,7 +41,8 @@ pub async fn list_audit_logs(
     let limit = pagination.limit() as usize;
 
     let paginated_data: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
-    let response = PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
+    let response =
+        PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
 
     Ok(HttpResponse::Ok().json(response))
 }

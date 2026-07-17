@@ -1,8 +1,8 @@
 use deadpool::managed::Pool;
+use deadpool::managed::Timeouts;
+use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::pooled_connection::ManagerConfig;
-use diesel_async::AsyncPgConnection;
-use deadpool::managed::Timeouts;
 use futures_util::FutureExt;
 use std::time::Duration;
 
@@ -23,14 +23,17 @@ impl Database {
             let timeout = timeout_secs;
             let url = url.to_string();
             async move {
-                let mut conn = <AsyncPgConnection as diesel_async::AsyncConnection>::establish(&url).await?;
+                let mut conn =
+                    <AsyncPgConnection as diesel_async::AsyncConnection>::establish(&url).await?;
                 if let Some(timeout) = timeout {
                     let timeout_ms = (timeout * 1000) as i32;
                     use diesel_async::RunQueryDsl;
                     diesel::sql_query(format!("SET statement_timeout = {}", timeout_ms))
                         .execute(&mut conn)
                         .await
-                        .map_err(|e| diesel::result::ConnectionError::BadConnection(e.to_string()))?;
+                        .map_err(|e| {
+                            diesel::result::ConnectionError::BadConnection(e.to_string())
+                        })?;
                 }
                 Ok(conn)
             }

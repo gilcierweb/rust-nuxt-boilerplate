@@ -53,8 +53,8 @@ impl TelemetryConfig {
             .map(|v| v != "false" && v != "0")
             .unwrap_or(true);
 
-        let endpoint = std::env::var(ENV_OTEL_ENDPOINT)
-            .unwrap_or_else(|_| DEFAULT_OTEL_ENDPOINT.to_string());
+        let endpoint =
+            std::env::var(ENV_OTEL_ENDPOINT).unwrap_or_else(|_| DEFAULT_OTEL_ENDPOINT.to_string());
 
         let sampler = if !enabled {
             SamplerType::AlwaysOff
@@ -71,8 +71,8 @@ impl TelemetryConfig {
 
     /// Resolve sampler type from environment variables.
     fn resolve_sampler() -> SamplerType {
-        let sampler_str = std::env::var(ENV_OTEL_SAMPLER)
-            .unwrap_or_else(|_| "parent_based".to_string());
+        let sampler_str =
+            std::env::var(ENV_OTEL_SAMPLER).unwrap_or_else(|_| "parent_based".to_string());
 
         match sampler_str.as_str() {
             "always_on" => SamplerType::AlwaysOn,
@@ -81,14 +81,14 @@ impl TelemetryConfig {
             "ratio_based" => {
                 let ratio = Self::read_ratio();
                 SamplerType::RatioBased(ratio)
-            }
+            },
             _ => {
                 tracing::warn!(
                     sampler = %sampler_str,
                     "Unknown OTEL_SAMPLER value, falling back to parent_based"
                 );
                 SamplerType::ParentBased
-            }
+            },
         }
     }
 

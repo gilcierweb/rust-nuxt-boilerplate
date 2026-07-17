@@ -77,6 +77,11 @@ where
 
         req.attach(authorities);
 
-        Box::pin(async move { service.call(req).await.map(ServiceResponse::map_into_left_body) })
+        Box::pin(async move {
+            service
+                .call(req)
+                .await
+                .map(ServiceResponse::map_into_left_body)
+        })
     }
 }

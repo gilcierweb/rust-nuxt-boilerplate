@@ -53,10 +53,7 @@ mod tests {
         let ability = build_ability(1, &["admin".to_string()]);
         let authorities = ability.authorities();
 
-        assert!(authorities.contains(&authority_for(
-            AbilityResource::Users,
-            AbilityAction::Read
-        )));
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
         assert!(authorities.contains(&authority_for(
             AbilityResource::Users,
             AbilityAction::Delete
@@ -73,9 +70,6 @@ mod tests {
     fn customer_gets_read_authorities_in_fallback() {
         let ability = build_ability(3, &["customer".to_string()]);
         let authorities = ability.authorities();
-        assert!(authorities.contains(&authority_for(
-            AbilityResource::Users,
-            AbilityAction::Read
-        )));
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
     }
 }

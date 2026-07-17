@@ -364,9 +364,9 @@ impl IUserRepository for UsersRepository {
                             failed_attempts.eq(0),
                             locked_at.eq::<Option<chrono::NaiveDateTime>>(None),
                             current_sign_in_at.eq(Some(chrono::Utc::now().naive_utc())),
-                            last_sign_in_at.eq(diesel::dsl::sql::<diesel::sql_types::Nullable<
-                                diesel::sql_types::Timestamptz,
-                            >>("current_sign_in_at")),
+                            last_sign_in_at.eq(diesel::dsl::sql::<
+                                diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,
+                            >("current_sign_in_at")),
                             current_sign_in_ip.eq(ip),
                             sign_in_count.eq(diesel::dsl::sql::<diesel::sql_types::Integer>(
                                 "sign_in_count + 1",
@@ -413,9 +413,10 @@ impl IUserRepository for UsersRepository {
                             roles_permissions::table
                                 .on(users_roles::dsl::role_id.eq(roles_permissions::dsl::role_id)),
                         )
-                        .inner_join(permissions::table.on(
-                            roles_permissions::dsl::permission_id.eq(permissions::dsl::id),
-                        ))
+                        .inner_join(
+                            permissions::table
+                                .on(roles_permissions::dsl::permission_id.eq(permissions::dsl::id)),
+                        )
                         .select(permissions::dsl::code)
                         .distinct()
                         .load::<String>(conn)
@@ -465,8 +466,7 @@ impl IUserRepository for UsersRepository {
                         .set((
                             encrypted_password.eq(pwd),
                             reset_password_token_digest.eq::<Option<String>>(None),
-                            reset_password_sent_at
-                                .eq::<Option<chrono::NaiveDateTime>>(None),
+                            reset_password_sent_at.eq::<Option<chrono::NaiveDateTime>>(None),
                             updated_at.eq(chrono::Utc::now().naive_utc()),
                         ))
                         .execute(conn)
@@ -476,11 +476,7 @@ impl IUserRepository for UsersRepository {
             .await
     }
 
-    async fn set_otp_secret(
-        &self,
-        user_id: &Uuid,
-        otp_secret: &str,
-    ) -> diesel::QueryResult<usize> {
+    async fn set_otp_secret(&self, user_id: &Uuid, otp_secret: &str) -> diesel::QueryResult<usize> {
         let sec = otp_secret.to_string();
         let user_id = *user_id;
         self.base

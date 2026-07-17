@@ -107,9 +107,9 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         &self,
         plaintext_token: &str,
     ) -> diesel::QueryResult<Option<RefreshToken>> {
+        use crate::db::schema::refresh_tokens::dsl::*;
         use crate::services::token_service::verify_token_hash;
         use chrono::Utc;
-        use crate::db::schema::refresh_tokens::dsl::*;
 
         let token = plaintext_token.to_string();
         self.base

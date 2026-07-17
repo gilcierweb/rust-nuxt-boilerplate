@@ -78,7 +78,7 @@ impl SecurityService {
                     .key_manager
                     .derive_encryption_key(self.current_key_version)?;
                 encrypt(value.as_bytes(), &encryption_key).map(Some)
-            }
+            },
             None => Ok(None),
         }
     }

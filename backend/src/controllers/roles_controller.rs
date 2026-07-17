@@ -73,7 +73,8 @@ pub async fn list_roles(
     let limit = pagination.limit() as usize;
 
     let paginated_data: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
-    let response = PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
+    let response =
+        PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
 
     Ok(HttpResponse::Ok().json(response))
 }
@@ -201,7 +202,9 @@ mod tests {
     async fn list_roles_returns_forbidden_without_authority() {
         let container = mock_container();
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).configure(test_config),
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(test_config),
         )
         .await;
 
@@ -218,7 +221,9 @@ mod tests {
     async fn create_role_returns_forbidden_for_customer_without_create_authority() {
         let container = mock_container();
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).configure(test_config),
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(test_config),
         )
         .await;
 
@@ -256,7 +261,9 @@ mod tests {
         container.roles = Arc::new(roles_repo);
 
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).configure(test_config),
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(test_config),
         )
         .await;
 
@@ -289,7 +296,9 @@ mod tests {
         container.roles = Arc::new(roles_repo);
 
         let app = test::init_service(
-            App::new().app_data(web::Data::new(container)).configure(test_config),
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(test_config),
         )
         .await;
 

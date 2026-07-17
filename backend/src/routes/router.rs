@@ -3,8 +3,8 @@ use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
 pub use crate::controllers::{
-    audit_logs_controller, auth_controller, health_controller,
-    roles_controller, upload_controller, users_controller, metrics_controller,
+    audit_logs_controller, auth_controller, health_controller, metrics_controller,
+    roles_controller, upload_controller, users_controller,
 };
 
 use actix_web::web;

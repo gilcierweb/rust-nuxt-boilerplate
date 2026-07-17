@@ -33,7 +33,12 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
     // Check token blacklist first
     if let Some(container) = req.app_data::<web::Data<AppContainer>>() {
         let token_hash = hash_token_for_blacklist(raw_token);
-        if container.access_token_blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
+        if container
+            .access_token_blacklist
+            .is_blacklisted(&token_hash)
+            .await
+            .unwrap_or(false)
+        {
             tracing::warn!("grants extractor: token is blacklisted");
             return Ok(HashSet::new());
         }
@@ -44,7 +49,7 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
         Err(error) => {
             tracing::warn!("grants extractor: invalid bearer token: {}", error);
             return Ok(HashSet::new());
-        }
+        },
     };
 
     let container = req.app_data::<web::Data<AppContainer>>();
@@ -64,7 +69,7 @@ pub async fn build_authorities_for_claims(
         Err(error) => {
             tracing::warn!("grants extractor: failed to load user roles: {}", error);
             Vec::new()
-        }
+        },
     };
 
     match container.users.get_user_permissions(&claims.sub).await {
@@ -75,7 +80,7 @@ pub async fn build_authorities_for_claims(
             }
             authorities.extend(permission_codes);
             authorities
-        }
+        },
         Ok(_) => {
             let mut authorities = HashSet::new();
             for role in &roles {
@@ -83,7 +88,7 @@ pub async fn build_authorities_for_claims(
             }
             authorities.extend(build_ability(claims.role, &roles).authorities());
             authorities
-        }
+        },
         Err(error) => {
             tracing::warn!(
                 "grants extractor: failed to load user permissions, using ability fallback: {}",
@@ -96,6 +101,6 @@ pub async fn build_authorities_for_claims(
             }
             authorities.extend(build_ability(claims.role, &roles).authorities());
             authorities
-        }
+        },
     }
 }

@@ -1,5 +1,5 @@
-pub mod audit_logs_repository;
 pub mod access_token_blacklist;
+pub mod audit_logs_repository;
 pub mod base;
 pub mod container;
 pub mod macros;

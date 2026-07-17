@@ -9,9 +9,7 @@ macro_rules! impl_crud {
                 use diesel::SelectableHelper;
                 use diesel_async::RunQueryDsl;
                 self.$field
-                    .run(|conn| {
-                        Box::pin(async move { $table.load::<$model>(conn).await })
-                    })
+                    .run(|conn| Box::pin(async move { $table.load::<$model>(conn).await }))
                     .await
             }
 
@@ -71,9 +69,7 @@ macro_rules! impl_crud {
                 let id = *id;
                 self.$field
                     .run(move |conn| {
-                        Box::pin(async move {
-                            diesel::delete($table.find(id)).execute(conn).await
-                        })
+                        Box::pin(async move { diesel::delete($table.find(id)).execute(conn).await })
                     })
                     .await
             }

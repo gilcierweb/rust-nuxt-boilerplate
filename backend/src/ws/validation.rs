@@ -71,10 +71,7 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
     if raw.len() > MAX_WS_MESSAGE_BYTES {
         return Err(WsValidationError::new(
             "MESSAGE_TOO_LARGE",
-            format!(
-                "Message exceeds {} bytes limit",
-                MAX_WS_MESSAGE_BYTES
-            ),
+            format!("Message exceeds {} bytes limit", MAX_WS_MESSAGE_BYTES),
         ));
     }
 
@@ -86,20 +83,14 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
     }
 
     // Layer 2: JSON parse
-    let parsed: RawClientMessage = serde_json::from_str(raw).map_err(|e| {
-        WsValidationError::new(
-            "INVALID_JSON",
-            format!("Malformed JSON: {}", e),
-        )
-    })?;
+    let parsed: RawClientMessage = serde_json::from_str(raw)
+        .map_err(|e| WsValidationError::new("INVALID_JSON", format!("Malformed JSON: {}", e)))?;
 
     // Layer 3: action field validation
-    let action_str = parsed.action.as_deref().ok_or_else(|| {
-        WsValidationError::new(
-            "MISSING_FIELD",
-            "Field 'action' is required",
-        )
-    })?;
+    let action_str = parsed
+        .action
+        .as_deref()
+        .ok_or_else(|| WsValidationError::new("MISSING_FIELD", "Field 'action' is required"))?;
 
     if action_str.is_empty() {
         return Err(WsValidationError::new(
@@ -111,10 +102,7 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
     if action_str.len() > MAX_ACTION_LENGTH {
         return Err(WsValidationError::new(
             "ACTION_TOO_LONG",
-            format!(
-                "Field 'action' exceeds {} characters",
-                MAX_ACTION_LENGTH
-            ),
+            format!("Field 'action' exceeds {} characters", MAX_ACTION_LENGTH),
         ));
     }
 
@@ -134,15 +122,12 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
 }
 
 fn validate_join_room(data: serde_json::Value) -> Result<WsClientAction, WsValidationError> {
-    let room = data
-        .get("room")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| {
-            WsValidationError::new(
-                "MISSING_FIELD",
-                "Field 'data.room' is required and must be a string",
-            )
-        })?;
+    let room = data.get("room").and_then(|v| v.as_str()).ok_or_else(|| {
+        WsValidationError::new(
+            "MISSING_FIELD",
+            "Field 'data.room' is required and must be a string",
+        )
+    })?;
 
     if room.is_empty() {
         return Err(WsValidationError::new(
@@ -311,57 +296,51 @@ mod tests {
 
     #[test]
     fn unknown_action_rejected() {
-        let err =
-            validate_client_message(r#"{"action":"fly_to_moon","data":{}}"#).unwrap_err();
+        let err = validate_client_message(r#"{"action":"fly_to_moon","data":{}}"#).unwrap_err();
         assert_eq!(err.error.code, "UNKNOWN_ACTION");
     }
 
     #[test]
     fn join_room_missing_room_rejected() {
-        let err =
-            validate_client_message(r#"{"action":"join_room","data":{}}"#).unwrap_err();
+        let err = validate_client_message(r#"{"action":"join_room","data":{}}"#).unwrap_err();
         assert_eq!(err.error.code, "MISSING_FIELD");
     }
 
     #[test]
     fn join_room_empty_room_rejected() {
-        let err = validate_client_message(
-            r#"{"action":"join_room","data":{"room":""}}"#,
-        )
-        .unwrap_err();
+        let err =
+            validate_client_message(r#"{"action":"join_room","data":{"room":""}}"#).unwrap_err();
         assert_eq!(err.error.code, "EMPTY_FIELD");
     }
 
     #[test]
     fn join_room_long_room_rejected() {
         let long_room = "a".repeat(MAX_ROOM_NAME_LENGTH + 1);
-        let msg = format!(r#"{{"action":"join_room","data":{{"room":"{}"}}}}"#, long_room);
+        let msg = format!(
+            r#"{{"action":"join_room","data":{{"room":"{}"}}}}"#,
+            long_room
+        );
         let err = validate_client_message(&msg).unwrap_err();
         assert_eq!(err.error.code, "FIELD_TOO_LONG");
     }
 
     #[test]
     fn join_room_room_must_be_string() {
-        let err = validate_client_message(
-            r#"{"action":"join_room","data":{"room":123}}"#,
-        )
-        .unwrap_err();
+        let err =
+            validate_client_message(r#"{"action":"join_room","data":{"room":123}}"#).unwrap_err();
         assert_eq!(err.error.code, "MISSING_FIELD");
     }
 
     #[test]
     fn chat_missing_content_rejected() {
-        let err =
-            validate_client_message(r#"{"action":"chat","data":{}}"#).unwrap_err();
+        let err = validate_client_message(r#"{"action":"chat","data":{}}"#).unwrap_err();
         assert_eq!(err.error.code, "MISSING_FIELD");
     }
 
     #[test]
     fn chat_empty_content_rejected() {
-        let err = validate_client_message(
-            r#"{"action":"chat","data":{"content":""}}"#,
-        )
-        .unwrap_err();
+        let err =
+            validate_client_message(r#"{"action":"chat","data":{"content":""}}"#).unwrap_err();
         assert_eq!(err.error.code, "EMPTY_FIELD");
     }
 
@@ -378,10 +357,8 @@ mod tests {
 
     #[test]
     fn chat_content_must_be_string() {
-        let err = validate_client_message(
-            r#"{"action":"chat","data":{"content":42}}"#,
-        )
-        .unwrap_err();
+        let err =
+            validate_client_message(r#"{"action":"chat","data":{"content":42}}"#).unwrap_err();
         assert_eq!(err.error.code, "MISSING_FIELD");
     }
 
@@ -423,10 +400,8 @@ mod tests {
 
     #[test]
     fn data_must_be_object_for_actions_needing_data() {
-        let err = validate_client_message(
-            r#"{"action":"join_room","data":"not-an-object"}"#,
-        )
-        .unwrap_err();
+        let err = validate_client_message(r#"{"action":"join_room","data":"not-an-object"}"#)
+            .unwrap_err();
         assert_eq!(err.error.code, "MISSING_FIELD");
     }
 }

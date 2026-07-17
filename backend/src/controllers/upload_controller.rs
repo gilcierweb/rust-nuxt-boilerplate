@@ -8,7 +8,7 @@ use crate::{
     errors::{AppError, AppResult},
     middleware::auth::AuthUser,
     utils::file_validation::{
-        FileCategory, FileValidationError, FileLimits, ValidatedFile, validate_upload,
+        FileCategory, FileLimits, FileValidationError, ValidatedFile, validate_upload,
     },
 };
 
