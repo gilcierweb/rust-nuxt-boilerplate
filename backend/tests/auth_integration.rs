@@ -8,7 +8,9 @@
 //! - Redis running at REDIS_URL_TEST (default: redis://127.0.0.1:6379)
 //! - Migrations applied: `diesel migration run --database-url $DATABASE_URL_TEST`
 
-use actix_web::{App, test, web};
+use actix_web::{App, test, web, HttpMessage};
+use backend::middleware::auth::{Claims, ACCESS_TOKEN_USE};
+use chrono::Utc;
 use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
@@ -16,6 +18,19 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde_json::Value;
 use std::sync::Arc;
 use uuid::Uuid as UuidType;
+
+fn make_claims(sub: UuidType, profile_id: UuidType) -> Claims {
+    let now = Utc::now();
+    let exp = now + chrono::Duration::hours(1);
+    Claims {
+        sub,
+        profile_id,
+        role: 0, // viewer
+        token_use: ACCESS_TOKEN_USE.to_string(),
+        exp: exp.timestamp() as usize,
+        iat: now.timestamp() as usize,
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -348,17 +363,23 @@ async fn test_full_auth_cycle() {
     assert!(status.is_success(), "Login failed: {:?}", body);
 
     let access_token = body["access_token"].as_str().unwrap();
+    let user_id = body["user"]["id"].as_str().unwrap();
+    let profile_id = body["user"]["profile_id"].as_str().unwrap();
     println!("Refresh cookie: {:?}", refresh_cookie);
 
+    // Create Claims for authenticated requests
+    let claims = make_claims(
+        UuidType::parse_str(user_id).unwrap(),
+        UuidType::parse_str(profile_id).unwrap(),
+    );
+
     // --- Step 3: Access protected endpoint ---
-    let resp = test::call_service(
-        &app,
-        test::TestRequest::get()
-            .uri("/api/v1/auth/me")
-            .insert_header(("Authorization", format!("Bearer {}", access_token)))
-            .to_request(),
-    )
-    .await;
+    let req = test::TestRequest::get()
+        .uri("/api/v1/auth/me")
+        .insert_header(("Authorization", format!("Bearer {}", access_token)))
+        .to_request();
+    req.extensions_mut().insert(claims.clone());
+    let resp = test::call_service(&app, req).await;
     let status = resp.status();
     let body: Value = test::read_body_json(resp).await;
     println!("Me: {} - {:?}", status, body);
@@ -369,6 +390,7 @@ async fn test_full_auth_cycle() {
     let mut refresh_req = test::TestRequest::post()
         .uri("/api/v1/auth/refresh")
         .to_request();
+    refresh_req.extensions_mut().insert(claims.clone());
     if let Some(ref cookie) = refresh_cookie {
         refresh_req.headers_mut().insert(
             actix_web::http::header::COOKIE,
@@ -385,14 +407,12 @@ async fn test_full_auth_cycle() {
     assert_ne!(access_token, new_token, "token should rotate");
 
     // --- Step 5: Use new token ---
-    let resp = test::call_service(
-        &app,
-        test::TestRequest::get()
-            .uri("/api/v1/auth/me")
-            .insert_header(("Authorization", format!("Bearer {}", new_token)))
-            .to_request(),
-    )
-    .await;
+    let req = test::TestRequest::get()
+        .uri("/api/v1/auth/me")
+        .insert_header(("Authorization", format!("Bearer {}", new_token)))
+        .to_request();
+    req.extensions_mut().insert(claims.clone());
+    let resp = test::call_service(&app, req).await;
     assert!(resp.status().is_success());
     let body: Value = test::read_body_json(resp).await;
     assert_eq!(body["email"], "test@example.com");
@@ -402,6 +422,7 @@ async fn test_full_auth_cycle() {
         .uri("/api/v1/auth/logout")
         .insert_header(("Authorization", format!("Bearer {}", new_token)))
         .to_request();
+    logout_req.extensions_mut().insert(claims.clone());
     if let Some(ref cookie) = refresh_cookie {
         logout_req.headers_mut().insert(
             actix_web::http::header::COOKIE,
@@ -413,14 +434,12 @@ async fn test_full_auth_cycle() {
     assert!(resp.status().is_success() || resp.status().as_u16() == 204);
 
     // --- Step 7: Verify token is invalid ---
-    let resp = test::call_service(
-        &app,
-        test::TestRequest::get()
-            .uri("/api/v1/auth/me")
-            .insert_header(("Authorization", format!("Bearer {}", new_token)))
-            .to_request(),
-    )
-    .await;
+    let req = test::TestRequest::get()
+        .uri("/api/v1/auth/me")
+        .insert_header(("Authorization", format!("Bearer {}", new_token)))
+        .to_request();
+    req.extensions_mut().insert(claims);
+    let resp = test::call_service(&app, req).await;
     println!("After logout: {}", resp.status());
     assert!(
         resp.status().is_client_error(),
