@@ -69,11 +69,17 @@ jobs:
       - name: Run cargo audit (security check)
         run: cargo audit
 
-      - name: Install diesel_cli (pre-built binary)
-        uses: taiki-e/install-action@diesel-cli
+      - name: Cache diesel_cli binary
+        uses: actions/cache@v4
         with:
-          features: postgres
-          no-default-features: true
+          path: ~/.cargo/bin/diesel
+          key: ${{ runner.os }}-diesel-cli-postgres-${{ hashFiles('backend/Cargo.lock') }}
+
+      - name: Install diesel_cli
+        run: |
+          if ! command -v diesel &> /dev/null; then
+            cargo install diesel_cli --no-default-features --features postgres
+          fi
 
       # Migration rollback test runs FIRST on clean DB (tests full up→down→up cycle)
       - name: Run migration rollback test (clean DB)
