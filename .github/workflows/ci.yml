@@ -9,6 +9,9 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
+  # sccache configuration
+  SCCACHE_GHA_ENABLED: "true"
+  RUSTC_WRAPPER: "sccache"
 
 jobs:
   backend-test:
@@ -17,6 +20,7 @@ jobs:
     defaults:
       run:
         working-directory: ./backend
+        shell: bash
     services:
       postgres:
         image: postgres:16
@@ -51,7 +55,7 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - name: Cache Cargo registry and build artifacts
+      - name: Cache Cargo registry, git, and build artifacts
         uses: actions/cache@v4
         with:
           path: |
@@ -62,18 +66,42 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.5
+      - name: Cache cargo-audit binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/cargo-audit
+          key: ${{ runner.os }}-cargo-audit-${{ hashFiles('backend/Cargo.lock') }}
 
-      - name: Install cargo-audit
-        run: cargo install cargo-audit
+      - name: Cache diesel_cli binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/diesel
+          key: ${{ runner.os }}-diesel-cli-${{ hashFiles('backend/Cargo.lock') }}
+
+      - name: Install sccache (with GitHub Actions cache backend)
+        uses: mozilla-actions/sccache-action@v0.0.5
+        with:
+          s3-bucket: ""
+          s3-region: ""
+          gcs-bucket: ""
+          redis-endpoint: ""
+          memcached-endpoint: ""
+          # Uses GitHub Actions cache as backend via SCCACHE_GHA_ENABLED
+
+      - name: Install cargo-audit (cached)
+        run: |
+          if ! command -v cargo-audit &> /dev/null; then
+            cargo install cargo-audit
+          fi
 
       - name: Run cargo audit (security check)
         run: cargo audit
-        continue-on-error: false
 
-      - name: Install diesel_cli
-        run: cargo install diesel_cli --no-default-features --features postgres
+      - name: Install diesel_cli (cached)
+        run: |
+          if ! command -v diesel &> /dev/null; then
+            cargo install diesel_cli --no-default-features --features postgres
+          fi
 
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
@@ -105,12 +133,17 @@ jobs:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
+      - name: Print sccache stats
+        if: always()
+        run: sccache --show-stats
+
   frontend-test:
     name: Frontend Tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: ./frontend
+        shell: bash
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -122,9 +155,10 @@ jobs:
           cache: 'pnpm'
 
       - name: Install pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@9 --activate
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
 
       - name: Cache pnpm modules
         uses: actions/cache@v4
@@ -163,7 +197,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install cargo-audit
-        run: cargo install cargo-audit
+        run: |
+          if ! command -v cargo-audit &> /dev/null; then
+            cargo install cargo-audit
+          fi
 
       - name: Run cargo audit with JSON output
         run: cargo audit --json > audit-report.json || true
