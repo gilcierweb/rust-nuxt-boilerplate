@@ -173,6 +173,7 @@ impl EmailService {
     }
 
     /// Send an email with HTML body
+    #[tracing::instrument(skip_all, fields(to = %to, subject = %subject, service = "resend"))]
     pub async fn send_email_with_html(
         &self,
         to: &str,
@@ -212,14 +213,16 @@ impl EmailService {
 
         let url = format!("{}/emails", self.base_url);
 
-        let response = self
+        let request = self
             .client
             .post(&url)
             .header("Authorization", format!("Bearer {}", self.api_key))
             .header("Content-Type", "application/json")
-            .json(&request)
-            .send()
-            .await?;
+            .json(&request);
+
+        let request = crate::traced_http::inject_traceparent(request);
+
+        let response = request.send().await?;
 
         let status = response.status();
         let response_text = response.text().await?;

@@ -30,6 +30,7 @@ impl CacheManager {
 
     /// Get a value from cache
     pub async fn get<T: DeserializeOwned>(&self, key: &str) -> Option<T> {
+        let _span = tracing::debug_span!("redis.get", key = %key).entered();
         let mut conn = self.pool.get().await.ok()?;
         let data: Option<Vec<u8>> = conn.get(key).await.ok()?;
 
@@ -51,6 +52,8 @@ impl CacheManager {
         value: &T,
         ttl: Duration,
     ) -> Result<(), CacheError> {
+        let _span =
+            tracing::debug_span!("redis.set", key = %key, ttl_secs = ttl.as_secs()).entered();
         let data =
             serde_json::to_vec(value).map_err(|e| CacheError::Serialization(e.to_string()))?;
 
@@ -70,6 +73,7 @@ impl CacheManager {
 
     /// Delete a key from cache
     pub async fn delete(&self, key: &str) -> Result<(), CacheError> {
+        let _span = tracing::debug_span!("redis.del", key = %key).entered();
         let mut conn = self
             .pool
             .get()
@@ -86,6 +90,7 @@ impl CacheManager {
 
     /// Clear cache by pattern (use with caution)
     pub async fn clear_pattern(&self, pattern: &str) -> Result<(), CacheError> {
+        let _span = tracing::info_span!("redis.keys_pattern", pattern = %pattern).entered();
         let mut conn = self
             .pool
             .get()
@@ -110,6 +115,7 @@ impl CacheManager {
 
     /// Increment a counter
     pub async fn increment(&self, key: &str, delta: i64) -> Result<i64, CacheError> {
+        let _span = tracing::debug_span!("redis.incr", key = %key, delta = delta).entered();
         let mut conn = self
             .pool
             .get()
@@ -126,6 +132,7 @@ impl CacheManager {
 
     /// Check if key exists
     pub async fn exists(&self, key: &str) -> Result<bool, CacheError> {
+        let _span = tracing::debug_span!("redis.exists", key = %key).entered();
         let mut conn = self
             .pool
             .get()

@@ -98,6 +98,7 @@ impl WsRedisState {
 
     /// Check connection limits using Redis atomic operations
     pub async fn check_connection_limits(&self, ip: &str) -> AppResult<()> {
+        let _span = tracing::debug_span!("ws.redis.check_limits", ip = %ip).entered();
         let mut conn = self.get_conn().await?;
 
         let global_count: usize = conn.get(WS_GLOBAL_COUNT).await.unwrap_or(0);
@@ -129,6 +130,7 @@ impl WsRedisState {
         info: ConnectionInfo,
         addr: Recipient<WsMessage>,
     ) -> AppResult<bool> {
+        let _span = tracing::info_span!("ws.redis.add_connection", conn_id = %conn_id, profile_id = %info.profile_id).entered();
         let ip = info.ip.clone();
         let profile_id = info.profile_id;
         let room = info.room.clone();
@@ -211,6 +213,7 @@ impl WsRedisState {
 
     /// Remove connection metadata from Redis and unregister locally.
     pub async fn remove_connection(&self, conn_id: &str) -> AppResult<()> {
+        let _span = tracing::info_span!("ws.redis.remove_connection", conn_id = %conn_id).entered();
         // Unregister locally first
         self.unregister_local(conn_id).await;
 
@@ -271,6 +274,8 @@ impl WsRedisState {
     // ------------------------------------------------------------------
 
     async fn increment_user_connections(&self, profile_id: Uuid) -> AppResult<bool> {
+        let _span =
+            tracing::debug_span!("ws.redis.user_conn_incr", profile_id = %profile_id).entered();
         let mut conn = self.get_conn().await?;
         let presence_key = format!("{}{}", WS_PRESENCE_PREFIX, profile_id);
 
@@ -288,6 +293,8 @@ impl WsRedisState {
     }
 
     async fn decrement_user_connections(&self, profile_id: Uuid) -> AppResult<bool> {
+        let _span =
+            tracing::debug_span!("ws.redis.user_conn_decr", profile_id = %profile_id).entered();
         let mut conn = self.get_conn().await?;
         let presence_key = format!("{}{}", WS_PRESENCE_PREFIX, profile_id);
 
@@ -399,6 +406,7 @@ impl WsRedisState {
     }
 
     async fn publish_envelope(&self, envelope: &serde_json::Value) -> AppResult<()> {
+        let _span = tracing::debug_span!("ws.redis.publish", channel = WS_PUBSUB_CHANNEL).entered();
         let payload = serde_json::to_string(envelope).map_err(|e| {
             AppError::Internal(format!("Failed to serialize Pub/Sub envelope: {}", e))
         })?;
@@ -418,6 +426,7 @@ impl WsRedisState {
 
     /// Handle incoming Pub/Sub message: parse envelope and deliver to local actors.
     pub async fn handle_pubsub_message(&self, payload: &str) -> AppResult<()> {
+        let _span = tracing::debug_span!("ws.handle_pubsub").entered();
         let envelope: serde_json::Value = serde_json::from_str(payload)
             .map_err(|e| AppError::Internal(format!("Failed to parse Pub/Sub envelope: {}", e)))?;
 
@@ -556,10 +565,11 @@ pub async fn run_pubsub_listener(state: Arc<WsRedisState>) -> AppResult<()> {
 
     let mut on_message = pubsub.on_message();
     while let Some(msg) = on_message.next().await {
-        if let Ok(payload) = msg.get_payload::<String>()
-            && let Err(e) = state.handle_pubsub_message(&payload).await
-        {
-            error!("Error handling Pub/Sub message: {}", e);
+        if let Ok(payload) = msg.get_payload::<String>() {
+            let _span = tracing::debug_span!("ws.redis.pubsub.message").entered();
+            if let Err(e) = state.handle_pubsub_message(&payload).await {
+                error!("Error handling Pub/Sub message: {}", e);
+            }
         }
     }
 

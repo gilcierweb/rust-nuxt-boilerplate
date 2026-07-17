@@ -14,6 +14,7 @@ pub mod repositories;
 pub mod routes;
 pub mod security;
 pub mod services;
+pub mod traced_http;
 pub mod utils;
 pub mod ws;
 

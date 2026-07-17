@@ -2,6 +2,7 @@ use crate::db::database::DBPool;
 use diesel::{QueryableByName, result::QueryResult, sql_query};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use futures::future::BoxFuture;
+use tracing::Instrument;
 
 #[derive(QueryableByName)]
 #[allow(dead_code)]
@@ -30,7 +31,9 @@ impl BaseRepo {
                 Box::new(e.to_string()),
             )
         })?;
-        f(&mut conn).await
+        f(&mut conn)
+            .instrument(tracing::info_span!("db.query", pool = "diesel"))
+            .await
     }
 
     pub async fn run_transaction<F, T, E>(&self, f: F) -> Result<T, E>
@@ -49,7 +52,10 @@ impl BaseRepo {
             .execute(&mut *conn)
             .await
             .map_err(E::from)?;
-        match f(&mut conn).await {
+        match f(&mut conn)
+            .instrument(tracing::info_span!("db.transaction", pool = "diesel"))
+            .await
+        {
             Ok(val) => {
                 diesel::sql_query("COMMIT")
                     .execute(&mut *conn)
