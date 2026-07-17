@@ -51,7 +51,7 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - name: Cache Cargo registry
+      - name: Cache Cargo registry and build artifacts
         uses: actions/cache@v4
         with:
           path: |
@@ -61,6 +61,11 @@ jobs:
           key: ${{ runner.os }}-cargo-${{ hashFiles('backend/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
+
+      - name: Install sccache
+        uses: actions-rs/sccache@v2
+        with:
+          version: "v0.9.0"
 
       - name: Install cargo-audit
         run: cargo install cargo-audit
@@ -75,20 +80,29 @@ jobs:
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
 
-      - name: Test migration rollback cycle (up → revert all → up)
-        run: |
-          chmod +x scripts/test_migration_rollback.sh
-          ./scripts/test_migration_rollback.sh postgres://postgres:postgres@localhost:5432/test_db
-        working-directory: ${{ github.workspace }}
-
       - name: Run cargo fmt (check formatting)
         run: cargo fmt --all -- --check
 
       - name: Run cargo clippy (linting)
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      - name: Run cargo test
-        run: cargo test --all-features
+      # Unit tests: file-based, no DB, parallel
+      - name: Run unit tests (parallel, no DB)
+        run: |
+          cargo test --lib --bins \
+            --test api_version_integration \
+            --test csrf_protection_integration \
+            --test migration_rollback \
+            -- --test-threads=4 --skip live_migration_rollback_cycle
+        env:
+          REDIS_URL: redis://localhost:6379
+
+      # Integration tests: need DB, sequential
+      - name: Run integration tests (sequential, with DB)
+        run: |
+          cargo test --test auth_integration \
+            --test migration_rollback \
+            -- --test-threads=1 live_migration_rollback_cycle
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
@@ -107,6 +121,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'pnpm'
 
       - name: Install pnpm
         uses: pnpm/action-setup@v3
