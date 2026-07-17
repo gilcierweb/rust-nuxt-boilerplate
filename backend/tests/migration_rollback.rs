@@ -291,10 +291,11 @@ fn live_migration_rollback_cycle() {
         run_sql_against_db(&db_url, &sql);
     }
 
-    // Re-apply all migrations to restore database
+    // Re-apply all migrations to leave database in migrated state for subsequent tests
     for name in &migrations {
         let up_sql = migrations_dir.join(name).join("up.sql");
-        let sql = fs::read_to_string(&up_sql).unwrap();
+        let sql = fs::read_to_string(&up_sql)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", up_sql.display(), e));
         println!("  UP   {} (restore)", name);
         run_sql_against_db(&db_url, &sql);
     }
