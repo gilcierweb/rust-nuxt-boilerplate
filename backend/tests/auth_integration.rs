@@ -15,6 +15,7 @@ use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde_json::Value;
 use std::sync::Arc;
+use uuid::Uuid as UuidType;
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -316,6 +317,19 @@ async fn test_full_auth_cycle() {
     let body: Value = test::read_body_json(resp).await;
     println!("Register: {} - {:?}", status, body);
     assert!(status.is_success() || status.as_u16() == 409);
+
+    // --- Step 1b: Confirm email (required for login) ---
+    if status.is_success() {
+        let user_id = body["user_id"].as_str().unwrap();
+        let mut conn = db.pool().get().await.expect("Failed to get connection");
+        diesel::sql_query(
+            "UPDATE users SET confirmed_at = NOW() WHERE id = $1",
+        )
+        .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(user_id).unwrap())
+        .execute(&mut *conn)
+        .await
+        .expect("Failed to confirm user email");
+    }
 
     // --- Step 2: Login ---
     let resp = test::call_service(
