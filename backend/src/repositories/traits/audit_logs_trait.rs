@@ -12,6 +12,5 @@ pub trait IAuditLogRepository: Send + Sync {
     async fn all(&self) -> QueryResult<Vec<AuditLog>>;
     async fn find(&self, id: &Uuid) -> QueryResult<AuditLog>;
     async fn create(&self, item: &NewAuditLog) -> QueryResult<AuditLog>;
-    async fn update(&self, id: &Uuid, item: &NewAuditLog) -> QueryResult<AuditLog>;
-    async fn destroy(&self, id: &Uuid) -> QueryResult<usize>;
+    async fn find_latest_hash(&self) -> QueryResult<Option<String>>;
 }

@@ -1384,6 +1384,8 @@ pub async fn stripe_webhook(
             "event_type": event_type,
         }),
         metadata: payload_json.clone(),
+        prev_hash: None,
+        hash: String::new(),
     };
 
     if let Err(e) = container.domain_audit_logs.create(&audit_log).await {
@@ -1540,6 +1542,8 @@ pub async fn pix_webhook(
             "event_type": event_type,
         }),
         metadata: payload_json.clone(),
+        prev_hash: None,
+        hash: String::new(),
     };
 
     if let Err(e) = container.domain_audit_logs.create(&audit_log).await {

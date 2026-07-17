@@ -3,7 +3,8 @@ use crate::db::schema::audit_logs as audit_logs_table;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::audit_logs_trait::IAuditLogRepository;
-use diesel::{QueryDsl, SelectableHelper};
+use crate::services::audit_log_service::compute_audit_log_hash;
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
@@ -29,6 +30,7 @@ impl IAuditLogRepository for AuditLogsRepository {
             .run(|conn| {
                 Box::pin(async move {
                     audit_logs_table::table
+                        .order(audit_logs_table::created_at.desc())
                         .load::<AuditLog>(conn)
                         .await
                 })
@@ -55,8 +57,24 @@ impl IAuditLogRepository for AuditLogsRepository {
         self.base
             .run(move |conn| {
                 Box::pin(async move {
+                    // Get the previous log's hash for chaining
+                    let prev_hash: Option<String> = audit_logs_table::table
+                        .order(audit_logs_table::created_at.desc())
+                        .select(audit_logs_table::hash)
+                        .first::<String>(conn)
+                        .await
+                        .optional()?;
+
+                    // Compute hash for this entry
+                    let (prev_hash_str, hash) = compute_audit_log_hash(&item, prev_hash.as_deref());
+
+                    // Create new item with hash chain
+                    let mut new_item = item;
+                    new_item.prev_hash = prev_hash_str;
+                    new_item.hash = hash;
+
                     diesel::insert_into(audit_logs_table::table)
-                        .values(&item)
+                        .values(&new_item)
                         .returning(AuditLog::as_returning())
                         .get_result(conn)
                         .await
@@ -65,30 +83,16 @@ impl IAuditLogRepository for AuditLogsRepository {
             .await
     }
 
-    async fn update(&self, id: &Uuid, item: &NewAuditLog) -> diesel::QueryResult<AuditLog> {
-        let id = *id;
-        let item = item.clone();
+    async fn find_latest_hash(&self) -> diesel::QueryResult<Option<String>> {
         self.base
-            .run(move |conn| {
+            .run(|conn| {
                 Box::pin(async move {
-                    diesel::update(audit_logs_table::table.find(id))
-                        .set(&item)
-                        .returning(AuditLog::as_returning())
-                        .get_result(conn)
+                    audit_logs_table::table
+                        .order(audit_logs_table::created_at.desc())
+                        .select(audit_logs_table::hash)
+                        .first::<String>(conn)
                         .await
-                })
-            })
-            .await
-    }
-
-    async fn destroy(&self, id: &Uuid) -> diesel::QueryResult<usize> {
-        let id = *id;
-        self.base
-            .run(move |conn| {
-                Box::pin(async move {
-                    diesel::delete(audit_logs_table::table.find(id))
-                        .execute(conn)
-                        .await
+                        .optional()
                 })
             })
             .await

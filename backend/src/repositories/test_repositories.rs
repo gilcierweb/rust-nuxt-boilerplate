@@ -144,6 +144,8 @@ pub fn audit_log_fixture() -> AuditLog {
         changes: serde_json::json!({}),
         metadata: serde_json::json!({}),
         created_at: Utc::now(),
+        prev_hash: None,
+        hash: "a".repeat(64),
     }
 }
 

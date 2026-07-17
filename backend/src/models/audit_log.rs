@@ -25,6 +25,8 @@ pub struct AuditLog {
     pub changes: Value,
     pub metadata: Value,
     pub created_at: DateTime<Utc>,
+    pub prev_hash: Option<String>,
+    pub hash: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset, Validate)]
@@ -44,4 +46,6 @@ pub struct NewAuditLog {
     pub request_id: Option<Uuid>,
     pub changes: Value,
     pub metadata: Value,
+    pub prev_hash: Option<String>,
+    pub hash: String,
 }

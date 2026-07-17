@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, delete, get, patch, post, web};
+use actix_web::{HttpResponse, get, post, web};
 use actix_web_grants::authorities::AuthDetails;
 use diesel::result::Error as DieselError;
 use uuid::Uuid;
@@ -80,51 +80,10 @@ pub async fn create_audit_log(
     Ok(HttpResponse::Created().json(created))
 }
 
-#[patch("/audit-logs/{id}")]
-pub async fn update_audit_log(
-    details: AuthDetails,
-    container: web::Data<AppContainer>,
-    id: web::Path<Uuid>,
-    body: web::Json<NewAuditLog>,
-) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Update)?;
-    let payload = body.into_inner();
-    payload
-        .validate()
-        .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
-    let updated = container
-        .domain_audit_logs
-        .update(&id.into_inner(), &payload)
-        .await
-        .map_err(|error| map_repo_error(error, "AuditLog"))?;
-    Ok(HttpResponse::Ok().json(updated))
-}
-
-#[delete("/audit-logs/{id}")]
-pub async fn delete_audit_log(
-    details: AuthDetails,
-    container: web::Data<AppContainer>,
-    id: web::Path<Uuid>,
-) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Delete)?;
-    let audit_log_id = id.into_inner();
-    let affected = container
-        .domain_audit_logs
-        .destroy(&audit_log_id)
-        .await
-        .map_err(|error| map_repo_error(error, "AuditLog"))?;
-    if affected == 0 {
-        return Err(AppError::NotFound("AuditLog".to_string()));
-    }
-    Ok(HttpResponse::NoContent().finish())
-}
-
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(list_audit_logs)
         .service(get_audit_log)
-        .service(create_audit_log)
-        .service(update_audit_log)
-        .service(delete_audit_log);
+        .service(create_audit_log);
 }
 
 #[cfg(test)]
@@ -216,6 +175,8 @@ mod tests {
                 changes: json!({}),
                 metadata: json!({}),
                 created_at: Utc::now(),
+                prev_hash: None,
+                hash: "a".repeat(64),
             }])
         });
         container.domain_audit_logs = Arc::new(repo);

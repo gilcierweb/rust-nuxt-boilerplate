@@ -35,7 +35,7 @@ fn resolve_field_error_message(field: &str, error: &ValidationError) -> String {
 pub fn first_validation_error_message(errors: &ValidationErrors) -> String {
     for (field, list) in errors.field_errors() {
         if let Some(error) = list.first() {
-            return resolve_field_error_message(field, error);
+            return resolve_field_error_message(field.as_ref(), error);
         }
     }
 
