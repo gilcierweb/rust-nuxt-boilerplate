@@ -43,10 +43,14 @@ impl TestDb {
 
     async fn drop_all_tables(&self) {
         let mut conn = self.pool.get().await.expect("Failed to get connection");
-        diesel::sql_query("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
+        diesel::sql_query("DROP SCHEMA public CASCADE;")
             .execute(&mut *conn)
             .await
-            .expect("Failed to drop all tables");
+            .expect("Failed to drop schema");
+        diesel::sql_query("CREATE SCHEMA public;")
+            .execute(&mut *conn)
+            .await
+            .expect("Failed to create schema");
     }
 
     async fn create_auth_schema(&self) {

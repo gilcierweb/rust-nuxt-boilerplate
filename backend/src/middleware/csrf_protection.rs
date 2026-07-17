@@ -10,6 +10,7 @@ use std::rc::Rc;
 
 use crate::config::AppConfig;
 
+/// CSRF cookie name.
 const CSRF_COOKIE_NAME: &str = "csrf_token";
 
 /// CSRF token expiry: 15 minutes.
@@ -20,11 +21,45 @@ const CSRF_TOKEN_EXPIRY_SECS: u64 = 15 * 60;
 /// This prevents race conditions from concurrent state-changing requests.
 const CSRF_ROTATION_GRACE_SECS: u64 = 30;
 
+/// CSRF protection middleware.
+///
+/// # Bearer Token Bypass
+///
+/// Requests carrying `Authorization: Bearer <token>` skip CSRF validation
+/// entirely. This is **correct** for SPA-only deployments where the frontend
+/// authenticates exclusively via Bearer tokens (no auth cookies).
+///
+/// **Security assumption:** Bearer token auth and cookie-based auth are
+/// mutually exclusive per-request. If a browser sends both a Bearer token
+/// *and* auth cookies (e.g. after a mixed-auth migration), the Bearer token
+/// would suppress CSRF checks, leaving cookie-authenticated requests
+/// vulnerable to CSRF.
+///
+/// # Cookie-Based Auth Paths
+///
+/// If the frontend ever uses cookies for authentication (SameSite=None,
+/// cross-origin, etc.), set `CSRF_COOKIE_AUTH_PATHS` to a comma-separated
+/// list of path prefixes that must **always** enforce CSRF, even when a
+/// Bearer token is present:
+///
+/// ```text
+/// CSRF_COOKIE_AUTH_PATHS=/api/v1/admin,/api/v1/users
+/// ```
+///
+/// Paths matching any prefix in this list will never bypass CSRF, regardless
+/// of the Authorization header.
 pub struct CsrfProtection {
     exclude_paths: Vec<String>,
+    cookie_auth_paths: Vec<String>,
 }
 
 impl CsrfProtection {
+    /// Create a new CSRF protection middleware.
+    ///
+    /// - `exclude_paths`: Additional path prefixes to skip CSRF checks
+    ///   (unauthenticated endpoints like login, register, webhooks).
+    /// - `cookie_auth_paths`: Path prefixes that **always** enforce CSRF,
+    ///   even with a Bearer token. Set via `CSRF_COOKIE_AUTH_PATHS` env var.
     pub fn new(exclude_paths: Vec<String>) -> Self {
         let mut defaults = vec![
             "/api/v1/auth/login".to_string(),
@@ -47,9 +82,23 @@ impl CsrfProtection {
 
         defaults.extend(exclude_paths);
 
+        let cookie_auth_paths = std::env::var("CSRF_COOKIE_AUTH_PATHS")
+            .unwrap_or_default()
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .filter(|s| !s.is_empty())
+            .collect();
+
         Self {
             exclude_paths: defaults,
+            cookie_auth_paths,
         }
+    }
+
+    /// Override `cookie_auth_paths` directly (for testing or programmatic config).
+    pub fn with_cookie_auth_paths(mut self, paths: Vec<String>) -> Self {
+        self.cookie_auth_paths = paths;
+        self
     }
 }
 
@@ -68,6 +117,7 @@ where
         ready(Ok(CsrfProtectionMiddleware {
             service: Rc::new(service),
             exclude_paths: self.exclude_paths.clone(),
+            cookie_auth_paths: self.cookie_auth_paths.clone(),
         }))
     }
 }
@@ -75,6 +125,7 @@ where
 pub struct CsrfProtectionMiddleware<S> {
     service: Rc<S>,
     exclude_paths: Vec<String>,
+    cookie_auth_paths: Vec<String>,
 }
 
 impl<S> Service<ServiceRequest> for CsrfProtectionMiddleware<S>
@@ -96,11 +147,16 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let svc = self.service.clone();
         let exclude_paths = self.exclude_paths.clone();
+        let cookie_auth_paths = self.cookie_auth_paths.clone();
 
         Box::pin(async move {
             let should_check = {
                 let path = req.uri().path();
                 let path_excluded = exclude_paths.iter().any(|p| path.starts_with(p));
+
+                // Paths that use cookie-based auth must always enforce CSRF,
+                // even when a Bearer token is present.
+                let is_cookie_auth_path = cookie_auth_paths.iter().any(|p| path.starts_with(p));
 
                 let has_bearer_token = req
                     .headers()
@@ -109,7 +165,13 @@ where
                     .map(|h| h.starts_with("Bearer "))
                     .unwrap_or(false);
 
-                !path_excluded && !has_bearer_token
+                if is_cookie_auth_path {
+                    // Cookie auth paths: always enforce CSRF
+                    !path_excluded
+                } else {
+                    // Standard paths: skip CSRF for Bearer token requests
+                    !path_excluded && !has_bearer_token
+                }
             };
 
             let is_state_changing = {
@@ -195,7 +257,7 @@ where
 }
 
 /// Generate a CSRF token with embedded timestamp: `{timestamp}.{nonce}.{hmac}`
-fn generate_csrf_token(secret_key: &str) -> String {
+pub fn generate_csrf_token(secret_key: &str) -> String {
     use hmac::{Hmac, Mac};
     use rand::RngCore;
     use rand::rngs::OsRng;
@@ -432,5 +494,60 @@ mod tests {
     fn test_csrf_token_expiry_constants() {
         assert_eq!(CSRF_TOKEN_EXPIRY_SECS, 900); // 15 minutes
         assert_eq!(CSRF_ROTATION_GRACE_SECS, 30); // 30 seconds
+    }
+
+    #[test]
+    fn test_exclude_paths_include_auth_endpoints() {
+        let csrf = CsrfProtection::new(vec![]);
+        assert!(csrf.exclude_paths.iter().any(|p| p == "/api/v1/auth/login"));
+        assert!(
+            csrf.exclude_paths
+                .iter()
+                .any(|p| p == "/api/v1/auth/register")
+        );
+        assert!(csrf.exclude_paths.iter().any(|p| p == "/api/v1/webhooks"));
+    }
+
+    #[test]
+    fn test_additional_exclude_paths() {
+        let csrf = CsrfProtection::new(vec!["/api/v1/custom".to_string()]);
+        assert!(csrf.exclude_paths.iter().any(|p| p == "/api/v1/custom"));
+        // Defaults still present
+        assert!(csrf.exclude_paths.iter().any(|p| p == "/api/v1/auth/login"));
+    }
+
+    #[test]
+    fn test_cookie_auth_paths_builder() {
+        let csrf = CsrfProtection::new(vec![]).with_cookie_auth_paths(vec![
+            "/api/v1/admin".to_string(),
+            "/api/v1/users".to_string(),
+        ]);
+        assert_eq!(csrf.cookie_auth_paths.len(), 2);
+        assert!(
+            csrf.cookie_auth_paths
+                .contains(&"/api/v1/admin".to_string())
+        );
+        assert!(
+            csrf.cookie_auth_paths
+                .contains(&"/api/v1/users".to_string())
+        );
+    }
+
+    #[test]
+    fn test_cookie_auth_paths_empty_by_default() {
+        let csrf = CsrfProtection::new(vec![]);
+        assert!(csrf.cookie_auth_paths.is_empty());
+    }
+
+    #[test]
+    fn test_cookie_auth_paths_override() {
+        let csrf = CsrfProtection::new(vec![])
+            .with_cookie_auth_paths(vec!["/api/v1/admin".to_string()])
+            .with_cookie_auth_paths(vec!["/api/v1/users".to_string()]);
+        assert_eq!(csrf.cookie_auth_paths.len(), 1);
+        assert!(
+            csrf.cookie_auth_paths
+                .contains(&"/api/v1/users".to_string())
+        );
     }
 }
