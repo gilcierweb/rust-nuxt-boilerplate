@@ -75,6 +75,12 @@ jobs:
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
 
+      - name: Test migration rollback cycle (up → revert all → up)
+        run: |
+          chmod +x scripts/test_migration_rollback.sh
+          ./scripts/test_migration_rollback.sh postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: ${{ github.workspace }}
+
       - name: Run cargo fmt (check formatting)
         run: cargo fmt --all -- --check
 

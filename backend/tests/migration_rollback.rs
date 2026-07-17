@@ -233,3 +233,103 @@ fn diesel_toml_has_correct_config() {
         "diesel.toml missing migration config"
     );
 }
+
+/// Run a live migration rollback cycle against a real PostgreSQL database.
+/// Skipped when `DATABASE_URL_TEST` is not set (e.g. in unit-test-only runs).
+/// When set (e.g. in CI), validates that up.sql and down.sql execute without
+/// errors — a broken down.sql would only be caught during a production rollback.
+#[test]
+fn live_migration_rollback_cycle() {
+    let db_url = match std::env::var("DATABASE_URL_TEST") {
+        Ok(url) => url,
+        Err(_) => {
+            println!("Skipping live rollback test: DATABASE_URL_TEST not set");
+            return;
+        },
+    };
+
+    let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let migrations_dir = Path::new(&manifest_dir).join(MIGRATIONS_DIR);
+
+    // Count migrations
+    let migration_count = fs::read_dir(&migrations_dir)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_dir() && e.file_name().to_string_lossy() != ".keep")
+        .count();
+
+    assert!(migration_count > 0, "No migrations found");
+    println!("Testing rollback cycle for {} migrations", migration_count);
+
+    // Collect migration directories in chronological order
+    let mut migrations: Vec<String> = fs::read_dir(&migrations_dir)
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_dir() && e.file_name().to_string_lossy() != ".keep")
+        .map(|e| e.file_name().to_string_lossy().to_string())
+        .collect();
+    migrations.sort();
+
+    // Apply all migrations forward
+    for name in &migrations {
+        let up_sql = migrations_dir.join(name).join("up.sql");
+        let sql = fs::read_to_string(&up_sql)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", up_sql.display(), e));
+        println!("  UP   {}", name);
+        run_sql_against_db(&db_url, &sql);
+    }
+
+    // Revert all migrations in reverse order
+    for name in migrations.iter().rev() {
+        let down_sql = migrations_dir.join(name).join("down.sql");
+        let sql = fs::read_to_string(&down_sql)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", down_sql.display(), e));
+        println!("  DOWN {}", name);
+        run_sql_against_db(&db_url, &sql);
+    }
+
+    // Re-apply all migrations to restore database
+    for name in &migrations {
+        let up_sql = migrations_dir.join(name).join("up.sql");
+        let sql = fs::read_to_string(&up_sql).unwrap();
+        println!("  UP   {} (restore)", name);
+        run_sql_against_db(&db_url, &sql);
+    }
+
+    println!(
+        "Migration rollback cycle passed for {} migrations",
+        migration_count
+    );
+}
+
+/// Execute raw SQL against the database via a simple psql command.
+fn run_sql_against_db(database_url: &str, sql: &str) {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let mut child = Command::new("psql")
+        .arg(database_url)
+        .arg("-v")
+        .arg("ON_ERROR_STOP=1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to run psql — is it installed?");
+
+    child
+        .stdin
+        .take()
+        .expect("Failed to open stdin")
+        .write_all(sql.as_bytes())
+        .expect("Failed to write SQL to stdin");
+
+    let output = child.wait_with_output().expect("Failed to wait for psql");
+    assert!(
+        output.status.success(),
+        "SQL execution failed (exit {}):\n{}\nSQL:\n{}",
+        output.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&output.stderr),
+        sql,
+    );
+}
