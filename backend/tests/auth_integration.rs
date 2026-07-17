@@ -488,8 +488,10 @@ async fn test_login_invalid_credentials() {
             .to_request(),
     )
     .await;
-    println!("Invalid login: {}", resp.status());
-    assert!(resp.status().is_client_error());
+    let status = resp.status();
+    let body: Value = test::read_body_json(resp).await;
+    println!("Invalid login: {} - {:?}", status, body);
+    assert!(status.is_client_error(), "Expected client error, got {}: {:?}", status, body);
 
     // db.drop_all_tables().await;
 }
