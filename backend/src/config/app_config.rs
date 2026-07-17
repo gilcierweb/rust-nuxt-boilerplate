@@ -298,7 +298,7 @@ impl AppConfig {
                 secrets
             },
             jwt_public_key: env::var("JWT_PUBLIC_KEY").ok(),
-            jwt_access_expiry_secs: 2 * 60 * 60,
+            jwt_access_expiry_secs: 15 * 60, // 15 minutes
             jwt_refresh_expiry_secs: 30 * 24 * 3600,
 
             // All secrets are required - fail fast if missing in any environment
