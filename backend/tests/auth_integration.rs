@@ -443,9 +443,7 @@ async fn test_full_auth_cycle() {
 #[actix_web::test]
 async fn test_login_invalid_credentials() {
     let db = TestDb::new().await;
-    // Use existing schema from diesel migrations (applied in CI before this test)
-    // db.drop_all_tables().await;
-    // db.create_auth_schema().await;
+    db.create_auth_schema().await;
 
     let config = Arc::new(test_config());
     let r_pool = redis_pool();
@@ -499,6 +497,7 @@ async fn test_login_invalid_credentials() {
 #[actix_web::test]
 async fn test_health_endpoint() {
     let db = TestDb::new().await;
+    db.create_auth_schema().await;
     let r_pool = redis_pool();
 
     let config = Arc::new(test_config());
