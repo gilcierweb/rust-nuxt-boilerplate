@@ -261,6 +261,9 @@ fn live_migration_rollback_cycle() {
     assert!(migration_count > 0, "No migrations found");
     println!("Testing rollback cycle for {} migrations", migration_count);
 
+    // Start with a clean database - drop all tables
+    drop_all_tables(&db_url);
+
     // Collect migration directories in chronological order
     let mut migrations: Vec<String> = fs::read_dir(&migrations_dir)
         .unwrap()
@@ -331,5 +334,38 @@ fn run_sql_against_db(database_url: &str, sql: &str) {
         output.status.code().unwrap_or(-1),
         String::from_utf8_lossy(&output.stderr),
         sql,
+    );
+}
+
+/// Drop all tables in the public schema to start fresh.
+fn drop_all_tables(database_url: &str) {
+    use std::io::Write;
+    use std::process::{Command, Stdio};
+
+    let sql = "DROP SCHEMA public CASCADE; CREATE SCHEMA public;";
+
+    let mut child = Command::new("psql")
+        .arg(database_url)
+        .arg("-v")
+        .arg("ON_ERROR_STOP=1")
+        .stdin(Stdio::piped())
+        .stdout(Stdio::null())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("Failed to run psql — is it installed?");
+
+    child
+        .stdin
+        .take()
+        .expect("Failed to open stdin")
+        .write_all(sql.as_bytes())
+        .expect("Failed to write SQL to stdin");
+
+    let output = child.wait_with_output().expect("Failed to wait for psql");
+    assert!(
+        output.status.success(),
+        "Failed to drop schema: exit {}: {}",
+        output.status.code().unwrap_or(-1),
+        String::from_utf8_lossy(&output.stderr),
     );
 }
