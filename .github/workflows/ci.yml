@@ -63,32 +63,17 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
-      - name: Cache cargo-audit binary
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/cargo-audit
-          key: ${{ runner.os }}-cargo-audit-${{ hashFiles('backend/Cargo.lock') }}
-
-      - name: Cache diesel_cli binary
-        uses: actions/cache@v4
-        with:
-          path: ~/.cargo/bin/diesel
-          key: ${{ runner.os }}-diesel-cli-${{ hashFiles('backend/Cargo.lock') }}
-
-      - name: Install cargo-audit (cached)
-        run: |
-          if ! command -v cargo-audit &> /dev/null; then
-            cargo install cargo-audit
-          fi
+      - name: Install cargo-audit (pre-built binary)
+        uses: taiki-e/install-action@cargo-audit
 
       - name: Run cargo audit (security check)
         run: cargo audit
 
-      - name: Install diesel_cli (cached)
-        run: |
-          if ! command -v diesel &> /dev/null; then
-            cargo install diesel_cli --no-default-features --features postgres
-          fi
+      - name: Install diesel_cli (pre-built binary)
+        uses: taiki-e/install-action@diesel-cli
+        with:
+          features: postgres
+          no-default-features: true
 
       # Migration rollback test runs FIRST on clean DB (tests full up→down→up cycle)
       - name: Run migration rollback test (clean DB)
@@ -198,11 +183,8 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install cargo-audit
-        run: |
-          if ! command -v cargo-audit &> /dev/null; then
-            cargo install cargo-audit
-          fi
+      - name: Install cargo-audit (pre-built binary)
+        uses: taiki-e/install-action@cargo-audit
 
       - name: Run cargo audit with JSON output
         run: cargo audit --json > audit-report.json || true
