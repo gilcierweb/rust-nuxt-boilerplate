@@ -29,7 +29,7 @@ pub struct AppState {
     pub redis: deadpool_redis::Pool,
     pub config: Arc<crate::config::AppConfig>,
     pub metrics: Arc<crate::services::metrics_service::MetricsRegistry>,
-    pub ws: crate::ws::WsState,
+    pub ws: crate::ws::WsRedisState,
 }
 
 i18n!("locales");

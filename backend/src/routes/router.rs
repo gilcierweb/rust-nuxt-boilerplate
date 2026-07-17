@@ -153,6 +153,6 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             .route("/health", web::get().to(health_controller::health_check))
             .route("/metrics", web::get().to(metrics_controller::metrics))
             // WebSocket route (inside /api/v1 scope)
-            .service(web::resource("/ws").route(web::get().to(crate::ws::server::ws_handler))),
+            .service(web::resource("/ws").route(web::get().to(crate::ws::redis_handler::ws_handler))),
     );
 }

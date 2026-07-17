@@ -56,6 +56,56 @@ pub struct ConnectionInfo {
     pub ip: String,
 }
 
+impl Serialize for ConnectionInfo {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("ConnectionInfo", 4)?;
+        state.serialize_field("profile_id", &self.profile_id)?;
+        state.serialize_field("username", &self.username)?;
+        state.serialize_field("room", &self.room)?;
+        state.serialize_field("ip", &self.ip)?;
+        state.end()
+    }
+}
+
+#[derive(Deserialize)]
+struct ConnectionInfoMeta {
+    profile_id: Uuid,
+    username: String,
+    room: Option<String>,
+    ip: String,
+}
+
+impl<'de> Deserialize<'de> for ConnectionInfo {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let meta = ConnectionInfoMeta::deserialize(deserializer)?;
+        Ok(Self {
+            profile_id: meta.profile_id,
+            username: meta.username,
+            room: meta.room,
+            addr: {
+                struct Dummy;
+                impl actix::Actor for Dummy {
+                    type Context = actix::Context<Self>;
+                }
+                impl actix::Handler<WsMessage> for Dummy {
+                    type Result = ();
+                    fn handle(&mut self, _: WsMessage, _: &mut Self::Context) {}
+                }
+                let addr: actix::Addr<Dummy> = Dummy.start();
+                addr.recipient()
+            },
+            ip: meta.ip,
+        })
+    }
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PresenceInfo {
     pub active_connections: usize,
@@ -604,7 +654,7 @@ pub async fn ws_handler(
         .map_err(|e| AppError::Internal(format!("WebSocket error: {}", e)))
 }
 
-fn extract_ws_protocol_token(req: &HttpRequest) -> Option<String> {
+pub(crate) fn extract_ws_protocol_token(req: &HttpRequest) -> Option<String> {
     req.headers()
         .get(SEC_WEBSOCKET_PROTOCOL)
         .and_then(|header| header.to_str().ok())

@@ -240,7 +240,7 @@ async fn test_full_auth_cycle() {
         redis: r_pool.clone(),
         config: config.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
-        ws: backend::ws::WsState::new(),
+        ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
     });
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
@@ -249,7 +249,10 @@ async fn test_full_auth_cycle() {
         (*config).clone(),
     ));
 
-    let ws_state = web::Data::new(backend::ws::WsState::new());
+    let ws_state = web::Data::new(backend::ws::WsRedisState::new(
+        r_pool.clone(),
+        backend::ws::WsLimits::default(),
+    ));
 
     let app = test::init_service(
         App::new()
@@ -421,7 +424,7 @@ async fn test_login_invalid_credentials() {
         redis: r_pool.clone(),
         config: config.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
-        ws: backend::ws::WsState::new(),
+        ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
     });
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
@@ -473,7 +476,7 @@ async fn test_health_endpoint() {
         redis: r_pool.clone(),
         config: config.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
-        ws: backend::ws::WsState::new(),
+        ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
     });
 
     let app = test::init_service(

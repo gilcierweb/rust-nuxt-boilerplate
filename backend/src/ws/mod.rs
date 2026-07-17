@@ -3,10 +3,13 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+pub mod redis_handler;
+pub mod redis_state;
 pub mod server;
 pub mod validation;
 
-pub use server::WsState;
+pub use redis_state::WsRedisState;
+pub use server::{WsLimits, WsState};
 
 #[derive(Clone)]
 pub struct WsStateOld {

@@ -160,19 +160,34 @@ async fn main() -> std::io::Result<()> {
         .create_pool(Some(Runtime::Tokio1))
         .expect("Failed to create Redis connection pool");
     let redis_pool_for_container = redis_pool.clone();
+    let redis_pool_for_ws = redis_pool.clone();
 
-    let ws_state = web::Data::new(backend::ws::server::WsState::new());
+    let ws_state = web::Data::new(backend::ws::WsRedisState::new(
+        redis_pool_for_ws,
+        backend::ws::WsLimits::default(),
+    ));
 
     let state = web::Data::new(AppState {
         db: db_pool,
         redis: redis_pool,
         config: config.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
-        ws: backend::ws::WsState::new(),
+        ws: backend::ws::WsRedisState::new(
+            redis_pool_for_container.clone(),
+            backend::ws::WsLimits::default(),
+        ),
     });
 
     // Record cold-start duration (time from boot_start to AppState ready)
     state.metrics.record_cold_start(boot_start.elapsed());
+
+    // Start WebSocket Pub/Sub listener for distributed message delivery
+    let pubsub_state = std::sync::Arc::new(state.ws.clone());
+    actix::spawn(async move {
+        if let Err(e) = backend::ws::redis_state::run_pubsub_listener(pubsub_state).await {
+            tracing::error!("WebSocket Pub/Sub listener failed: {}", e);
+        }
+    });
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
         db_pool_for_container,

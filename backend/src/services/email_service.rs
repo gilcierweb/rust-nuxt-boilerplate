@@ -267,11 +267,7 @@ impl EmailService {
     }
 
     /// Send account confirmation email
-    pub async fn send_confirmation_email(
-        &self,
-        to: &str,
-        confirm_url: &str,
-    ) -> EmailResult {
+    pub async fn send_confirmation_email(&self, to: &str, confirm_url: &str) -> EmailResult {
         let subject = "Confirm your email address";
         let body = format!(
             "Please click the link below to confirm your email address:\n\n{}\n\nThis link will expire in 24 hours.",
@@ -310,11 +306,7 @@ impl EmailService {
     }
 
     /// Send password reset email
-    pub async fn send_password_reset_email(
-        &self,
-        to: &str,
-        reset_url: &str,
-    ) -> EmailResult {
+    pub async fn send_password_reset_email(&self, to: &str, reset_url: &str) -> EmailResult {
         let subject = "Reset your password";
         let body = format!(
             "Click the link below to reset your password:\n\n{}\n\nThis link will expire in 1 hour.",
