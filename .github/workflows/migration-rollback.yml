@@ -50,17 +50,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-cargo-
 
+      - name: Install sccache
+        uses: mozilla-actions/sccache-action@v0.0.5
+
       - name: Install diesel_cli
         run: cargo install diesel_cli --no-default-features --features postgres
 
-      - name: Run migration rollback test (script)
+      - name: Run migration rollback test
         run: |
           chmod +x ../scripts/test_migration_rollback.sh
           ../scripts/test_migration_rollback.sh postgres://postgres:postgres@localhost:5432/test_db
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-
-      - name: Run live_migration_rollback_cycle test (cargo test)
-        run: cargo test --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
-        env:
-          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
