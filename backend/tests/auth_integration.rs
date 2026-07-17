@@ -235,8 +235,9 @@ fn extract_cookie(
 #[actix_web::test]
 async fn test_full_auth_cycle() {
     let db = TestDb::new().await;
-    db.drop_all_tables().await;
-    db.create_auth_schema().await;
+    // Use existing schema from diesel migrations (applied in CI before this test)
+    // db.drop_all_tables().await;
+    // db.create_auth_schema().await;
 
     let config = Arc::new(test_config());
     let r_pool = redis_pool();
@@ -419,8 +420,9 @@ async fn test_full_auth_cycle() {
 #[actix_web::test]
 async fn test_login_invalid_credentials() {
     let db = TestDb::new().await;
-    db.drop_all_tables().await;
-    db.create_auth_schema().await;
+    // Use existing schema from diesel migrations (applied in CI before this test)
+    // db.drop_all_tables().await;
+    // db.create_auth_schema().await;
 
     let config = Arc::new(test_config());
     let r_pool = redis_pool();
@@ -468,7 +470,7 @@ async fn test_login_invalid_credentials() {
     println!("Invalid login: {}", resp.status());
     assert!(resp.status().is_client_error());
 
-    db.drop_all_tables().await;
+    // db.drop_all_tables().await;
 }
 
 #[actix_web::test]
