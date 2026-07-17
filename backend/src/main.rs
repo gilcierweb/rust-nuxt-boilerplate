@@ -140,19 +140,20 @@ async fn main() -> std::io::Result<()> {
     );
 
     // Warn if pool size is too low for production workloads
-    if config.redis_pool_size < 20
+    if config.redis_pool_size < backend::config::app_config::REDIS_POOL_MIN_PRODUCTION
         && matches!(
             config.environment,
             backend::config::app_config::Environment::Production
         )
     {
-        tracing::warn!(
-            event = "redis.pool_size_low",
+        tracing::error!(
+            event = "redis.pool_size_below_minimum",
             pool_size = config.redis_pool_size,
-            recommended = 50,
-            "Redis pool size may be insufficient for production. \
-             Consider increasing REDIS_POOL_SIZE to 50+ for high-concurrency workloads \
-             (rate limiting, caching, session storage, token blacklisting)."
+            recommended = backend::config::app_config::REDIS_POOL_MIN_PRODUCTION,
+            "Redis pool size is below the production minimum. \
+             Consider increasing REDIS_POOL_SIZE to {}+ for high-concurrency workloads \
+             (rate limiting, caching, session storage, token blacklisting).",
+            backend::config::app_config::REDIS_POOL_MIN_PRODUCTION
         );
     }
 

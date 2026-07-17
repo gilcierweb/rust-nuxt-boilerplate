@@ -213,8 +213,36 @@ pub enum Environment {
     Test,
 }
 
+/// Minimum Redis pool sizes per environment.
+const REDIS_POOL_DEFAULT_DEV: usize = 10;
+const REDIS_POOL_DEFAULT_STAGING: usize = 30;
+/// Production minimum (50) is required for rate limiting, caching, session storage,
+/// token blacklisting, and WebSocket Pub/Sub under load.
+pub const REDIS_POOL_MIN_PRODUCTION: usize = 50;
+
 impl AppConfig {
     pub fn from_env() -> Result<Self, env::VarError> {
+        // Parse environment first so we can use it for environment-aware defaults
+        let environment = {
+            let env_var = env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
+            match env_var.to_ascii_lowercase().as_str() {
+                "production" => Environment::Production,
+                "staging" => Environment::Staging,
+                "test" => Environment::Test,
+                _ => Environment::Development,
+            }
+        };
+
+        // Default Redis pool size depends on environment:
+        // - Development/Test: 10 (light local usage)
+        // - Staging: 30
+        // - Production: REDIS_POOL_MIN_PRODUCTION (50)
+        let redis_pool_default = match environment {
+            Environment::Production => REDIS_POOL_MIN_PRODUCTION,
+            Environment::Staging => REDIS_POOL_DEFAULT_STAGING,
+            Environment::Test | Environment::Development => REDIS_POOL_DEFAULT_DEV,
+        };
+
         Ok(Self {
             host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
             port: env::var("PORT")
@@ -230,16 +258,7 @@ impl AppConfig {
             frontend_url: env::var("FRONTEND_URL")
                 .unwrap_or_else(|_| "http://localhost:3000".to_string()),
 
-            // Parse environment first to check for required secrets
-            environment: {
-                let env_var = env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
-                match env_var.to_ascii_lowercase().as_str() {
-                    "production" => Environment::Production,
-                    "staging" => Environment::Staging,
-                    "test" => Environment::Test,
-                    _ => Environment::Development,
-                }
-            },
+            environment,
 
             database_url: required_secret("DATABASE_URL")?,
             db_pool_size: env::var("DB_POOL_SIZE")
@@ -266,9 +285,9 @@ impl AppConfig {
             redis_url: env::var("REDIS_URL")
                 .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
             redis_pool_size: env::var("REDIS_POOL_SIZE")
-                .unwrap_or_else(|_| "10".to_string())
-                .parse()
-                .unwrap_or(10),
+                .ok()
+                .and_then(|s| s.parse::<usize>().ok())
+                .unwrap_or(redis_pool_default),
 
             jwt_secret: required_secret("JWT_SECRET")?,
             jwt_secrets: {
@@ -493,6 +512,20 @@ impl AppConfig {
         }
         if self.redis_pool_size == 0 {
             errors.push("REDIS_POOL_SIZE must be greater than 0".to_string());
+        }
+
+        // Production must have a minimum Redis pool size of 50.
+        // This prevents connection pool exhaustion under load
+        // (rate limiting, caching, session storage, token blacklisting, WebSocket Pub/Sub).
+        if matches!(self.environment, Environment::Production)
+            && self.redis_pool_size < REDIS_POOL_MIN_PRODUCTION
+        {
+            errors.push(format!(
+                "REDIS_POOL_SIZE must be at least {} in production (got {}). \
+                 Consider rate limiting, caching, session storage, token blacklisting, \
+                 and WebSocket Pub/Sub requirements.",
+                REDIS_POOL_MIN_PRODUCTION, self.redis_pool_size
+            ));
         }
 
         // Platform settings validation
