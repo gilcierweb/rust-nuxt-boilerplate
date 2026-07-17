@@ -97,6 +97,12 @@ jobs:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
+      # The rollback test runs raw SQL without recording in diesel_migrations,
+      # so we must reset the schema before diesel migration run to avoid
+      # "relation already exists" errors.
+      - name: Reset database schema after rollback test
+        run: psql postgres://postgres:postgres@localhost:5432/test_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
       # Apply migrations for other integration tests
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
