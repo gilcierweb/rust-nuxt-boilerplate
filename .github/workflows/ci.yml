@@ -90,6 +90,14 @@ jobs:
             cargo install diesel_cli --no-default-features --features postgres
           fi
 
+      # Migration rollback test runs FIRST on clean DB (tests full up→down→up cycle)
+      - name: Run migration rollback test (clean DB)
+        run: cargo test --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      # Apply migrations for other integration tests
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
 
@@ -110,12 +118,10 @@ jobs:
         env:
           REDIS_URL: redis://localhost:6379
 
-      # Integration tests: need DB, sequential
+      # Integration tests: need DB, sequential (migrations already applied)
       - name: Run integration tests (sequential, with DB)
         run: |
-          cargo test --test auth_integration \
-            --test migration_rollback \
-            -- --test-threads=1 live_migration_rollback_cycle
+          cargo test --test auth_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
