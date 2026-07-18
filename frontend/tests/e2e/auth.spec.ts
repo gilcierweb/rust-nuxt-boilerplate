@@ -166,14 +166,14 @@ test.describe('Reset Password Page', () => {
     await expect(page.locator(SUBMIT)).toBeVisible()
   })
 
-  test('should toggle password visibility', async ({ page }) => {
+test('should toggle password visibility', async ({ page }) => {
     await page.goto('/auth/reset-password?token=valid-token-123')
     const pw = page.getByLabel(a.resetPassword.newPassword)
     await expect(pw).toHaveAttribute('type', 'password')
-    // Icon button is outside viewport, scroll into view and force click
-    const toggleBtn = pw.locator('..').locator('button[type="button"]').first()
-    await toggleBtn.scrollIntoViewIfNeeded()
-    await toggleBtn.click({ force: true })
+    // Icon button outside viewport in CI; click via keyboard to avoid viewport issues
+    await pw.focus()
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Space')
     await expect(pw).toHaveAttribute('type', 'text')
   })
 
@@ -262,7 +262,8 @@ test.describe('Navigation Between Auth Pages', () => {
 test.describe('Homepage', () => {
   test('should load homepage', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' })
-    // Check main heading text (case-insensitive match)
+    // Wait for client-side hydration and h1 to be visible
+    await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 })
     await expect(page.locator('h1').first()).toContainText(/build full-stack apps/i)
   })
 })
