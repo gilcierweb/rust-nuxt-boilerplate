@@ -262,8 +262,8 @@ test.describe('Navigation Between Auth Pages', () => {
 test.describe('Homepage', () => {
   test('should load homepage', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' })
-    // Wait for client-side hydration and h1 to be visible
-    await expect(page.locator('h1').first()).toBeVisible({ timeout: 15000 })
-    await expect(page.locator('h1').first()).toContainText(/build full-stack apps/i)
+    // Wait for hero section h1 to be visible (SSR + hydration)
+    await expect(page.locator('#hero h1').first()).toBeVisible({ timeout: 15000 })
+    await expect(page.locator('#hero h1').first()).toContainText(/build full-stack apps/i)
   })
 })
