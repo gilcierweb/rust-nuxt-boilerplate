@@ -11,38 +11,10 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
-  build-backend:
-    name: Build Backend
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: ./backend
-        shell: bash
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
-      - name: Cache Cargo build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: backend
-          key: rust-cache-${{ runner.os }}-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: rust-cache-${{ runner.os }}-
-
-      - name: Build backend binary
-        run: cargo build --bin backend
-
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [build-backend]
     defaults:
       run:
         working-directory: ./backend
@@ -81,16 +53,13 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - name: Cache Cargo build artifacts (restore only)
+      - name: Cache Cargo build artifacts
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-          key: rust-cache-${{ runner.os }}-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: rust-cache-${{ runner.os }}-
-          save-if: false
 
-      - name: Verify backend binary exists
-        run: test -f target/debug/backend && echo "Binary found OK"
+      - name: Build backend
+        run: cargo build --bin backend
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -192,7 +161,7 @@ jobs:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [build-backend, frontend-test]
+    needs: [frontend-test]
     defaults:
       run:
         shell: bash
@@ -228,16 +197,14 @@ jobs:
         with:
           toolchain: stable
 
-      - name: Cache Cargo build artifacts (restore only)
+      - name: Cache Cargo build artifacts
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-          key: rust-cache-${{ runner.os }}-${{ hashFiles('backend/Cargo.lock') }}
-          restore-keys: rust-cache-${{ runner.os }}-
-          save-if: false
 
-      - name: Verify backend binary exists
-        run: test -f backend/target/debug/backend && echo "Binary found OK"
+      - name: Build backend
+        run: cargo build --bin backend
+        working-directory: ./backend
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -269,7 +236,6 @@ jobs:
 
       - name: Start backend server
         run: |
-          chmod +x backend/target/debug/backend
           backend/target/debug/backend &
           echo "BACKEND_PID=$!" >> $GITHUB_ENV
         working-directory: ${{ github.workspace }}
