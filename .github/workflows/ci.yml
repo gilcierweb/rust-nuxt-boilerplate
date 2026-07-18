@@ -298,6 +298,11 @@ jobs:
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
 
+      - name: Audit security headers
+        run: |
+          ./scripts/security-headers-audit.sh http://localhost:3000
+        working-directory: ${{ github.workspace }}
+
       - name: Stop backend server
         if: always()
         run: |
