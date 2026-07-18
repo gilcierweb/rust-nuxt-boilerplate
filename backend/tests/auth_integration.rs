@@ -56,83 +56,6 @@ impl TestDb {
     fn pool(&self) -> &Pool<AsyncDieselConnectionManager<AsyncPgConnection>> {
         &self.pool
     }
-
-    async fn drop_all_tables(&self) {
-        let mut conn = self.pool.get().await.expect("Failed to get connection");
-        diesel::sql_query("DROP SCHEMA public CASCADE;")
-            .execute(&mut *conn)
-            .await
-            .expect("Failed to drop schema");
-        diesel::sql_query("CREATE SCHEMA public;")
-            .execute(&mut *conn)
-            .await
-            .expect("Failed to create schema");
-    }
-
-    #[allow(dead_code)]
-    async fn create_auth_schema(&self) {
-        let statements = [
-            r#"CREATE TABLE IF NOT EXISTS users (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                email_encrypted BYTEA NOT NULL,
-                email_blind_index BYTEA NOT NULL,
-                encrypted_password TEXT NOT NULL,
-                confirmed_at TIMESTAMPTZ,
-                locked_at TIMESTAMPTZ,
-                failed_attempts INTEGER DEFAULT 0,
-                last_failed_at TIMESTAMPTZ,
-                otp_secret TEXT,
-                otp_enabled_at TIMESTAMPTZ,
-                encryption_key_version INTEGER DEFAULT 1,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )"#,
-            r#"CREATE TABLE IF NOT EXISTS profiles (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-                first_name TEXT, last_name TEXT, slug TEXT UNIQUE,
-                cpf_encrypted BYTEA, cpf_blind_index BYTEA,
-                phone_encrypted BYTEA, phone_blind_index BYTEA,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )"#,
-            r#"CREATE TABLE IF NOT EXISTS roles (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                name VARCHAR(50) NOT NULL, resource_type VARCHAR(50), resource_id UUID
-            )"#,
-            r#"CREATE TABLE IF NOT EXISTS users_roles (
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                role_id UUID NOT NULL REFERENCES roles(id) ON DELETE CASCADE,
-                PRIMARY KEY (user_id, role_id)
-            )"#,
-            r#"CREATE TABLE IF NOT EXISTS refresh_tokens (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                token_hash TEXT NOT NULL, device_info TEXT, ip_address TEXT,
-                expires_at TIMESTAMPTZ NOT NULL, revoked_at TIMESTAMPTZ,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )"#,
-            r#"CREATE TABLE IF NOT EXISTS audit_logs (
-                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                actor_id UUID, actor_role_snapshot TEXT, action VARCHAR(100) NOT NULL,
-                resource_type VARCHAR(100), resource_id UUID, metadata JSONB,
-                ip_address TEXT, user_agent TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-            )"#,
-            r#"INSERT INTO roles (id, name) VALUES
-                ('a0000000-0000-0000-0000-000000000001', 'admin'),
-                ('a0000000-0000-0000-0000-000000000002', 'operator'),
-                ('a0000000-0000-0000-0000-000000000003', 'viewer')
-            ON CONFLICT DO NOTHING"#,
-        ];
-
-        for sql in &statements {
-            let mut conn = self.pool.get().await.expect("Failed to get connection");
-            diesel::sql_query(*sql)
-                .execute(&mut *conn)
-                .await
-                .expect("Failed to create test schema");
-        }
-    }
 }
 
 fn redis_pool() -> deadpool_redis::Pool {
@@ -448,13 +371,16 @@ async fn test_full_auth_cycle() {
     // Token invalidation via blacklist only works when JwtAuth middleware is present.
     // So we don't test token invalidation here since it would require JwtAuth middleware.
 
-    db.drop_all_tables().await;
+    // Do not drop tables here - other tests in the same file need the schema.
+    // CI runs `diesel migration run` before tests, and the scheduled migration
+    // rollback workflow validates rollback separately.
 }
 
 #[actix_web::test]
 async fn test_login_invalid_credentials() {
     let db = TestDb::new().await;
-    db.create_auth_schema().await;
+    // Schema is already created by diesel migration run in CI.
+    // Each test uses its own TestDb pool but shares the same database.
 
     let config = Arc::new(test_config());
     let r_pool = redis_pool();
@@ -515,7 +441,7 @@ async fn test_login_invalid_credentials() {
 #[actix_web::test]
 async fn test_health_endpoint() {
     let db = TestDb::new().await;
-    db.create_auth_schema().await;
+    // Schema is already created by diesel migration run in CI.
     let r_pool = redis_pool();
 
     let config = Arc::new(test_config());

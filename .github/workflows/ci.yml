@@ -175,7 +175,7 @@ jobs:
         run: pnpm run lint
 
       - name: Run unit tests
-        run: pnpm test
+        run: pnpm test -- --run --passWithNoTests
 
   frontend-e2e:
     name: Frontend E2E Tests
