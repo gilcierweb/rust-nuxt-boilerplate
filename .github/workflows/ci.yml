@@ -292,7 +292,7 @@ jobs:
 
       - name: Start frontend server
         run: |
-          pnpm run preview -- --port 3000 &
+          NITRO_PORT=3000 pnpm run preview &
           echo "FRONTEND_PID=$!" >> $GITHUB_ENV
         working-directory: ./frontend
 
