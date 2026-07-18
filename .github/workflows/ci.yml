@@ -11,10 +11,112 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
-  backend-test:
-    name: Backend Tests
+  # Fast lint job - runs in parallel with build
+  backend-lint:
+    name: Backend Lint (fmt + clippy)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./backend
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Run cargo fmt
+        run: cargo fmt --all -- --check
+
+      - name: Run cargo clippy
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  # Build debug for testing (faster than release)
+  backend-build-debug:
+    name: Backend Build (debug)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: ./backend
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Build backend (debug)
+        run: cargo build --bin backend
+
+  # Unit tests (no DB needed) - run in parallel
+  backend-unit-tests:
+    name: Backend Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [backend-build-debug]
+    defaults:
+      run:
+        working-directory: ./backend
+        shell: bash
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Run unit tests (parallel, no DB)
+        run: |
+          cargo test --lib --bins \
+            --test api_version_integration \
+            --test csrf_protection_integration \
+            --test migration_rollback \
+            -- --test-threads=4 --skip live_migration_rollback_cycle
+        env:
+          REDIS_URL: redis://localhost:6379
+
+  # Integration tests (with DB) - run sequentially
+  backend-integration-tests:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [backend-build-debug]
     defaults:
       run:
         working-directory: ./backend
@@ -42,7 +144,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -51,15 +152,11 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          components: rustfmt, clippy
 
-      - name: Cache Cargo build artifacts
+      - name: Cache Cargo artifacts
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-
-      - name: Build backend (release for sharing with E2E)
-        run: cargo build --bin backend --release
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -85,12 +182,6 @@ jobs:
           rm -rf "$TMPDIR"
           diesel --version
 
-      - name: Run cargo fmt (check formatting)
-        run: cargo fmt --all -- --check
-
-      - name: Run cargo clippy (linting)
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
       - name: Run migration rollback test (clean DB)
         run: cargo test --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
         env:
@@ -103,22 +194,38 @@ jobs:
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
 
-      - name: Run unit tests (parallel, no DB)
-        run: |
-          cargo test --lib --bins \
-            --test api_version_integration \
-            --test csrf_protection_integration \
-            --test migration_rollback \
-            -- --test-threads=4 --skip live_migration_rollback_cycle
-        env:
-          REDIS_URL: redis://localhost:6379
-
       - name: Run integration tests (sequential, with DB)
-        run: |
-          cargo test --test auth_integration -- --test-threads=1
+        run: cargo test --test auth_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
+
+  # Build release binary only for E2E artifact
+  backend-build-release:
+    name: Backend Build (release for E2E)
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    needs: [backend-lint, backend-unit-tests, backend-integration-tests]
+    defaults:
+      run:
+        working-directory: ./backend
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Build backend (release)
+        run: cargo build --bin backend --release
 
       - name: Upload backend binary
         uses: actions/upload-artifact@v4
@@ -167,8 +274,8 @@ jobs:
   frontend-e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [frontend-test, backend-test]
+    timeout-minutes: 12
+    needs: [frontend-test, backend-build-release]
     defaults:
       run:
         shell: bash
@@ -335,7 +442,7 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [backend-test, frontend-test, frontend-e2e]
+    needs: [backend-lint, backend-unit-tests, backend-integration-tests, backend-build-release, frontend-test, frontend-e2e]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

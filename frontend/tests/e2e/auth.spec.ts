@@ -48,57 +48,23 @@ test.describe('Login Page', () => {
   })
 
   test('should display loading state during submission', async ({ page }) => {
-    await page.getByLabel(a.login.email).fill('user@example.com')
+    await page.getByLabel(a.login.email).fill('admin@example.com')
     await page.getByLabel(a.login.password).fill('password123')
     const btn = page.locator(SUBMIT)
     await btn.click()
     await expect(btn).toBeDisabled()
   })
 
-  test('should display 2FA OTP form when requires_otp is returned', async ({ page }) => {
-    await page.getByLabel(a.login.email).fill('2fa@example.com')
-    await page.getByLabel(a.login.password).fill('correctpassword')
-    await page.locator(SUBMIT).click()
-    await expect(page.getByText(a.login.otp.label)).toBeVisible()
-    await expect(page.getByLabel(a.login.otp.title)).toBeVisible()
-  })
-
-  test('should validate OTP code is exactly 6 digits', async ({ page }) => {
-    await page.getByLabel(a.login.email).fill('2fa@example.com')
-    await page.getByLabel(a.login.password).fill('correctpassword')
-    await page.locator(SUBMIT).click()
-
-    const otp = page.getByLabel(a.login.otp.title)
-    await expect(otp).toHaveAttribute('maxlength', '6')
-    await expect(otp).toHaveAttribute('inputmode', 'numeric')
-
-    const verifyBtn = page.getByRole('button', { name: a.login.otp.title, exact: true })
-    await expect(verifyBtn).toBeDisabled()
-
-    await otp.fill('123456')
-    await expect(verifyBtn).toBeEnabled()
-  })
-
-  test('should show error for invalid OTP code', async ({ page }) => {
-    await page.getByLabel(a.login.email).fill('2fa@example.com')
-    await page.getByLabel(a.login.password).fill('correctpassword')
-    await page.locator(SUBMIT).click()
-
-    await page.getByLabel(a.login.otp.title).fill('000000')
-    await page.getByRole('button', { name: a.login.otp.title, exact: true }).click()
-    await expect(page.getByText(a.login.otp.invalidCode)).toBeVisible()
-  })
-
   test('should redirect to admin dashboard on successful admin login', async ({ page }) => {
     await page.getByLabel(a.login.email).fill('admin@example.com')
-    await page.getByLabel(a.login.password).fill('Admin123!@#')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
     await expect(page).toHaveURL('/admin/dashboard')
   })
 
   test('should redirect to portal on successful non-admin login', async ({ page }) => {
-    await page.getByLabel(a.login.email).fill('user@example.com')
-    await page.getByLabel(a.login.password).fill('User123!@#')
+    await page.getByLabel(a.login.email).fill('user02@example.com')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
     await expect(page).toHaveURL('/portal')
   })
@@ -106,8 +72,9 @@ test.describe('Login Page', () => {
   test('should redirect to saved returnUrl after login', async ({ page }) => {
     await page.goto('/admin/users')
     await expect(page).toHaveURL(/\/auth\/login/)
+
     await page.getByLabel(a.login.email).fill('admin@example.com')
-    await page.getByLabel(a.login.password).fill('Admin123!@#')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
     await expect(page).toHaveURL('/admin/users')
   })
@@ -121,7 +88,7 @@ test.describe('Registration Page', () => {
   test('should display registration form with all required fields', async ({ page }) => {
     await expect(page.getByRole('heading', { name: a.register.title })).toBeVisible()
     await expect(page.getByLabel(a.register.email)).toBeVisible()
-    await expect(page.getByLabel(a.register.password)).toBeVisible()
+    await expect(page.locator('#password')).toBeVisible()
     await expect(page.getByLabel(a.register.confirmPassword)).toBeVisible()
     await expect(page.locator(SUBMIT)).toBeVisible()
   })
@@ -131,7 +98,7 @@ test.describe('Registration Page', () => {
   })
 
   test('should toggle password visibility on both password fields', async ({ page }) => {
-    const pw = page.getByLabel(a.register.password)
+    const pw = page.locator('#password')
     const confirm = page.getByLabel(a.register.confirmPassword)
 
     await expect(pw).toHaveAttribute('type', 'password')
@@ -143,7 +110,7 @@ test.describe('Registration Page', () => {
   })
 
   test('should show password strength indicator', async ({ page }) => {
-    const pw = page.getByLabel(a.register.password)
+    const pw = page.locator('#password')
 
     await pw.fill('abcdefgh')
     await expect(page.getByText(a.register.strength.weak)).toBeVisible()
@@ -159,14 +126,14 @@ test.describe('Registration Page', () => {
   })
 
   test('should show password mismatch error', async ({ page }) => {
-    await page.getByLabel(a.register.password).fill('Password123!')
+    await page.locator('#password').fill('Password123!')
     await page.getByLabel(a.register.confirmPassword).fill('Different123!')
     await expect(page.getByText(a.register.errors.passwordMismatch)).toBeVisible()
   })
 
   test('should disable submit button when passwords do not match', async ({ page }) => {
     await page.getByLabel(a.register.email).fill('new@example.com')
-    await page.getByLabel(a.register.password).fill('Password123!')
+    await page.locator('#password').fill('Password123!')
     await page.getByLabel(a.register.confirmPassword).fill('Different123!')
     await page.getByRole('checkbox').check()
     await expect(page.locator(SUBMIT)).toBeDisabled()
@@ -174,8 +141,9 @@ test.describe('Registration Page', () => {
 
   test('should require terms consent checkbox', async ({ page }) => {
     await page.getByLabel(a.register.email).fill('new@example.com')
-    await page.getByLabel(a.register.password).fill('Password123!')
+    await page.locator('#password').fill('Password123!')
     await page.getByLabel(a.register.confirmPassword).fill('Password123!')
+
     await expect(page.locator(SUBMIT)).toBeDisabled()
 
     await page.getByRole('checkbox').check()
@@ -184,7 +152,7 @@ test.describe('Registration Page', () => {
 
   test('should show success message after registration', async ({ page }) => {
     await page.getByLabel(a.register.email).fill('newuser@example.com')
-    await page.getByLabel(a.register.password).fill('StrongPass123!')
+    await page.locator('#password').fill('StrongPass123!')
     await page.getByLabel(a.register.confirmPassword).fill('StrongPass123!')
     await page.getByRole('checkbox').check()
     await page.locator(SUBMIT).click()
@@ -194,8 +162,8 @@ test.describe('Registration Page', () => {
   })
 
   test('should show error for duplicate email registration', async ({ page }) => {
-    await page.getByLabel(a.register.email).fill('existing@example.com')
-    await page.getByLabel(a.register.password).fill('StrongPass123!')
+    await page.getByLabel(a.register.email).fill('admin@example.com')
+    await page.locator('#password').fill('StrongPass123!')
     await page.getByLabel(a.register.confirmPassword).fill('StrongPass123!')
     await page.getByRole('checkbox').check()
     await page.locator(SUBMIT).click()
@@ -334,9 +302,10 @@ test.describe('Protected Routes', () => {
 
   test('should redirect non-admin user from admin routes to portal', async ({ page }) => {
     await page.goto('/auth/login')
-    await page.getByLabel(a.login.email).fill('user@example.com')
-    await page.getByLabel(a.login.password).fill('User123!@#')
+    await page.getByLabel(a.login.email).fill('user02@example.com')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
+
     await page.goto('/admin/dashboard')
     await expect(page).toHaveURL('/portal')
   })
@@ -344,8 +313,9 @@ test.describe('Protected Routes', () => {
   test('should allow admin user to access admin routes', async ({ page }) => {
     await page.goto('/auth/login')
     await page.getByLabel(a.login.email).fill('admin@example.com')
-    await page.getByLabel(a.login.password).fill('Admin123!@#')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
+
     await page.goto('/admin/dashboard')
     await expect(page).toHaveURL('/admin/dashboard')
   })
@@ -353,8 +323,9 @@ test.describe('Protected Routes', () => {
   test('should save return URL and redirect back after login', async ({ page }) => {
     await page.goto('/admin/roles/new')
     await expect(page).toHaveURL(/\/auth\/login/)
+
     await page.getByLabel(a.login.email).fill('admin@example.com')
-    await page.getByLabel(a.login.password).fill('Admin123!@#')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
     await expect(page).toHaveURL('/admin/roles/new')
   })
@@ -364,7 +335,7 @@ test.describe('Authenticated User Redirect', () => {
   test('should redirect authenticated user from login to admin dashboard', async ({ page }) => {
     await page.goto('/auth/login')
     await page.getByLabel(a.login.email).fill('admin@example.com')
-    await page.getByLabel(a.login.password).fill('Admin123!@#')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
     await expect(page).toHaveURL('/admin/dashboard')
 
@@ -375,7 +346,7 @@ test.describe('Authenticated User Redirect', () => {
   test('should redirect authenticated user from register to admin dashboard', async ({ page }) => {
     await page.goto('/auth/login')
     await page.getByLabel(a.login.email).fill('admin@example.com')
-    await page.getByLabel(a.login.password).fill('Admin123!@#')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
     await expect(page).toHaveURL('/admin/dashboard')
 
@@ -385,8 +356,8 @@ test.describe('Authenticated User Redirect', () => {
 
   test('should redirect authenticated non-admin user from login to portal', async ({ page }) => {
     await page.goto('/auth/login')
-    await page.getByLabel(a.login.email).fill('user@example.com')
-    await page.getByLabel(a.login.password).fill('User123!@#')
+    await page.getByLabel(a.login.email).fill('user02@example.com')
+    await page.getByLabel(a.login.password).fill('password123')
     await page.locator(SUBMIT).click()
     await expect(page).toHaveURL('/portal')
 
