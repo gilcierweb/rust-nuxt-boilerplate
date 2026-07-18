@@ -9,9 +9,6 @@ on:
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
-  # sccache: keep compiler artifacts across runs (dramatically reduces Rust rebuild time)
-  RUSTC_WRAPPER: sccache
-  SCCACHE_GHA_ENABLED: "true"
 
 jobs:
   backend-test:
@@ -55,9 +52,6 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
-
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
 
       - name: Cache Cargo build artifacts
         uses: Swatinem/rust-cache@v2
@@ -210,9 +204,6 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
-
-      - name: Install sccache
-        uses: mozilla-actions/sccache-action@v0.0.7
 
       - name: Cache Cargo build artifacts
         uses: Swatinem/rust-cache@v2
