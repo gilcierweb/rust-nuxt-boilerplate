@@ -170,8 +170,9 @@ test.describe('Reset Password Page', () => {
     await page.goto('/auth/reset-password?token=valid-token-123')
     const pw = page.getByLabel(a.resetPassword.newPassword)
     await expect(pw).toHaveAttribute('type', 'password')
-    // Icon button is not "visible" to Playwright, force click
+    // Icon button is outside viewport, scroll into view and force click
     const toggleBtn = pw.locator('..').locator('button[type="button"]').first()
+    await toggleBtn.scrollIntoViewIfNeeded()
     await toggleBtn.click({ force: true })
     await expect(pw).toHaveAttribute('type', 'text')
   })
@@ -260,7 +261,7 @@ test.describe('Navigation Between Auth Pages', () => {
 
 test.describe('Homepage', () => {
   test('should load homepage', async ({ page }) => {
-    await page.goto('/')
+    await page.goto('/', { waitUntil: 'networkidle' })
     // Check main heading text (case-insensitive match)
     await expect(page.locator('h1').first()).toContainText(/build full-stack apps/i)
   })
