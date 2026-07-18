@@ -339,33 +339,7 @@ jobs:
           name: seed-binary
           path: backend/target/debug/
 
-      - name: Make binaries executable
-        run: |
-          chmod +x backend/target/release/backend
-          chmod +x backend/target/debug/seed
-
-      - name: Run diesel migrations (E2E DB)
-        run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
-        working-directory: ./backend
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-
-      - name: Run database seed
-        run: |
-          backend/target/debug/seed
-        working-directory: ${{ github.workspace }}
-        env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
-          JWT_SECRET: "test-jwt-secret-key-for-integration-tests-32b!"
-          MASTER_KEY: "dGVzdC1tYXN0ZXIta2V5LWZvci1jaS0zMi1ieXRlcy1sb25nIQ=="
-          BLIND_INDEX_KEY: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLWNpLTMyYnl0ZXMh"
-          CSRF_SECRET_KEY: "test-csrf-secret-key-for-ci-32-bytes-long!"
-          REFRESH_TOKEN_HASH_SALT: "test-refresh-token-hash-salt-32b!"
-          FRONTEND_URL: "http://localhost:3000"
-          ENVIRONMENT: "Test"
-
-      - name: Start backend server
+      - name: Install diesel_cli (pre-built binary)
         shell: bash
         run: |
           set -euo pipefail
@@ -389,12 +363,20 @@ jobs:
           rm -rf "$TMPDIR"
           diesel --version
 
-      - name: Run diesel migrations
+      - name: Make binaries executable
+        run: |
+          chmod +x backend/target/release/backend
+          chmod +x backend/target/debug/seed
+
+      - name: Run diesel migrations (E2E DB)
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
         working-directory: ./backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
 
       - name: Run database seed
-        run: backend/target/release/seed
+        run: |
+          backend/target/debug/seed
         working-directory: ${{ github.workspace }}
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
