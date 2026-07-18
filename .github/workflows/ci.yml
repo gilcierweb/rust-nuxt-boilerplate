@@ -344,6 +344,12 @@ jobs:
           chmod +x backend/target/release/backend
           chmod +x backend/target/debug/seed
 
+      - name: Run diesel migrations (E2E DB)
+        run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
+        working-directory: ./backend
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+
       - name: Run database seed
         run: |
           backend/target/debug/seed
