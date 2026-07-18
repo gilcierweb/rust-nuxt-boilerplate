@@ -260,9 +260,10 @@ test.describe('Navigation Between Auth Pages', () => {
 })
 
 test.describe('Homepage', () => {
-  test('should load homepage', async ({ page }) => {
+test('should load homepage', async ({ page }) => {
     await page.goto('/', { waitUntil: 'networkidle' })
     // Wait for hero section h1 to be attached to DOM, then visible
+    await expect(page.locator('#hero h1').first()).toBeAttached({ timeout: 30000 })
     await expect(page.locator('#hero h1').first()).toBeVisible({ timeout: 30000 })
     await expect(page.locator('#hero h1').first()).toContainText(/build full-stack apps/i)
   })
