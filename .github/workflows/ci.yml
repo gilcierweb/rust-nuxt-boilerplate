@@ -58,8 +58,8 @@ jobs:
         with:
           workspaces: backend
 
-      - name: Build backend
-        run: cargo build --bin backend
+      - name: Build backend (release for sharing with E2E)
+        run: cargo build --bin backend --release
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -120,6 +120,13 @@ jobs:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
+      - name: Upload backend binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-binary
+          path: backend/target/release/backend
+          retention-days: 1
+
   frontend-test:
     name: Frontend Tests
     runs-on: ubuntu-latest
@@ -160,8 +167,8 @@ jobs:
   frontend-e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: [frontend-test]
+    timeout-minutes: 15
+    needs: [frontend-test, backend-test]
     defaults:
       run:
         shell: bash
@@ -192,19 +199,14 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Download backend binary
+        uses: actions/download-artifact@v4
         with:
-          toolchain: stable
+          name: backend-binary
+          path: backend/target/release/
 
-      - name: Cache Cargo build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: backend
-
-      - name: Build backend
-        run: cargo build --bin backend
-        working-directory: ./backend
+      - name: Make backend executable
+        run: chmod +x backend/target/release/backend
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -236,7 +238,7 @@ jobs:
 
       - name: Start backend server
         run: |
-          backend/target/debug/backend &
+          backend/target/release/backend &
           echo "BACKEND_PID=$!" >> $GITHUB_ENV
         working-directory: ${{ github.workspace }}
         env:
@@ -253,13 +255,12 @@ jobs:
       - name: Wait for backend to be ready
         run: |
           echo "Waiting for backend on port 8080..."
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
             if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
               echo "Backend is ready!"
               exit 0
             fi
-            echo "Attempt $i/30 - waiting 2s..."
-            sleep 2
+            sleep 1
           done
           echo "ERROR: Backend failed to start within 60 seconds"
           if [ -n "$BACKEND_PID" ]; then kill $BACKEND_PID || true; fi
@@ -299,13 +300,12 @@ jobs:
       - name: Wait for frontend to be ready
         run: |
           echo "Waiting for frontend on port 3000..."
-          for i in $(seq 1 30); do
+          for i in $(seq 1 60); do
             if curl -sf http://localhost:3000 > /dev/null 2>&1; then
               echo "Frontend is ready!"
               exit 0
             fi
-            echo "Attempt $i/30 - waiting 2s..."
-            sleep 2
+            sleep 1
           done
           echo "ERROR: Frontend failed to start within 60 seconds"
           exit 1
