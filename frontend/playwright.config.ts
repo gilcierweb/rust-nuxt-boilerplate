@@ -12,12 +12,14 @@ export default defineConfig({
     trace: 'on-first-retry',
     video: 'retain-on-failure',
     screenshot: 'only-on-failure',
+    actionTimeout: 10_000,
+    navigationTimeout: 15_000,
   },
 
   webServer: {
-    command: process.env.CI ? 'pnpm run build && pnpm run preview' : 'npm run build && npm run preview',
+    command: 'pnpm run preview -- --port 3000',
     port: 3000,
-    timeout: 120 * 1000,
+    timeout: 60_000,
     reuseExistingServer: !process.env.CI,
   },
 

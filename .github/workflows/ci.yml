@@ -32,18 +32,11 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-          shared-key: backend-build
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          key: rust-cache-${{ runner.os }}-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: rust-cache-${{ runner.os }}-
 
       - name: Build backend binary
         run: cargo build --bin backend
-
-      - name: Upload backend binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-binary
-          path: backend/target/debug/backend
-          retention-days: 1
 
   backend-test:
     name: Backend Tests
@@ -88,21 +81,16 @@ jobs:
           toolchain: stable
           components: rustfmt, clippy
 
-      - name: Cache Cargo build artifacts
+      - name: Cache Cargo build artifacts (restore only)
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: backend
-          shared-key: backend-build
+          key: rust-cache-${{ runner.os }}-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: rust-cache-${{ runner.os }}-
           save-if: false
 
-      - name: Download backend binary
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-binary
-          path: backend/target/debug
-
-      - name: Make binary executable
-        run: chmod +x ${{ github.workspace }}/backend/target/debug/backend
+      - name: Verify backend binary exists
+        run: test -f target/debug/backend && echo "Binary found OK"
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -207,7 +195,6 @@ jobs:
     needs: [build-backend, frontend-test]
     defaults:
       run:
-        working-directory: ./frontend
         shell: bash
     services:
       postgres:
@@ -236,19 +223,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download backend binary
-        uses: actions/download-artifact@v4
-        with:
-          name: backend-binary
-          path: backend/target/debug
-
-      - name: Make binary executable
-        run: chmod +x ${{ github.workspace }}/backend/target/debug/backend
-
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
+
+      - name: Cache Cargo build artifacts (restore only)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+          key: rust-cache-${{ runner.os }}-${{ hashFiles('backend/Cargo.lock') }}
+          restore-keys: rust-cache-${{ runner.os }}-
+          save-if: false
+
+      - name: Verify backend binary exists
+        run: test -f backend/target/debug/backend && echo "Binary found OK"
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -280,9 +269,10 @@ jobs:
 
       - name: Start backend server
         run: |
-          ${{ github.workspace }}/backend/target/debug/backend &
+          chmod +x backend/target/debug/backend
+          backend/target/debug/backend &
           echo "BACKEND_PID=$!" >> $GITHUB_ENV
-          sleep 5
+        working-directory: ${{ github.workspace }}
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
@@ -291,6 +281,21 @@ jobs:
           BLIND_INDEX_KEY: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLXRlc3Rz"
           FRONTEND_URL: "http://localhost:3000"
           ENVIRONMENT: "Test"
+
+      - name: Wait for backend to be ready
+        run: |
+          echo "Waiting for backend on port 8080..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null 2>&1; then
+              echo "Backend is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - waiting 2s..."
+            sleep 2
+          done
+          echo "ERROR: Backend failed to start within 60 seconds"
+          if [ -n "$BACKEND_PID" ]; then kill $BACKEND_PID || true; fi
+          exit 1
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -307,12 +312,19 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+        working-directory: ./frontend
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium
+        working-directory: ./frontend
+
+      - name: Build frontend
+        run: pnpm run build
+        working-directory: ./frontend
 
       - name: Run E2E tests
         run: pnpm run test:e2e
+        working-directory: ./frontend
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           CI: "true"
@@ -328,9 +340,7 @@ jobs:
       - name: Stop backend server
         if: always()
         run: |
-          if [ -n "$BACKEND_PID" ]; then
-            kill $BACKEND_PID || true
-          fi
+          if [ -n "$BACKEND_PID" ]; then kill $BACKEND_PID || true; fi
 
   security-scan:
     name: Security Scan
