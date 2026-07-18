@@ -11,10 +11,45 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  build-backend:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ./backend
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+          shared-key: backend-build
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build backend binary
+        run: cargo build --bin backend
+
+      - name: Upload backend binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-binary
+          path: backend/target/debug/backend
+          retention-days: 1
+
   backend-test:
     name: Backend Tests
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: [build-backend]
     defaults:
       run:
         working-directory: ./backend
@@ -58,7 +93,16 @@ jobs:
         with:
           workspaces: backend
           shared-key: backend-build
-          save-if: ${{ github.ref == 'refs/heads/main' }}
+          save-if: false
+
+      - name: Download backend binary
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-binary
+          path: backend/target/debug
+
+      - name: Make binary executable
+        run: chmod +x ${{ github.workspace }}/backend/target/debug/backend
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -84,30 +128,24 @@ jobs:
           rm -rf "$TMPDIR"
           diesel --version
 
-      # Migration rollback test runs FIRST on clean DB (tests full up→down→up cycle)
-      - name: Run migration rollback test (clean DB)
-        run: cargo test --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
-        env:
-          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
-          REDIS_URL: redis://localhost:6379
-
-      # The rollback test runs raw SQL without recording in diesel_migrations,
-      # so we must reset the schema before diesel migration run to avoid
-      # "relation already exists" errors.
-      - name: Reset database schema after rollback test
-        run: psql postgres://postgres:postgres@localhost:5432/test_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
-
-      # Apply migrations for other integration tests
-      - name: Run diesel migrations
-        run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
-
       - name: Run cargo fmt (check formatting)
         run: cargo fmt --all -- --check
 
       - name: Run cargo clippy (linting)
         run: cargo clippy --all-targets --all-features -- -D warnings
 
-      # Unit tests: file-based, no DB, parallel
+      - name: Run migration rollback test (clean DB)
+        run: cargo test --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Reset database schema after rollback test
+        run: psql postgres://postgres:postgres@localhost:5432/test_db -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+      - name: Run diesel migrations
+        run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
+
       - name: Run unit tests (parallel, no DB)
         run: |
           cargo test --lib --bins \
@@ -118,7 +156,6 @@ jobs:
         env:
           REDIS_URL: redis://localhost:6379
 
-      # Integration tests: need DB, sequential (migrations already applied)
       - name: Run integration tests (sequential, with DB)
         run: |
           cargo test --test auth_integration -- --test-threads=1
@@ -166,8 +203,8 @@ jobs:
   frontend-e2e:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    needs: [backend-test, frontend-test]
+    timeout-minutes: 20
+    needs: [build-backend, frontend-test]
     defaults:
       run:
         working-directory: ./frontend
@@ -199,18 +236,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Download backend binary
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-binary
+          path: backend/target/debug
+
+      - name: Make binary executable
+        run: chmod +x ${{ github.workspace }}/backend/target/debug/backend
+
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          components: rustfmt, clippy
-
-      - name: Cache Cargo build artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: backend
-          shared-key: backend-build
-          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Install diesel_cli (pre-built binary)
         shell: bash
@@ -242,10 +280,9 @@ jobs:
 
       - name: Start backend server
         run: |
-          cargo run --bin backend &
+          ${{ github.workspace }}/backend/target/debug/backend &
           echo "BACKEND_PID=$!" >> $GITHUB_ENV
-          sleep 10
-        working-directory: ./backend
+          sleep 5
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
@@ -272,7 +309,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps chromium firefox webkit
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E tests
         run: pnpm run test:e2e
@@ -306,9 +343,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      # cargo audit is delegated to dependency-audit.yml (dedicated workflow)
-      # secret scanning is delegated to secret-scanning.yml (gitleaks)
-      # This job runs lightweight secret-only scan to fail fast on push.
       - name: Run Gitleaks (push gate)
         uses: gitleaks/gitleaks-action@v2
         env:

@@ -15,24 +15,31 @@ export default defineConfig({
   },
 
   webServer: {
-    command: 'npm run build && npm run preview',
+    command: process.env.CI ? 'pnpm run build && pnpm run preview' : 'npm run build && npm run preview',
     port: 3000,
     timeout: 120 * 1000,
     reuseExistingServer: !process.env.CI,
   },
 
-  projects: [
-    {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
-    },
-    {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
-    },
-    {
-      name: 'safari',
-      use: { ...devices['Desktop Safari'] },
-    },
-  ],
+  projects: process.env.CI
+    ? [
+        {
+          name: 'chromium',
+          use: { ...devices['Desktop Chrome'] },
+        },
+      ]
+    : [
+        {
+          name: 'chromium',
+          use: { ...devices['Desktop Chrome'] },
+        },
+        {
+          name: 'firefox',
+          use: { ...devices['Desktop Firefox'] },
+        },
+        {
+          name: 'safari',
+          use: { ...devices['Desktop Safari'] },
+        },
+      ],
 })
