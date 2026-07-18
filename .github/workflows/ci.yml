@@ -86,7 +86,7 @@ jobs:
             -o "$TMPDIR/${ASSET}.sha256"
           (cd "$TMPDIR" && sha256sum -c "${ASSET}.sha256")
           tar -xJf "$TMPDIR/${ASSET}" -C "$TMPDIR"
-          install -m 0755 "$TMPDIR/diesel" "$INSTALL_DIR/diesel"
+          install -m 0755 "$TMPDIR/diesel_cli-x86_64-unknown-linux-gnu/diesel" "$INSTALL_DIR/diesel"
           rm -rf "$TMPDIR"
           diesel --version
 
@@ -241,7 +241,7 @@ jobs:
             -o "$TMPDIR/${ASSET}.sha256"
           (cd "$TMPDIR" && sha256sum -c "${ASSET}.sha256")
           tar -xJf "$TMPDIR/${ASSET}" -C "$TMPDIR"
-          install -m 0755 "$TMPDIR/diesel" "$INSTALL_DIR/diesel"
+          install -m 0755 "$TMPDIR/diesel_cli-x86_64-unknown-linux-gnu/diesel" "$INSTALL_DIR/diesel"
           rm -rf "$TMPDIR"
           diesel --version
 
