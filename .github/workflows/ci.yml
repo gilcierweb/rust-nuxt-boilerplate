@@ -290,6 +290,26 @@ jobs:
         run: pnpm run build
         working-directory: ./frontend
 
+      - name: Start frontend server
+        run: |
+          pnpm run preview -- --port 3000 &
+          echo "FRONTEND_PID=$!" >> $GITHUB_ENV
+        working-directory: ./frontend
+
+      - name: Wait for frontend to be ready
+        run: |
+          echo "Waiting for frontend on port 3000..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000 > /dev/null 2>&1; then
+              echo "Frontend is ready!"
+              exit 0
+            fi
+            echo "Attempt $i/30 - waiting 2s..."
+            sleep 2
+          done
+          echo "ERROR: Frontend failed to start within 60 seconds"
+          exit 1
+
       - name: Run E2E tests
         run: pnpm run test:e2e
         working-directory: ./frontend
@@ -305,10 +325,11 @@ jobs:
           path: frontend/playwright-report/
           retention-days: 7
 
-      - name: Stop backend server
+      - name: Stop servers
         if: always()
         run: |
           if [ -n "$BACKEND_PID" ]; then kill $BACKEND_PID || true; fi
+          if [ -n "$FRONTEND_PID" ]; then kill $FRONTEND_PID || true; fi
 
   security-scan:
     name: Security Scan

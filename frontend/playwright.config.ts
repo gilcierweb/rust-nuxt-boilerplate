@@ -16,11 +16,11 @@ export default defineConfig({
     navigationTimeout: 15_000,
   },
 
-  webServer: {
-    command: 'pnpm run preview -- --port 3000',
+  webServer: process.env.CI ? undefined : {
+    command: 'npm run build && npm run preview',
     port: 3000,
-    timeout: 60_000,
-    reuseExistingServer: !process.env.CI,
+    timeout: 120_000,
+    reuseExistingServer: true,
   },
 
   projects: process.env.CI
