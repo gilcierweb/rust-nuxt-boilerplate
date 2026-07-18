@@ -6,8 +6,8 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '~': resolve(__dirname, 'app'),
-      '@': resolve(__dirname, 'app'),
+      '~': resolve(__dirname),
+      '@': resolve(__dirname),
       '#imports': resolve(__dirname, 'tests/mocks/imports.ts'),
     },
   },
