@@ -231,7 +231,7 @@ impl EmailService {
         let response_text = response
             .text()
             .await
-            .map_err(|e| EmailError::HttpError(HttpClientError::HttpError(e)))?;
+            .map_err(HttpClientError::HttpError)?;
 
         if status.is_success() {
             let _resend_response: ResendEmailResponse = serde_json::from_str(&response_text)
