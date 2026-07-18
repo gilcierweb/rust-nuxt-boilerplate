@@ -13,4 +13,9 @@ pub trait IAuditLogRepository: Send + Sync {
     async fn find(&self, id: &Uuid) -> QueryResult<AuditLog>;
     async fn create(&self, item: &NewAuditLog) -> QueryResult<AuditLog>;
     async fn find_latest_hash(&self) -> QueryResult<Option<String>>;
+    async fn find_batch_ordered_by_created_at(
+        &self,
+        cursor_id: Option<Uuid>,
+        limit: i64,
+    ) -> QueryResult<Vec<AuditLog>>;
 }

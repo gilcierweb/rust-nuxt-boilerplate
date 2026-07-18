@@ -7,3 +7,6 @@ ADD COLUMN hash VARCHAR(64) NOT NULL DEFAULT '';
 
 -- Create index for efficient chain verification
 CREATE INDEX idx_audit_logs_hash_chain ON audit_logs (prev_hash);
+
+-- Create index for efficient chronological ordering (used by chain verification)
+CREATE INDEX idx_audit_logs_created_at ON audit_logs (created_at ASC);

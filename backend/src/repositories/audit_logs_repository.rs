@@ -97,4 +97,26 @@ impl IAuditLogRepository for AuditLogsRepository {
             })
             .await
     }
+
+    async fn find_batch_ordered_by_created_at(
+        &self,
+        cursor_id: Option<Uuid>,
+        limit: i64,
+    ) -> diesel::QueryResult<Vec<AuditLog>> {
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    let mut query = audit_logs_table::table
+                        .order(audit_logs_table::created_at.asc())
+                        .into_boxed();
+
+                    if let Some(cursor) = cursor_id {
+                        query = query.filter(audit_logs_table::id.gt(cursor));
+                    }
+
+                    query.limit(limit).load::<AuditLog>(conn).await
+                })
+            })
+            .await
+    }
 }

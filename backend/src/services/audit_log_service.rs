@@ -1,6 +1,9 @@
 use crate::models::audit_log::NewAuditLog;
 use serde_json::json;
 
+/// Batch size for audit log chain verification to prevent OOM on large tables.
+const AUDIT_LOG_VERIFY_BATCH_SIZE: i64 = 1000;
+
 /// Compute SHA-256 hash for audit log entry with cryptographic chaining.
 ///
 /// The hash is computed from the canonical JSON representation of the audit log
@@ -47,7 +50,80 @@ pub fn compute_audit_log_hash(
 
 /// Verify the integrity of the audit log chain.
 ///
-/// Returns the number of entries verified and any errors found.
+/// Uses cursor-based pagination to fetch logs in batches, preventing OOM on large tables.
+/// Returns the total number of entries verified and any errors found.
+pub async fn verify_audit_log_chain_batched<R>(repo: &R) -> Result<usize, String>
+where
+    R: crate::repositories::traits::audit_logs_trait::IAuditLogRepository + ?Sized,
+{
+    let mut total_verified = 0;
+    let mut prev_hash: Option<String> = None;
+    let mut cursor_id: Option<uuid::Uuid> = None;
+
+    loop {
+        let batch = repo
+            .find_batch_ordered_by_created_at(cursor_id, AUDIT_LOG_VERIFY_BATCH_SIZE)
+            .await
+            .map_err(|e| format!("Failed to fetch batch: {}", e))?;
+
+        if batch.is_empty() {
+            break;
+        }
+
+        for log in &batch {
+            let canonical = serde_json::json!({
+                "actor_user_id": log.actor_user_id,
+                "actor_role_snapshot": log.actor_role_snapshot,
+                "action": log.action,
+                "resource_type": log.resource_type,
+                "resource_id": log.resource_id,
+                "ip_address": log.ip_address.as_ref().map(|ip| ip.to_string()),
+                "user_agent": log.user_agent,
+                "request_id": log.request_id,
+                "changes": log.changes,
+                "metadata": log.metadata,
+                "prev_hash": log.prev_hash,
+            });
+
+            let canonical_str = serde_json::to_string(&canonical)
+                .map_err(|e| format!("Serialization error: {}", e))?;
+
+            use sha2::{Digest, Sha256};
+            let mut hasher = Sha256::new();
+            hasher.update(canonical_str.as_bytes());
+            let computed_hash = hex::encode(hasher.finalize());
+
+            if computed_hash != log.hash {
+                return Err(format!(
+                    "Hash mismatch at entry {}: computed {} != stored {}",
+                    log.id, computed_hash, log.hash
+                ));
+            }
+
+            if prev_hash != log.prev_hash {
+                return Err(format!(
+                    "Chain break at entry {}: expected prev_hash {:?} != stored {:?}",
+                    log.id, prev_hash, log.prev_hash
+                ));
+            }
+
+            prev_hash = Some(log.hash.clone());
+            cursor_id = Some(log.id);
+            total_verified += 1;
+        }
+
+        if batch.len() < AUDIT_LOG_VERIFY_BATCH_SIZE as usize {
+            break;
+        }
+    }
+
+    Ok(total_verified)
+}
+
+/// Verify the integrity of the audit log chain (legacy in-memory version).
+///
+/// DEPRECATED: Use `verify_audit_log_chain_batched` for production use.
+/// This version loads all logs into memory and should only be used for testing.
 pub async fn verify_audit_log_chain(
     audit_logs: &[crate::models::audit_log::AuditLog],
 ) -> Result<usize, String> {
@@ -55,7 +131,6 @@ pub async fn verify_audit_log_chain(
         return Ok(0);
     }
 
-    // Sort by created_at ascending (oldest first)
     let mut sorted = audit_logs.to_vec();
     sorted.sort_by_key(|a| a.created_at);
 
@@ -63,7 +138,6 @@ pub async fn verify_audit_log_chain(
     let mut prev_hash: Option<String> = None;
 
     for log in sorted {
-        // Recompute hash for this entry
         let canonical = serde_json::json!({
             "actor_user_id": log.actor_user_id,
             "actor_role_snapshot": log.actor_role_snapshot,
@@ -86,7 +160,6 @@ pub async fn verify_audit_log_chain(
         hasher.update(canonical_str.as_bytes());
         let computed_hash = hex::encode(hasher.finalize());
 
-        // Verify hash matches stored hash
         if computed_hash != log.hash {
             return Err(format!(
                 "Hash mismatch at entry {}: computed {} != stored {}",
@@ -94,7 +167,6 @@ pub async fn verify_audit_log_chain(
             ));
         }
 
-        // Verify chain linkage
         if prev_hash != log.prev_hash {
             return Err(format!(
                 "Chain break at entry {}: expected prev_hash {:?} != stored {:?}",
