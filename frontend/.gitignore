@@ -18,6 +18,9 @@ logs
 .fleet
 .idea
 
+# Playwright auth state
+tests/e2e/.auth/
+
 # Local env files
 .env
 .env.*
