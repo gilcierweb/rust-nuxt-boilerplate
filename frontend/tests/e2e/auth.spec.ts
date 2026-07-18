@@ -1,9 +1,8 @@
 import { test, expect } from '@playwright/test'
-import auth from '../../i18n/locales/pt-BR/auth.json'
-import common from '../../i18n/locales/pt-BR/common.json'
+import { createRequire } from 'module'
 
-const a = auth.auth
-const c = common.common
+const require = createRequire(import.meta.url)
+const a = require('../../i18n/locales/pt-BR/auth.json').auth
 
 const SUBMIT = 'button[type="submit"]'
 
