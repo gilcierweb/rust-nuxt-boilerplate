@@ -38,6 +38,9 @@ importers:
       nuxt-security:
         specifier: 2.5.1
         version: 2.5.1(magicast@0.5.3)(rollup@4.62.2)
+      pinia:
+        specifier: ^3.0.4
+        version: 3.0.4(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3))
       pinia-plugin-persistedstate:
         specifier: ^4.7.1
         version: 4.7.1(@nuxt/kit@4.4.8(magicast@0.5.3))(@pinia/nuxt@0.11.3(magicast@0.5.3)(pinia@3.0.4(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3))))(pinia@3.0.4(typescript@5.9.3)(vue@3.5.39(typescript@5.9.3)))
