@@ -146,13 +146,24 @@ fn redis_pool() -> deadpool_redis::Pool {
 
 fn test_config() -> backend::config::AppConfig {
     use backend::config::app_config::Environment;
+    use rand::Rng;
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     let database_url = std::env::var("DATABASE_URL_TEST")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string());
     let redis_url =
         std::env::var("REDIS_URL_TEST").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
-    let jwt_secret = std::env::var("JWT_SECRET")
-        .unwrap_or_else(|_| "test-jwt-secret-key-for-integration-tests-32b!".to_string());
+
+    // Generate a unique JWT secret per test run to avoid token collisions
+    let jwt_secret = std::env::var("JWT_SECRET").unwrap_or_else(|_| {
+        let mut rng = StdRng::from_entropy();
+        const CHARSET: &[u8] =
+            b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*";
+        (0..64)
+            .map(|_| CHARSET[rng.gen_range(0..CHARSET.len())] as char)
+            .collect::<String>()
+    });
     let csrf_key = jwt_secret.clone();
     let master_key = std::env::var("MASTER_KEY").unwrap_or_else(|_| {
         use base64::Engine;
