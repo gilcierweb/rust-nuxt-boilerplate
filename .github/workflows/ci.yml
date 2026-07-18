@@ -67,6 +67,16 @@ jobs:
       - name: Build backend (debug)
         run: cargo build --bin backend
 
+      - name: Build seed binary (debug)
+        run: cargo build --bin seed
+
+      - name: Upload seed binary (debug)
+        uses: actions/upload-artifact@v4
+        with:
+          name: seed-binary
+          path: backend/target/debug/seed
+          retention-days: 1
+
   # Build release binary for E2E in PARALLEL with tests (not after)
   backend-build-release:
     name: Backend Build (release for E2E)
@@ -228,6 +238,17 @@ jobs:
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
 
+      - name: Run database seed
+        run: cargo run --bin seed
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: "test-jwt-secret-key-for-integration-tests-32b!"
+          MASTER_KEY: "dGVzdC1tYXN0ZXIta2V5LWZvci1jaS0zMi1ieXRlcy1sb25nIQ=="
+          BLIND_INDEX_KEY: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLWNpLTMyYnl0ZXMh"
+          CSRF_SECRET_KEY: "test-csrf-secret-key-for-ci-32-bytes-long!"
+          REFRESH_TOKEN_HASH_SALT: "test-refresh-token-hash-salt-32b!"
+
       - name: Run integration tests (sequential, with DB)
         run: cargo test --test auth_integration -- --test-threads=1
         env:
@@ -312,10 +333,33 @@ jobs:
           name: backend-binary
           path: backend/target/release/
 
-      - name: Make backend executable
-        run: chmod +x backend/target/release/backend
+      - name: Download seed binary (debug)
+        uses: actions/download-artifact@v4
+        with:
+          name: seed-binary
+          path: backend/target/debug/
 
-      - name: Install diesel_cli (pre-built binary)
+      - name: Make binaries executable
+        run: |
+          chmod +x backend/target/release/backend
+          chmod +x backend/target/debug/seed
+
+      - name: Run database seed
+        run: |
+          backend/target/debug/seed
+        working-directory: ${{ github.workspace }}
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: "test-jwt-secret-key-for-integration-tests-32b!"
+          MASTER_KEY: "dGVzdC1tYXN0ZXIta2V5LWZvci1jaS0zMi1ieXRlcy1sb25nIQ=="
+          BLIND_INDEX_KEY: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLWNpLTMyYnl0ZXMh"
+          CSRF_SECRET_KEY: "test-csrf-secret-key-for-ci-32-bytes-long!"
+          REFRESH_TOKEN_HASH_SALT: "test-refresh-token-hash-salt-32b!"
+          FRONTEND_URL: "http://localhost:3000"
+          ENVIRONMENT: "Test"
+
+      - name: Start backend server
         shell: bash
         run: |
           set -euo pipefail
@@ -342,6 +386,20 @@ jobs:
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
         working-directory: ./backend
+
+      - name: Run database seed
+        run: backend/target/release/seed
+        working-directory: ${{ github.workspace }}
+        env:
+          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+          JWT_SECRET: "test-jwt-secret-key-for-integration-tests-32b!"
+          MASTER_KEY: "dGVzdC1tYXN0ZXIta2V5LWZvci1jaS0zMi1ieXRlcy1sb25nIQ=="
+          BLIND_INDEX_KEY: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLWNpLTMyYnl0ZXMh"
+          CSRF_SECRET_KEY: "test-csrf-secret-key-for-ci-32-bytes-long!"
+          REFRESH_TOKEN_HASH_SALT: "test-refresh-token-hash-salt-32b!"
+          FRONTEND_URL: "http://localhost:3000"
+          ENVIRONMENT: "Test"
 
       - name: Start backend server
         run: |
