@@ -45,7 +45,7 @@ jobs:
   backend-build-debug:
     name: Backend Build (debug)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     defaults:
       run:
         working-directory: ./backend
@@ -67,11 +67,45 @@ jobs:
       - name: Build backend (debug)
         run: cargo build --bin backend
 
+  # Build release binary for E2E in PARALLEL with tests (not after)
+  backend-build-release:
+    name: Backend Build (release for E2E)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [backend-build-debug]  # only needs debug build to exist (cache warm)
+    defaults:
+      run:
+        working-directory: ./backend
+        shell: bash
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: backend
+
+      - name: Build backend (release)
+        run: cargo build --bin backend --release
+
+      - name: Upload backend binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-binary
+          path: backend/target/release/backend
+          retention-days: 1
+
   # Unit tests (no DB needed) - run in parallel
   backend-unit-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     needs: [backend-build-debug]
     defaults:
       run:
@@ -115,7 +149,7 @@ jobs:
   backend-integration-tests:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 8
     needs: [backend-build-debug]
     defaults:
       run:
@@ -199,40 +233,6 @@ jobs:
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-
-  # Build release binary only for E2E artifact
-  backend-build-release:
-    name: Backend Build (release for E2E)
-    runs-on: ubuntu-latest
-    timeout-minutes: 8
-    needs: [backend-lint, backend-unit-tests, backend-integration-tests]
-    defaults:
-      run:
-        working-directory: ./backend
-        shell: bash
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-
-      - name: Cache Cargo artifacts
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: backend
-
-      - name: Build backend (release)
-        run: cargo build --bin backend --release
-
-      - name: Upload backend binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-binary
-          path: backend/target/release/backend
-          retention-days: 1
 
   frontend-test:
     name: Frontend Tests
