@@ -14,9 +14,6 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     actionTimeout: 10_000,
     navigationTimeout: 15_000,
-    extraHTTPHeaders: {
-      'Accept-Language': 'en',
-    },
   },
 
   webServer: process.env.CI ? undefined : {
@@ -29,16 +26,8 @@ export default defineConfig({
   projects: process.env.CI
     ? [
         {
-          name: 'setup',
-          testMatch: /.*\.setup\.ts/,
-        },
-        {
           name: 'chromium',
-          use: {
-            ...devices['Desktop Chrome'],
-            storageState: 'tests/e2e/.auth/user.json',
-          },
-          dependencies: ['setup'],
+          use: { ...devices['Desktop Chrome'] },
         },
       ]
     : [
