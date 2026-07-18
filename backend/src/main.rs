@@ -285,7 +285,10 @@ async fn main() -> std::io::Result<()> {
             )
             .app_data(web::PayloadConfig::new(config_form_limit))
             .wrap(cors)
+            // middleware
+            // .wrap(actix_web::middleware::Logger::default())
             .wrap(actix_web::middleware::Compress::default())
+            .wrap(actix_web::middleware::NormalizePath::trim())
             .wrap(backend::middleware::security_headers::SecurityHeaders)
             .wrap(backend::middleware::metrics_middleware::MetricsMiddleware)
             .wrap(backend::middleware::request_log_middleware::RequestLogMiddleware)

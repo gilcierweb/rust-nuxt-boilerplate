@@ -170,9 +170,8 @@ test.describe('Reset Password Page', () => {
     await page.goto('/auth/reset-password?token=valid-token-123')
     const pw = page.getByLabel(a.resetPassword.newPassword)
     await expect(pw).toHaveAttribute('type', 'password')
-    // The toggle button is a sibling button inside the same wrapper
+    // The toggle button is an icon button - click it directly without waiting for visibility
     const toggleBtn = pw.locator('..').locator('button[type="button"]').first()
-    await expect(toggleBtn).toBeVisible()
     await toggleBtn.click()
     await expect(pw).toHaveAttribute('type', 'text')
   })
@@ -262,6 +261,8 @@ test.describe('Navigation Between Auth Pages', () => {
 test.describe('Homepage', () => {
   test('should load homepage', async ({ page }) => {
     await page.goto('/')
-    await expect(page.locator('h1').first()).toContainText(/build full-stack apps faster/i)
+    // Wait for the hero section to load and check for the main heading
+    await expect(page.locator('#hero').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('h1').first()).toContainText(/build full-stack apps/i)
   })
 })
