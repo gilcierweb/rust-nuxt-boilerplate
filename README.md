@@ -12,6 +12,38 @@
 
 ---
 
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [API Routes](#-api-routes)
+  - [Authentication](#authentication)
+  - [Admin](#admin)
+  - [Health & Metrics](#health--metrics)
+  - [Upload](#upload)
+  - [WebSocket](#websocket)
+  - [Webhooks](#webhooks)
+- [Frontend Routes](#-frontend-routes)
+  - [Public Pages](#public-pages)
+  - [Authentication Pages](#authentication-pages)
+  - [User Portal](#user-portal)
+  - [Admin Panel](#admin-panel)
+- [Environment Variables](#-environment-variables)
+- [Project Structure](#-project-structure)
+- [Testing](#-testing)
+- [Security](#-security)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
+
+---
+
+![App Nuxt](frontend/app/assets/images/screenshot-1.webp)
+
+![App Nuxt Admin](frontend/app/assets/images/screenshot-2.webp)
+
+![App Nuxt Admin](frontend/app/assets/images/screenshot-3.webp)
+
+---
 ## ✨ Features
 
 ### Backend (Rust / Actix Web)
@@ -249,6 +281,142 @@ pnpm dev
 
 ---
 
+## 🛣️ API Routes
+
+Complete API endpoint reference with authentication requirements and descriptions.
+
+### Authentication
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/v1/auth/register` | No | Register new user with email and password |
+| POST | `/api/v1/auth/login` | No | Login with email/password, returns JWT + refresh cookie |
+| POST | `/api/v1/auth/refresh` | No | Refresh access token using refresh cookie |
+| POST | `/api/v1/auth/logout` | Yes | Invalidate refresh tokens and blacklist access token |
+| GET | `/api/v1/auth/confirm?token=xxx` | No | Verify email address with confirmation token |
+| POST | `/api/v1/auth/recover` | No | Request password reset email |
+| POST | `/api/v1/auth/reset` | No | Reset password with reset token |
+| GET | `/api/v1/auth/session` | Yes | Get current session user info + new access token |
+| GET | `/api/v1/auth/session/` | Yes | Get current session (trailing slash variant) |
+| GET | `/api/v1/auth/me` | Yes | Get current authenticated user details |
+| POST | `/api/v1/auth/2fa/setup` | Yes | Initialize TOTP 2FA setup, returns QR code URL |
+| POST | `/api/v1/auth/2fa/enable` | Yes | Enable TOTP 2FA with verification code |
+| POST | `/api/v1/auth/2fa/disable` | Yes | Disable TOTP 2FA with verification code |
+| POST | `/api/v1/auth/change-password` | Yes | Change password (requires current password) |
+
+### Admin
+
+All admin endpoints require JWT authentication and appropriate RBAC permissions.
+
+| Method | Endpoint | Auth | Permission | Description |
+|--------|----------|------|------------|-------------|
+| GET | `/api/v1/admin/users` | Yes | `users:read` | List all users (paginated) |
+| GET | `/api/v1/admin/roles` | Yes | `roles:read` | List all roles (paginated) |
+| GET | `/api/v1/admin/roles/{id}` | Yes | `roles:read` | Get role by ID |
+| POST | `/api/v1/admin/roles` | Yes | `roles:create` | Create new role |
+| PATCH | `/api/v1/admin/roles/{id}` | Yes | `roles:update` | Update role by ID |
+| DELETE | `/api/v1/admin/roles/{id}` | Yes | `roles:delete` | Delete role by ID |
+| GET | `/api/v1/admin/audit-logs` | Yes | `audit_logs:read` | List audit logs (paginated) |
+| GET | `/api/v1/admin/audit-logs/{id}` | Yes | `audit_logs:read` | Get audit log by ID |
+| POST | `/api/v1/admin/audit-logs` | Yes | `audit_logs:create` | Create audit log entry |
+| POST | `/api/v1/admin/upload` | Yes | - | Upload file (multipart form-data) |
+
+### Health & Metrics
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/health` | No | Service health check with DB + Redis probe |
+| GET | `/metrics` | No | Prometheus-compatible metrics endpoint |
+
+### Upload
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/v1/admin/upload` | Yes | Upload file via multipart form-data. Validates magic bytes, enforces size limits per category (photo/video/audio/document) |
+
+### WebSocket
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/api/v1/ws` | No | WebSocket handler with Redis pub/sub for real-time communication |
+
+### Webhooks
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/v1/webhooks/stripe` | Stripe Signature | Handle Stripe webhook events (checkout.session.completed, invoice.paid, invoice.payment_failed, customer.subscription.updated, customer.subscription.deleted) |
+| POST | `/api/v1/webhooks/pix` | Provider-specific | Handle Pix webhook events (Brazilian instant payment system) |
+
+### API Documentation
+
+Interactive API documentation is available at:
+
+- **Swagger UI**: http://localhost:8080/swagger-ui
+- **Scalar**: http://localhost:8080/scalar
+- **OpenAPI JSON**: http://localhost:8080/api-docs/openapi.json
+
+---
+
+## 🖥️ Frontend Routes
+
+Complete frontend route structure organized by section.
+
+### Public Pages
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/` | `app/pages/index.vue` | Landing page / Home |
+| `/about` | `app/pages/about.vue` | About page |
+| `/how-work` | `app/pages/how-work.vue` | How it works page |
+| `/contact` | `app/pages/contact.vue` | Contact page |
+| `/privacy` | `app/pages/privacy.vue` | Privacy policy |
+| `/terms` | `app/pages/terms.vue` | Terms of service |
+
+### Authentication Pages
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/auth/login` | `app/pages/auth/login.vue` | User login form |
+| `/auth/register` | `app/pages/auth/register.vue` | User registration form |
+| `/auth/forgot-password` | `app/pages/auth/forgot-password.vue` | Password recovery request |
+| `/auth/reset-password` | `app/pages/auth/reset-password.vue` | Password reset with token |
+| `/auth/confirm` | `app/pages/auth/confirm.vue` | Email confirmation page |
+
+### User Portal
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/portal` | `app/pages/portal/index.vue` | Portal index / dashboard redirect |
+| `/portal/dashboard` | `app/pages/portal/dashboard.vue` | User dashboard |
+| `/portal/support` | `app/pages/portal/support/index.vue` | Support tickets / help center |
+
+### Admin Panel
+
+| Route | Component | Description |
+|-------|-----------|-------------|
+| `/admin` | `app/pages/admin/index.vue` | Admin panel index |
+| `/admin/dashboard` | `app/pages/admin/dashboard/index.vue` | Admin dashboard with metrics |
+| `/admin/users` | `app/pages/admin/users/index.vue` | User management list |
+| `/admin/users/:id` | `app/pages/admin/users/[id]/index.vue` | View user details |
+| `/admin/roles` | `app/pages/admin/roles/index.vue` | Role management list |
+| `/admin/roles/new` | `app/pages/admin/roles/new.vue` | Create new role |
+| `/admin/roles/:id` | `app/pages/admin/roles/[id]/index.vue` | View role details |
+| `/admin/roles/:id/edit` | `app/pages/admin/roles/[id]/edit.vue` | Edit role |
+| `/admin/audit-logs` | `app/pages/admin/audit-logs/index.vue` | Audit logs list |
+| `/admin/audit-logs/:id` | `app/pages/admin/audit-logs/[id]/index.vue` | View audit log details |
+| `/admin/audit-logs/:id/edit` | `app/pages/admin/audit-logs/[id]/edit.vue` | Edit audit log |
+| `/admin/audit-logs/new` | `app/pages/admin/audit-logs/new.vue` | Create audit log |
+| `/admin/:slug` | `app/pages/admin/[...slug].vue` | Catch-all for dynamic admin routes |
+
+### Frontend Portal URL
+
+**Development**: http://localhost:3000  
+**With Proctor**: http://localhost:4000
+
+The frontend runs on port 4000 when using Proctor to avoid conflicts with other services.
+
+---
+
 ## 🐳 Docker Setup (Alternative)
 
 For those who prefer not to install dependencies locally.
@@ -315,41 +483,6 @@ services:
     volumes:
       - ./infra/ssl:/etc/nginx/ssl:ro
 ```
-
----
-
-### API Endpoints Reference
-
-| Category | Endpoint | Method | Auth | Description |
-|----------|----------|--------|------|-------------|
-| **Auth** | `/api/v1/auth/register` | POST | No | Register new user |
-| | `/api/v1/auth/login` | POST | No | Login (returns JWT + sets refresh cookie) |
-| | `/api/v1/auth/refresh` | POST | No | Refresh access token (via cookie) |
-| | `/api/v1/auth/logout` | POST | Yes | Invalidate refresh token |
-| | `/api/v1/auth/recover` | POST | No | Request password reset |
-| | `/api/v1/auth/reset` | POST | No | Reset password with token |
-| | `/api/v1/auth/confirm` | GET | No | Verify email with token |
-| | `/api/v1/auth/session` | GET | Yes | Get current session user |
-| | `/api/v1/auth/2fa/setup` | POST | Yes | Setup TOTP 2FA |
-| | `/api/v1/auth/2fa/enable` | POST | Yes | Enable TOTP 2FA |
-| | `/api/v1/auth/2fa/disable` | POST | Yes | Disable TOTP 2FA |
-| | `/api/v1/auth/2fa/verify` | POST | Yes | Verify TOTP code |
-| | `/api/v1/auth/change-password` | POST | Yes | Change password |
-| **Admin** | `/api/v1/admin/users` | GET | Admin | List users (paginated) |
-| | `/api/v1/admin/users` | POST | Admin | Create user |
-| | `/api/v1/admin/users/{id}` | GET | Admin | Get user |
-| | `/api/v1/admin/users/{id}` | PATCH | Admin | Update user |
-| | `/api/v1/admin/users/{id}` | DELETE | Admin | Delete user |
-| | `/api/v1/admin/roles` | GET | Admin | List roles |
-| | `/api/v1/admin/roles` | POST | Admin | Create role |
-| | `/api/v1/admin/roles/{id}` | GET | Admin | Get role |
-| | `/api/v1/admin/roles/{id}` | PATCH | Admin | Update role |
-| | `/api/v1/admin/roles/{id}` | DELETE | Admin | Delete role |
-| | `/api/v1/admin/audit-logs` | GET | Admin | List audit logs (paginated) |
-| | `/api/v1/admin/audit-logs` | POST | Admin | Create audit log |
-| | `/api/v1/admin/audit-logs/{id}` | GET | Admin | Get audit log |
-| **Health** | `/health` | GET | No | Service health |
-| | `/metrics` | GET | No | Prometheus metrics |
 
 ---
 
@@ -541,10 +674,18 @@ cd frontend && pnpm audit --prod
 src/
 ├── config/           # AppConfig (env-driven)
 ├── controllers/      # HTTP handlers (thin)
+│   ├── auth_controller.rs       # Register, login, refresh, logout, 2FA, password reset
+│   ├── users_controller.rs      # List users (admin)
+│   ├── roles_controller.rs      # CRUD roles (admin)
+│   ├── audit_logs_controller.rs # CRUD audit logs (admin)
+│   ├── upload_controller.rs     # File upload with validation
+│   ├── health_controller.rs     # Health check with DB/Redis probes
+│   └── metrics_controller.rs    # Prometheus metrics endpoint
 ├── services/         # Business logic
 ├── repositories/     # Data access (Diesel)
 ├── models/           # Domain entities
 ├── routes/           # Route definitions
+│   └── router.rs     # Main router with middleware configuration
 ├── middleware/       # Auth, CORS, rate limiting, metrics
 ├── auth/             # JWT, Paseto, PBKDF2, TOTP
 ├── authz/            # RBAC engine (grants/abilities)
@@ -566,9 +707,44 @@ app/
 │   └── *.vue         # Landing/shared components
 ├── layouts/          # Page layouts
 ├── pages/            # File-based routing
-│   ├── admin/        # Admin panel pages
-│   ├── portal/       # User portal pages
-│   └── auth/         # Auth pages
+│   ├── index.vue                    # Landing page
+│   ├── about.vue                    # About page
+│   ├── how-work.vue                 # How it works page
+│   ├── contact.vue                  # Contact page
+│   ├── privacy.vue                  # Privacy policy
+│   ├── terms.vue                    # Terms of service
+│   ├── auth/
+│   │   ├── login.vue               # Login form
+│   │   ├── register.vue            # Registration form
+│   │   ├── forgot-password.vue     # Password recovery request
+│   │   ├── reset-password.vue      # Password reset with token
+│   │   └── confirm.vue             # Email confirmation
+│   ├── portal/
+│   │   ├── index.vue               # Portal index
+│   │   ├── dashboard.vue           # User dashboard
+│   │   └── support/
+│   │       └── index.vue           # Support tickets
+│   └── admin/
+│       ├── index.vue               # Admin panel index
+│       ├── dashboard/
+│       │   └── index.vue           # Admin dashboard
+│       ├── users/
+│       │   ├── index.vue           # User list
+│       │   └── [id]/
+│       │       └── index.vue       # User details
+│       ├── roles/
+│       │   ├── index.vue           # Role list
+│       │   ├── new.vue             # Create role
+│       │   └── [id]/
+│       │       ├── index.vue       # Role details
+│       │       └── edit.vue        # Edit role
+│       ├── audit-logs/
+│       │   ├── index.vue           # Audit log list
+│       │   ├── new.vue             # Create audit log
+│       │   └── [id]/
+│       │       ├── index.vue       # Audit log details
+│       │       └── edit.vue        # Edit audit log
+│       └── [...slug].vue           # Catch-all dynamic routes
 ├── composables/      # Vue composables
 ├── plugins/          # Nuxt plugins
 ├── stores/           # Pinia stores
@@ -625,6 +801,53 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD"              # Connect 
 | Development | 5-10 |
 | Staging | 10-20 |
 | Production | 30-100 |
+
+---
+
+## 🎯 Key Features Deep Dive
+
+### Authentication System
+
+- **JWT + Refresh Tokens**: Access tokens (1 hour) + refresh tokens (7 days) with rotation
+- **Paseto Email Verification**: Secure email confirmation tokens
+- **PBKDF2 Password Hashing**: Industry-standard password security
+- **TOTP 2FA**: Time-based one-time passwords with QR code setup
+- **OAuth2 Ready**: Extensible for social login providers
+- **Session Management**: Real-time session validation with Redis blacklist
+
+### Authorization (RBAC)
+
+- **Role-Based Access Control**: Hierarchical roles (Admin, Operator, Viewer)
+- **Resource-Level Permissions**: Fine-grained `resource:action` abilities
+- **actix-web-grants Integration**: Declarative authorization guards
+- **Role Caching**: 60-second Redis cache to prevent N+1 queries
+- **Cache Invalidation**: Automatic invalidation on role changes
+
+### Security Features
+
+- **Field-Level Encryption**: PII encryption at rest
+- **Blind Indexes**: Searchable encryption without exposing data
+- **Key Rotation**: Multi-key JWT support with versioning
+- **CSRF Protection**: Signed cookies for browser-based attacks
+- **Rate Limiting**: Redis-backed sliding window algorithm
+- **API Key Auth**: Service-to-service authentication
+- **Signature Verification**: Stripe/Pix webhook signature validation
+
+### Database Layer
+
+- **Diesel ORM**: Compile-time SQL verification
+- **Connection Pooling**: Configurable pool size per environment
+- **Migrations**: Version-controlled schema changes
+- **Repository Pattern**: Clean separation of data access logic
+- **Audit Logging**: Blockchain-style hash chain for integrity
+
+### Observability
+
+- **Structured Logging**: JSON logs with `tracing` crate
+- **Prometheus Metrics**: Request counts, latencies, P95/P99
+- **Health Checks**: DB + Redis probes with latency tracking
+- **Request Tracing**: Distributed tracing support
+- **Grafana Dashboards**: Pre-configured monitoring panels
 
 ---
 
@@ -685,6 +908,24 @@ MIT License - see [LICENSE](LICENSE) for details.
 Built by [gilcierweb](https://gilcierweb.com.br) - https://gilcierweb.com.br
 
 ---
+
+## 📚 Additional Resources
+
+- [API Documentation](http://localhost:8080/swagger-ui) - Interactive Swagger UI
+- [Scalar Docs](http://localhost:8080/scalar) - Alternative API documentation
+- [OpenAPI Spec](http://localhost:8080/api-docs/openapi.json) - Machine-readable API spec
+- [Grafana Dashboards](http://localhost:3001) - Pre-configured monitoring
+- [Prometheus Metrics](http://localhost:9090) - Raw metrics endpoint
+
+### Related Documentation
+
+- [Backend README](backend/README.md) - Backend-specific setup and commands
+- [Frontend README](frontend/README.md) - Frontend-specific setup and commands
+- [Infrastructure README](infra/README.md) - Docker, Kubernetes, and deployment guides
+- [Load Testing](load-test/README.md) - Performance testing with k6
+
+---
+
 <div align="center">
   <strong>Built for developers who want to ship faster</strong>
   <br>
