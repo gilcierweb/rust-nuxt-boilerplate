@@ -243,8 +243,10 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
           JWT_SECRET: "test-jwt-secret-key-for-integration-tests-32b!"
-          MASTER_KEY: "dGVzdC1tYXN0ZXIta2V5LWZvci11bml0LXRlc3Rz"
-          BLIND_INDEX_KEY: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLXRlc3Rz"
+          MASTER_KEY: "dGVzdC1tYXN0ZXIta2V5LWZvci1jaS0zMi1ieXRlcy1sb25nIQ=="
+          BLIND_INDEX_KEY: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLWNpLTMyYnl0ZXMh"
+          CSRF_SECRET_KEY: "test-csrf-secret-key-for-ci-32-bytes-long!"
+          REFRESH_TOKEN_HASH_SALT: "test-refresh-token-hash-salt-32b!"
           FRONTEND_URL: "http://localhost:3000"
           ENVIRONMENT: "Test"
 
