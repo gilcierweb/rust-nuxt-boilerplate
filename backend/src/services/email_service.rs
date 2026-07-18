@@ -225,7 +225,7 @@ impl EmailService {
             .json(&request)
             .send()
             .await
-            .map_err(|e| EmailError::HttpError(e))?;
+            .map_err(EmailError::HttpError)?;
 
         let status = response.status();
         let response_text = response
