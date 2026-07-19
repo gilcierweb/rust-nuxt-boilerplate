@@ -36,3 +36,7 @@ frontend/node_modules/
 infra/ssl/*.pem
 infra/ssl/private/
 !infra/ssl/.gitkeep
+infra/secrets/*
+!infra/secrets/.gitkeep
+!infra/secrets/README.md
+!infra/secrets/.gitignore

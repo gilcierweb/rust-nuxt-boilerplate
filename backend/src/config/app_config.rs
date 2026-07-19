@@ -5,12 +5,16 @@ use base64::Engine as _;
 
 /// Read a secret value from multiple sources in priority order:
 /// 1. Environment variable `<NAME>`
-/// 2. File at `<NAME>_FILE` env var path (Docker secrets pattern)
-/// 3. Default value
+/// 2. File at `<NAME>_FILE` env var path (Docker/K8s secrets pattern)
+/// 3. Auto-detected file at `/run/secrets/<name_lowercase>` (Docker Compose
+///    `secrets:` mount convention; only checked when running inside a container
+///    detected via `/run/secrets/.docker-secrets` marker)
+/// 4. Default value
 ///
 /// This supports:
 /// - **Environment variables**: Direct `JWT_SECRET=xxx`
 /// - **Docker secrets**: `JWT_SECRET_FILE=/run/secrets/jwt_secret`
+///   or mounted directly via Compose `secrets:` to `/run/secrets/<name>`
 /// - **Kubernetes secrets**: Mounted as files via `secretKeyRef`
 /// - **AWS/GCP/Azure**: Secrets mounted as files or fetched via SDK
 ///
@@ -61,6 +65,18 @@ fn secret_from_env_or_file(name: &str, default: &str) -> String {
         }
     }
 
+    // Third, auto-detect /run/secrets/<lowercase_name> (Docker Compose `secrets:`
+    // without explicit _FILE env var). This is consistent with the convention
+    // used in docker-compose.yml infra/secrets/.
+    let secret_path = format!("/run/secrets/{}", name.to_lowercase());
+    if let Ok(content) = fs::read_to_string(&secret_path) {
+        let trimmed = content.trim().to_string();
+        if !trimmed.is_empty() {
+            tracing::debug!(secret = %name, path = %secret_path, "Loaded secret from /run/secrets");
+            return trimmed;
+        }
+    }
+
     default.to_string()
 }
 
@@ -92,6 +108,17 @@ fn required_secret(name: &str) -> Result<String, env::VarError> {
                     "Failed to read secret file"
                 );
             },
+        }
+    }
+
+    // Auto-detect /run/secrets/<lowercase_name> (Docker Compose `secrets:`
+    // without explicit _FILE env var).
+    let secret_path = format!("/run/secrets/{}", name.to_lowercase());
+    if let Ok(content) = fs::read_to_string(&secret_path) {
+        let trimmed = content.trim().to_string();
+        if !trimmed.is_empty() {
+            tracing::debug!(secret = %name, path = %secret_path, "Loaded secret from /run/secrets");
+            return Ok(trimmed);
         }
     }
 

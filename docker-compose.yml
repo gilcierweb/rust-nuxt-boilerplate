@@ -1,8 +1,21 @@
 version: "3.9"
 
-# -- rust_nuxt_boilerplate Platform - Docker Compose 
+# -- rust_nuxt_boilerplate Platform - Docker Compose
 # Development: docker compose up
-# Production:  docker compose --env-file .env.production up -d
+# Production:  docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Secrets (SECURITY_AUDIT.md I3):
+#   - In dev: env_file: .env provides values directly as env vars.
+#   - In production: secrets are mounted from infra/secrets/*.txt files at
+#     /run/secrets/ inside the container. Application code reads them via
+#     `client/src/config/secrets.rs` which prefers /run/secrets/<NAME> and
+#     falls back to env vars. Critical secrets (POSTGRES_PASSWORD, JWT_SECRET,
+#     MASTER_ENCRYPTION_KEY, BLIND_INDEX_KEY, CSRF_SECRET_KEY,
+#     REFRESH_TOKEN_HASH_SALT) MUST be provided as Docker secrets in production.
+#
+#   To rotate: replace the file in infra/secrets/ — no rebuild required
+#   (`docker compose up -d` reads the file at startup, but only the backend
+#   needs to be restarted to pick up the change).
 
 services:
 
@@ -60,7 +73,7 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
-  # -- Backend (Rust / Actix-Web) 
+  # -- Backend (Rust / Actix-Web)
   backend:
     build:
       context: ./backend
@@ -76,6 +89,23 @@ services:
       - "8080:8080"
     volumes:
       - ./backend/src:/app/src:ro  # hot reload in dev via cargo-watch
+    # Critical secrets mounted as files in /run/secrets/. The backend's
+    # `src/config/secrets.rs` reads from /run/secrets/<name> first, then
+    # falls back to env vars. In production, populate infra/secrets/*.txt
+    # with real values (see infra/secrets/README.md). In dev, placeholders
+    # are fine because env_file: .env provides the working values.
+    secrets:
+      - postgres_password
+      - jwt_secret
+      - master_encryption_key
+      - blind_index_key
+      - csrf_secret_key
+      - refresh_token_hash_salt
+      - resend_api_key
+      - stripe_secret_key
+      - stripe_webhook_secret
+    # `DOCKER_SECRETS_ENABLED=1` tells the app to prefer /run/secrets over env vars.
+    # Set this in production; leave unset in dev to keep env_file precedence.
     depends_on:
       postgres:
         condition: service_healthy
@@ -198,7 +228,7 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
-# -- Volumes 
+# -- Volumes
 volumes:
   postgres_data:
   redis_data:
@@ -207,6 +237,30 @@ volumes:
   prometheus_data:
   grafana_data:
   nginx_logs:
+
+# -- Docker secrets (SECURITY_AUDIT.md I3)
+# Each file in infra/secrets/ becomes /run/secrets/<name> in the backend container.
+# Source files are gitignored. In development you can leave them as placeholders;
+# env_file: .env provides fallback values for non-critical config.
+secrets:
+  postgres_password:
+    file: ./infra/secrets/postgres_password.txt
+  jwt_secret:
+    file: ./infra/secrets/jwt_secret.txt
+  master_encryption_key:
+    file: ./infra/secrets/master_encryption_key.txt
+  blind_index_key:
+    file: ./infra/secrets/blind_index_key.txt
+  csrf_secret_key:
+    file: ./infra/secrets/csrf_secret_key.txt
+  refresh_token_hash_salt:
+    file: ./infra/secrets/refresh_token_hash_salt.txt
+  resend_api_key:
+    file: ./infra/secrets/resend_api_key.txt
+  stripe_secret_key:
+    file: ./infra/secrets/stripe_secret_key.txt
+  stripe_webhook_secret:
+    file: ./infra/secrets/stripe_webhook_secret.txt
 
 # -- Networks 
 networks:
