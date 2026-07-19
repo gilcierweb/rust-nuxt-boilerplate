@@ -232,8 +232,11 @@ pub async fn confirm(
 }
 
 /// Get user roles with Redis caching to avoid N+1 queries
-/// Cache TTL: 60 seconds (short window minimizes stale role propagation)
+/// Cache TTL: 10 minutes (roles are low-churn; invalidation is explicit via
+/// `invalidate_user_roles_cache` and `invalidate_role_cache` on role changes)
 async fn get_cached_user_roles(container: &AppContainer, user_id: &Uuid) -> AppResult<Vec<String>> {
+    const ROLE_CACHE_TTL: std::time::Duration = std::time::Duration::from_secs(600);
+
     let cache_key = format!("user_roles:{}", user_id);
 
     // Try to get from cache first
@@ -248,10 +251,10 @@ async fn get_cached_user_roles(container: &AppContainer, user_id: &Uuid) -> AppR
         .await
         .map_err(AppError::Database)?;
 
-    // Cache for 60 seconds
+    // Cache for 10 minutes (explicit invalidation on role changes)
     let _ = container
         .cache
-        .set_with_ttl(&cache_key, &roles, std::time::Duration::from_secs(60))
+        .set_with_ttl(&cache_key, &roles, ROLE_CACHE_TTL)
         .await;
 
     Ok(roles)
@@ -266,7 +269,7 @@ pub async fn invalidate_user_roles_cache(container: &AppContainer, user_id: &Uui
 /// Invalidate role cache for all users assigned to a given role.
 ///
 /// Called from role CRUD endpoints (create, update, delete) to ensure
-/// stale role data does not persist beyond the 60-second TTL window.
+/// stale role data does not persist beyond the 10-minute TTL window.
 pub async fn invalidate_role_cache(container: &AppContainer, role_id: &Uuid) {
     if let Ok(user_roles) = container.user_roles.find_by_role(role_id).await {
         for ur in user_roles {
