@@ -1,5 +1,6 @@
 pub mod email;
 pub mod file_validation;
+pub mod ip;
 pub mod money;
 pub mod pagination;
 pub mod sanitize;

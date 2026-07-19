@@ -1,7 +1,7 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
-use rand::rngs::OsRng;
 use rand::RngCore;
+use rand::rngs::OsRng;
 
 use crate::errors::{AppError, AppResult};
 

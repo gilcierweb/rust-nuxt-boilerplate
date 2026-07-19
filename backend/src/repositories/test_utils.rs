@@ -97,6 +97,7 @@ pub mod mocks {
             argon2_m_cost: 65536,
             argon2_t_cost: 3,
             argon2_p_cost: 1,
+            trusted_proxies: vec![],
             jwt_secrets: vec![crate::config::app_config::JwtSecretKey {
                 kid: "test-key-1".to_string(),
                 secret: generate_deterministic_string(32, 0x9E3779B97F4A7C15),

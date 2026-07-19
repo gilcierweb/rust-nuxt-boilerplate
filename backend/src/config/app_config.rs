@@ -208,6 +208,9 @@ pub struct AppConfig {
     pub argon2_m_cost: u32,
     pub argon2_t_cost: u32,
     pub argon2_p_cost: u32,
+
+    // Trusted proxies for X-Forwarded-For / Forwarded header support
+    pub trusted_proxies: Vec<ipnet::IpNet>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -423,6 +426,17 @@ impl AppConfig {
                 .ok()
                 .and_then(|s| s.parse::<u32>().ok())
                 .unwrap_or(1),
+
+            // Trusted proxies for X-Forwarded-For / Forwarded header support
+            // Comma-separated list of CIDR ranges (e.g., "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16")
+            trusted_proxies: env::var("TRUSTED_PROXIES")
+                .ok()
+                .map(|s| {
+                    s.split(',')
+                        .filter_map(|part| part.trim().parse::<ipnet::IpNet>().ok())
+                        .collect()
+                })
+                .unwrap_or_default(),
         })
     }
 

@@ -12,7 +12,7 @@ use crate::{
         hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password,
     },
     services::token_service::hash_token,
-    utils::validation::first_validation_error_message,
+    utils::{ip::extract_client_ip, validation::first_validation_error_message},
 };
 use actix_web::{
     HttpRequest, HttpResponse,
@@ -295,7 +295,7 @@ pub async fn login(
     let security = SecurityService::from_config(container.config.as_ref())?;
     let normalized_email = security.normalize_email(&body.email);
     let email_lookup = security.protect_email(&normalized_email)?;
-    let request_ip = request_ip(&req);
+    let request_ip = extract_client_ip(&req, &container.config.trusted_proxies);
     let user_agent = request_user_agent(&req);
 
     // Find user by email
@@ -309,7 +309,7 @@ pub async fn login(
             tracing::warn!(
                 event = "auth.login.user_not_found",
                 email_fingerprint = %fingerprint_value(&email_lookup.blind_index),
-                ip = request_ip.as_deref().unwrap_or("unknown"),
+                ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
                 user_agent = user_agent.as_deref().unwrap_or("unknown"),
                 "login failed: user not found"
             );
@@ -323,7 +323,7 @@ pub async fn login(
         tracing::warn!(
             event = "auth.login.blocked_locked",
             user_id = %user.id,
-            ip = request_ip.as_deref().unwrap_or("unknown"),
+            ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
             user_agent = user_agent.as_deref().unwrap_or("unknown"),
             "login blocked: account locked"
         );
@@ -335,7 +335,7 @@ pub async fn login(
         tracing::warn!(
             event = "auth.login.blocked_unconfirmed",
             user_id = %user.id,
-            ip = request_ip.as_deref().unwrap_or("unknown"),
+            ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
             "login blocked: email not confirmed"
         );
         return Err(AppError::BadRequest(
@@ -354,7 +354,7 @@ pub async fn login(
         tracing::warn!(
             event = "auth.login.invalid_password",
             user_id = %user.id,
-            ip = request_ip.as_deref().unwrap_or("unknown"),
+            ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
             user_agent = user_agent.as_deref().unwrap_or("unknown"),
             "login failed: invalid password"
         );
@@ -394,7 +394,7 @@ pub async fn login(
                 tracing::info!(
                     event = "auth.login.otp_required",
                     user_id = %user.id,
-                    ip = request_ip.as_deref().unwrap_or("unknown"),
+                    ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
                     "login requires otp"
                 );
                 return Ok(HttpResponse::Ok().json(serde_json::json!({
@@ -410,7 +410,7 @@ pub async fn login(
                     tracing::warn!(
                         event = "auth.login.invalid_otp",
                         user_id = %user.id,
-                        ip = request_ip.as_deref().unwrap_or("unknown"),
+                        ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
                         user_agent = user_agent.as_deref().unwrap_or("unknown"),
                         "login failed: invalid otp"
                     );
@@ -490,7 +490,7 @@ pub async fn login(
     tracing::info!(
         event = "auth.login.success",
         user_id = %user.id,
-        ip = request_ip.as_deref().unwrap_or("unknown"),
+        ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
         user_agent = user_agent.as_deref().unwrap_or("unknown"),
         "login success"
     );
@@ -519,7 +519,9 @@ pub async fn refresh(
     if refresh_tokens.is_empty() {
         tracing::warn!(
             event = "auth.refresh.invalid_token",
-            ip = request_ip(&req).as_deref().unwrap_or("unknown"),
+            ip = extract_client_ip(&req, &container.config.trusted_proxies)
+                .map(|ip| ip.to_string())
+                .unwrap_or_else(|| "unknown".to_string()),
             user_agent = request_user_agent(&req).as_deref().unwrap_or("unknown"),
             "refresh failed: missing refresh token cookie"
         );
@@ -561,7 +563,9 @@ pub async fn refresh(
         None => {
             tracing::warn!(
                 event = "auth.refresh.invalid_token",
-                ip = request_ip(&req).as_deref().unwrap_or("unknown"),
+                ip = extract_client_ip(&req, &container.config.trusted_proxies)
+                    .map(|ip| ip.to_string())
+                    .unwrap_or_else(|| "unknown".to_string()),
                 user_agent = request_user_agent(&req).as_deref().unwrap_or("unknown"),
                 "refresh failed: invalid or missing token"
             );
@@ -729,7 +733,9 @@ pub async fn logout(
     tracing::info!(
         event = "auth.logout.success",
         revoked_tokens = revoked_count,
-        ip = request_ip(&req).as_deref().unwrap_or("unknown"),
+        ip = extract_client_ip(&req, &container.config.trusted_proxies)
+            .map(|ip| ip.to_string())
+            .unwrap_or_else(|| "unknown".to_string()),
         "logout success"
     );
 
@@ -1229,10 +1235,6 @@ fn generate_random_token(length: usize) -> String {
             CHARSET[idx] as char
         })
         .collect()
-}
-
-fn request_ip(req: &HttpRequest) -> Option<String> {
-    req.peer_addr().map(|addr| addr.ip().to_string())
 }
 
 fn request_user_agent(req: &HttpRequest) -> Option<String> {

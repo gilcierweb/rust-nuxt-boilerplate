@@ -100,6 +100,7 @@ pub fn test_config() -> AppConfig {
         argon2_m_cost: 65536,
         argon2_t_cost: 3,
         argon2_p_cost: 1,
+        trusted_proxies: vec![],
     }
 }
 
