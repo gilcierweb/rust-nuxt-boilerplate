@@ -29,11 +29,16 @@ const CSRF_ROTATION_GRACE_SECS: u64 = 30;
 /// entirely. This is **correct** for SPA-only deployments where the frontend
 /// authenticates exclusively via Bearer tokens (no auth cookies).
 ///
-/// **Security assumption:** Bearer token auth and cookie-based auth are
+/// **⚠️ SECURITY WARNING:** Bearer token auth and cookie-based auth are
 /// mutually exclusive per-request. If a browser sends both a Bearer token
-/// *and* auth cookies (e.g. after a mixed-auth migration), the Bearer token
-/// would suppress CSRF checks, leaving cookie-authenticated requests
-/// vulnerable to CSRF.
+/// *and* auth cookies (e.g., after a mixed-auth migration, or if XSS steals
+/// tokens and injects them alongside cookies), the Bearer token would suppress
+/// CSRF checks, leaving cookie-authenticated requests vulnerable to CSRF.
+///
+/// **Mitigation:** This middleware provides `CSRF_COOKIE_AUTH_PATHS` to mark
+/// path prefixes that **must always enforce CSRF**, even when a Bearer token
+/// is present. Configure this for any routes that use cookie-based auth
+/// (refresh_token, session cookies, etc.).
 ///
 /// # Cookie-Based Auth Paths
 ///
@@ -48,6 +53,10 @@ const CSRF_ROTATION_GRACE_SECS: u64 = 30;
 ///
 /// Paths matching any prefix in this list will never bypass CSRF, regardless
 /// of the Authorization header.
+///
+/// **Default for this project:** `/api/v1/admin` is added by default because
+/// admin routes use refresh_token cookies alongside JWT Bearer tokens.
+/// Override via `CSRF_COOKIE_AUTH_PATHS` env var if needed.
 pub struct CsrfProtection {
     exclude_paths: Vec<String>,
     cookie_auth_paths: Vec<String>,
@@ -60,6 +69,8 @@ impl CsrfProtection {
     ///   (unauthenticated endpoints like login, register, webhooks).
     /// - `cookie_auth_paths`: Path prefixes that **always** enforce CSRF,
     ///   even with a Bearer token. Set via `CSRF_COOKIE_AUTH_PATHS` env var.
+    ///   Defaults to `["/api/v1/admin"]` because admin routes use refresh_token
+    ///   cookies alongside JWT Bearer tokens.
     pub fn new(exclude_paths: Vec<String>) -> Self {
         let mut defaults = vec![
             "/api/v1/auth/login".to_string(),
@@ -83,7 +94,7 @@ impl CsrfProtection {
         defaults.extend(exclude_paths);
 
         let cookie_auth_paths = std::env::var("CSRF_COOKIE_AUTH_PATHS")
-            .unwrap_or_default()
+            .unwrap_or_else(|_| "/api/v1/admin".to_string()) // Default: admin routes use cookie auth
             .split(',')
             .map(|s| s.trim().to_string())
             .filter(|s| !s.is_empty())
@@ -345,14 +356,15 @@ fn validate_csrf_token(token: &str, secret_key: &str) -> bool {
 
 fn build_csrf_cookie(config: &AppConfig, token: &str) -> Cookie<'static> {
     let same_site = match std::env::var("AUTH_COOKIE_SAME_SITE")
-        .unwrap_or_else(|_| "lax".to_string())
+        .unwrap_or_else(|_| "strict".to_string()) // Default to Strict for CSRF protection
         .to_ascii_lowercase()
         .as_str()
     {
         "none" if !is_production_like(config) => SameSite::Lax,
         "none" => SameSite::None,
         "strict" => SameSite::Strict,
-        _ => SameSite::Lax,
+        "lax" if is_production_like(config) => SameSite::Strict, // Upgrade to Strict in prod
+        _ => SameSite::Strict, // Default: Strict in all environments
     };
 
     let mut cookie = Cookie::build(CSRF_COOKIE_NAME, token.to_owned())
@@ -534,9 +546,10 @@ mod tests {
     }
 
     #[test]
-    fn test_cookie_auth_paths_empty_by_default() {
+    fn test_cookie_auth_paths_defaults_to_admin() {
         let csrf = CsrfProtection::new(vec![]);
-        assert!(csrf.cookie_auth_paths.is_empty());
+        assert!(!csrf.cookie_auth_paths.is_empty());
+        assert!(csrf.cookie_auth_paths.contains(&"/api/v1/admin".to_string()));
     }
 
     #[test]
