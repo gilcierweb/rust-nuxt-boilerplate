@@ -173,6 +173,7 @@ export const useAuthStore = defineStore('auth', {
 
       this.isBootstrapping = true
 
+      // Create the promise FIRST, before awaiting, to prevent race conditions
       bootstrapPromise = (async () => {
         try {
           await this.refreshTokens()
