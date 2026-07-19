@@ -13,7 +13,27 @@
     "yes": "Sí",
     "no": "No",
     "or": "o",
-    "and": "y"
+    "and": "y",
+    "actions": {
+      "show": "Ver",
+      "edit": "Editar",
+      "new": "Nuevo",
+      "refresh": "Actualizar",
+      "saveChanges": "Guardar cambios",
+      "saving": "Guardando...",
+      "send": "Enviar",
+      "cancel": "Cancelar",
+      "back": "Volver",
+      "submit": "Enviar"
+    },
+    "table": {
+      "actions": "Acciones"
+    }
+  },
+  "proxy": {
+    "unavailable": "API de backend no disponible",
+    "unavailableForAuthSession": "API de backend no disponible para sesión de autenticación",
+    "unavailableForAuthRefresh": "API de backend no disponible para refresco de autenticación"
   },
   "auth": {
     "login": {

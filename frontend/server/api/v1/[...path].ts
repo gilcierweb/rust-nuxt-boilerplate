@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
       console.error('[proxy] request error without response:', error)
       throw createError({
         statusCode: 502,
-        statusMessage: `Backend API unavailable via ${backendApiBase}`,
+        statusMessage: 'Backend API unavailable',
       })
     }
 

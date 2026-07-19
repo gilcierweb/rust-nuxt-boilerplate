@@ -25,10 +25,42 @@
       "cancel": "Cancel",
       "back": "Back",
       "submit": "Submit"
+},
+  "common": {
+    "success": "Success",
+    "error": "Error",
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "submit": "Submit",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "close": "Close",
+    "yes": "Yes",
+    "no": "No",
+    "or": "or",
+    "and": "and",
+    "actions": {
+      "show": "Show",
+      "edit": "Edit",
+      "new": "New",
+      "refresh": "Refresh",
+      "saveChanges": "Save changes",
+      "saving": "Saving...",
+      "send": "Send",
+      "cancel": "Cancel",
+      "back": "Back",
+      "submit": "Submit"
     },
     "table": {
       "actions": "Actions"
     }
+  },
+  "proxy": {
+    "unavailable": "Backend API unavailable",
+    "unavailableForAuthSession": "Backend API unavailable for auth session",
+    "unavailableForAuthRefresh": "Backend API unavailable for auth refresh"
   },
   "auth": {
     "login": {
@@ -2516,6 +2548,13 @@
       "2": "Seed action 2",
       "3": "Seed action 3",
       "4": "Seed action 4"
+    }
+  },
+  "proxy": {
+    "errors": {
+      "unavailable_session": "Backend API unavailable for auth session",
+      "unavailable_refresh": "Backend API unavailable for auth refresh",
+      "unavailable": "Backend API unavailable"
     }
   }
 }

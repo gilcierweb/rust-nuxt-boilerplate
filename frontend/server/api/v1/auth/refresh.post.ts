@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
     if (!response) {
       throw createError({
         statusCode: 502,
-        statusMessage: `Backend API unavailable for auth refresh via ${backendApiBases.join(' or ')}`,
+        statusMessage: 'Backend API unavailable',
       })
     }
 

@@ -2517,5 +2517,12 @@
       "3": "Ação de seed 3",
       "4": "Ação de seed 4"
     }
+  },
+  "proxy": {
+    "errors": {
+      "unavailable_session": "API do Backend indisponível para sessão de autenticação",
+      "unavailable_refresh": "API do Backend indisponível para renovação de autenticação",
+      "unavailable": "API do Backend indisponível"
+    }
   }
 }
