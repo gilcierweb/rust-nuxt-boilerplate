@@ -1,8 +1,11 @@
 #![allow(dead_code)]
 
 use crate::config::app_config::{AppConfig, Environment, JwtSecretKey};
+use crate::services::email_templates::{EmailTemplateError, EmailTemplates, names as tpl};
+use crate::services::email_test_capture::{CapturedEmail, TestEmailCapture};
 use crate::services::http_client::{HttpClient, HttpClientConfig, HttpClientError};
 use crate::utils::sanitize::{sanitize_for_email, sanitize_for_html_email};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
@@ -109,6 +112,8 @@ pub enum EmailError {
     SendFailed(String),
     #[error("HTTP error: {0}")]
     HttpError(#[from] HttpClientError),
+    #[error("Template error: {0}")]
+    Template(#[from] EmailTemplateError),
 }
 
 pub type EmailResult = Result<(), EmailError>;
@@ -134,14 +139,24 @@ pub struct EmailService {
     from_email: String,
     from_name: String,
     base_url: String,
+    frontend_url: String,
+    templates: Option<EmailTemplates>,
+    /// Optional in-memory capture used in test mode. When `Some`, outbound
+    /// HTTP requests are skipped and the rendered email is recorded instead.
+    capture: Option<TestEmailCapture>,
 }
 
 impl EmailService {
     pub fn new(config: &AppConfig) -> Self {
         let api_key = config.resend_api_key.clone();
         let from_email = config.email_from.clone();
-        let from_name = "Boilerplate App".to_string();
+        let from_name = if config.email_from_name.is_empty() {
+            "Boilerplate App".to_string()
+        } else {
+            config.email_from_name.clone()
+        };
         let base_url = "https://api.resend.com".to_string();
+        let frontend_url = config.frontend_url.clone();
 
         let http_config = HttpClientConfig {
             timeout: std::time::Duration::from_secs(10),
@@ -153,12 +168,26 @@ impl EmailService {
 
         let client = HttpClient::new(http_config).expect("Failed to create HTTP client");
 
+        // Template loading is best-effort: if templates fail to compile (which
+        // is statically impossible because they are bundled), we fall back to
+        // the legacy inline HTML implementations.
+        let templates = match EmailTemplates::new() {
+            Ok(t) => Some(t),
+            Err(err) => {
+                tracing::error!(error = %err, "failed to load email templates; falling back to inline HTML");
+                None
+            }
+        };
+
         Self {
             client,
             api_key,
             from_email,
             from_name,
             base_url,
+            frontend_url,
+            templates,
+            capture: None,
         }
     }
 
@@ -166,8 +195,52 @@ impl EmailService {
         Self::new(config)
     }
 
+    /// Construct a service for testing. Returns `(service, capture)` where the
+    /// capture records every outgoing email — no HTTP requests are issued.
+    pub fn for_test(config: &AppConfig) -> (Self, TestEmailCapture) {
+        let mut s = Self::new(config);
+        let capture = TestEmailCapture::new();
+        s.capture = Some(capture.clone());
+        (s, capture)
+    }
+
+    /// Whether test-capture mode is enabled (skipping HTTP delivery).
+    pub fn is_capturing(&self) -> bool {
+        self.capture.is_some()
+    }
+
+    /// Borrow the capture handle if enabled. Returns `None` in production mode.
+    pub fn capture(&self) -> Option<&TestEmailCapture> {
+        self.capture.as_ref()
+    }
+
     pub fn is_configured(&self) -> bool {
         !self.api_key.is_empty()
+    }
+
+    /// Return the configured frontend base URL (used to build action URLs).
+    pub fn frontend_url(&self) -> &str {
+        &self.frontend_url
+    }
+
+    /// Return the templates instance if available (used for previews).
+    pub fn templates(&self) -> Option<&EmailTemplates> {
+        self.templates.as_ref()
+    }
+
+    /// Resolve a token into a full URL by joining with the configured frontend URL.
+    ///
+    /// If `path_or_url` already looks like an absolute URL, return it verbatim.
+    fn resolve_url(&self, path_or_url: &str) -> String {
+        if path_or_url.starts_with("http://")
+            || path_or_url.starts_with("https://")
+            || path_or_url.starts_with("//")
+        {
+            return path_or_url.to_string();
+        }
+        let base = self.frontend_url.trim_end_matches('/');
+        let path = path_or_url.trim_start_matches('/');
+        format!("{}/{}", base, path)
     }
 
     /// Send a plain text email
@@ -184,6 +257,44 @@ impl EmailService {
         body: &str,
         html_body: Option<&str>,
     ) -> EmailResult {
+        self.dispatch(to, subject, body, html_body, "").await
+    }
+
+    /// Internal dispatcher that records the originating template when
+    /// capture-mode is enabled. Kept private to avoid leaking the
+    /// `template` argument into the public API.
+    async fn dispatch(
+        &self,
+        to: &str,
+        subject: &str,
+        body: &str,
+        html_body: Option<&str>,
+        template: &str,
+    ) -> EmailResult {
+        // ---- Test capture short-circuit ----
+        // When capture-mode is enabled we record the email and return without
+        // hitting the network. This keeps test suites hermetic and provides
+        // assertions on to/subject/body without mocking the HTTP client.
+        if let Some(capture) = &self.capture {
+            let safe_to = sanitize_for_email(to);
+            let safe_subject = sanitize_for_email(subject);
+            let safe_body = sanitize_for_html_email(body);
+            let html = html_body
+                .map(sanitize_for_html_email)
+                .unwrap_or_else(|| self.wrap_html(&safe_subject, &safe_body));
+            capture.capture(CapturedEmail {
+                to: safe_to.clone(),
+                subject: safe_subject.clone(),
+                template: template.to_string(),
+                text_body: safe_body.clone(),
+                html_body: html,
+                context: serde_json::json!({}),
+                sent_at: Utc::now(),
+            });
+            tracing::debug!(to = %safe_to, subject = %safe_subject, "Email captured (test mode)");
+            return Ok(());
+        }
+
         if !self.is_configured() {
             tracing::warn!(
                 "Email service not configured (missing RESEND_API_KEY), skipping email to {}",
@@ -275,11 +386,148 @@ impl EmailService {
     /// Send account confirmation email
     pub async fn send_confirmation_email(&self, to: &str, confirm_url: &str) -> EmailResult {
         let subject = "Confirm your email address";
-        let body = format!(
-            "Please click the link below to confirm your email address:\n\n{}\n\nThis link will expire in 24 hours.",
-            confirm_url
-        );
-        let html = format!(
+        let resolved_url = self.resolve_url(confirm_url);
+
+        let ctx = serde_json::json!({
+            "user_name": "",
+            "confirm_url": resolved_url,
+            "to_email": to,
+        });
+
+        let (html, text) = self
+            .render_pair(tpl::USER_CONFIRMATION_HTML, tpl::USER_CONFIRMATION_TEXT, &ctx)
+            .unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "confirmation template render failed; using inline fallback");
+                let body = format!(
+                    "Please click the link below to confirm your email address:\n\n{}\n\nThis link will expire in 24 hours.",
+                    resolved_url
+                );
+                let html = self.confirmation_html_fallback(&resolved_url);
+                (html, body)
+            });
+
+        self.dispatch(to, subject, &text, Some(&html), tpl::USER_CONFIRMATION_HTML)
+            .await
+    }
+
+    /// Send password reset email
+    pub async fn send_password_reset_email(&self, to: &str, reset_url: &str) -> EmailResult {
+        let subject = "Reset your password";
+        let resolved_url = self.resolve_url(reset_url);
+
+        let ctx = serde_json::json!({
+            "user_name": "",
+            "reset_url": resolved_url,
+            "to_email": to,
+        });
+
+        let (html, text) = self
+            .render_pair(tpl::USER_PASSWORD_RESET_HTML, tpl::USER_PASSWORD_RESET_TEXT, &ctx)
+            .unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "password reset template render failed; using inline fallback");
+                let body = format!(
+                    "Click the link below to reset your password:\n\n{}\n\nThis link will expire in 1 hour.",
+                    resolved_url
+                );
+                let html = self.password_reset_html_fallback(&resolved_url);
+                (html, body)
+            });
+
+        self.dispatch(to, subject, &text, Some(&html), tpl::USER_PASSWORD_RESET_HTML)
+            .await
+    }
+
+    /// Send 2FA setup email
+    pub async fn send_2fa_setup_email(
+        &self,
+        to: &str,
+        secret: &str,
+        qr_code_url: &str,
+        backup_codes: &[String],
+    ) -> EmailResult {
+        let subject = "Your 2FA setup codes";
+        let backup_codes_text = backup_codes.join(", ");
+
+        let ctx = serde_json::json!({
+            "user_name": "",
+            "secret": secret,
+            "qr_code_url": qr_code_url,
+            "backup_codes_text": backup_codes_text,
+            "to_email": to,
+        });
+
+        let (html, text) = self
+            .render_pair(tpl::USER_TWO_FACTOR_SETUP_HTML, tpl::USER_TWO_FACTOR_SETUP_TEXT, &ctx)
+            .unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "2fa setup template render failed; using inline fallback");
+                let body = format!(
+                    "Your 2FA secret: {}\n\nQR Code: {}\n\nBackup codes (save these!):\n{}",
+                    secret, qr_code_url, backup_codes_text
+                );
+                let html = self.two_factor_setup_html_fallback(secret, qr_code_url, &backup_codes_text);
+                (html, body)
+            });
+
+        self.dispatch(to, subject, &text, Some(&html), tpl::USER_TWO_FACTOR_SETUP_HTML)
+            .await
+    }
+
+    /// Send password changed notification
+    pub async fn send_password_changed_notification(&self, to: &str) -> EmailResult {
+        let subject = "Your password has been changed";
+
+        let ctx = serde_json::json!({
+            "user_name": "",
+            "to_email": to,
+        });
+
+        let (html, text) = self
+            .render_pair(tpl::USER_PASSWORD_CHANGED_HTML, tpl::USER_PASSWORD_CHANGED_TEXT, &ctx)
+            .unwrap_or_else(|err| {
+                tracing::warn!(error = %err, "password changed template render failed; using inline fallback");
+                let body = "Your password was successfully changed. If you didn't make this change, please contact support immediately.";
+                let html = self.password_changed_html_fallback();
+                (html, body.to_string())
+            });
+
+        self.dispatch(to, subject, &text, Some(&html), tpl::USER_PASSWORD_CHANGED_HTML)
+            .await
+    }
+
+    /// Alias for backward compatibility
+    pub async fn send_password_reset(&self, to: &str, token: &str) -> EmailResult {
+        let reset_url = format!("/auth/reset?token={}", token);
+        self.send_password_reset_email(to, &reset_url).await
+    }
+
+    /// Alias for backward compatibility
+    pub async fn send_confirmation(&self, to: &str, token: &str) -> EmailResult {
+        let confirm_url = format!("/auth/confirm?token={}", token);
+        self.send_confirmation_email(to, &confirm_url).await
+    }
+
+    /// Render an HTML+text pair from templates using the mailer layout.
+    fn render_pair(
+        &self,
+        html_template: &str,
+        text_template: &str,
+        ctx: &serde_json::Value,
+    ) -> Result<(String, String), EmailError> {
+        let templates = self
+            .templates
+            .as_ref()
+            .ok_or(EmailError::Template(EmailTemplateError::NotFound(
+                "templates not loaded".to_string(),
+            )))?;
+        let html = templates.render_html_with_layout(html_template, ctx)?;
+        let text = templates.render(text_template, ctx)?;
+        Ok((html, text))
+    }
+
+    // ---- Inline HTML fallbacks (used when templates are unavailable) ----
+
+    fn confirmation_html_fallback(&self, confirm_url: &str) -> String {
+        format!(
             r#"<!DOCTYPE html>
 <html>
 <head>
@@ -305,20 +553,11 @@ impl EmailService {
 </body>
 </html>"#,
             confirm_url, confirm_url, confirm_url
-        );
-
-        self.send_email_with_html(to, subject, &body, Some(&html))
-            .await
+        )
     }
 
-    /// Send password reset email
-    pub async fn send_password_reset_email(&self, to: &str, reset_url: &str) -> EmailResult {
-        let subject = "Reset your password";
-        let body = format!(
-            "Click the link below to reset your password:\n\n{}\n\nThis link will expire in 1 hour.",
-            reset_url
-        );
-        let html = format!(
+    fn password_reset_html_fallback(&self, reset_url: &str) -> String {
+        format!(
             r#"<!DOCTYPE html>
 <html>
 <head>
@@ -345,27 +584,16 @@ impl EmailService {
 </body>
 </html>"#,
             reset_url, reset_url, reset_url
-        );
-
-        self.send_email_with_html(to, subject, &body, Some(&html))
-            .await
+        )
     }
 
-    /// Send 2FA setup email
-    pub async fn send_2fa_setup_email(
+    fn two_factor_setup_html_fallback(
         &self,
-        to: &str,
         secret: &str,
         qr_code_url: &str,
-        backup_codes: &[String],
-    ) -> EmailResult {
-        let subject = "Your 2FA setup codes";
-        let backup_codes_text = backup_codes.join(", ");
-        let body = format!(
-            "Your 2FA secret: {}\n\nQR Code: {}\n\nBackup codes (save these!):\n{}",
-            secret, qr_code_url, backup_codes_text
-        );
-        let html = format!(
+        backup_codes_text: &str,
+    ) -> String {
+        format!(
             r#"<!DOCTYPE html>
 <html>
 <head>
@@ -392,17 +620,11 @@ impl EmailService {
 </body>
 </html>"#,
             secret, qr_code_url, qr_code_url, backup_codes_text
-        );
-
-        self.send_email_with_html(to, subject, &body, Some(&html))
-            .await
+        )
     }
 
-    /// Send password changed notification
-    pub async fn send_password_changed_notification(&self, to: &str) -> EmailResult {
-        let subject = "Your password has been changed";
-        let body = "Your password was successfully changed. If you didn't make this change, please contact support immediately.";
-        let html = r#"<!DOCTYPE html>
+    fn password_changed_html_fallback(&self) -> String {
+        r#"<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
@@ -419,22 +641,8 @@ impl EmailService {
         This email was sent by Boilerplate App
     </p>
 </body>
-</html>"#;
-
-        self.send_email_with_html(to, subject, body, Some(html))
-            .await
-    }
-
-    /// Alias for backward compatibility
-    pub async fn send_password_reset(&self, to: &str, token: &str) -> EmailResult {
-        let reset_url = format!("/auth/reset?token={}", token);
-        self.send_password_reset_email(to, &reset_url).await
-    }
-
-    /// Alias for backward compatibility
-    pub async fn send_confirmation(&self, to: &str, token: &str) -> EmailResult {
-        let confirm_url = format!("/auth/confirm?token={}", token);
-        self.send_confirmation_email(to, &confirm_url).await
+</html>"#
+            .to_string()
     }
 }
 
@@ -472,5 +680,29 @@ mod tests {
         config.resend_api_key = "test_key".to_string();
         let service = EmailService::new(&config);
         assert!(service.is_configured());
+    }
+
+    #[test]
+    fn templates_load_successfully() {
+        let config = test_config();
+        let service = EmailService::new(&config);
+        assert!(service.templates().is_some(), "templates should load");
+    }
+
+    #[test]
+    fn resolve_url_joins_relative_paths() {
+        let config = test_config();
+        let service = EmailService::new(&config);
+        let url = service.resolve_url("/auth/confirm?token=abc");
+        assert!(url.starts_with("http://localhost:3000"));
+        assert!(url.contains("/auth/confirm?token=abc"));
+    }
+
+    #[test]
+    fn resolve_url_passes_through_absolute_urls() {
+        let config = test_config();
+        let service = EmailService::new(&config);
+        let url = service.resolve_url("https://example.com/x");
+        assert_eq!(url, "https://example.com/x");
     }
 }

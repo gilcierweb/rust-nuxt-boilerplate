@@ -1,0 +1,17 @@
+Olá {{ user_name | default(value="there") }},
+
+Sua autenticação de dois fatores (2FA) foi configurada com sucesso.
+
+Segredo (Secret):
+{{ secret }}
+
+QR Code:
+{{ qr_code_url }}
+
+Códigos de Backup (salve em local seguro!):
+{{ backup_codes_text }}
+
+Atenção: estes códigos são exibidos apenas uma vez. Guarde-os em um gerenciador de senhas.
+
+---
+{{ app_name }}

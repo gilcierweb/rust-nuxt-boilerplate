@@ -1,0 +1,18 @@
+<p>Olá <strong>{{ user_name | default(value="there") }}</strong>,</p>
+
+<p>Sua autenticação de dois fatores (2FA) foi configurada com sucesso. Aqui estão os detalhes:</p>
+
+<h2 style="font-size: 18px; margin-top: 24px;">Segredo (Secret)</h2>
+<div class="code-block"><strong>Secret:</strong> {{ secret }}</div>
+
+<h2 style="font-size: 18px; margin-top: 24px;">QR Code</h2>
+<p>Escaneie este QR code usando seu aplicativo autenticador:</p>
+<p><a href="{{ qr_code_url }}">{{ qr_code_url }}</a></p>
+
+<h2 style="font-size: 18px; margin-top: 24px;">Códigos de Backup (salve em local seguro!)</h2>
+<div class="alert">
+    <p style="font-family: monospace; word-break: break-all; margin: 0;">{{ backup_codes_text }}</p>
+</div>
+<div class="alert">
+    <strong>Atenção:</strong> estes códigos são exibidos apenas uma vez. Guarde-os em um gerenciador de senhas.
+</div>

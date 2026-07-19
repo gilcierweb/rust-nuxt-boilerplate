@@ -114,8 +114,13 @@ pub mod mocks {
             std::time::Duration::from_secs(60),
         ));
 
+        let config = mock_app_config();
+        let email_service = Arc::new(
+            crate::services::email_service::EmailService::new(&config),
+        );
+
         AppContainer {
-            config: Arc::new(mock_app_config()),
+            config: Arc::new(config),
             cache,
             users: Arc::new(MockIUserRepository::new()),
             profiles: Arc::new(MockIProfileRepository::new()),
@@ -126,6 +131,7 @@ pub mod mocks {
             access_token_blacklist: Arc::new(
                 crate::repositories::access_token_blacklist::AccessTokenBlacklist::new(pool),
             ),
+            email_service,
         }
     }
 

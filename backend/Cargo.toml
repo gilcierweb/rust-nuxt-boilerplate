@@ -107,6 +107,11 @@ reqwest-middleware = { version = "0.3" }
 reqwest-retry = { version = "0.3" }
 retry-policies = "0.3"
 
+# -- Template engine for email mailers
+tera = "1.20"
+# -- Synchronization primitives for test capture and concurrent helpers
+parking_lot = "0.12"
+
 [dev-dependencies]
 actix-rt = "2.9"
 mockall = "0.12"

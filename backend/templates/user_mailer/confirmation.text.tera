@@ -1,0 +1,9 @@
+Olá {{ user_name | default(value="there") }},
+
+Para começar, por favor confirme seu endereço de email acessando:
+{{ confirm_url }}
+
+Este link expira em 24 horas. Se você não criou esta conta, pode ignorar este email.
+
+---
+{{ app_name }}

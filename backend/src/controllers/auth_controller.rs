@@ -11,7 +11,6 @@ use crate::{
     services::auth_service::{
         hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password,
     },
-    services::email_service::EmailService,
     services::token_service::hash_token,
     utils::validation::first_validation_error_message,
 };
@@ -170,7 +169,7 @@ pub async fn register(
         .await
         .map_err(AppError::Database)?;
 
-    let email_service = EmailService::from_config(container.config.as_ref());
+    let email_service = container.email_service.clone();
     if let Err(error) = email_service
         .send_confirmation(&body.email, &confirmation_token)
         .await
@@ -773,7 +772,7 @@ pub async fn recover_password(
 
     // Always attempt to send email (will fail silently for non-existent users)
     // This ensures the same timing regardless of user existence
-    let email_service = EmailService::from_config(container.config.as_ref());
+    let email_service = container.email_service.clone();
     if let Err(error) = email_service.send_password_reset(&body.email, &token).await {
         tracing::debug!("password reset email delivery skipped or failed: {}", error);
     }

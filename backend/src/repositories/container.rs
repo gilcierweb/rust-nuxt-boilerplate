@@ -13,6 +13,7 @@ use crate::repositories::refresh_tokens_repository::{
 use crate::repositories::roles_repository::{IRoleRepository, RolesRepository};
 use crate::repositories::user_roles_repository::{IUserRoleRepository, UserRolesRepository};
 use crate::repositories::users_repository::{IUserRepository, UsersRepository};
+use crate::services::email_service::EmailService;
 
 pub struct AppContainer {
     pub config: Arc<AppConfig>,
@@ -24,6 +25,10 @@ pub struct AppContainer {
     pub roles: Arc<dyn IRoleRepository>,
     pub domain_audit_logs: Arc<dyn IAuditLogRepository>,
     pub access_token_blacklist: Arc<AccessTokenBlacklist>,
+    /// Shared email service (Rails-style mailer sender). Cheap to clone via
+    /// `Arc`; reuses the underlying reqwest client and template engine across
+    /// requests instead of rebuilding them per handler invocation.
+    pub email_service: Arc<EmailService>,
 }
 
 impl AppContainer {
@@ -32,6 +37,7 @@ impl AppContainer {
             redis_pool.clone(),
             std::time::Duration::from_secs(3600),
         ));
+        let email_service = Arc::new(EmailService::new(&config));
 
         Self {
             config: Arc::new(config),
@@ -43,6 +49,7 @@ impl AppContainer {
             roles: Arc::new(RolesRepository::new(pool.clone())),
             domain_audit_logs: Arc::new(AuditLogsRepository::new(pool.clone())),
             access_token_blacklist: Arc::new(AccessTokenBlacklist::new(redis_pool)),
+            email_service,
         }
     }
 }
