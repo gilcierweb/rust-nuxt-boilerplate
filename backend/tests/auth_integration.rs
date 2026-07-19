@@ -29,6 +29,7 @@ fn make_claims(sub: UuidType, profile_id: UuidType) -> Claims {
         token_use: ACCESS_TOKEN_USE.to_string(),
         exp: exp.timestamp() as usize,
         iat: now.timestamp() as usize,
+        jti: Some(uuid::Uuid::new_v4().to_string()),
     }
 }
 

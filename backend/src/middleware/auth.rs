@@ -19,6 +19,8 @@ pub struct Claims {
     pub token_use: String,
     pub exp: usize,
     pub iat: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub jti: Option<String>,
 }
 
 impl Claims {
@@ -255,6 +257,7 @@ pub fn create_token_with_kid(
     let now = Utc::now();
     let exp = (now + chrono::Duration::seconds(expiry_secs)).timestamp() as usize;
     let iat = now.timestamp() as usize;
+    let jti = uuid::Uuid::new_v4().to_string();
 
     let claims = Claims {
         sub: user_id,
@@ -263,6 +266,7 @@ pub fn create_token_with_kid(
         token_use: token_use.to_string(),
         exp,
         iat,
+        jti: Some(jti),
     };
 
     let mut header = jsonwebtoken::Header::default();
@@ -490,6 +494,7 @@ mod tests {
             token_use: "access".to_string(),
             exp: 0,
             iat: 0,
+            jti: None,
         };
         assert!(claims.is_admin());
         assert!(!claims.has_role("operator"));

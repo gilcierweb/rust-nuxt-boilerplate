@@ -17,6 +17,7 @@ pub struct Claims {
     pub role: i32,
     pub exp: usize,
     pub iat: usize,
+    pub jti: Option<String>,
 }
 
 pub fn create_token(
@@ -33,6 +34,7 @@ pub fn create_token(
         role: role_claim,
         exp: now + expiry_secs as usize,
         iat: now,
+        jti: Some(uuid::Uuid::new_v4().to_string()),
     };
     let token = encode(
         &Header::default(),
