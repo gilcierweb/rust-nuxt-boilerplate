@@ -84,7 +84,7 @@ security: {
         "img-src": ["'self'", "data:", "blob:"],
         "font-src": ["'self'", "fonts.gstatic.com", "data:"],
         "style-src": ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
-        "script-src": ["'self'"],
+        "script-src": ["'self'", "'unsafe-inline'"],
         "script-src-attr": ["'none'"],
       },
     },

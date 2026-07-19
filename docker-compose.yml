@@ -33,18 +33,13 @@ services:
     image: redis:7-alpine
     container_name: rust_nuxt_boilerplate_redis
     restart: unless-stopped
-    command: >
-      redis-server
-      ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
-      --maxmemory 512mb
-      --maxmemory-policy allkeys-lru
-      --save 60 1000
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --save 60 1000
     volumes:
       - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", ${REDIS_PASSWORD:+-a ${REDIS_PASSWORD}}, "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -62,8 +57,7 @@ services:
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-rust_nuxt_boilerplate}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rust_nuxt_boilerplate_dev}
-      ${REDIS_PASSWORD:+REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379}
-      ${REDIS_PASSWORD:+REDIS_PASSWORD=${REDIS_PASSWORD}}
+      REDIS_URL: redis://redis:6379
     ports:
       - "8080:8080"
     volumes:
