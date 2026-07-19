@@ -6,7 +6,12 @@ version: "3.9"
 
 services:
 
-  # -- PostgreSQL 
+  # -- PostgreSQL
+  # Internal service. In production (no override file loaded), postgres is NOT
+  # exposed on the host — only reachable via the `rust_nuxt_boilerplate_net`
+  # Docker network on port 5432. For local development, use
+  # `docker-compose.override.yml` which adds host port mappings.
+  # See SECURITY_AUDIT.md I1.
   postgres:
     image: postgres:16-alpine
     container_name: rust_nuxt_boilerplate_postgres
@@ -18,8 +23,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./backend/migrations:/docker-entrypoint-initdb.d:ro
-    ports:
-      - "5432:5432"
+    # NO host port mapping by default. Override file (dev only) adds it.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-rust_nuxt_boilerplate}"]
       interval: 10s
@@ -29,6 +33,7 @@ services:
       - rust_nuxt_boilerplate_net
 
   # -- Redis
+  # Internal service. See postgres note above. SECURITY_AUDIT.md I1.
   redis:
     image: redis:7-alpine
     container_name: rust_nuxt_boilerplate_redis
@@ -46,8 +51,7 @@ services:
       --save 60 1000
     volumes:
       - redis_data:/data
-    ports:
-      - "6379:6379"
+    # NO host port mapping by default. Override file (dev only) adds it.
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s

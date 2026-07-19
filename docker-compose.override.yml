@@ -1,0 +1,22 @@
+# Development override for docker-compose.yml
+#
+# Merged AUTOMATICALLY when you run `docker compose up` (no flag needed).
+# Purpose: Expose internal services (postgres, redis) to the host for local dev tools
+# (psql, redis-cli, GUI tools like DBeaver, TablePlus, etc.).
+#
+# In PRODUCTION, do NOT load this override — the base `docker-compose.yml`
+# already keeps postgres/redis internal-only (no host port mapping).
+# See SECURITY_AUDIT.md I1.
+
+services:
+  # -- PostgreSQL
+  # Map container port 5432 to host port 5432 for dev tooling (psql, DBeaver).
+  postgres:
+    ports:
+      - "5432:5432"
+
+  # -- Redis
+  # Map container port 6379 to host port 6379 for dev tooling (redis-cli, RDM).
+  redis:
+    ports:
+      - "6379:6379"
