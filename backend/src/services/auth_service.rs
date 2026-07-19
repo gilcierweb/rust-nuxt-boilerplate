@@ -37,6 +37,7 @@ pub fn hash_password(password: &str, config: &AppConfig) -> Result<String, AppEr
 }
 
 /// Verify a plaintext password against an Argon2id hash.
+/// Uses the parameters encoded in the hash itself.
 pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
     let parsed = PasswordHash::new(hash)
         .map_err(|e| AppError::Internal(format!("Password parse error: {}", e)))?;
