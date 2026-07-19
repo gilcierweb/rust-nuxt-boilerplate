@@ -106,16 +106,34 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
     async fn find_valid_by_token(
         &self,
         plaintext_token: &str,
+        hash_key: &str,
     ) -> diesel::QueryResult<Option<RefreshToken>> {
         use crate::db::schema::refresh_tokens::dsl::*;
-        use crate::services::token_service::verify_token_hash;
+        use crate::services::token_service::hash_token;
         use chrono::Utc;
 
         let token = plaintext_token.to_string();
+        let key = hash_key.to_string();
         self.base
             .run(move |conn| {
                 Box::pin(async move {
                     let now = Utc::now();
+
+                    // Fast path: HMAC tokens are deterministic — compute hash and lookup directly
+                    let hmac_hash = hash_token(&token, &key);
+                    if let Ok(Some(found)) = refresh_tokens_table::table
+                        .filter(revoked_at.is_null())
+                        .filter(expires_at.gt(now))
+                        .filter(token_hash.eq(&hmac_hash))
+                        .select(RefreshToken::as_select())
+                        .first::<RefreshToken>(conn)
+                        .await
+                        .optional()
+                    {
+                        return Ok(Some(found));
+                    }
+
+                    // Slow path: legacy Argon2id tokens — iterate and verify
                     let candidates: Vec<RefreshToken> = refresh_tokens_table::table
                         .filter(revoked_at.is_null())
                         .filter(expires_at.gt(now))
@@ -123,9 +141,10 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                         .load::<RefreshToken>(conn)
                         .await?;
 
+                    use crate::services::token_service::verify_token_hash;
                     Ok(candidates
                         .into_iter()
-                        .find(|t| verify_token_hash(&token, &t.token_hash)))
+                        .find(|t| verify_token_hash(&token, &t.token_hash, &key)))
                 })
             })
             .await
@@ -170,6 +189,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         let plaintext = old_token_plaintext.to_string();
         let expires_secs = expires_in_secs;
         let salt = hash_salt.to_string();
+        let key = hash_salt.to_string();
 
         self.base
             .run_transaction(move |conn| {
@@ -186,7 +206,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
 
                     let existing_token = candidates
                         .into_iter()
-                        .find(|t| verify_token_hash(&plaintext, &t.token_hash));
+                        .find(|t| verify_token_hash(&plaintext, &t.token_hash, &key));
 
                     let existing_token = match existing_token {
                         Some(t) => t,

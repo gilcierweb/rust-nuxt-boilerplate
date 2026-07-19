@@ -769,7 +769,7 @@ pub async fn logout(
     for refresh_token in extract_refresh_cookies(&req) {
         if let Ok(Some(token)) = container
             .refresh_tokens
-            .find_valid_by_token(&refresh_token)
+            .find_valid_by_token(&refresh_token, &container.config.refresh_token_hash_salt)
             .await
         {
             container
@@ -1387,7 +1387,7 @@ async fn find_valid_refresh_token(
     for refresh_token in refresh_tokens {
         let stored = match container
             .refresh_tokens
-            .find_valid_by_token(&refresh_token)
+            .find_valid_by_token(&refresh_token, &container.config.refresh_token_hash_salt)
             .await
         {
             Ok(Some(token)) => token,
@@ -2020,9 +2020,9 @@ mod tests {
         let refresh_token_plain_owned = refresh_token_plain.to_string();
         mock_refresh_tokens
             .expect_find_valid_by_token()
-            .withf(move |value| value == refresh_token_plain_owned)
+            .withf(move |value, _| value == refresh_token_plain_owned)
             .times(1)
-            .returning(move |_| {
+            .returning(move |_, _| {
                 Ok(Some(RefreshToken {
                     id: Uuid::new_v4(),
                     user_id: refresh_user_id,

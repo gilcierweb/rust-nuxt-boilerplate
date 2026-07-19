@@ -371,29 +371,29 @@ mod tests {
     fn test_hash_token_consistency() {
         use super::super::token_service::verify_token_hash;
         let token = "test-token-123";
-        let salt = "test_salt";
-        let hash1 = hash_token(token, salt);
-        let hash2 = hash_token(token, salt);
-        // Argon2id uses random salt, so hashes are different each time
-        assert_ne!(hash1, hash2);
-        // But both should verify correctly with the original token
-        assert!(verify_token_hash(token, &hash1));
-        assert!(verify_token_hash(token, &hash2));
+        let key = "test_key";
+        let hash1 = hash_token(token, key);
+        let hash2 = hash_token(token, key);
+        // HMAC-SHA256 is deterministic: same input + same key = same hash
+        assert_eq!(hash1, hash2);
+        // Both should verify correctly with the original token and key
+        assert!(verify_token_hash(token, &hash1, key));
+        assert!(verify_token_hash(token, &hash2, key));
     }
 
     #[test]
     fn test_hash_token_different_inputs() {
-        let salt = "test_salt";
-        let hash1 = hash_token("token-1", salt);
-        let hash2 = hash_token("token-2", salt);
+        let key = "test_key";
+        let hash1 = hash_token("token-1", key);
+        let hash2 = hash_token("token-2", key);
         assert_ne!(hash1, hash2);
     }
 
     #[test]
-    fn test_hash_token_different_salts() {
+    fn test_hash_token_different_keys() {
         let token = "test-token-123";
-        let hash1 = hash_token(token, "salt1");
-        let hash2 = hash_token(token, "salt2");
+        let hash1 = hash_token(token, "key1");
+        let hash2 = hash_token(token, "key2");
         assert_ne!(hash1, hash2);
     }
 }
