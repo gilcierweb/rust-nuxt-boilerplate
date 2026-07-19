@@ -1,5 +1,6 @@
 use aes_gcm::aead::{Aead, KeyInit};
 use aes_gcm::{Aes256Gcm, Nonce};
+use rand::rngs::OsRng;
 use rand::RngCore;
 
 use crate::errors::{AppError, AppResult};
@@ -9,7 +10,7 @@ pub fn encrypt(data: &[u8], key: &[u8]) -> AppResult<Vec<u8>> {
         .map_err(|_| AppError::Internal("invalid encryption key length".to_string()))?;
 
     let mut nonce_bytes = [0u8; 12];
-    rand::thread_rng().fill_bytes(&mut nonce_bytes);
+    OsRng.fill_bytes(&mut nonce_bytes);
 
     let nonce = Nonce::from(nonce_bytes);
     let ciphertext = cipher
