@@ -972,12 +972,9 @@ pub async fn enable_2fa(
     let email = security.decrypt_user_email(&user_data)?;
     let qr_code_url = format!(
         "otpauth://totp/{}:{}?secret={}&issuer={}",
-        container.config.totp_issuer,
-        email,
-        secret,
-        container.config.totp_issuer
+        container.config.totp_issuer, email, secret, container.config.totp_issuer
     );
-    
+
     let email_service = container.email_service.clone();
     if let Err(error) = email_service
         .send_2fa_setup_email(&email, secret, &qr_code_url, &backup_codes)

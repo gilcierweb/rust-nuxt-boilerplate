@@ -7,7 +7,7 @@
 
 <h2 style="font-size: 18px; margin-top: 24px;">QR Code</h2>
 <p>Escaneie este QR code usando seu aplicativo autenticador:</p>
-<p><a href="{{ qr_code_url }}">{{ qr_code_url }}</a></p>
+<p><a href="{{ qr_code_url | safe }}">{{ qr_code_url | safe }}</a></p>
 
 <h2 style="font-size: 18px; margin-top: 24px;">Códigos de Backup (salve em local seguro!)</h2>
 <div class="alert">

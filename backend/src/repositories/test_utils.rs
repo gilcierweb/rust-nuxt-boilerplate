@@ -115,9 +115,7 @@ pub mod mocks {
         ));
 
         let config = mock_app_config();
-        let email_service = Arc::new(
-            crate::services::email_service::EmailService::new(&config),
-        );
+        let email_service = Arc::new(crate::services::email_service::EmailService::new(&config));
 
         AppContainer {
             config: Arc::new(config),

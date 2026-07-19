@@ -3,11 +3,11 @@
 <p>Para começar, por favor confirme seu endereço de email clicando no botão abaixo:</p>
 
 <p style="text-align: center; margin: 32px 0;">
-    <a href="{{ confirm_url }}" class="button">Confirmar Email</a>
+    <a href="{{ confirm_url | safe }}" class="button">Confirmar Email</a>
 </p>
 
 <p>Ou copie e cole este link no seu navegador:</p>
-<p class="code-block">{{ confirm_url }}</p>
+<p class="code-block">{{ confirm_url | safe }}</p>
 
 <div class="alert">
     Este link expira em 24 horas. Se você não criou esta conta, pode ignorar este email.

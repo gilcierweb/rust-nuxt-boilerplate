@@ -176,7 +176,7 @@ impl EmailService {
             Err(err) => {
                 tracing::error!(error = %err, "failed to load email templates; falling back to inline HTML");
                 None
-            }
+            },
         };
 
         Self {
@@ -433,8 +433,14 @@ impl EmailService {
                 (html, body)
             });
 
-        self.dispatch(to, subject, &text, Some(&html), tpl::USER_PASSWORD_RESET_HTML)
-            .await
+        self.dispatch(
+            to,
+            subject,
+            &text,
+            Some(&html),
+            tpl::USER_PASSWORD_RESET_HTML,
+        )
+        .await
     }
 
     /// Send 2FA setup email
@@ -468,8 +474,14 @@ impl EmailService {
                 (html, body)
             });
 
-        self.dispatch(to, subject, &text, Some(&html), tpl::USER_TWO_FACTOR_SETUP_HTML)
-            .await
+        self.dispatch(
+            to,
+            subject,
+            &text,
+            Some(&html),
+            tpl::USER_TWO_FACTOR_SETUP_HTML,
+        )
+        .await
     }
 
     /// Send password changed notification
@@ -490,8 +502,14 @@ impl EmailService {
                 (html, body.to_string())
             });
 
-        self.dispatch(to, subject, &text, Some(&html), tpl::USER_PASSWORD_CHANGED_HTML)
-            .await
+        self.dispatch(
+            to,
+            subject,
+            &text,
+            Some(&html),
+            tpl::USER_PASSWORD_CHANGED_HTML,
+        )
+        .await
     }
 
     /// Alias for backward compatibility
@@ -513,12 +531,12 @@ impl EmailService {
         text_template: &str,
         ctx: &serde_json::Value,
     ) -> Result<(String, String), EmailError> {
-        let templates = self
-            .templates
-            .as_ref()
-            .ok_or(EmailError::Template(EmailTemplateError::NotFound(
-                "templates not loaded".to_string(),
-            )))?;
+        let templates =
+            self.templates
+                .as_ref()
+                .ok_or(EmailError::Template(EmailTemplateError::NotFound(
+                    "templates not loaded".to_string(),
+                )))?;
         let html = templates.render_html_with_layout(html_template, ctx)?;
         let text = templates.render(text_template, ctx)?;
         Ok((html, text))
