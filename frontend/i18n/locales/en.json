@@ -28,7 +28,8 @@
     },
     "table": {
       "actions": "Actions"
-    }
+    },
+    "appName": "Boilerplate Rust Nuxt"
   },
   "auth": {
     "login": {
@@ -3240,7 +3241,7 @@
         "privacy": "Privacy",
         "contact": "Contact"
       },
-      "copyright": "\u00a9 2024 BuildTrack Sistemas T\u00e9cnicos S.A. ALL RIGHTS RESERVED.",
+      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. ALL RIGHTS RESERVED.",
       "cnpj": "CNPJ {number}",
       "location": "{city}, {state}"
     }
