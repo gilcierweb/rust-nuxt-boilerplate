@@ -19,8 +19,13 @@ const AUTH_ONLY_PAGES = [
   '/auth/confirm',
 ]
 
+function stripLocalePrefix(path: string): string {
+  return path.replace(/^\/[a-z]{2}(-[A-Z]{2})?(?=\/|$)/, '') || '/'
+}
+
 function matchesRoute(path: string, route: string) {
-  return path === route || path.startsWith(`${route}/`)
+  const normalized = stripLocalePrefix(path)
+  return normalized === route || normalized.startsWith(`${route}/`)
 }
 
 export function isPublicRoute(path: string) {
