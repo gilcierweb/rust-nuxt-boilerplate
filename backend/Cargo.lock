@@ -672,6 +672,7 @@ dependencies = [
  "sha2 0.10.9",
  "subtle",
  "sysinfo",
+ "tempfile",
  "tera",
  "thiserror 1.0.69",
  "tokio",

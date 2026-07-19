@@ -2,6 +2,8 @@ use actix_multipart::Multipart;
 use actix_web::{HttpResponse, post, web};
 use futures_util::StreamExt;
 use serde::Serialize;
+use std::io::Write;
+use tempfile::NamedTempFile;
 
 use crate::{
     config::AppConfig,
@@ -105,23 +107,28 @@ pub async fn upload_file(
             .map(|m| m.to_string())
             .unwrap_or_else(|| "application/octet-stream".to_string());
 
+        // Create a temp file to stream the upload to
+        let mut temp_file = NamedTempFile::new().map_err(|e| AppError::Internal(e.to_string()))?;
         let mut total_size: u64 = 0;
         let mut prefix_buf = Vec::with_capacity(MAGIC_BYTES_PREFIX);
-        let mut all_data = Vec::new();
 
+        // Stream the file to disk while capturing the first bytes for magic byte detection
         while let Some(chunk) = field.next().await {
             let chunk = chunk.map_err(|e| AppError::BadRequest(e.to_string()))?;
             total_size += chunk.len() as u64;
 
+            // Capture prefix for magic byte detection
             if prefix_buf.len() < MAGIC_BYTES_PREFIX {
                 let remaining = MAGIC_BYTES_PREFIX - prefix_buf.len();
                 let take = chunk.len().min(remaining);
                 prefix_buf.extend_from_slice(&chunk[..take]);
             }
 
-            all_data.extend_from_slice(&chunk);
+            // Write chunk to temp file
+            temp_file.write_all(&chunk).map_err(|e| AppError::Internal(e.to_string()))?;
         }
 
+        // Validate the upload using the captured prefix
         let validated = validate_upload(
             &original_filename,
             &declared_mime,
@@ -130,6 +137,11 @@ pub async fn upload_file(
             &limits,
         )
         .map_err(file_validation_error_to_app)?;
+
+        // At this point, the file is validated and stored in temp_file.
+        // In a real implementation, you would move the temp file to permanent storage
+        // (S3, Bunny.net, Backblaze B2, etc.) here.
+        // For now, we just return the validation info.
 
         return Ok(HttpResponse::Ok().json(UploadResponse::from(validated)));
     }

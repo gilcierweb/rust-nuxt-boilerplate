@@ -109,6 +109,8 @@ retry-policies = "0.3"
 
 # -- Template engine for email mailers
 tera = "1.20"
+# -- Temp file handling for streaming uploads
+tempfile = "3.10"
 # -- Synchronization primitives for test capture and concurrent helpers
 parking_lot = "0.12"
 
