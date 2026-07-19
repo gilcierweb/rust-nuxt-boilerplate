@@ -11,6 +11,21 @@ pub mod mocks {
     use crate::services::cache_service::CacheManager;
     use std::sync::Arc;
 
+    /// Create a dummy DB pool for fields that require a concrete type (e.g. users_tx).
+    /// The pool is never actually used in mock tests — it only satisfies the type system.
+    fn dummy_db_pool() -> crate::db::database::DBPool {
+        use deadpool::managed::Pool;
+        use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+        let manager = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
+            "postgres://localhost:5432/dummy",
+        );
+        Pool::builder(manager)
+            .max_size(1)
+            .runtime(deadpool::Runtime::Tokio1)
+            .build()
+            .expect("Failed to create dummy pool")
+    }
+
     /// Generate a deterministic base64-encoded key using a seeded RNG.
     /// This ensures tests are reproducible while still using realistic key formats.
     fn generate_deterministic_base64_key(byte_length: usize, seed: u64) -> String {
@@ -127,7 +142,7 @@ pub mod mocks {
             config: Arc::new(config),
             cache,
             users: users_repo.clone(),
-            users_tx: users_repo.clone(),
+            users_tx: Arc::new(UsersRepository::new(dummy_db_pool())),
             profiles: Arc::new(MockIProfileRepository::new()),
             refresh_tokens: Arc::new(MockIRefreshTokenRepository::new()),
             user_roles: Arc::new(MockIUserRoleRepository::new()),
@@ -139,31 +154,29 @@ pub mod mocks {
             email_service,
         }
     }
-}
-}
 
-/// Create a mock container with pre-configured user repository expectations.
-pub fn mock_container_with_user(user: crate::models::user::User) -> AppContainer {
-    let mut container = mock_container();
+    /// Create a mock container with pre-configured user repository expectations.
+    pub fn mock_container_with_user(user: crate::models::user::User) -> AppContainer {
+        let mut container = mock_container();
 
-    let email_blind_index = user.email_blind_index.clone();
-    let user_id = user.id;
-    let user_for_find = user.clone();
-    let user_for_email = user.clone();
+        let email_blind_index = user.email_blind_index.clone();
+        let user_id = user.id;
+        let user_for_find = user.clone();
+        let user_for_email = user.clone();
 
-    let mut mock_user_repo = MockIUserRepository::new();
-    mock_user_repo
-        .expect_find()
-        .withf(move |id| *id == user_id)
-        .times(1)
-        .returning(move |_| Ok(user_for_find.clone()));
-    mock_user_repo
-        .expect_find_by_email()
-        .withf(move |blind_index| blind_index == email_blind_index)
-        .times(1)
-        .returning(move |_| Ok(Some(user_for_email.clone())));
+        let mut mock_user_repo = MockIUserRepository::new();
+        mock_user_repo
+            .expect_find()
+            .withf(move |id| *id == user_id)
+            .times(1)
+            .returning(move |_| Ok(user_for_find.clone()));
+        mock_user_repo
+            .expect_find_by_email()
+            .withf(move |blind_index| blind_index == email_blind_index)
+            .times(1)
+            .returning(move |_| Ok(Some(user_for_email.clone())));
 
-    container.users = Arc::new(mock_user_repo);
-    container
-}
+        container.users = Arc::new(mock_user_repo);
+        container
+    }
 }

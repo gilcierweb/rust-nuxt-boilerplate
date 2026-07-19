@@ -7,6 +7,7 @@ use actix_web::{
 };
 use actix_web_grants::authorities::AttachAuthorities;
 use futures::future::{LocalBoxFuture, Ready, ready};
+use serde_json::json;
 use std::{rc::Rc, sync::Arc};
 
 use crate::{
@@ -149,9 +150,17 @@ where
                                 &token,
                             );
                         if blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
-                            return Err(actix_web::error::ErrorUnauthorized(
-                                t!("middleware.token_revoked").into_owned(),
-                            ));
+                            let response = actix_web::HttpResponse::Unauthorized().json(json!({
+                                "error": {
+                                    "code": "TOKEN_REVOKED",
+                                    "message": t!("middleware.token_revoked").into_owned(),
+                                }
+                            }));
+                            return Err(actix_web::error::InternalError::from_response(
+                                "token_revoked",
+                                response,
+                            )
+                            .into());
                         }
                     }
 
@@ -204,9 +213,17 @@ where
                             if let Some(m) = metrics {
                                 m.record_jwt_rejected();
                             }
-                            Err(actix_web::error::ErrorUnauthorized(
-                                t!("middleware.invalid_token").into_owned(),
-                            ))
+                            let response = actix_web::HttpResponse::Unauthorized().json(json!({
+                                "error": {
+                                    "code": "TOKEN_EXPIRED",
+                                    "message": t!("middleware.invalid_token").into_owned(),
+                                }
+                            }));
+                            Err(actix_web::error::InternalError::from_response(
+                                "invalid_token",
+                                response,
+                            )
+                            .into())
                         },
                     }
                 },

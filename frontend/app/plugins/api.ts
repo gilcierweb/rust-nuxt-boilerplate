@@ -112,11 +112,18 @@ export default defineNuxtPlugin((nuxtApp) => {
       const authStore = useAuthStore(nuxtApp.$pinia);
       const isUnauthorized =
         error?.response?.status === 401 || error?.statusCode === 401;
+
+      // Only retry refresh for TOKEN_EXPIRED — skip for TOKEN_REVOKED to
+      // avoid wasted round-trips when the user has been logged out server-side.
+      const errorCode = error?.data?.error?.code as string | undefined;
+      const isTokenRevoked = errorCode === "TOKEN_REVOKED";
+
       const canRefresh =
         import.meta.client &&
         !hasRetried &&
         isUnauthorized &&
-        !isAuthRequest(request);
+        !isAuthRequest(request) &&
+        !isTokenRevoked;
 
       if (!canRefresh) {
         throw error;

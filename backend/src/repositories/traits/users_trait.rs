@@ -76,10 +76,9 @@ pub trait IUserRepository: Send + Sync {
 pub trait IUserRepositoryTransaction: Send + Sync {
     async fn run_transaction<F, T, E>(&self, f: F) -> Result<T, E>
     where
-        F: for<'a> FnOnce(
-                &'a mut AsyncPgConnection,
-            ) -> BoxFuture<'a, Result<T, E>>
-            + Send,
+        F: for<'a> FnOnce(&'a mut AsyncPgConnection) -> BoxFuture<'a, Result<T, E>>
+            + Send
+            + 'static,
         T: Send + 'static,
         E: From<diesel::result::Error> + Send + 'static;
 }

@@ -3,17 +3,15 @@
 use std::rc::Rc;
 
 use actix_web::{
-    Error, ResponseError,
+    Error,
     dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
     http::Method,
     web,
 };
 use futures::future::{LocalBoxFuture, Ready, ready};
+use serde_json::json;
 
-use crate::{
-    AppState, errors::AppError, middleware::auth::verify_token,
-    repositories::container::AppContainer,
-};
+use crate::{AppState, middleware::auth::verify_token, repositories::container::AppContainer};
 
 #[derive(Clone)]
 pub struct PublicRoute {
@@ -131,9 +129,13 @@ where
                 .unwrap_or(false);
 
             if !is_valid {
-                let response = AppError::Unauthorized(t!("middleware.unauthorized").into_owned())
-                    .error_response()
-                    .map_into_right_body();
+                let response = actix_web::HttpResponse::Unauthorized().json(json!({
+                    "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": t!("middleware.unauthorized").into_owned(),
+                    }
+                }));
+                let response = response.map_into_right_body();
                 return Ok(req.into_response(response));
             }
 
@@ -149,10 +151,13 @@ where
                     .await
                     .unwrap_or(false)
                 {
-                    let response =
-                        AppError::Unauthorized(t!("middleware.token_revoked").into_owned())
-                            .error_response()
-                            .map_into_right_body();
+                    let response = actix_web::HttpResponse::Unauthorized().json(json!({
+                        "error": {
+                            "code": "TOKEN_REVOKED",
+                            "message": t!("middleware.token_revoked").into_owned(),
+                        }
+                    }));
+                    let response = response.map_into_right_body();
                     return Ok(req.into_response(response));
                 }
             }

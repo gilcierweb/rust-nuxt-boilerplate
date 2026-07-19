@@ -23,8 +23,8 @@ use actix_web::{
 };
 use chrono::Utc;
 use diesel::result::Error as DieselError;
-use diesel_async::RunQueryDsl;
 use diesel::{ExpressionMethods, QueryDsl};
+use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
