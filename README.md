@@ -291,7 +291,7 @@ Complete API endpoint reference with authentication requirements and description
 |--------|----------|------|-------------|
 | POST | `/api/v1/auth/register` | No | Register new user with email and password |
 | POST | `/api/v1/auth/login` | No | Login with email/password, returns JWT + refresh cookie |
-| POST | `/api/v1/auth/refresh` | No | Refresh access token using refresh cookie |
+| POST | `/api/v1/auth/refresh` | Yes | Refresh access token using refresh cookie (requires valid access token for blacklist check) |
 | POST | `/api/v1/auth/logout` | Yes | Invalidate refresh tokens and blacklist access token |
 | GET | `/api/v1/auth/confirm?token=xxx` | No | Verify email address with confirmation token |
 | POST | `/api/v1/auth/recover` | No | Request password reset email |
