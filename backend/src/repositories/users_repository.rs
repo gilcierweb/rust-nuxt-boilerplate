@@ -1,8 +1,8 @@
-use crate::DBPool;
+use crate::db::database::DBPool;
 use crate::db::schema::users as users_table;
 use crate::models::user::{NewUser, User};
 use crate::repositories::base::BaseRepo;
-pub use crate::repositories::traits::users_trait::IUserRepository;
+pub use crate::repositories::traits::users_trait::{IUserRepository, IUserRepositoryTransaction};
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
@@ -537,5 +537,20 @@ impl IUserRepository for UsersRepository {
                 })
             })
             .await
+    }
+}
+
+#[async_trait::async_trait]
+impl IUserRepositoryTransaction for UsersRepository {
+    async fn run_transaction<F, T, E>(&self, f: F) -> Result<T, E>
+    where
+        F: for<'a> FnOnce(
+                &'a mut diesel_async::AsyncPgConnection,
+            ) -> futures::future::BoxFuture<'a, Result<T, E>>
+            + Send,
+        T: Send + 'static,
+        E: From<diesel::result::Error> + Send + 'static,
+    {
+        self.base.run_transaction(f).await
     }
 }

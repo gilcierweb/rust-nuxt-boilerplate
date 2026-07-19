@@ -19,6 +19,7 @@ pub struct AppContainer {
     pub config: Arc<AppConfig>,
     pub cache: Arc<crate::services::cache_service::CacheManager>,
     pub users: Arc<dyn IUserRepository>,
+    pub users_tx: Arc<UsersRepository>,
     pub profiles: Arc<dyn IProfileRepository>,
     pub refresh_tokens: Arc<dyn IRefreshTokenRepository>,
     pub user_roles: Arc<dyn IUserRoleRepository>,
@@ -39,10 +40,13 @@ impl AppContainer {
         ));
         let email_service = Arc::new(EmailService::new(&config));
 
+        let users_repo = Arc::new(UsersRepository::new(pool.clone()));
+
         Self {
             config: Arc::new(config),
             cache,
-            users: Arc::new(UsersRepository::new(pool.clone())),
+            users: users_repo.clone(),
+            users_tx: users_repo.clone(),
             profiles: Arc::new(ProfilesRepository::new(pool.clone())),
             refresh_tokens: Arc::new(RefreshTokensRepository::new(pool.clone())),
             user_roles: Arc::new(UserRolesRepository::new(pool.clone())),

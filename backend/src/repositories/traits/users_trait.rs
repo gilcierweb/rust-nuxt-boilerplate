@@ -3,6 +3,8 @@
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use diesel::QueryResult;
+use diesel_async::AsyncPgConnection;
+use futures::future::BoxFuture;
 use ipnet::IpNet;
 use uuid::Uuid;
 
@@ -67,4 +69,17 @@ pub trait IUserRepository: Send + Sync {
     async fn set_otp_secret(&self, user_id: &Uuid, secret: &str) -> QueryResult<usize>;
     async fn enable_2fa(&self, user_id: &Uuid, backup_codes: &[String]) -> QueryResult<usize>;
     async fn disable_2fa(&self, user_id: &Uuid) -> QueryResult<usize>;
+}
+
+#[cfg_attr(test, mockall::automock)]
+#[async_trait]
+pub trait IUserRepositoryTransaction: Send + Sync {
+    async fn run_transaction<F, T, E>(&self, f: F) -> Result<T, E>
+    where
+        F: for<'a> FnOnce(
+                &'a mut AsyncPgConnection,
+            ) -> BoxFuture<'a, Result<T, E>>
+            + Send,
+        T: Send + 'static,
+        E: From<diesel::result::Error> + Send + 'static;
 }

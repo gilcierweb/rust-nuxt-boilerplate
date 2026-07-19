@@ -7,7 +7,7 @@ pub mod mocks {
     use crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository;
     use crate::repositories::roles_repository::MockIRoleRepository;
     use crate::repositories::user_roles_repository::MockIUserRoleRepository;
-    use crate::repositories::users_repository::MockIUserRepository;
+    use crate::repositories::users_repository::{MockIUserRepository, UsersRepository};
     use crate::services::cache_service::CacheManager;
     use std::sync::Arc;
 
@@ -121,10 +121,13 @@ pub mod mocks {
         let config = mock_app_config();
         let email_service = Arc::new(crate::services::email_service::EmailService::new(&config));
 
+        let users_repo = Arc::new(MockIUserRepository::new());
+
         AppContainer {
             config: Arc::new(config),
             cache,
-            users: Arc::new(MockIUserRepository::new()),
+            users: users_repo.clone(),
+            users_tx: users_repo.clone(),
             profiles: Arc::new(MockIProfileRepository::new()),
             refresh_tokens: Arc::new(MockIRefreshTokenRepository::new()),
             user_roles: Arc::new(MockIUserRoleRepository::new()),
@@ -136,29 +139,31 @@ pub mod mocks {
             email_service,
         }
     }
+}
+}
 
-    /// Create a mock container with pre-configured user repository expectations.
-    pub fn mock_container_with_user(user: crate::models::user::User) -> AppContainer {
-        let mut container = mock_container();
+/// Create a mock container with pre-configured user repository expectations.
+pub fn mock_container_with_user(user: crate::models::user::User) -> AppContainer {
+    let mut container = mock_container();
 
-        let email_blind_index = user.email_blind_index.clone();
-        let user_id = user.id;
-        let user_for_find = user.clone();
-        let user_for_email = user.clone();
+    let email_blind_index = user.email_blind_index.clone();
+    let user_id = user.id;
+    let user_for_find = user.clone();
+    let user_for_email = user.clone();
 
-        let mut mock_user_repo = MockIUserRepository::new();
-        mock_user_repo
-            .expect_find()
-            .withf(move |id| *id == user_id)
-            .times(1)
-            .returning(move |_| Ok(user_for_find.clone()));
-        mock_user_repo
-            .expect_find_by_email()
-            .withf(move |blind_index| blind_index == email_blind_index)
-            .times(1)
-            .returning(move |_| Ok(Some(user_for_email.clone())));
+    let mut mock_user_repo = MockIUserRepository::new();
+    mock_user_repo
+        .expect_find()
+        .withf(move |id| *id == user_id)
+        .times(1)
+        .returning(move |_| Ok(user_for_find.clone()));
+    mock_user_repo
+        .expect_find_by_email()
+        .withf(move |blind_index| blind_index == email_blind_index)
+        .times(1)
+        .returning(move |_| Ok(Some(user_for_email.clone())));
 
-        container.users = Arc::new(mock_user_repo);
-        container
-    }
+    container.users = Arc::new(mock_user_repo);
+    container
+}
 }

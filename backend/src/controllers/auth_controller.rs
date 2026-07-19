@@ -1,3 +1,4 @@
+use crate::db::schema::users as users_table;
 use crate::{
     config::AppConfig,
     errors::{AppError, AppResult},
@@ -7,6 +8,7 @@ use crate::{
     models::role::{ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER},
     models::user::{NewUser, User},
     repositories::container::AppContainer,
+    repositories::traits::users_trait::IUserRepositoryTransaction,
     security::SecurityService,
     services::auth_service::{
         hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password,
@@ -21,6 +23,8 @@ use actix_web::{
 };
 use chrono::Utc;
 use diesel::result::Error as DieselError;
+use diesel_async::RunQueryDsl;
+use diesel::{ExpressionMethods, QueryDsl};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
@@ -360,34 +364,6 @@ pub async fn login(
         );
         return Err(AppError::Unauthorized(t!("auth.login.failed").into_owned()));
     }
-
-    // Upgrade password hash if using outdated Argon2 parameters
-    if needs_rehash(&user.encrypted_password, container.config.as_ref()) {
-        let new_hash = match rehash_password(&body.password, container.config.as_ref()) {
-            Ok(h) => h,
-            Err(e) => {
-                tracing::warn!(
-                    event = "auth.login.rehash_error",
-                    user_id = %user.id,
-                    error = %e,
-                    "password rehash error"
-                );
-                // Non-fatal: continue with old hash
-                user.encrypted_password.clone()
-            },
-        };
-        if let Err(e) = container.users.update_password(&user.id, &new_hash).await {
-            tracing::warn!(
-                event = "auth.login.rehash_failed",
-                user_id = %user.id,
-                error = %e,
-                "password rehash failed"
-            );
-            // Non-fatal: login continues with old hash
-        }
-    }
-
-    // Verify TOTP if 2FA is enabled
     if user.is_otp_enabled() {
         match &body.otp_code {
             None => {
@@ -434,7 +410,7 @@ pub async fn login(
     let role_claim = primary_role_claim(&roles);
 
     // Generate tokens
-    let active_kid = container.config.jwt_secrets.first().map(|k| k.kid.as_str());
+    let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
     let access_token = create_token_with_kid(
         user.id,
         profile.id,
@@ -469,6 +445,67 @@ pub async fn login(
             .ok()
     });
 
+    // Upgrade password hash if using outdated Argon2 parameters - use transaction for atomicity
+    if needs_rehash(&user.encrypted_password, container.config.as_ref()) {
+        let new_hash = match rehash_password(&body.password, container.config.as_ref()) {
+            Ok(h) => h,
+            Err(e) => {
+                tracing::warn!(
+                    event = "auth.login.rehash_error",
+                    user_id = %user.id,
+                    error = %e,
+                    "password rehash error"
+                );
+                // Non-fatal: continue with old hash
+                user.encrypted_password.clone()
+            },
+        };
+        let user_id = user.id;
+        let ip_clone = ip;
+        container
+            .users_tx
+            .run_transaction(move |conn| {
+                Box::pin(async move {
+                    use crate::db::schema::users::dsl::*;
+                    // Update password
+                    diesel::update(users_table::table.find(user_id))
+                        .set((
+                            encrypted_password.eq(&new_hash),
+                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                        ))
+                        .execute(conn)
+                        .await?;
+                    // Record successful login
+                    diesel::update(users_table::table.find(user_id))
+                        .set((
+                            failed_attempts.eq(0),
+                            locked_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            current_sign_in_at.eq(Some(chrono::Utc::now().naive_utc())),
+                            last_sign_in_at.eq(diesel::dsl::sql::<
+                                diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,
+                            >("current_sign_in_at")),
+                            current_sign_in_ip.eq(ip_clone),
+                            sign_in_count.eq(diesel::dsl::sql::<diesel::sql_types::Integer>(
+                                "sign_in_count + 1",
+                            )),
+                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                        ))
+                        .execute(conn)
+                        .await?;
+                    Ok::<_, diesel::result::Error>(())
+                })
+            })
+            .await
+            .map_err(AppError::Database)?;
+    } else {
+        // No rehash needed, just record successful login
+        container
+            .users
+            .record_successful_login(&user.id, ip)
+            .await
+            .map_err(AppError::Database)?;
+    }
+
     let new_refresh = NewRefreshToken {
         id: Uuid::new_v4(),
         user_id: user.id,
@@ -488,13 +525,6 @@ pub async fn login(
     container
         .refresh_tokens
         .create(&new_refresh)
-        .await
-        .map_err(AppError::Database)?;
-
-    // Record successful login
-    container
-        .users
-        .record_successful_login(&user.id, ip)
         .await
         .map_err(AppError::Database)?;
 
@@ -604,7 +634,7 @@ pub async fn refresh(
     let role_claim = primary_role_claim(&roles);
 
     // Generate new access token
-    let active_kid = container.config.jwt_secrets.first().map(|k| k.kid.as_str());
+    let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
     let access_token = create_token_with_kid(
         user.id,
         _profile.id,
@@ -658,7 +688,7 @@ async fn session_impl(
 
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
-    let active_kid = container.config.jwt_secrets.first().map(|k| k.kid.as_str());
+    let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
     let access_token = create_token_with_kid(
         user.id,
         profile.id,
