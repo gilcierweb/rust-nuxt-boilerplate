@@ -198,12 +198,26 @@ security: {
   nitro: {
     compressPublicAssets: true,
     routeRules: {
+      // Backend API proxies — never cache
       '/api/v1/**': {
         security: {
           rateLimiter: false,
         },
         csurf: false,
       },
+      // Public marketing pages — Stale-While-Revalidate (ISR)
+      // Pages revalidated in background; visitors always get a fast cached version
+      '/': { swr: 60 },           // Home: revalidate every 60s
+      '/about': { swr: 3600 },    // About: revalidate every 1h
+      '/contact': { swr: 3600 },  // Contact: revalidate every 1h
+      '/how-work': { swr: 3600 }, // How it works: revalidate every 1h
+      '/terms': { swr: 86400 },   // Terms: revalidate daily
+      '/privacy': { swr: 86400 }, // Privacy: revalidate daily
+      // Authenticated areas — MUST be explicitly uncached (no ISR / no SWR)
+      // These routes serve per-user data and must never be cached at the edge.
+      '/portal/**': { swr: false, cache: false, headers: { 'cache-control': 'no-store, no-cache, must-revalidate, private' } },
+      '/admin/**': { swr: false, cache: false, headers: { 'cache-control': 'no-store, no-cache, must-revalidate, private' } },
+      '/auth/**': { swr: false, cache: false, headers: { 'cache-control': 'no-store, no-cache, must-revalidate, private' } },
     },
   },
 
