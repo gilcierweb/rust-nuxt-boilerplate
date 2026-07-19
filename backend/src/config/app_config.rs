@@ -203,6 +203,11 @@ pub struct AppConfig {
 
     // Rate limiting
     pub rate_limit_enabled: bool,
+
+    // Argon2 password hashing parameters
+    pub argon2_m_cost: u32,
+    pub argon2_t_cost: u32,
+    pub argon2_p_cost: u32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -404,6 +409,20 @@ impl AppConfig {
                 .ok()
                 .and_then(|s| s.parse::<bool>().ok())
                 .unwrap_or(true),
+
+            // Argon2 password hashing parameters
+            argon2_m_cost: env::var("ARGON2_M_COST")
+                .ok()
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(65536),
+            argon2_t_cost: env::var("ARGON2_T_COST")
+                .ok()
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(3),
+            argon2_p_cost: env::var("ARGON2_P_COST")
+                .ok()
+                .and_then(|s| s.parse::<u32>().ok())
+                .unwrap_or(1),
         })
     }
 

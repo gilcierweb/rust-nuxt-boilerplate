@@ -138,7 +138,7 @@ where
 
             match token {
                 None => Err(actix_web::error::ErrorUnauthorized(
-                    "Missing Authorization header",
+                    t!("middleware.missing_header").into_owned(),
                 )),
                 Some(token) => {
                     if !config.skip_blacklist_check
@@ -149,7 +149,7 @@ where
                                 &token,
                             );
                         if blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
-                            return Err(actix_web::error::ErrorUnauthorized("Token revoked"));
+                            return Err(actix_web::error::ErrorUnauthorized(t!("middleware.token_revoked").into_owned()));
                         }
                     }
 
@@ -165,7 +165,7 @@ where
                                 event = "auth.jwt_config_missing",
                                 "JWT secret not available: neither AppState nor AppContainer is configured in the middleware chain"
                             );
-                            actix_web::error::ErrorInternalServerError("Server configuration error")
+                            actix_web::error::ErrorInternalServerError(t!("errors.internal").into_owned())
                         })?;
 
                     match verify_token_with_secrets(&token, &secrets, ACCESS_TOKEN_USE) {
@@ -202,7 +202,7 @@ where
                             if let Some(m) = metrics {
                                 m.record_jwt_rejected();
                             }
-                            Err(actix_web::error::ErrorUnauthorized("Invalid token"))
+                            Err(actix_web::error::ErrorUnauthorized(t!("middleware.invalid_token").into_owned()))
                         },
                     }
                 },

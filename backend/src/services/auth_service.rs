@@ -3,6 +3,7 @@
 #[allow(unused_imports)]
 use crate::errors::AppResult;
 use crate::{
+    config::AppConfig,
     errors::AppError,
     models::user::{NewUser, User},
     security::SecurityService,
@@ -16,18 +17,17 @@ use chrono::Utc;
 use diesel::prelude::*;
 use uuid::Uuid;
 
-/// Current Argon2 parameters for password hashing.
-/// Update these when strengthening requirements.
-const ARGON2_M_COST: u32 = 65536;
-const ARGON2_T_COST: u32 = 3;
-const ARGON2_P_COST: u32 = 1;
-
-/// Hash a plaintext password using Argon2id with current parameters.
-pub fn hash_password(password: &str) -> Result<String, AppError> {
+/// Hash a plaintext password using Argon2id with configurable parameters.
+pub fn hash_password(password: &str, config: &AppConfig) -> Result<String, AppError> {
     let salt = SaltString::generate(&mut OsRng);
 
-    let params = argon2::Params::new(ARGON2_M_COST, ARGON2_T_COST, ARGON2_P_COST, None)
-        .map_err(|e| AppError::Internal(format!("Invalid Argon2 parameters: {}", e)))?;
+    let params = argon2::Params::new(
+        config.argon2_m_cost,
+        config.argon2_t_cost,
+        config.argon2_p_cost,
+        None,
+    )
+    .map_err(|e| AppError::Internal(format!("Invalid Argon2 parameters: {}", e)))?;
     let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
 
     argon2
@@ -47,7 +47,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
 
 /// Check if a password hash needs to be rehashed with current parameters.
 /// Returns true if the hash was created with different parameters than the current policy.
-pub fn needs_rehash(hash: &str) -> bool {
+pub fn needs_rehash(hash: &str, config: &AppConfig) -> bool {
     let parsed = match PasswordHash::new(hash) {
         Ok(h) => h,
         Err(_) => return true,
@@ -68,13 +68,13 @@ pub fn needs_rehash(hash: &str) -> bool {
         .and_then(|v| v.to_string().parse::<u32>().ok())
         .unwrap_or(0);
 
-    m_cost != ARGON2_M_COST || t_cost != ARGON2_T_COST || p_cost != ARGON2_P_COST
+    m_cost != config.argon2_m_cost || t_cost != config.argon2_t_cost || p_cost != config.argon2_p_cost
 }
 
 /// Rehash a password with current parameters. Returns the new hash.
 /// Should only be called after successful password verification.
-pub fn rehash_password(password: &str) -> Result<String, AppError> {
-    hash_password(password)
+pub fn rehash_password(password: &str, config: &AppConfig) -> Result<String, AppError> {
+    hash_password(password, config)
 }
 
 /// Validate password strength: min 12 chars, at least 1 digit, 1 uppercase, 1 special char.
@@ -113,7 +113,7 @@ pub fn find_user_by_email(conn: &mut PgConnection, email_input: &str) -> Result<
         .first::<User>(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
-                AppError::Unauthorized("Invalid email or password".to_string())
+                AppError::Unauthorized(t!("auth.login.failed").into_owned())
             },
             _ => AppError::Database(e),
         })
@@ -127,7 +127,7 @@ pub fn find_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<User, A
         .select(User::as_select())
         .first::<User>(conn)
         .map_err(|e| match e {
-            diesel::result::Error::NotFound => AppError::NotFound("User".to_string()),
+            diesel::result::Error::NotFound => AppError::NotFound(t!("validation.fields.user_id").into_owned()),
             _ => AppError::Database(e),
         })
 }
@@ -138,6 +138,7 @@ pub fn register_user(
     email_input: &str,
     password: &str,
     token_salt: &str,
+    config: &AppConfig,
 ) -> Result<(User, String), AppError> {
     validate_password_strength(password)?;
     let security = SecurityService::from_env()?;
@@ -152,10 +153,10 @@ pub fn register_user(
     .map_err(AppError::Database)?;
 
     if exists {
-        return Err(AppError::Conflict("Email already registered".to_string()));
+        return Err(AppError::Conflict(t!("auth.register.email_exists").into_owned()));
     }
 
-    let hashed = hash_password(password)?;
+    let hashed = hash_password(password, config)?;
     let confirmation_token_plain = generate_random_token(32);
 
     let new_user = NewUser::new(
@@ -202,7 +203,7 @@ pub fn confirm_email(
         .first::<User>(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
-                AppError::BadRequest("Invalid or already used confirmation token".to_string())
+                AppError::BadRequest(t!("auth.confirm.token_invalid").into_owned())
             },
             _ => AppError::Database(e),
         })?;
@@ -255,6 +256,7 @@ pub fn record_successful_login(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::repositories::test_utils::mocks::mock_app_config;
     use diesel::r2d2::{ConnectionManager, Pool};
     use std::ops::Deref;
     use std::sync::Arc;
@@ -280,7 +282,8 @@ mod tests {
     #[test]
     fn test_hash_password_creates_valid_hash() {
         let password = "TestPassword123!";
-        let hash = hash_password(password).expect("Failed to hash password");
+        let config = mock_app_config();
+        let hash = hash_password(password, &config).expect("Failed to hash password");
 
         assert!(!hash.is_empty());
         assert!(hash.starts_with("$argon2id$"));
@@ -289,7 +292,8 @@ mod tests {
     #[test]
     fn test_verify_password_correct() {
         let password = "TestPassword123!";
-        let hash = hash_password(password).expect("Failed to hash password");
+        let config = mock_app_config();
+        let hash = hash_password(password, &config).expect("Failed to hash password");
         let result = verify_password(password, &hash).expect("Failed to verify password");
         assert!(result);
     }
@@ -298,7 +302,8 @@ mod tests {
     fn test_verify_password_incorrect() {
         let password = "TestPassword123!";
         let wrong_password = "WrongPassword123!";
-        let hash = hash_password(password).expect("Failed to hash password");
+        let config = mock_app_config();
+        let hash = hash_password(password, &config).expect("Failed to hash password");
         let result = verify_password(wrong_password, &hash).expect("Failed to verify password");
         assert!(!result);
     }
