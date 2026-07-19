@@ -180,14 +180,32 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
-  # -- Portainer (Container Management UI) 
+  # -- Portainer (Container Management UI)
+  # SECURITY_AUDIT.md I4: Portainer requires `/var/run/docker.sock` which
+  # gives the container FULL root access to the host. This is acceptable
+  # for local development behind a firewall, but MUST NOT be deployed in
+  # production. Portainer is gated behind the `dev-tools` profile:
+  #
+  #   # Dev only:
+  #   docker compose --profile dev-tools up
+  #
+  #   # Production: omit portainer entirely (default `docker compose up`)
+  #
+  # For production container management, consider:
+  #   - Host-side: lazydocker, ctop, sysdig, or kubectl (for k8s)
+  #   - Remote Portainer Agent: run portainer-agent on a dedicated host
+  #     and point it at remote Docker daemons via TCP+TLS (no socket mount)
   portainer:
+    profiles: ["dev-tools"]
     image: portainer/portainer-ce:latest
     container_name: rust_nuxt_boilerplate_portainer
     restart: unless-stopped
     ports:
       - "9000:9000"
     volumes:
+      # WARNING: This mount gives Portainer complete control over the
+      # Docker daemon — equivalent to root on the host. Acceptable for
+      # local dev only (gated by profile above).
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
     networks:

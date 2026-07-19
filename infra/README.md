@@ -29,6 +29,54 @@ infra/
     └── dhparam.pem          # Diffie-Hellman parameters (gitignored, optional)
 ```
 
+## Service Profiles (SECURITY_AUDIT.md I1, I4)
+
+Sensitive services are gated behind Compose `profiles:` so they never run by
+default. The default `docker compose up` boots a production-shaped stack; the
+flags below add dev tooling that exposes host ports or the Docker socket.
+
+| Command | Services |
+|---------|----------|
+| `docker compose up` | nginx, backend, frontend (production shape — no socket, no DB/Redis host exposure) |
+| `docker compose --profile dev-tools up` | + postgres/redis (host ports 5432, 6379) + portainer (Docker socket, port 9000) |
+
+### Why Postgres/Redis are NOT exposed by default
+
+`SECURITY_AUDIT.md I1`: In production, the database and cache are internal-only.
+Mounting them on the host is fine for local development with `psql`, `redis-cli`,
+or GUI tools (DBeaver, RedisInsight), but it leaks credentials if the host
+firewall is misconfigured. The `dev-tools` profile makes this explicit.
+
+### Why Portainer is NOT included by default
+
+`SECURITY_AUDIT.md I4`: Portainer requires `/var/run/docker.sock` mounted into
+the container. Any process with that socket can spawn privileged containers,
+mount the host filesystem, or grant itself shell access — equivalent to root
+on the host. Acceptable for local dev only.
+
+**Production alternatives:**
+
+1. **Run Portainer Agent remotely** — Deploy Portainer CE on a *separate* host,
+   run `portainer/agent` on each Docker host, connect via TCP+TLS. No socket mount.
+
+   ```yaml
+   # On the remote Docker host (NOT in this compose):
+   portainer_agent:
+     image: portainer/agent
+     # ... no /var/run/docker.sock mount needed ...
+     environment:
+       - AGENT_CLUSTER_ADDR=portainer.example.com:9001
+   ```
+
+2. **Host-side tools** — `lazydocker` (TUI), `ctop`, `dive` (image inspection).
+3. **Remote-hosted** — Use a managed Kubernetes service (EKS, GKE, AKS),
+   Nomad, or vendor-managed (Portainer Cloud / Portainer BE on a hardened host).
+
+If you must ship Portainer CE in this stack for production, at minimum:
+- Bind port 9000 to `127.0.0.1` on the host (`"127.0.0.1:9000:9000"`)
+- Front it with nginx + mTLS + IP allowlist (cf. `infra/nginx/conf.d/app.conf`)
+- Audit all `portainer_data` volume backups (they include access tokens)
+
 ## Production Secrets (SECURITY_AUDIT.md I3)
 
 In production, the backend reads critical secrets from files mounted via Docker
