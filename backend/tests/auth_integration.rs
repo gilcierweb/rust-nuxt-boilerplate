@@ -156,6 +156,7 @@ fn test_config() -> backend::config::AppConfig {
         argon2_m_cost: 65536,
         argon2_t_cost: 3,
         argon2_p_cost: 1,
+        trusted_proxies: Vec::new(),
         jwt_secrets: vec![backend::config::app_config::JwtSecretKey {
             kid: "test-key-1".to_string(),
             secret: jwt_secret,

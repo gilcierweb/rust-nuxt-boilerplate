@@ -23,34 +23,32 @@ pub fn extract_client_ip(req: &HttpRequest, trusted_proxies: &[IpNet]) -> Option
     }
 
     // 1. Check Forwarded header (RFC 7239)
-    if let Some(forwarded) = req.headers().get("forwarded") {
-        if let Ok(forwarded_str) = forwarded.to_str() {
-            if let Some(ip) = parse_forwarded_for(forwarded_str) {
-                return Some(ip);
-            }
-        }
+    if let Some(forwarded) = req.headers().get("forwarded")
+        && let Ok(forwarded_str) = forwarded.to_str()
+        && let Some(ip) = parse_forwarded_for(forwarded_str)
+    {
+        return Some(ip);
     }
 
     // 2. Check X-Forwarded-For header
-    if let Some(xff) = req.headers().get("x-forwarded-for") {
-        if let Ok(xff_str) = xff.to_str() {
-            // X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
-            // The leftmost is the original client
-            if let Some(ip_str) = xff_str.split(',').next() {
-                if let Ok(ip) = ip_str.trim().parse::<IpAddr>() {
-                    return Some(ip);
-                }
-            }
+    if let Some(xff) = req.headers().get("x-forwarded-for")
+        && let Ok(xff_str) = xff.to_str()
+    {
+        // X-Forwarded-For can contain multiple IPs: "client, proxy1, proxy2"
+        // The leftmost is the original client
+        if let Some(ip_str) = xff_str.split(',').next()
+            && let Ok(ip) = ip_str.trim().parse::<IpAddr>()
+        {
+            return Some(ip);
         }
     }
 
     // 3. Check X-Real-IP header
-    if let Some(xri) = req.headers().get("x-real-ip") {
-        if let Ok(xri_str) = xri.to_str() {
-            if let Ok(ip) = xri_str.trim().parse::<IpAddr>() {
-                return Some(ip);
-            }
-        }
+    if let Some(xri) = req.headers().get("x-real-ip")
+        && let Ok(xri_str) = xri.to_str()
+        && let Ok(ip) = xri_str.trim().parse::<IpAddr>()
+    {
+        return Some(ip);
     }
 
     // Fallback to peer address
