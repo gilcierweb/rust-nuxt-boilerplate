@@ -77,14 +77,15 @@ export default defineNuxtConfig({
     },
   },
 
-  security: {
+security: {
     headers: {
       contentSecurityPolicy: {
         "default-src": ["'self'"],
         "img-src": ["'self'", "data:", "blob:"],
         "font-src": ["'self'", "fonts.gstatic.com", "data:"],
         "style-src": ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
-        "script-src": ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+        "script-src": ["'self'"],
+        "script-src-attr": ["'none'"],
       },
     },
     csrf: true,
