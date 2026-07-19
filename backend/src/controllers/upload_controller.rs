@@ -125,7 +125,9 @@ pub async fn upload_file(
             }
 
             // Write chunk to temp file
-            temp_file.write_all(&chunk).map_err(|e| AppError::Internal(e.to_string()))?;
+            temp_file
+                .write_all(&chunk)
+                .map_err(|e| AppError::Internal(e.to_string()))?;
         }
 
         // Validate the upload using the captured prefix
