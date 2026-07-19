@@ -245,8 +245,7 @@ mod tests {
         let t = templates();
         let err = t
             .render("does/not/exist.html.tera", &json!({}))
-            .err()
-            .expect("expected error");
+            .expect_err("expected error");
         assert!(matches!(err, EmailTemplateError::Render(_)));
     }
 
