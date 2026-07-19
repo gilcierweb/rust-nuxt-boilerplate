@@ -124,6 +124,10 @@ services:
       - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./infra/nginx/conf.d:/etc/nginx/conf.d:ro
       - ./infra/ssl:/etc/nginx/ssl:ro
+      # DH params — required for DHE-* cipher suites. Generate with:
+      #   openssl dhparam -out infra/ssl/dhparam.pem 2048
+      # See infra/README.md.
+      - ./infra/ssl/dhparam.pem:/etc/nginx/dhparam.pem:ro
       - nginx_logs:/var/log/nginx
     depends_on:
       - backend
@@ -131,7 +135,7 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
-  # -- MeiliSearch 
+  # -- MeiliSearch
   meilisearch:
     image: getmeili/meilisearch:v1.7
     container_name: rust_nuxt_boilerplate_search
