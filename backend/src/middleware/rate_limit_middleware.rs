@@ -92,33 +92,27 @@ pub const RATE_MESSAGES: RateLimit = RateLimit::new(60, 60, "rl:msg");
 /// Limit: 120 requests per minute (per user)
 pub const RATE_MESSAGES_AUTHENTICATED: RateLimit = RateLimit::new(120, 60, "rl:msg");
 
-/// Lua script for atomic sliding window rate limiting
-/// Uses sorted sets to track request timestamps
+/// Lua script for atomic fixed-window rate limiting.
+///
+/// Uses a single counter per window instead of sorted sets — reduces Redis
+/// commands from 5 (ZREMRANGEBYSCORE, ZCARD, INCR, ZADD, EXPIRE×2) to 2
+/// (INCR, EXPIRE on first request only). Trades sliding-window precision
+/// for significantly lower latency under load.
+///
 /// Returns: 1 if allowed, 0 if rate limited
 const RATE_LIMIT_LUA_SCRIPT: &str = r#"
 local key = KEYS[1]
-local window = tonumber(ARGV[1])
-local max_requests = tonumber(ARGV[2])
-local now = tonumber(ARGV[3])
+local limit = tonumber(ARGV[1])
+local window = tonumber(ARGV[2])
 
--- Remove expired entries from the sorted set
-redis.call('ZREMRANGEBYSCORE', key, 0, now - window)
-
--- Count current requests in window
-local current = redis.call('ZCARD', key)
-
-if current < max_requests then
-    -- Add current request with unique member using atomic INCR counter
-    local seq = redis.call('INCR', key .. ':seq')
-    redis.call('ZADD', key, now, now .. ':' .. seq)
+local current = redis.call('INCR', key)
+if current == 1 then
     redis.call('EXPIRE', key, window)
-    redis.call('EXPIRE', key .. ':seq', window)
-    return 1
-else
-    -- Rate limited, still set expiry for cleanup
-    redis.call('EXPIRE', key, window)
+end
+if current > limit then
     return 0
 end
+return 1
 "#;
 
 pub struct RateLimiter {
@@ -261,19 +255,13 @@ where
             let allowed = async {
                 let mut conn = redis.get().await.ok()?;
 
-                // Use Lua script for atomic sliding window rate limiting
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .ok()?
-                    .as_secs();
-
+                // Use fixed-window Lua script (2 Redis ops vs 5 for sliding window)
                 let result: u64 = redis::cmd("EVAL")
                     .arg(RATE_LIMIT_LUA_SCRIPT)
                     .arg(1) // number of keys
                     .arg(&key)
-                    .arg(effective_limit.window_secs)
                     .arg(effective_limit.max_requests)
-                    .arg(now)
+                    .arg(effective_limit.window_secs)
                     .query_async(&mut conn)
                     .await
                     .ok()?;
