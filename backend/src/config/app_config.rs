@@ -224,9 +224,15 @@ pub enum Environment {
 /// Minimum Redis pool sizes per environment.
 const REDIS_POOL_DEFAULT_DEV: usize = 10;
 const REDIS_POOL_DEFAULT_STAGING: usize = 30;
-/// Production minimum (50) is required for rate limiting, caching, session storage,
-/// token blacklisting, and WebSocket Pub/Sub under load.
+/// Production minimum (50) is required to avoid pool exhaustion under load
+/// (rate limiting, caching, session storage, token blacklisting, WebSocket Pub/Sub).
+/// This is a hard floor — validation will reject configs below this value.
 pub const REDIS_POOL_MIN_PRODUCTION: usize = 50;
+/// Production recommended size (100) for typical multi-worker deployments.
+/// A warning is logged (not a hard failure) when production pool size is below
+/// this recommended value but at or above the minimum.
+pub const REDIS_POOL_RECOMMENDED_PRODUCTION: usize = 100;
+const REDIS_POOL_DEFAULT_PRODUCTION: usize = REDIS_POOL_RECOMMENDED_PRODUCTION;
 
 /// Default PostgreSQL statement timeout in seconds. Applied via `SET statement_timeout`
 /// on each connection acquired from the pool. Prevents long-running queries from
@@ -249,9 +255,10 @@ impl AppConfig {
         // Default Redis pool size depends on environment:
         // - Development/Test: 10 (light local usage)
         // - Staging: 30
-        // - Production: REDIS_POOL_MIN_PRODUCTION (50)
+        // - Production: REDIS_POOL_DEFAULT_PRODUCTION (100 — recommended for
+        //   rate limiting, caching, session storage, token blacklisting, WS Pub/Sub)
         let redis_pool_default = match environment {
-            Environment::Production => REDIS_POOL_MIN_PRODUCTION,
+            Environment::Production => REDIS_POOL_DEFAULT_PRODUCTION,
             Environment::Staging => REDIS_POOL_DEFAULT_STAGING,
             Environment::Test | Environment::Development => REDIS_POOL_DEFAULT_DEV,
         };
@@ -556,14 +563,16 @@ impl AppConfig {
         // Production must have a minimum Redis pool size of 50.
         // This prevents connection pool exhaustion under load
         // (rate limiting, caching, session storage, token blacklisting, WebSocket Pub/Sub).
+        // Note: REDIS_POOL_RECOMMENDED_PRODUCTION (100) is recommended for typical
+        // multi-worker deployments; a warning is logged if below recommended but >= minimum.
         if matches!(self.environment, Environment::Production)
             && self.redis_pool_size < REDIS_POOL_MIN_PRODUCTION
         {
             errors.push(format!(
                 "REDIS_POOL_SIZE must be at least {} in production (got {}). \
                  Consider rate limiting, caching, session storage, token blacklisting, \
-                 and WebSocket Pub/Sub requirements.",
-                REDIS_POOL_MIN_PRODUCTION, self.redis_pool_size
+                 and WebSocket Pub/Sub requirements. Recommended: {}+",
+                REDIS_POOL_MIN_PRODUCTION, self.redis_pool_size, REDIS_POOL_RECOMMENDED_PRODUCTION
             ));
         }
 

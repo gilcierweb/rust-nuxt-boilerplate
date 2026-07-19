@@ -178,6 +178,25 @@ async fn main() -> std::io::Result<()> {
              (rate limiting, caching, session storage, token blacklisting).",
             backend::config::app_config::REDIS_POOL_MIN_PRODUCTION
         );
+    } else if config.redis_pool_size
+        < backend::config::app_config::REDIS_POOL_RECOMMENDED_PRODUCTION
+        && matches!(
+            config.environment,
+            backend::config::app_config::Environment::Production
+        )
+    {
+        tracing::warn!(
+            event = "redis.pool_size_below_recommended",
+            pool_size = config.redis_pool_size,
+            recommended = backend::config::app_config::REDIS_POOL_RECOMMENDED_PRODUCTION,
+            "Redis pool size is below the recommended production value of {}. \
+             Current size ({}) may be insufficient for high-concurrency workloads \
+             (rate limiting, caching, session storage, token blacklisting, WebSocket Pub/Sub). \
+             Consider setting REDIS_POOL_SIZE={} or higher.",
+            backend::config::app_config::REDIS_POOL_RECOMMENDED_PRODUCTION,
+            config.redis_pool_size,
+            backend::config::app_config::REDIS_POOL_RECOMMENDED_PRODUCTION
+        );
     }
 
     let redis_pool = redis_cfg

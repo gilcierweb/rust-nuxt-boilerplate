@@ -413,6 +413,7 @@ pub async fn login(
     let role_claim = primary_role_claim(&roles);
 
     // Generate tokens
+    #[allow(clippy::get_first)]
     let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
     let access_token = create_token_with_kid(
         user.id,
@@ -638,6 +639,7 @@ pub async fn refresh(
     let role_claim = primary_role_claim(&roles);
 
     // Generate new access token
+    #[allow(clippy::get_first)]
     let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
     let access_token = create_token_with_kid(
         user.id,
@@ -692,6 +694,7 @@ async fn session_impl(
 
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
+    #[allow(clippy::get_first)]
     let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
     let access_token = create_token_with_kid(
         user.id,
