@@ -90,7 +90,7 @@ where
                             .json(serde_json::json!({
                                 "error": {
                                     "code": "STRIPE_SIGNATURE_MISSING",
-                                    "message": "Missing Stripe signature header"
+                                    "message": t!("webhooks.stripe.missing_signature").into_owned()
                                 }
                             }))
                             .map_into_boxed_body();
@@ -123,7 +123,7 @@ where
                             .json(serde_json::json!({
                                 "error": {
                                     "code": "STRIPE_SIGNATURE_INVALID",
-                                    "message": "Invalid Stripe webhook signature"
+                                    "message": t!("webhooks.stripe.invalid_signature").into_owned()
                                 }
                             }))
                             .map_into_boxed_body();

@@ -153,6 +153,9 @@ fn test_config() -> backend::config::AppConfig {
         csrf_secret_key: csrf_key,
         refresh_token_hash_salt: "test-salt-for-refresh-tokens-16b!".to_string(),
         rate_limit_enabled: false,
+        argon2_m_cost: 65536,
+        argon2_t_cost: 3,
+        argon2_p_cost: 1,
         jwt_secrets: vec![backend::config::app_config::JwtSecretKey {
             kid: "test-key-1".to_string(),
             secret: jwt_secret,

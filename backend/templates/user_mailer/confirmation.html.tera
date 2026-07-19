@@ -1,4 +1,4 @@
-<p>Olá <strong>{{ user_name | default(value="there") }}</strong>,</p>
+<p>Olá {{ user_name | default(value="there") }},</p>
 
 <p>Para começar, por favor confirme seu endereço de email clicando no botão abaixo:</p>
 

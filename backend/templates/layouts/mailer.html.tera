@@ -38,11 +38,11 @@
                 {% block content %}{{ content | safe }}{% endblock content %}
             </div>
             <div class="footer">
-                <p>{% if to_email %}This email was sent to {{ to_email }}{% endif %}</p>
+                <p>{% if to_email %}Este email foi enviado para {{ to_email }}{% endif %}</p>
                 {% if unsubscribe_url %}
-                <p><a href="{{ unsubscribe_url }}">Unsubscribe</a>{% if preferences_url %} | <a href="{{ preferences_url }}">Email Preferences</a>{% endif %}</p>
+                <p><a href="{{ unsubscribe_url }}">Cancelar inscrição</a>{% if preferences_url %} | <a href="{{ preferences_url }}">Preferências de Email</a>{% endif %}</p>
                 {% endif %}
-                <p>&copy; {{ current_year }} {{ app_name }}. All rights reserved.</p>
+                <p>© {{ current_year }} {{ app_name }}. Todos os direitos reservados.</p>
             </div>
         </div>
     </div>

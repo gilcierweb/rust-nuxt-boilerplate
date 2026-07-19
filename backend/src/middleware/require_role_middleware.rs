@@ -15,10 +15,11 @@ pub fn require_role(req: &HttpRequest, role: &str) -> Result<(), AppError> {
     if claims.has_role(role) || claims.is_admin() {
         Ok(())
     } else {
-        Err(AppError::Forbidden(format!(
-            "Role '{}' required for this action",
-            role
-        )))
+        Err(AppError::Forbidden(t!(
+            "middleware.role_required",
+            role = role
+        )
+        .into_owned()))
     }
 }
 
@@ -33,7 +34,7 @@ pub fn require_owner_or_admin(
         Ok(())
     } else {
         Err(AppError::Forbidden(
-            "You don't have permission to access this resource".to_string(),
+            t!("middleware.access_denied").into_owned(),
         ))
     }
 }
@@ -54,6 +55,6 @@ pub async fn ensure_admin(user: &AuthUser, container: &AppContainer) -> AppResul
     if roles.iter().any(|role| role.eq_ignore_ascii_case("admin")) {
         Ok(())
     } else {
-        Err(AppError::Forbidden("Admin role required".to_string()))
+        Err(AppError::Forbidden(t!("middleware.admin_required").into_owned()))
     }
 }

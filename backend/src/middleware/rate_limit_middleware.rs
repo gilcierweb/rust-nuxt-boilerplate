@@ -317,7 +317,7 @@ where
                         .json(json!({
                             "error": {
                                 "code": "SERVICE_UNAVAILABLE",
-                                "message": "Rate limiter unavailable, please try again"
+                                "message": t!("errors.rate_limiter_unavailable").into_owned()
                             }
                         }))
                         .map_into_boxed_body();

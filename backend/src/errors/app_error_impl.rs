@@ -13,7 +13,7 @@ impl From<DieselError> for AppError {
 
 impl From<JwtError> for AppError {
     fn from(error: JwtError) -> Self {
-        AppError::Unauthorized(format!("Token error: {}", error))
+        AppError::Unauthorized(t!("errors.token_error", error = error.to_string()).into_owned())
     }
 }
 

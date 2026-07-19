@@ -36,7 +36,10 @@ impl WsValidationError {
 
     pub fn to_json(&self) -> String {
         serde_json::to_string(self).unwrap_or_else(|_| {
-            r#"{"error":{"code":"INTERNAL","message":"validation error"}}"#.to_string()
+            format!(
+                r#"{{"error":{{"code":"INTERNAL","message":"{}"}}}}"#,
+                t!("ws.internal_error").into_owned()
+            )
         })
     }
 }
@@ -71,38 +74,38 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
     if raw.len() > MAX_WS_MESSAGE_BYTES {
         return Err(WsValidationError::new(
             "MESSAGE_TOO_LARGE",
-            format!("Message exceeds {} bytes limit", MAX_WS_MESSAGE_BYTES),
+            t!("ws.message_too_large", limit = MAX_WS_MESSAGE_BYTES).into_owned(),
         ));
     }
 
     if raw.is_empty() {
         return Err(WsValidationError::new(
             "EMPTY_MESSAGE",
-            "Message must not be empty",
+            t!("ws.empty_message").into_owned(),
         ));
     }
 
     // Layer 2: JSON parse
     let parsed: RawClientMessage = serde_json::from_str(raw)
-        .map_err(|e| WsValidationError::new("INVALID_JSON", format!("Malformed JSON: {}", e)))?;
+        .map_err(|e| WsValidationError::new("INVALID_JSON", t!("ws.invalid_json", reason = e.to_string()).into_owned()))?;
 
     // Layer 3: action field validation
     let action_str = parsed
         .action
         .as_deref()
-        .ok_or_else(|| WsValidationError::new("MISSING_FIELD", "Field 'action' is required"))?;
+        .ok_or_else(|| WsValidationError::new("MISSING_FIELD", t!("ws.missing_field", field = "action").into_owned()))?;
 
     if action_str.is_empty() {
         return Err(WsValidationError::new(
             "MISSING_ACTION",
-            "Field 'action' must not be empty",
+            t!("ws.empty_action").into_owned(),
         ));
     }
 
     if action_str.len() > MAX_ACTION_LENGTH {
         return Err(WsValidationError::new(
             "ACTION_TOO_LONG",
-            format!("Field 'action' exceeds {} characters", MAX_ACTION_LENGTH),
+            t!("ws.action_too_long", limit = MAX_ACTION_LENGTH).into_owned(),
         ));
     }
 
@@ -116,33 +119,30 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
         "ping" => Ok(WsClientAction::Ping),
         other => Err(WsValidationError::new(
             "UNKNOWN_ACTION",
-            format!("Unknown action: '{}'", other),
+            t!("ws.unknown_action", action = other).into_owned(),
         )),
     }
 }
 
 fn validate_join_room(data: serde_json::Value) -> Result<WsClientAction, WsValidationError> {
     let room = data.get("room").and_then(|v| v.as_str()).ok_or_else(|| {
-        WsValidationError::new(
-            "MISSING_FIELD",
-            "Field 'data.room' is required and must be a string",
-        )
+            WsValidationError::new(
+                "MISSING_FIELD",
+                t!("ws.missing_field", field = "data.room").into_owned(),
+            )
     })?;
 
     if room.is_empty() {
         return Err(WsValidationError::new(
             "EMPTY_FIELD",
-            "Field 'data.room' must not be empty",
+            t!("ws.empty_field", field = "data.room").into_owned(),
         ));
     }
 
     if room.len() > MAX_ROOM_NAME_LENGTH {
         return Err(WsValidationError::new(
             "FIELD_TOO_LONG",
-            format!(
-                "Field 'data.room' exceeds {} characters",
-                MAX_ROOM_NAME_LENGTH
-            ),
+            t!("ws.field_too_long", field = "data.room", limit = MAX_ROOM_NAME_LENGTH).into_owned(),
         ));
     }
 
@@ -158,24 +158,21 @@ fn validate_chat(data: serde_json::Value) -> Result<WsClientAction, WsValidation
         .ok_or_else(|| {
             WsValidationError::new(
                 "MISSING_FIELD",
-                "Field 'data.content' is required and must be a string",
+                t!("ws.missing_field", field = "data.content").into_owned(),
             )
         })?;
 
     if content.is_empty() {
         return Err(WsValidationError::new(
             "EMPTY_FIELD",
-            "Field 'data.content' must not be empty",
+            t!("ws.empty_field", field = "data.content").into_owned(),
         ));
     }
 
     if content.len() > MAX_CHAT_CONTENT_LENGTH {
         return Err(WsValidationError::new(
             "FIELD_TOO_LONG",
-            format!(
-                "Field 'data.content' exceeds {} characters",
-                MAX_CHAT_CONTENT_LENGTH
-            ),
+            t!("ws.field_too_long", field = "data.content", limit = MAX_CHAT_CONTENT_LENGTH).into_owned(),
         ));
     }
 
@@ -189,7 +186,7 @@ fn validate_data_is_object(data: &serde_json::Value) -> Result<(), WsValidationE
     if !data.is_object() {
         return Err(WsValidationError::new(
             "INVALID_DATA_TYPE",
-            "Field 'data' must be a JSON object",
+            t!("ws.invalid_data_type").into_owned(),
         ));
     }
     Ok(())

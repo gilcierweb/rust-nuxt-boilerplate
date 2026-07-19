@@ -217,7 +217,7 @@ where
                             }
 
                             let warn_msg =
-                                format!("API v{} is deprecated. Migrate to latest version.", v);
+                                t!("api.deprecated_warning", version = v);
                             if let Ok(val) = header::HeaderValue::from_str(&warn_msg) {
                                 headers.insert(HEADER_X_API_WARN, val);
                             }
@@ -231,11 +231,12 @@ where
                         let body = serde_json::to_string(&VersionError {
                             error: VersionErrorBody {
                                 code: "UNSUPPORTED_API_VERSION",
-                                message: format!(
-                                    "API version v{} is not supported. Supported versions: {}",
-                                    v,
-                                    supported_list.join(", ")
-                                ),
+                                message: t!(
+                                    "api.version_not_supported",
+                                    version = v,
+                                    versions = supported_list.join(", ")
+                                )
+                                .into_owned(),
                             },
                         })
                         .unwrap_or_default();

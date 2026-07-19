@@ -36,26 +36,30 @@ impl std::fmt::Display for FileValidationError {
             Self::FileTooLarge { max, actual } => {
                 write!(
                     f,
-                    "File size {} bytes exceeds maximum of {} bytes",
-                    actual, max
+                    "{}",
+                    t!("validation.file_too_large", size = actual, max = max)
                 )
             },
             Self::UnsupportedMimeType(mime) => {
-                write!(f, "Unsupported file type: {}", mime)
+                write!(f, "{}", t!("validation.unsupported_mime_type", mime = mime))
             },
             Self::MimeTypeMismatch { declared, detected } => {
                 write!(
                     f,
-                    "Declared type {} does not match detected type {}",
-                    declared, detected
+                    "{}",
+                    t!(
+                        "validation.mime_type_mismatch",
+                        declared = declared,
+                        detected = detected
+                    )
                 )
             },
-            Self::EmptyFile => write!(f, "Uploaded file is empty"),
+            Self::EmptyFile => write!(f, "{}", t!("validation.empty_file").into_owned()),
             Self::PathTraversalAttempt => {
-                write!(f, "Filename contains path traversal characters")
+                write!(f, "{}", t!("validation.path_traversal").into_owned())
             },
-            Self::NoFileExtension => write!(f, "Filename has no extension"),
-            Self::UnsafeFilename => write!(f, "Filename contains unsafe characters"),
+            Self::NoFileExtension => write!(f, "{}", t!("validation.no_extension").into_owned()),
+            Self::UnsafeFilename => write!(f, "{}", t!("validation.unsafe_filename").into_owned()),
         }
     }
 }

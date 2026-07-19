@@ -222,7 +222,7 @@ where
                         .json(serde_json::json!({
                             "error": {
                                 "code": "CSRF_TOKEN_INVALID",
-                                "message": "CSRF token invalid or missing"
+                                "message": t!("middleware.csrf_invalid").into_owned()
                             }
                         }))
                         .map_into_boxed_body();

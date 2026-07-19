@@ -15,7 +15,19 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
-use tera::{Context, Tera, Value};
+use rust_i18n::t;
+use tera::{Context, Result as TeraResult, Tera, Value};
+
+/// Custom Tera function `t` that resolves an i18n key via `rust_i18n`,
+/// using the current global locale. Usage in templates: `{{ t("key") }}`.
+fn tera_t_function(args: &HashMap<String, Value>) -> TeraResult<Value> {
+    let key = args
+        .get("key")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| tera::Error::msg("t() requires a `key` argument"))?;
+    let message = t!(key).into_owned();
+    Ok(Value::String(message))
+}
 
 #[derive(Debug, thiserror::Error)]
 pub enum EmailTemplateError {
@@ -104,6 +116,8 @@ impl EmailTemplates {
 
         // Only autoescape HTML templates (text/plain must remain unescaped).
         tera.autoescape_on(vec![".html.tera"]);
+
+        tera.register_function("t", tera_t_function);
 
         Ok(tera)
     }

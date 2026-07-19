@@ -1,4 +1,4 @@
-<p>Olá <strong>{{ user_name | default(value="there") }}</strong>,</p>
+<p>Olá {{ user_name | default(value="there") }},</p>
 
 <p>Sua autenticação de dois fatores (2FA) foi configurada com sucesso. Aqui estão os detalhes:</p>
 
@@ -14,5 +14,5 @@
     <p style="font-family: monospace; word-break: break-all; margin: 0;">{{ backup_codes_text }}</p>
 </div>
 <div class="alert">
-    <strong>Atenção:</strong> estes códigos são exibidos apenas uma vez. Guarde-os em um gerenciador de senhas.
+    <strong>Atenção: estes códigos são exibidos apenas uma vez. Guarde-os em um gerenciador de senhas.</strong>
 </div>

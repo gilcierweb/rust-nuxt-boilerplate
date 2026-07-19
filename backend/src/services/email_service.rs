@@ -101,6 +101,9 @@ pub fn test_config() -> AppConfig {
         csrf_secret_key: generate_deterministic_string(32, 0xABCDEF),
         refresh_token_hash_salt: generate_deterministic_string(16, 0x1234),
         rate_limit_enabled: true,
+        argon2_m_cost: 65536,
+        argon2_t_cost: 3,
+        argon2_p_cost: 1,
     }
 }
 
@@ -151,7 +154,7 @@ impl EmailService {
         let api_key = config.resend_api_key.clone();
         let from_email = config.email_from.clone();
         let from_name = if config.email_from_name.is_empty() {
-            "Boilerplate App".to_string()
+            t!("app.name").into_owned()
         } else {
             config.email_from_name.clone()
         };
@@ -301,7 +304,7 @@ impl EmailService {
                 to
             );
             return Err(EmailError::NotConfigured(
-                "RESEND_API_KEY not set".to_string(),
+                t!("email.service_not_configured").into_owned(),
             ));
         }
 
@@ -375,17 +378,20 @@ impl EmailService {
         <div style="white-space: pre-wrap;">{}</div>
     </div>
     <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        This email was sent by Boilerplate App
+        {}
     </p>
 </body>
 </html>"#,
-            subject, subject, body
+            subject,
+            subject,
+            body,
+            t!("email.footer", app = self.from_name).into_owned()
         )
     }
 
     /// Send account confirmation email
     pub async fn send_confirmation_email(&self, to: &str, confirm_url: &str) -> EmailResult {
-        let subject = "Confirm your email address";
+        let subject = t!("email.confirmation.subject").into_owned();
         let resolved_url = self.resolve_url(confirm_url);
 
         let ctx = serde_json::json!({
@@ -398,21 +404,18 @@ impl EmailService {
             .render_pair(tpl::USER_CONFIRMATION_HTML, tpl::USER_CONFIRMATION_TEXT, &ctx)
             .unwrap_or_else(|err| {
                 tracing::warn!(error = %err, "confirmation template render failed; using inline fallback");
-                let body = format!(
-                    "Please click the link below to confirm your email address:\n\n{}\n\nThis link will expire in 24 hours.",
-                    resolved_url
-                );
+                let body = t!("email.confirmation.body_text", url = resolved_url).into_owned();
                 let html = self.confirmation_html_fallback(&resolved_url);
                 (html, body)
             });
 
-        self.dispatch(to, subject, &text, Some(&html), tpl::USER_CONFIRMATION_HTML)
+        self.dispatch(to, &subject, &text, Some(&html), tpl::USER_CONFIRMATION_HTML)
             .await
     }
 
     /// Send password reset email
     pub async fn send_password_reset_email(&self, to: &str, reset_url: &str) -> EmailResult {
-        let subject = "Reset your password";
+        let subject = t!("email.password_reset.subject").into_owned();
         let resolved_url = self.resolve_url(reset_url);
 
         let ctx = serde_json::json!({
@@ -425,17 +428,14 @@ impl EmailService {
             .render_pair(tpl::USER_PASSWORD_RESET_HTML, tpl::USER_PASSWORD_RESET_TEXT, &ctx)
             .unwrap_or_else(|err| {
                 tracing::warn!(error = %err, "password reset template render failed; using inline fallback");
-                let body = format!(
-                    "Click the link below to reset your password:\n\n{}\n\nThis link will expire in 1 hour.",
-                    resolved_url
-                );
+                let body = t!("email.password_reset.body_text", url = resolved_url).into_owned();
                 let html = self.password_reset_html_fallback(&resolved_url);
                 (html, body)
             });
 
         self.dispatch(
             to,
-            subject,
+            &subject,
             &text,
             Some(&html),
             tpl::USER_PASSWORD_RESET_HTML,
@@ -451,7 +451,7 @@ impl EmailService {
         qr_code_url: &str,
         backup_codes: &[String],
     ) -> EmailResult {
-        let subject = "Your 2FA setup codes";
+        let subject = t!("email.two_factor_setup.subject").into_owned();
         let backup_codes_text = backup_codes.join(", ");
 
         let ctx = serde_json::json!({
@@ -466,17 +466,20 @@ impl EmailService {
             .render_pair(tpl::USER_TWO_FACTOR_SETUP_HTML, tpl::USER_TWO_FACTOR_SETUP_TEXT, &ctx)
             .unwrap_or_else(|err| {
                 tracing::warn!(error = %err, "2fa setup template render failed; using inline fallback");
-                let body = format!(
-                    "Your 2FA secret: {}\n\nQR Code: {}\n\nBackup codes (save these!):\n{}",
-                    secret, qr_code_url, backup_codes_text
-                );
+                let body = t!(
+                    "email.two_factor_setup.body_text",
+                    secret = secret,
+                    qr = qr_code_url,
+                    codes = backup_codes_text
+                )
+                .into_owned();
                 let html = self.two_factor_setup_html_fallback(secret, qr_code_url, &backup_codes_text);
                 (html, body)
             });
 
         self.dispatch(
             to,
-            subject,
+            &subject,
             &text,
             Some(&html),
             tpl::USER_TWO_FACTOR_SETUP_HTML,
@@ -486,7 +489,7 @@ impl EmailService {
 
     /// Send password changed notification
     pub async fn send_password_changed_notification(&self, to: &str) -> EmailResult {
-        let subject = "Your password has been changed";
+        let subject = t!("email.password_changed.subject").into_owned();
 
         let ctx = serde_json::json!({
             "user_name": "",
@@ -497,14 +500,14 @@ impl EmailService {
             .render_pair(tpl::USER_PASSWORD_CHANGED_HTML, tpl::USER_PASSWORD_CHANGED_TEXT, &ctx)
             .unwrap_or_else(|err| {
                 tracing::warn!(error = %err, "password changed template render failed; using inline fallback");
-                let body = "Your password was successfully changed. If you didn't make this change, please contact support immediately.";
+                let body = t!("email.password_changed.body_text").into_owned();
                 let html = self.password_changed_html_fallback();
-                (html, body.to_string())
+                (html, body)
             });
 
         self.dispatch(
             to,
-            subject,
+            &subject,
             &text,
             Some(&html),
             tpl::USER_PASSWORD_CHANGED_HTML,
@@ -551,26 +554,35 @@ impl EmailService {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Confirm your email</title>
+    <title>{}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #1a1a2e; margin-top: 0;">Confirm your email address</h1>
-        <p>Thank you for registering! Please click the button below to confirm your email address:</p>
+        <h1 style="color: #1a1a2e; margin-top: 0;">{}</h1>
+        <p>{}</p>
         <p style="text-align: center; margin: 32px 0;">
             <a href="{}" style="background: #1a1a2e; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
-                Confirm Email
+                {}
             </a>
         </p>
-        <p style="color: #6c757d; font-size: 14px;">Or copy this link: <a href="{}">{}</a></p>
-        <p style="color: #6c757d; font-size: 14px;">This link will expire in 24 hours.</p>
+        <p style="color: #6c757d; font-size: 14px;">{} <a href="{}">{}</a></p>
+        <p style="color: #6c757d; font-size: 14px;">{}</p>
     </div>
     <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        This email was sent by Boilerplate App
+        {}
     </p>
 </body>
 </html>"#,
-            confirm_url, confirm_url, confirm_url
+            t!("email.confirmation.html_title").into_owned(),
+            t!("email.confirmation.html_heading").into_owned(),
+            t!("email.confirmation.html_body").into_owned(),
+            confirm_url,
+            t!("email.confirmation.html_button").into_owned(),
+            t!("email.confirmation.fallback_instruction").into_owned(),
+            confirm_url,
+            confirm_url,
+            t!("email.confirmation.expiry_notice").into_owned(),
+            t!("email.footer", app = self.from_name).into_owned()
         )
     }
 
@@ -581,27 +593,37 @@ impl EmailService {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reset your password</title>
+    <title>{}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #1a1a2e; margin-top: 0;">Reset your password</h1>
-        <p>You requested a password reset. Click the button below to create a new password:</p>
+        <h1 style="color: #1a1a2e; margin-top: 0;">{}</h1>
+        <p>{}</p>
         <p style="text-align: center; margin: 32px 0;">
             <a href="{}" style="background: #dc2626; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
-                Reset Password
+                {}
             </a>
         </p>
-        <p style="color: #6c757d; font-size: 14px;">Or copy this link: <a href="{}">{}</a></p>
-        <p style="color: #6c757d; font-size: 14px;">This link will expire in 1 hour.</p>
-        <p style="color: #6c757d; font-size: 14px;">If you didn't request this, please ignore this email.</p>
+        <p style="color: #6c757d; font-size: 14px;">{} <a href="{}">{}</a></p>
+        <p style="color: #6c757d; font-size: 14px;">{}</p>
+        <p style="color: #6c757d; font-size: 14px;">{}</p>
     </div>
     <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        This email was sent by Boilerplate App
+        {}
     </p>
 </body>
 </html>"#,
-            reset_url, reset_url, reset_url
+            t!("email.password_reset.html_title").into_owned(),
+            t!("email.password_reset.html_heading").into_owned(),
+            t!("email.password_reset.html_body").into_owned(),
+            reset_url,
+            t!("email.password_reset.html_button").into_owned(),
+            t!("email.password_reset.fallback_instruction").into_owned(),
+            reset_url,
+            reset_url,
+            t!("email.password_reset.expiry_notice").into_owned(),
+            t!("email.password_reset.html_warning").into_owned(),
+            t!("email.footer", app = self.from_name).into_owned()
         )
     }
 
@@ -617,50 +639,66 @@ impl EmailService {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2FA Setup</title>
+    <title>{}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #1a1a2e; margin-top: 0;">Two-Factor Authentication Setup</h1>
-        <p>Your 2FA has been enabled. Here are your setup details:</p>
+        <h1 style="color: #1a1a2e; margin-top: 0;">{}</h1>
+        <p>{}</p>
         <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 16px; margin: 16px 0; font-family: monospace; word-break: break-all;">
-            <strong>Secret:</strong> {}
+            <strong>{}</strong> {}
         </div>
-        <p><strong>QR Code:</strong> <a href="{}">{}</a></p>
-        <h2>Backup Codes (save these!)</h2>
+        <p><strong>{}</strong> <a href="{}">{}</a></p>
+        <h2>{}</h2>
         <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px;">
             <p style="font-family: monospace; word-break: break-all;">{}</p>
         </div>
     </div>
     <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        This email was sent by Boilerplate App
+        {}
     </p>
 </body>
 </html>"#,
-            secret, qr_code_url, qr_code_url, backup_codes_text
+            t!("email.two_factor_setup.html_title").into_owned(),
+            t!("email.two_factor_setup.html_heading").into_owned(),
+            t!("email.two_factor_setup.html_body").into_owned(),
+            t!("email.two_factor_setup.secret_label").into_owned(),
+            secret,
+            t!("email.two_factor_setup.qr_heading").into_owned(),
+            qr_code_url,
+            qr_code_url,
+            t!("email.two_factor_setup.backup_heading").into_owned(),
+            backup_codes_text,
+            t!("email.footer", app = self.from_name).into_owned()
         )
     }
 
     fn password_changed_html_fallback(&self) -> String {
-        r#"<!DOCTYPE html>
+        format!(
+            r#"<!DOCTYPE html>
 <html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Password Changed</title>
+    <title>{}</title>
 </head>
 <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
     <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #dc2626; margin-top: 0;">Password Changed</h1>
-        <p>Your password was successfully changed.</p>
-        <p style="color: #dc2626;"><strong>If you didn't make this change, please contact support immediately.</strong></p>
+        <h1 style="color: #dc2626; margin-top: 0;">{}</h1>
+        <p>{}</p>
+        <p style="color: #dc2626;"><strong>{}</strong></p>
     </div>
     <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        This email was sent by Boilerplate App
+        {}
     </p>
 </body>
-</html>"#
-            .to_string()
+</html>"#,
+            t!("email.password_changed.html_title").into_owned(),
+            t!("email.password_changed.html_heading").into_owned(),
+            t!("email.password_changed.html_body").into_owned(),
+            t!("email.password_changed.html_warning").into_owned(),
+            t!("email.footer", app = self.from_name).into_owned()
+        )
     }
 }
 

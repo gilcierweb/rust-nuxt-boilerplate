@@ -137,13 +137,13 @@ impl WsState {
 
     /// Check whether a new connection from `ip` is allowed under current limits.
     /// Returns `Ok(())` if allowed, or `Err(message)` if rejected.
-    pub async fn check_connection_limits(&self, ip: &str) -> Result<(), &'static str> {
+    pub async fn check_connection_limits(&self, ip: &str) -> Result<(), String> {
         let conns = self.connections.lock().await;
         let total = conns.len();
         drop(conns);
 
         if total >= self.limits.max_global_connections {
-            return Err("Global WebSocket connection limit reached");
+            return Err(t!("ws.connection_limit_global").into_owned());
         }
 
         let counters = self.ip_counters.lock().await;
@@ -151,7 +151,7 @@ impl WsState {
         drop(counters);
 
         if per_ip >= self.limits.max_connections_per_ip {
-            return Err("Per-IP WebSocket connection limit reached");
+            return Err(t!("ws.connection_limit_ip").into_owned());
         }
 
         Ok(())
@@ -474,7 +474,8 @@ impl WebSocketActor {
                 tracing::warn!(
                     connection_id = %self.conn_id,
                     error_code = %err.error.code,
-                    "Invalid WebSocket message"
+                    "{}",
+                    t!("ws.invalid_message").into_owned()
                 );
                 ctx.text(err.to_json());
                 return;
@@ -623,12 +624,12 @@ pub async fn ws_handler(
                 },
                 Err(_) => {
                     tracing::warn!("WebSocket auth failed");
-                    return Err(AppError::Unauthorized("Invalid token".to_string()));
+                    return Err(AppError::Unauthorized(t!("middleware.invalid_token").into_owned()));
                 },
             }
         },
         None => {
-            return Err(AppError::Unauthorized("Missing token".to_string()));
+            return Err(AppError::Unauthorized(t!("auth.missing_token").into_owned()));
         },
     };
 

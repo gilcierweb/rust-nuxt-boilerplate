@@ -122,7 +122,7 @@ pub async fn register(
         ));
     }
 
-    let encrypted_password = hash_password(&body.password)?;
+    let encrypted_password = hash_password(&body.password, container.config.as_ref())?;
     let now = Utc::now();
     let confirmation_token = Uuid::new_v4().to_string();
     let confirmation_token_digest = hash_token(
@@ -362,8 +362,8 @@ pub async fn login(
     }
 
     // Upgrade password hash if using outdated Argon2 parameters
-    if needs_rehash(&user.encrypted_password) {
-        let new_hash = match rehash_password(&body.password) {
+    if needs_rehash(&user.encrypted_password, container.config.as_ref()) {
+        let new_hash = match rehash_password(&body.password, container.config.as_ref()) {
             Ok(h) => h,
             Err(e) => {
                 tracing::warn!(
@@ -524,7 +524,7 @@ pub async fn refresh(
             "refresh failed: missing refresh token cookie"
         );
         return Err(AppError::Unauthorized(
-            "Missing refresh token cookie".to_string(),
+            t!("auth.missing_token").into_owned(),
         ));
     }
 
@@ -798,7 +798,9 @@ pub async fn reset_password(
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
     if body.password != body.password_confirmation {
-        return Err(AppError::Validation("Passwords do not match".to_string()));
+        return Err(AppError::Validation(
+            t!("auth.password.mismatch").into_owned(),
+        ));
     }
 
     let token_digest = hash_token(&body.token, &container.config.refresh_token_hash_salt);
@@ -844,7 +846,7 @@ pub async fn reset_password(
     // At this point, we have a valid user_id
     let user_id = user_id.expect("valid reset should have user_id");
 
-    let hashed_password = hash_password(&body.password)?;
+    let hashed_password = hash_password(&body.password, container.config.as_ref())?;
     let affected_rows = container
         .users
         .update_password(&user_id, &hashed_password)
@@ -1073,7 +1075,9 @@ pub async fn change_password(
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
     if body.new_password != body.password_confirmation {
-        return Err(AppError::Validation("Passwords do not match".into()));
+        return Err(AppError::Validation(
+            t!("auth.password.mismatch").into_owned(),
+        ));
     }
 
     let user_id = user.claims().sub;
@@ -1096,7 +1100,7 @@ pub async fn change_password(
     }
 
     validate_password_strength(&body.new_password)?;
-    let hashed = hash_password(&body.new_password)?;
+    let hashed = hash_password(&body.new_password, container.config.as_ref())?;
 
     container
         .users
@@ -1318,7 +1322,7 @@ async fn find_valid_refresh_token(
     let refresh_tokens = extract_refresh_cookies(req);
     if refresh_tokens.is_empty() {
         return Err(AppError::Unauthorized(
-            "Missing refresh token cookie".to_string(),
+            t!("auth.missing_token").into_owned(),
         ));
     }
 
@@ -1415,7 +1419,7 @@ pub async fn stripe_webhook(
                 "Failed to parse webhook payload as UTF-8"
             );
             return HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Invalid payload encoding"
+                "error": t!("webhooks.stripe.invalid_payload").into_owned()
             }));
         },
     };
@@ -1429,7 +1433,7 @@ pub async fn stripe_webhook(
                 "Failed to parse webhook payload as JSON"
             );
             return HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Invalid JSON payload"
+                "error": t!("webhooks.stripe.invalid_json").into_owned()
             }));
         },
     };
@@ -1565,7 +1569,7 @@ pub async fn pix_webhook(
                 "Failed to parse Pix webhook payload as UTF-8"
             );
             return HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Invalid payload encoding"
+                "error": t!("webhooks.pix.invalid_payload").into_owned()
             }));
         },
     };
@@ -1579,7 +1583,7 @@ pub async fn pix_webhook(
                 "Failed to parse Pix webhook payload as JSON"
             );
             return HttpResponse::BadRequest().json(serde_json::json!({
-                "error": "Invalid JSON payload"
+                "error": t!("webhooks.pix.invalid_json").into_owned()
             }));
         },
     };
@@ -1693,7 +1697,7 @@ mod tests {
             id: Uuid::new_v4(),
             email_blind_index: protected_email.blind_index,
             email_encrypted: protected_email.encrypted,
-            encrypted_password: hash_password("CorrectPassword1").unwrap(),
+            encrypted_password: hash_password("CorrectPassword1", &mock_app_config()).unwrap(),
             reset_password_token_digest: None,
             reset_password_sent_at: None,
             remember_created_at: None,

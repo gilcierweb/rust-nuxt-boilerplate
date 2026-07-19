@@ -215,5 +215,5 @@ pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::err
     req.extensions()
         .get::<Claims>()
         .cloned()
-        .ok_or_else(|| crate::errors::AppError::Unauthorized("Not authenticated".to_string()))
+        .ok_or_else(|| crate::errors::AppError::Unauthorized(t!("middleware.not_authenticated").into_owned()))
 }

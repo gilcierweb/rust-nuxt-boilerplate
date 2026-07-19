@@ -104,7 +104,7 @@ impl WsRedisState {
         let global_count: usize = conn.get(WS_GLOBAL_COUNT).await.unwrap_or(0);
         if global_count >= self.limits.max_global_connections {
             return Err(AppError::Forbidden(
-                "Global WebSocket connection limit reached".to_string(),
+                t!("ws.connection_limit_global").into_owned(),
             ));
         }
 
@@ -112,7 +112,7 @@ impl WsRedisState {
         let ip_count: usize = conn.get(&ip_key).await.unwrap_or(0);
         if ip_count >= self.limits.max_connections_per_ip {
             return Err(AppError::Forbidden(
-                "Per-IP WebSocket connection limit reached".to_string(),
+                t!("ws.connection_limit_ip").into_owned(),
             ));
         }
 

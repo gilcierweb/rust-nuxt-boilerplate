@@ -1,6 +1,6 @@
 <p>Olá <strong>{{ user_name | default(value="there") }}</strong>,</p>
 
-<p>Bem-vindo ao <strong>{{ app_name }}</strong>! Estamos felizes em ter você por aqui.</p>
+<p>Bem-vindo ao {{ app_name }}! Estamos felizes em ter você por aqui.</p>
 
 <p>Para começar, por favor confirme seu endereço de email clicando no botão abaixo:</p>
 
