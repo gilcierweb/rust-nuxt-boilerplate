@@ -47,16 +47,16 @@ export default defineEventHandler(async (event) => {
     })
 
     return applyProxyResponse(event, response)
-  } catch (error: any) {
-    const response = error?.response
-    if (!response) {
-      // Unexpected error shape (no response) — log for debugging and rethrow
-      console.error('[proxy] request error without response:', error)
-      throw createError({
-        statusCode: 502,
-        statusMessage: 'Backend API unavailable',
-      })
-    }
+} catch (error: any) {
+      const response = error?.response
+      if (!response) {
+        // Unexpected error shape (no response) — log for debugging and rethrow
+        console.error('[proxy] request error without response:', error)
+        throw createError({
+          statusCode: 502,
+          statusMessage: 'Backend API unavailable',
+        })
+      }
 
     const errorData = applyProxyResponse(event, response)
 

@@ -25,42 +25,10 @@
       "cancel": "Cancel",
       "back": "Back",
       "submit": "Submit"
-},
-  "common": {
-    "success": "Success",
-    "error": "Error",
-    "loading": "Loading...",
-    "save": "Save",
-    "cancel": "Cancel",
-    "submit": "Submit",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "close": "Close",
-    "yes": "Yes",
-    "no": "No",
-    "or": "or",
-    "and": "and",
-    "actions": {
-      "show": "Show",
-      "edit": "Edit",
-      "new": "New",
-      "refresh": "Refresh",
-      "saveChanges": "Save changes",
-      "saving": "Saving...",
-      "send": "Send",
-      "cancel": "Cancel",
-      "back": "Back",
-      "submit": "Submit"
     },
     "table": {
       "actions": "Actions"
     }
-  },
-  "proxy": {
-    "unavailable": "Backend API unavailable",
-    "unavailableForAuthSession": "Backend API unavailable for auth session",
-    "unavailableForAuthRefresh": "Backend API unavailable for auth refresh"
   },
   "auth": {
     "login": {
@@ -175,6 +143,11 @@
     "title": "Operations overview",
     "description": "Monitor critical modules and track the current administration status.",
     "companies": {
+      "status": {
+        "active": "Active",
+        "suspended": "Suspended",
+        "archived": "Archived"
+      },
       "messages": {
         "loadError": "Failed to load companies.",
         "createSuccess": "Company created successfully.",
@@ -182,32 +155,160 @@
         "updateSuccess": "Company updated successfully.",
         "updateError": "Failed to update company."
       },
-      "form": {
-        "error_title": "Error",
-        "id": "ID",
-        "slug": "Slug",
-        "subdomain": "Subdomain",
-        "legal_name": "Legal Name",
-        "trade_name": "Trade Name",
-        "status": "Status",
-        "status_active": "Active",
-        "status_inactive": "Inactive",
-        "status_helper": "Select the company status",
-        "encryption_key_version": "Key Version",
-        "settings": "Settings",
-        "settings_helper": "Configure additional parameters in JSON format",
-        "created_at": "Created at",
-        "updated_at": "Updated at",
-        "cancel": "Cancel",
-        "saving": "Saving...",
-        "create_company": "Create company",
-        "save_changes": "Save changes"
+      "index": {
+        "header": {
+          "section": "Admin / Companies",
+          "title": "Companies",
+          "description": "Tenant management with complete registration and settings fields."
+        },
+        "actions": {
+          "new": "New company",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "active": "Active",
+          "inactive": "Suspended/Archived"
+        },
+        "table": {
+          "legalName": "Legal Name",
+          "slug": "Slug",
+          "subdomain": "Subdomain",
+          "status": "Status",
+          "actions": "@:common.table.actions",
+          "show": "@:common.actions.show",
+          "edit": "@:common.actions.edit",
+          "empty": "No companies loaded."
+        }
       },
-      "validation": {
-        "slug_required": "Slug is required",
-        "subdomain_required": "Subdomain is required",
-        "legal_name_required": "Legal name is required",
-        "status_required": "Status is required"
+      "new": {
+        "header": {
+          "section": "Admin / Companies",
+          "title": "New company",
+          "description": "Full tenant onboarding. Fields follow the NewCompany contract."
+        },
+        "actions": {
+          "submit": "Create company"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Companies",
+          "title": "Edit company"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Companies",
+          "title": "Company details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "sections": {
+          "main": "Main data",
+          "security": "Status and security",
+          "settings": "Settings JSON"
+        },
+        "fields": {
+          "legalName": "Legal Name",
+          "tradeName": "Trade Name",
+          "slug": "Slug",
+          "subdomain": "Subdomain",
+          "status": "Status",
+          "encryptionKeyVersion": "Encryption Key Version",
+          "updatedAt": "Updated at"
+        },
+        "empty": "Company not found."
+      },
+      "form": {
+        "sections": {
+          "companyData": "Company data",
+          "statusPolicies": "Status and policies",
+          "featureFlags": "Feature flags (FlyonUI checkboxes)",
+          "advancedWarning": "Use Base64 or JSON byte array for encrypted fields (e.g. [1,2,3])."
+        },
+        "fields": {
+          "legalName": {
+            "label": "Legal Name",
+            "placeholder": "Build Track Empreendimentos LTDA",
+            "helper": "Please provide the full legal company name."
+          },
+          "tradeName": {
+            "label": "Trade Name",
+            "placeholder": "Build Track",
+            "helper": "Optional display name for marketing."
+          },
+          "slug": {
+            "label": "Slug",
+            "placeholder": "build-track",
+            "prefix": "org/",
+            "helper": "Internal unique identifier."
+          },
+          "subdomain": {
+            "label": "Subdomain",
+            "placeholder": "buildtrack",
+            "suffix": ".platform",
+            "helper": "Use lowercase, numbers and hyphen."
+          },
+          "visualTheme": {
+            "label": "Visual Theme",
+            "options": {
+              "default": "Default",
+              "corporate": "Corporate",
+              "light": "Light",
+              "dark": "Dark"
+            }
+          },
+          "encryptionKeyVersion": {
+            "label": "Encryption Key Version"
+          },
+          "status": {
+            "label": "Status",
+            "options": {
+              "active": "Active",
+              "suspended": "Suspended",
+              "archived": "Archived"
+            }
+          },
+          "logoFile": {
+            "label": "Pick a file",
+            "helper": "Logo file name will be stored in settings."
+          },
+          "advancedSwitch": "Advanced cryptographic fields",
+          "flags": {
+            "portalEnabled": "Portal Enabled",
+            "notifications": "Notifications",
+            "ticketing": "Ticketing",
+            "financePreview": "Finance Preview",
+            "publicGallery": "Public Gallery",
+            "autoTimeline": "Auto Timeline",
+            "requireLgpd": "Require LGPD",
+            "maintenanceMode": "Maintenance Mode"
+          },
+          "internalNotes": {
+            "label": "Internal notes",
+            "placeholder": "Internal operational notes"
+          },
+          "settingsJson": {
+            "label": "Settings JSON",
+            "placeholder": "\"theme\": \"default\""
+          },
+          "advanced": {
+            "cnpjEncrypted": "CNPJ Encrypted",
+            "cnpjBlindIndex": "CNPJ Blind Index",
+            "contactEmailEncrypted": "Contact Email Encrypted",
+            "contactEmailBlindIndex": "Contact Email Blind Index",
+            "contactPhoneEncrypted": "Contact Phone Encrypted",
+            "contactPhoneBlindIndex": "Contact Phone Blind Index"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "debt_categories": {
@@ -648,9 +749,15 @@
     },
     "module": "Module",
     "modules": {
-      "dashboard": { "description": "Consolidated KPIs and operational visibility." },
-      "projects": { "description": "Track delivery, milestones, and project status." },
-      "announcements": { "description": "Manage communications sent to customers." },
+      "dashboard": {
+        "description": "Consolidated KPIs and operational visibility."
+      },
+      "projects": {
+        "description": "Track delivery, milestones, and project status."
+      },
+      "announcements": {
+        "description": "Manage communications sent to customers."
+      },
       "settings": {
         "title": "Settings",
         "description": "Adjust administrative parameters and internal policies."
@@ -810,133 +917,18 @@
         "flyonui": "FlyonUI"
       }
     },
-    "companies": {
+    "memberships": {
+      "roles": {
+        "admin": "Admin",
+        "manager": "Manager",
+        "editor": "Editor",
+        "viewer": "Viewer"
+      },
       "status": {
         "active": "Active",
-        "suspended": "Suspended",
-        "archived": "Archived"
+        "invited": "Invited",
+        "suspended": "Suspended"
       },
-      "messages": {
-        "loadError": "Failed to load companies.",
-        "createSuccess": "Company created successfully.",
-        "createError": "Failed to create company.",
-        "updateSuccess": "Company updated successfully.",
-        "updateError": "Failed to update company."
-      },
-      "index": {
-        "header": {
-          "section": "Admin / Companies",
-          "title": "Companies",
-          "description": "Tenant management with complete registration and settings fields."
-        },
-        "actions": { "new": "New company", "refresh": "@:common.actions.refresh" },
-        "metrics": { "total": "Total", "active": "Active", "inactive": "Suspended/Archived" },
-        "table": {
-          "legalName": "Legal Name",
-          "slug": "Slug",
-          "subdomain": "Subdomain",
-          "status": "Status",
-          "actions": "@:common.table.actions",
-          "show": "@:common.actions.show",
-          "edit": "@:common.actions.edit",
-          "empty": "No companies loaded."
-        }
-      },
-      "new": {
-        "header": {
-          "section": "Admin / Companies",
-          "title": "New company",
-          "description": "Full tenant onboarding. Fields follow the NewCompany contract."
-        },
-        "actions": { "submit": "Create company" }
-      },
-      "edit": {
-        "header": { "section": "Admin / Companies", "title": "Edit company" },
-        "actions": { "submit": "@:common.actions.saveChanges" }
-      },
-      "show": {
-        "header": { "section": "Admin / Companies", "title": "Company details" },
-        "actions": { "edit": "@:common.actions.edit" },
-        "sections": { "main": "Main data", "security": "Status and security", "settings": "Settings JSON" },
-        "fields": {
-          "legalName": "Legal Name",
-          "tradeName": "Trade Name",
-          "slug": "Slug",
-          "subdomain": "Subdomain",
-          "status": "Status",
-          "encryptionKeyVersion": "Encryption Key Version",
-          "updatedAt": "Updated at"
-        },
-        "empty": "Company not found."
-      },
-      "form": {
-        "sections": {
-          "companyData": "Company data",
-          "statusPolicies": "Status and policies",
-          "featureFlags": "Feature flags (FlyonUI checkboxes)",
-          "advancedWarning": "Use Base64 or JSON byte array for encrypted fields (e.g. [1,2,3])."
-        },
-        "fields": {
-          "legalName": {
-            "label": "Legal Name",
-            "placeholder": "Build Track Empreendimentos LTDA",
-            "helper": "Please provide the full legal company name."
-          },
-          "tradeName": {
-            "label": "Trade Name",
-            "placeholder": "Build Track",
-            "helper": "Optional display name for marketing."
-          },
-          "slug": {
-            "label": "Slug",
-            "placeholder": "build-track",
-            "prefix": "org/",
-            "helper": "Internal unique identifier."
-          },
-          "subdomain": {
-            "label": "Subdomain",
-            "placeholder": "buildtrack",
-            "suffix": ".platform",
-            "helper": "Use lowercase, numbers and hyphen."
-          },
-          "visualTheme": {
-            "label": "Visual Theme",
-            "options": { "default": "Default", "corporate": "Corporate", "light": "Light", "dark": "Dark" }
-          },
-          "encryptionKeyVersion": { "label": "Encryption Key Version" },
-          "status": {
-            "label": "Status",
-            "options": { "active": "Active", "suspended": "Suspended", "archived": "Archived" }
-          },
-          "logoFile": { "label": "Pick a file", "helper": "Logo file name will be stored in settings." },
-          "advancedSwitch": "Advanced cryptographic fields",
-          "flags": {
-            "portalEnabled": "Portal Enabled",
-            "notifications": "Notifications",
-            "ticketing": "Ticketing",
-            "financePreview": "Finance Preview",
-            "publicGallery": "Public Gallery",
-            "autoTimeline": "Auto Timeline",
-            "requireLgpd": "Require LGPD",
-            "maintenanceMode": "Maintenance Mode"
-          },
-          "internalNotes": { "label": "Internal notes", "placeholder": "Internal operational notes" },
-          "settingsJson": { "label": "Settings JSON", "placeholder": "\"theme\": \"default\"" },
-          "advanced": {
-            "cnpjEncrypted": "CNPJ Encrypted",
-            "cnpjBlindIndex": "CNPJ Blind Index",
-            "contactEmailEncrypted": "Contact Email Encrypted",
-            "contactEmailBlindIndex": "Contact Email Blind Index",
-            "contactPhoneEncrypted": "Contact Phone Encrypted",
-            "contactPhoneBlindIndex": "Contact Phone Blind Index"
-          }
-        },
-        "actions": { "saving": "@:common.actions.saving" }
-      }
-    },
-    "memberships": {
-      "roles": { "admin": "Admin", "manager": "Manager", "editor": "Editor", "viewer": "Viewer" },
-      "status": { "active": "Active", "invited": "Invited", "suspended": "Suspended" },
       "messages": {
         "loadError": "Failed to load memberships.",
         "createSuccess": "Membership created successfully.",
@@ -945,9 +937,19 @@
         "updateError": "Failed to update membership."
       },
       "index": {
-        "header": { "section": "Admin / Memberships", "title": "User-Company Memberships" },
-        "actions": { "new": "New membership", "refresh": "@:common.actions.refresh" },
-        "metrics": { "total": "Total", "active": "Active", "primary": "Primary" },
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "User-Company Memberships"
+        },
+        "actions": {
+          "new": "New membership",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "active": "Active",
+          "primary": "Primary"
+        },
         "table": {
           "user": "User",
           "company": "Company",
@@ -960,35 +962,97 @@
           "empty": "No memberships loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Memberships", "title": "New membership" }, "actions": { "submit": "Create membership" } },
-      "edit": { "header": { "section": "Admin / Memberships", "title": "Edit membership" }, "actions": { "submit": "@:common.actions.saveChanges" } },
+      "new": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "New membership"
+        },
+        "actions": {
+          "submit": "Create membership"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Edit membership"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
       "show": {
-        "header": { "section": "Admin / Memberships", "title": "Membership details" },
-        "actions": { "edit": "@:common.actions.edit" },
-        "fields": { "primary": "Primary" },
+        "header": {
+          "section": "Admin / Memberships",
+          "title": "Membership details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "fields": {
+          "primary": "Primary"
+        },
         "empty": "Membership not found."
       },
       "form": {
-        "sections": { "main": "Main data", "audit": "Audit" },
+        "sections": {
+          "main": "Main data",
+          "audit": "Audit"
+        },
         "fields": {
-          "userId": { "label": "User ID" },
-          "companyId": { "label": "Company ID" },
+          "userId": {
+            "label": "User ID"
+          },
+          "companyId": {
+            "label": "Company ID"
+          },
           "membershipRole": {
             "label": "Membership Role",
-            "options": { "admin": "Admin", "manager": "Manager", "editor": "Editor", "viewer": "Viewer" }
+            "options": {
+              "admin": "Admin",
+              "manager": "Manager",
+              "editor": "Editor",
+              "viewer": "Viewer"
+            }
           },
-          "status": { "label": "Status", "options": { "active": "Active", "invited": "Invited", "suspended": "Suspended" } },
-          "isPrimary": { "label": "Primary membership" },
-          "invitedBy": { "label": "Invited By" },
-          "joinedAt": { "label": "Joined At" },
-          "lastAccessedAt": { "label": "Last Accessed At" }
+          "status": {
+            "label": "Status",
+            "options": {
+              "active": "Active",
+              "invited": "Invited",
+              "suspended": "Suspended"
+            }
+          },
+          "isPrimary": {
+            "label": "Primary membership"
+          },
+          "invitedBy": {
+            "label": "Invited By"
+          },
+          "joinedAt": {
+            "label": "Joined At"
+          },
+          "lastAccessedAt": {
+            "label": "Last Accessed At"
+          }
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "projects": {
-      "types": { "residential": "Residential", "commercial": "Commercial", "mixed": "Mixed", "lot": "Land lot" },
-      "status": { "planning": "Planning", "inProgress": "In progress", "paused": "Paused", "completed": "Completed" },
+      "types": {
+        "residential": "Residential",
+        "commercial": "Commercial",
+        "mixed": "Mixed",
+        "lot": "Land lot"
+      },
+      "status": {
+        "planning": "Planning",
+        "inProgress": "In progress",
+        "paused": "Paused",
+        "completed": "Completed"
+      },
       "messages": {
         "loadError": "Failed to load projects.",
         "createSuccess": "Project created successfully.",
@@ -997,9 +1061,20 @@
         "updateError": "Failed to update project."
       },
       "index": {
-        "header": { "section": "Admin / Projects", "title": "Projects" },
-        "actions": { "new": "New", "refresh": "@:common.actions.refresh" },
-        "metrics": { "total": "Total", "active": "Active", "source": "Source", "sourceDetail": "List integrated with endpoint" },
+        "header": {
+          "section": "Admin / Projects",
+          "title": "Projects"
+        },
+        "actions": {
+          "new": "New",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "active": "Active",
+          "source": "Source",
+          "sourceDetail": "List integrated with endpoint"
+        },
         "table": {
           "name": "Name",
           "code": "Code",
@@ -1008,11 +1083,32 @@
           "empty": "No projects loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Projects", "title": "New project" }, "actions": { "submit": "Create project" } },
-      "edit": { "header": { "section": "Admin / Projects", "title": "Edit project" }, "actions": { "submit": "@:common.actions.saveChanges" } },
+      "new": {
+        "header": {
+          "section": "Admin / Projects",
+          "title": "New project"
+        },
+        "actions": {
+          "submit": "Create project"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Projects",
+          "title": "Edit project"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
       "show": {
-        "header": { "section": "Admin / Projects", "title": "Project details" },
-        "actions": { "edit": "@:common.actions.edit" },
+        "header": {
+          "section": "Admin / Projects",
+          "title": "Project details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
         "sections": {
           "identification": "Identification",
           "classification": "Classification",
@@ -1049,59 +1145,179 @@
           "location": "Location"
         },
         "fields": {
-          "companyId": { "label": "Company ID" },
-          "code": { "label": "Code" },
-          "slug": { "label": "Slug" },
-          "name": { "label": "Name" },
-          "description": { "label": "Description" },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "code": {
+            "label": "Code"
+          },
+          "slug": {
+            "label": "Slug"
+          },
+          "name": {
+            "label": "Name"
+          },
+          "description": {
+            "label": "Description"
+          },
           "projectType": {
             "label": "Project type",
-            "options": { "residential": "Residential", "commercial": "Commercial", "mixed": "Mixed", "lot": "Land lot" }
+            "options": {
+              "residential": "Residential",
+              "commercial": "Commercial",
+              "mixed": "Mixed",
+              "lot": "Land lot"
+            }
           },
           "status": {
             "label": "Status",
-            "options": { "planning": "Planning", "inProgress": "In progress", "paused": "Paused", "completed": "Completed" }
+            "options": {
+              "planning": "Planning",
+              "inProgress": "In progress",
+              "paused": "Paused",
+              "completed": "Completed"
+            }
           },
-          "coverPhotoId": { "label": "Cover Photo ID" },
-          "salesStartAt": { "label": "Sales Start" },
-          "plannedStartAt": { "label": "Planned Start" },
-          "plannedDeliveryAt": { "label": "Planned Delivery" },
-          "actualStartAt": { "label": "Actual Start" },
-          "actualDeliveryAt": { "label": "Actual Delivery" },
-          "city": { "label": "City" },
-          "state": { "label": "State" },
-          "neighborhood": { "label": "Neighborhood" },
-          "streetAddress": { "label": "Street address" },
-          "postalCode": { "label": "Postal code" }
+          "coverPhotoId": {
+            "label": "Cover Photo ID"
+          },
+          "salesStartAt": {
+            "label": "Sales Start"
+          },
+          "plannedStartAt": {
+            "label": "Planned Start"
+          },
+          "plannedDeliveryAt": {
+            "label": "Planned Delivery"
+          },
+          "actualStartAt": {
+            "label": "Actual Start"
+          },
+          "actualDeliveryAt": {
+            "label": "Actual Delivery"
+          },
+          "city": {
+            "label": "City"
+          },
+          "state": {
+            "label": "State"
+          },
+          "neighborhood": {
+            "label": "Neighborhood"
+          },
+          "streetAddress": {
+            "label": "Street address"
+          },
+          "postalCode": {
+            "label": "Postal code"
+          }
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "references": {
-      "project": { "placeholder": "Select a project", "loadError": "Failed to load project options." },
-      "company": { "placeholder": "Select a company", "loadError": "Failed to load company options." },
-      "customer": { "placeholder": "Select a customer", "loadError": "Failed to load customer options." },
-      "unit": { "placeholder": "Select a unit", "loadError": "Failed to load unit options." },
-      "stage": { "placeholder": "Select a stage", "loadError": "Failed to load stage options." },
-      "user": { "placeholder": "Select a user", "loadError": "Failed to load user options." },
-      "ticket": { "placeholder": "Select a ticket", "loadError": "Failed to load ticket options." },
-      "photoAlbum": { "placeholder": "Select a photo album", "loadError": "Failed to load photo album options." },
+      "project": {
+        "placeholder": "Select a project",
+        "loadError": "Failed to load project options."
+      },
+      "company": {
+        "placeholder": "Select a company",
+        "loadError": "Failed to load company options."
+      },
+      "customer": {
+        "placeholder": "Select a customer",
+        "loadError": "Failed to load customer options."
+      },
+      "unit": {
+        "placeholder": "Select a unit",
+        "loadError": "Failed to load unit options."
+      },
+      "stage": {
+        "placeholder": "Select a stage",
+        "loadError": "Failed to load stage options."
+      },
+      "user": {
+        "placeholder": "Select a user",
+        "loadError": "Failed to load user options."
+      },
+      "ticket": {
+        "placeholder": "Select a ticket",
+        "loadError": "Failed to load ticket options."
+      },
+      "photoAlbum": {
+        "placeholder": "Select a photo album",
+        "loadError": "Failed to load photo album options."
+      },
       "status": {
-        "project": { "planning": "Planning", "inProgress": "In progress", "paused": "Paused", "completed": "Completed" },
-        "stage": { "planning": "Planning", "inProgress": "In Progress", "paused": "Paused", "done": "Done" },
-        "unit": { "planning": "Planning", "available": "Available", "reserved": "Reserved", "sold": "Sold", "delivered": "Delivered" },
-        "ticket": { "open": "Open", "inProgress": "In Progress", "waitingCustomer": "Waiting Customer", "closed": "Closed" },
-        "company": { "active": "Active", "suspended": "Suspended", "archived": "Archived" },
-        "customer": { "lead": "Lead", "invited": "Invited", "active": "Active", "inactive": "Inactive" }
+        "project": {
+          "planning": "Planning",
+          "inProgress": "In progress",
+          "paused": "Paused",
+          "completed": "Completed"
+        },
+        "stage": {
+          "planning": "Planning",
+          "inProgress": "In Progress",
+          "paused": "Paused",
+          "done": "Done"
+        },
+        "unit": {
+          "planning": "Planning",
+          "available": "Available",
+          "reserved": "Reserved",
+          "sold": "Sold",
+          "delivered": "Delivered"
+        },
+        "ticket": {
+          "open": "Open",
+          "inProgress": "In Progress",
+          "waitingCustomer": "Waiting Customer",
+          "closed": "Closed"
+        },
+        "company": {
+          "active": "Active",
+          "suspended": "Suspended",
+          "archived": "Archived"
+        },
+        "customer": {
+          "lead": "Lead",
+          "invited": "Invited",
+          "active": "Active",
+          "inactive": "Inactive"
+        }
       },
       "priority": {
-        "ticket": { "low": "Low", "medium": "Medium", "high": "High", "urgent": "Urgent" }
+        "ticket": {
+          "low": "Low",
+          "medium": "Medium",
+          "high": "High",
+          "urgent": "Urgent"
+        }
       },
       "type": {
-        "project": { "residential": "Residential", "commercial": "Commercial", "mixed": "Mixed", "lot": "Land lot" },
-        "unit": { "apartment": "Apartment", "house": "House" },
-        "document": { "contract": "Contract", "blueprint": "Blueprint", "permit": "Permit", "other": "Other" },
-        "announcement": { "general": "General", "urgent": "Urgent", "update": "Update" }
+        "project": {
+          "residential": "Residential",
+          "commercial": "Commercial",
+          "mixed": "Mixed",
+          "lot": "Land lot"
+        },
+        "unit": {
+          "apartment": "Apartment",
+          "house": "House"
+        },
+        "document": {
+          "contract": "Contract",
+          "blueprint": "Blueprint",
+          "permit": "Permit",
+          "other": "Other"
+        },
+        "announcement": {
+          "general": "General",
+          "urgent": "Urgent",
+          "update": "Update"
+        }
       }
     },
     "resourceForm": {
@@ -1257,13 +1473,27 @@
           "metadata": "Metadata"
         },
         "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "code": { "label": "Code" },
-          "tower": { "label": "Tower" },
-          "block": { "label": "Block" },
-          "floorLabel": { "label": "Floor" },
-          "unitLabel": { "label": "Unit label" },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "code": {
+            "label": "Code"
+          },
+          "tower": {
+            "label": "Tower"
+          },
+          "block": {
+            "label": "Block"
+          },
+          "floorLabel": {
+            "label": "Floor"
+          },
+          "unitLabel": {
+            "label": "Unit label"
+          },
           "unitType": {
             "label": "Unit type",
             "options": {
@@ -1282,12 +1512,24 @@
               "blocked": "Blocked"
             }
           },
-          "privateArea": { "label": "Private area" },
-          "totalArea": { "label": "Total area" },
-          "bedrooms": { "label": "Bedrooms" },
-          "bathrooms": { "label": "Bathrooms" },
-          "parkingSpots": { "label": "Parking spots" },
-          "handoverAt": { "label": "Handover at" },
+          "privateArea": {
+            "label": "Private area"
+          },
+          "totalArea": {
+            "label": "Total area"
+          },
+          "bedrooms": {
+            "label": "Bedrooms"
+          },
+          "bathrooms": {
+            "label": "Bathrooms"
+          },
+          "parkingSpots": {
+            "label": "Parking spots"
+          },
+          "handoverAt": {
+            "label": "Handover at"
+          },
           "metadataJson": {
             "label": "Metadata JSON",
             "placeholder": "Unit metadata JSON"
@@ -1379,9 +1621,15 @@
           "security": "Security"
         },
         "fields": {
-          "companyId": { "label": "Company ID" },
-          "userId": { "label": "User ID" },
-          "customerCode": { "label": "Customer code" },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "userId": {
+            "label": "User ID"
+          },
+          "customerCode": {
+            "label": "Customer code"
+          },
           "status": {
             "label": "Status",
             "options": {
@@ -1400,11 +1648,21 @@
               "support": "Support"
             }
           },
-          "lgpdConsentAt": { "label": "LGPD consent at" },
-          "invitedAt": { "label": "Invited at" },
-          "activatedAt": { "label": "Activated at" },
-          "lastPortalAccessAt": { "label": "Last portal access at" },
-          "encryptionKeyVersion": { "label": "Encryption key version" },
+          "lgpdConsentAt": {
+            "label": "LGPD consent at"
+          },
+          "invitedAt": {
+            "label": "Invited at"
+          },
+          "activatedAt": {
+            "label": "Activated at"
+          },
+          "lastPortalAccessAt": {
+            "label": "Last portal access at"
+          },
+          "encryptionKeyVersion": {
+            "label": "Encryption key version"
+          },
           "internalNotesEncryptedRaw": {
             "label": "Encrypted internal notes",
             "placeholder": "Base64 or JSON byte array"
@@ -1487,12 +1745,24 @@
           "execution": "Execution"
         },
         "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "code": { "label": "Code" },
-          "name": { "label": "Name" },
-          "description": { "label": "Description" },
-          "position": { "label": "Position" },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "code": {
+            "label": "Code"
+          },
+          "name": {
+            "label": "Name"
+          },
+          "description": {
+            "label": "Description"
+          },
+          "position": {
+            "label": "Position"
+          },
           "status": {
             "label": "Status",
             "options": {
@@ -1502,11 +1772,21 @@
               "done": "Done"
             }
           },
-          "plannedStartAt": { "label": "Planned start at" },
-          "plannedEndAt": { "label": "Planned end at" },
-          "actualStartAt": { "label": "Actual start at" },
-          "actualEndAt": { "label": "Actual end at" },
-          "progressPercentage": { "label": "Progress (%)" }
+          "plannedStartAt": {
+            "label": "Planned start at"
+          },
+          "plannedEndAt": {
+            "label": "Planned end at"
+          },
+          "actualStartAt": {
+            "label": "Actual start at"
+          },
+          "actualEndAt": {
+            "label": "Actual end at"
+          },
+          "progressPercentage": {
+            "label": "Progress (%)"
+          }
         },
         "actions": {
           "saving": "@:common.actions.saving"
@@ -1592,9 +1872,15 @@
           "relationship": "Relationship and access"
         },
         "fields": {
-          "companyId": { "label": "Company ID" },
-          "customerId": { "label": "Customer ID" },
-          "unitId": { "label": "Unit ID" },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "customerId": {
+            "label": "Customer ID"
+          },
+          "unitId": {
+            "label": "Unit ID"
+          },
           "relationshipType": {
             "label": "Relationship type",
             "options": {
@@ -1612,10 +1898,18 @@
               "revoked": "Revoked"
             }
           },
-          "isPrimary": { "label": "Primary link" },
-          "grantedBy": { "label": "Granted by" },
-          "startsAt": { "label": "Access starts at" },
-          "endsAt": { "label": "Access ends at" }
+          "isPrimary": {
+            "label": "Primary link"
+          },
+          "grantedBy": {
+            "label": "Granted by"
+          },
+          "startsAt": {
+            "label": "Access starts at"
+          },
+          "endsAt": {
+            "label": "Access ends at"
+          }
         },
         "actions": {
           "saving": "@:common.actions.saving"
@@ -1701,9 +1995,15 @@
           "content": "Content"
         },
         "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "constructionStageId": { "label": "Stage ID" },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "constructionStageId": {
+            "label": "Stage ID"
+          },
           "eventType": {
             "label": "Event type",
             "options": {
@@ -1721,11 +2021,21 @@
               "public": "Public"
             }
           },
-          "title": { "label": "Title" },
-          "body": { "label": "Body" },
-          "occurredAt": { "label": "Occurred at" },
-          "publishedAt": { "label": "Published at" },
-          "createdBy": { "label": "Created by" },
+          "title": {
+            "label": "Title"
+          },
+          "body": {
+            "label": "Body"
+          },
+          "occurredAt": {
+            "label": "Occurred at"
+          },
+          "publishedAt": {
+            "label": "Published at"
+          },
+          "createdBy": {
+            "label": "Created by"
+          },
           "metadataJson": {
             "label": "Metadata JSON",
             "placeholder": "Event metadata JSON"
@@ -1804,19 +2114,37 @@
           "report": "Progress report"
         },
         "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "constructionStageId": { "label": "Stage ID" },
-          "referenceDate": { "label": "Reference date" },
-          "progressPercentage": { "label": "Progress (%)" },
-          "summary": { "label": "Summary" },
-          "risks": { "label": "Risks" },
-          "nextSteps": { "label": "Next steps" },
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "constructionStageId": {
+            "label": "Stage ID"
+          },
+          "referenceDate": {
+            "label": "Reference date"
+          },
+          "progressPercentage": {
+            "label": "Progress (%)"
+          },
+          "summary": {
+            "label": "Summary"
+          },
+          "risks": {
+            "label": "Risks"
+          },
+          "nextSteps": {
+            "label": "Next steps"
+          },
           "metricsJson": {
             "label": "Metrics JSON",
             "placeholder": "Aggregated metrics JSON"
           },
-          "createdBy": { "label": "Created by" }
+          "createdBy": {
+            "label": "Created by"
+          }
         },
         "actions": {
           "saving": "@:common.actions.saving"
@@ -1834,9 +2162,20 @@
         "publishError": "Failed to publish announcement."
       },
       "index": {
-        "header": { "section": "Admin / Announcements", "title": "Announcements" },
-        "actions": { "new": "New announcement", "refresh": "@:common.actions.refresh", "publish": "Publish" },
-        "metrics": { "total": "Total", "published": "Published", "drafts": "Drafts" },
+        "header": {
+          "section": "Admin / Announcements",
+          "title": "Announcements"
+        },
+        "actions": {
+          "new": "New announcement",
+          "refresh": "@:common.actions.refresh",
+          "publish": "Publish"
+        },
+        "metrics": {
+          "total": "Total",
+          "published": "Published",
+          "drafts": "Drafts"
+        },
         "list": {
           "priority": "priority",
           "status": "status",
@@ -1847,24 +2186,85 @@
           "empty": "No announcements loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Announcements", "title": "New announcement" }, "actions": { "submit": "Create announcement" } },
-      "edit": { "header": { "section": "Admin / Announcements", "title": "Edit announcement" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Announcements", "title": "Announcement details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Announcement not found." },
-      "form": {
-        "sections": { "identification": "Identification", "content": "Content" },
-        "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "priority": { "label": "Priority", "options": { "low": "Low", "medium": "Medium", "high": "High" } },
-          "visibility": { "label": "Visibility", "options": { "internal": "Internal", "customer": "Customer", "public": "Public" } },
-          "title": { "label": "Title" },
-          "body": { "label": "Body" },
-          "publishedAt": { "label": "Published at" },
-          "expiresAt": { "label": "Expires at" },
-          "createdBy": { "label": "Created by" },
-          "metadataJson": { "label": "Metadata JSON", "placeholder": "Announcement metadata JSON" }
+      "new": {
+        "header": {
+          "section": "Admin / Announcements",
+          "title": "New announcement"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "submit": "Create announcement"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Announcements",
+          "title": "Edit announcement"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Announcements",
+          "title": "Announcement details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Announcement not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "content": "Content"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "priority": {
+            "label": "Priority",
+            "options": {
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High"
+            }
+          },
+          "visibility": {
+            "label": "Visibility",
+            "options": {
+              "internal": "Internal",
+              "customer": "Customer",
+              "public": "Public"
+            }
+          },
+          "title": {
+            "label": "Title"
+          },
+          "body": {
+            "label": "Body"
+          },
+          "publishedAt": {
+            "label": "Published at"
+          },
+          "expiresAt": {
+            "label": "Expires at"
+          },
+          "createdBy": {
+            "label": "Created by"
+          },
+          "metadataJson": {
+            "label": "Metadata JSON",
+            "placeholder": "Announcement metadata JSON"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "documents": {
@@ -1876,8 +2276,14 @@
         "updateError": "Failed to update document."
       },
       "index": {
-        "header": { "section": "Admin / Documents", "title": "Documents" },
-        "actions": { "new": "New document", "refresh": "@:common.actions.refresh" },
+        "header": {
+          "section": "Admin / Documents",
+          "title": "Documents"
+        },
+        "actions": {
+          "new": "New document",
+          "refresh": "@:common.actions.refresh"
+        },
         "table": {
           "title": "Title",
           "projectId": "Project",
@@ -1889,9 +2295,34 @@
           "empty": "No documents loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Documents", "title": "New document" }, "actions": { "submit": "Create document" } },
-      "edit": { "header": { "section": "Admin / Documents", "title": "Edit document" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Documents", "title": "Document details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Document not found." },
+      "new": {
+        "header": {
+          "section": "Admin / Documents",
+          "title": "New document"
+        },
+        "actions": {
+          "submit": "Create document"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Documents",
+          "title": "Edit document"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Documents",
+          "title": "Document details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Document not found."
+      },
       "form": {
         "error_title": "Error",
         "id": "ID",
@@ -1937,9 +2368,19 @@
         "updateError": "Failed to update ticket."
       },
       "index": {
-        "header": { "section": "Admin / Tickets", "title": "Tickets" },
-        "actions": { "new": "New ticket", "refresh": "@:common.actions.refresh" },
-        "metrics": { "total": "Total", "open": "Open", "highPriority": "High priority" },
+        "header": {
+          "section": "Admin / Tickets",
+          "title": "Tickets"
+        },
+        "actions": {
+          "new": "New ticket",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "open": "Open",
+          "highPriority": "High priority"
+        },
         "list": {
           "status": "status",
           "priority": "priority",
@@ -1948,29 +2389,108 @@
           "empty": "No tickets loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Tickets", "title": "New ticket" }, "actions": { "submit": "Create ticket" } },
-      "edit": { "header": { "section": "Admin / Tickets", "title": "Edit ticket" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Tickets", "title": "Ticket details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Ticket not found." },
-      "form": {
-        "sections": { "identification": "Identification", "messages": "Message and audit" },
-        "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "unitId": { "label": "Unit ID" },
-          "customerId": { "label": "Customer ID" },
-          "openedByUserId": { "label": "Opened by User ID" },
-          "assignedToUserId": { "label": "Assigned to User ID" },
-          "category": { "label": "Category", "options": { "support": "Support", "finance": "Finance", "technical": "Technical", "other": "Other" } },
-          "priority": { "label": "Priority", "options": { "low": "Low", "medium": "Medium", "high": "High", "urgent": "Urgent" } },
-          "status": { "label": "Status", "options": { "open": "Open", "inProgress": "In progress", "waitingCustomer": "Waiting customer", "closed": "Closed" } },
-          "subject": { "label": "Subject" },
-          "initialMessageEncryptedRaw": { "label": "Encrypted initial message", "placeholder": "Base64 or JSON byte array" },
-          "encryptionKeyVersion": { "label": "Encryption key version" },
-          "lastCustomerMessageAt": { "label": "Last customer message at" },
-          "lastStaffMessageAt": { "label": "Last staff message at" },
-          "closedAt": { "label": "Closed at" }
+      "new": {
+        "header": {
+          "section": "Admin / Tickets",
+          "title": "New ticket"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "submit": "Create ticket"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Tickets",
+          "title": "Edit ticket"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Tickets",
+          "title": "Ticket details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Ticket not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "messages": "Message and audit"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "unitId": {
+            "label": "Unit ID"
+          },
+          "customerId": {
+            "label": "Customer ID"
+          },
+          "openedByUserId": {
+            "label": "Opened by User ID"
+          },
+          "assignedToUserId": {
+            "label": "Assigned to User ID"
+          },
+          "category": {
+            "label": "Category",
+            "options": {
+              "support": "Support",
+              "finance": "Finance",
+              "technical": "Technical",
+              "other": "Other"
+            }
+          },
+          "priority": {
+            "label": "Priority",
+            "options": {
+              "low": "Low",
+              "medium": "Medium",
+              "high": "High",
+              "urgent": "Urgent"
+            }
+          },
+          "status": {
+            "label": "Status",
+            "options": {
+              "open": "Open",
+              "inProgress": "In progress",
+              "waitingCustomer": "Waiting customer",
+              "closed": "Closed"
+            }
+          },
+          "subject": {
+            "label": "Subject"
+          },
+          "initialMessageEncryptedRaw": {
+            "label": "Encrypted initial message",
+            "placeholder": "Base64 or JSON byte array"
+          },
+          "encryptionKeyVersion": {
+            "label": "Encryption key version"
+          },
+          "lastCustomerMessageAt": {
+            "label": "Last customer message at"
+          },
+          "lastStaffMessageAt": {
+            "label": "Last staff message at"
+          },
+          "closedAt": {
+            "label": "Closed at"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "notifications": {
@@ -1982,9 +2502,19 @@
         "updateError": "Failed to update notification."
       },
       "index": {
-        "header": { "section": "Admin / Notifications", "title": "Notifications" },
-        "actions": { "new": "New notification", "refresh": "@:common.actions.refresh" },
-        "metrics": { "total": "Total", "queued": "Queued", "failed": "Failed" },
+        "header": {
+          "section": "Admin / Notifications",
+          "title": "Notifications"
+        },
+        "actions": {
+          "new": "New notification",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "queued": "Queued",
+          "failed": "Failed"
+        },
         "list": {
           "channel": "channel",
           "status": "status",
@@ -1993,30 +2523,111 @@
           "empty": "No notifications loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Notifications", "title": "New notification" }, "actions": { "submit": "Create notification" } },
-      "edit": { "header": { "section": "Admin / Notifications", "title": "Edit notification" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Notifications", "title": "Notification details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Notification not found." },
-      "form": {
-        "sections": { "identification": "Identification", "content": "Content", "schedule": "Schedule and delivery" },
-        "fields": {
-          "companyId": { "label": "Company ID" },
-          "userId": { "label": "User ID" },
-          "customerId": { "label": "Customer ID" },
-          "channel": { "label": "Channel", "options": { "inApp": "In-app", "email": "Email", "sms": "SMS", "push": "Push" } },
-          "notificationType": { "label": "Notification type", "options": { "general": "General", "system": "System", "ticket": "Ticket", "announcement": "Announcement" } },
-          "status": { "label": "Status", "options": { "queued": "Queued", "sent": "Sent", "read": "Read", "failed": "Failed" } },
-          "encryptionKeyVersion": { "label": "Encryption key version" },
-          "targetValidation": "User ID or Customer ID must be set.",
-          "title": { "label": "Title" },
-          "bodyEncryptedRaw": { "label": "Encrypted body", "placeholder": "Base64 or JSON byte array" },
-          "payloadJson": { "label": "Payload JSON", "placeholder": "Notification extra data JSON" },
-          "dedupeKey": { "label": "Deduplication key" },
-          "scheduledAt": { "label": "Scheduled at" },
-          "sentAt": { "label": "Sent at" },
-          "readAt": { "label": "Read at" },
-          "failedAt": { "label": "Failed at" }
+      "new": {
+        "header": {
+          "section": "Admin / Notifications",
+          "title": "New notification"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "submit": "Create notification"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Notifications",
+          "title": "Edit notification"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Notifications",
+          "title": "Notification details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Notification not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "content": "Content",
+          "schedule": "Schedule and delivery"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "userId": {
+            "label": "User ID"
+          },
+          "customerId": {
+            "label": "Customer ID"
+          },
+          "channel": {
+            "label": "Channel",
+            "options": {
+              "inApp": "In-app",
+              "email": "Email",
+              "sms": "SMS",
+              "push": "Push"
+            }
+          },
+          "notificationType": {
+            "label": "Notification type",
+            "options": {
+              "general": "General",
+              "system": "System",
+              "ticket": "Ticket",
+              "announcement": "Announcement"
+            }
+          },
+          "status": {
+            "label": "Status",
+            "options": {
+              "queued": "Queued",
+              "sent": "Sent",
+              "read": "Read",
+              "failed": "Failed"
+            }
+          },
+          "encryptionKeyVersion": {
+            "label": "Encryption key version"
+          },
+          "targetValidation": "User ID or Customer ID must be set.",
+          "title": {
+            "label": "Title"
+          },
+          "bodyEncryptedRaw": {
+            "label": "Encrypted body",
+            "placeholder": "Base64 or JSON byte array"
+          },
+          "payloadJson": {
+            "label": "Payload JSON",
+            "placeholder": "Notification extra data JSON"
+          },
+          "dedupeKey": {
+            "label": "Deduplication key"
+          },
+          "scheduledAt": {
+            "label": "Scheduled at"
+          },
+          "sentAt": {
+            "label": "Sent at"
+          },
+          "readAt": {
+            "label": "Read at"
+          },
+          "failedAt": {
+            "label": "Failed at"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "photoAlbums": {
@@ -2028,8 +2639,14 @@
         "updateError": "Failed to update album."
       },
       "index": {
-        "header": { "section": "Admin / Albums", "title": "Photo albums" },
-        "actions": { "new": "New album", "refresh": "@:common.actions.refresh" },
+        "header": {
+          "section": "Admin / Albums",
+          "title": "Photo albums"
+        },
+        "actions": {
+          "new": "New album",
+          "refresh": "@:common.actions.refresh"
+        },
         "table": {
           "title": "Title",
           "projectId": "Project",
@@ -2040,22 +2657,73 @@
           "empty": "No albums loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Albums", "title": "New album" }, "actions": { "submit": "Create album" } },
-      "edit": { "header": { "section": "Admin / Albums", "title": "Edit album" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Albums", "title": "Album details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Album not found." },
-      "form": {
-        "sections": { "identification": "Identification", "content": "Content" },
-        "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "constructionStageId": { "label": "Stage ID" },
-          "createdBy": { "label": "Created by" },
-          "visibility": { "label": "Visibility", "options": { "internal": "Internal", "customer": "Customer", "public": "Public" } },
-          "title": { "label": "Title" },
-          "description": { "label": "Description" },
-          "publishedAt": { "label": "Published at" }
+      "new": {
+        "header": {
+          "section": "Admin / Albums",
+          "title": "New album"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "submit": "Create album"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Albums",
+          "title": "Edit album"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Albums",
+          "title": "Album details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Album not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "content": "Content"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "constructionStageId": {
+            "label": "Stage ID"
+          },
+          "createdBy": {
+            "label": "Created by"
+          },
+          "visibility": {
+            "label": "Visibility",
+            "options": {
+              "internal": "Internal",
+              "customer": "Customer",
+              "public": "Public"
+            }
+          },
+          "title": {
+            "label": "Title"
+          },
+          "description": {
+            "label": "Description"
+          },
+          "publishedAt": {
+            "label": "Published at"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "photos": {
@@ -2067,8 +2735,14 @@
         "updateError": "Failed to update photo."
       },
       "index": {
-        "header": { "section": "Admin / Photos", "title": "Photos" },
-        "actions": { "new": "New photo", "refresh": "@:common.actions.refresh" },
+        "header": {
+          "section": "Admin / Photos",
+          "title": "Photos"
+        },
+        "actions": {
+          "new": "New photo",
+          "refresh": "@:common.actions.refresh"
+        },
         "table": {
           "originalFilename": "File",
           "albumId": "Album",
@@ -2079,30 +2753,93 @@
           "empty": "No photos loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Photos", "title": "New photo" }, "actions": { "submit": "Create photo" } },
-      "edit": { "header": { "section": "Admin / Photos", "title": "Edit photo" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Photos", "title": "Photo details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Photo not found." },
-      "form": {
-        "sections": { "identification": "Identification", "file": "File and metadata" },
-        "fields": {
-          "companyId": { "label": "Company ID" },
-          "projectId": { "label": "Project ID" },
-          "albumId": { "label": "Album ID" },
-          "constructionStageId": { "label": "Stage ID" },
-          "uploadFile": { "label": "Pick a file" },
-          "storageKey": { "label": "Storage Key" },
-          "thumbnailStorageKey": { "label": "Thumbnail Storage Key" },
-          "originalFilename": { "label": "Original filename" },
-          "mimeType": { "label": "MIME type" },
-          "sizeBytes": { "label": "Size (bytes)" },
-          "checksumSha256": { "label": "Checksum SHA-256" },
-          "caption": { "label": "Caption" },
-          "capturedAt": { "label": "Captured at" },
-          "publishedAt": { "label": "Published at" },
-          "uploadedBy": { "label": "Uploaded by" },
-          "metadataJson": { "label": "Metadata JSON", "placeholder": "Photo metadata JSON" }
+      "new": {
+        "header": {
+          "section": "Admin / Photos",
+          "title": "New photo"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "submit": "Create photo"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Photos",
+          "title": "Edit photo"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Photos",
+          "title": "Photo details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Photo not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "file": "File and metadata"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "projectId": {
+            "label": "Project ID"
+          },
+          "albumId": {
+            "label": "Album ID"
+          },
+          "constructionStageId": {
+            "label": "Stage ID"
+          },
+          "uploadFile": {
+            "label": "Pick a file"
+          },
+          "storageKey": {
+            "label": "Storage Key"
+          },
+          "thumbnailStorageKey": {
+            "label": "Thumbnail Storage Key"
+          },
+          "originalFilename": {
+            "label": "Original filename"
+          },
+          "mimeType": {
+            "label": "MIME type"
+          },
+          "sizeBytes": {
+            "label": "Size (bytes)"
+          },
+          "checksumSha256": {
+            "label": "Checksum SHA-256"
+          },
+          "caption": {
+            "label": "Caption"
+          },
+          "capturedAt": {
+            "label": "Captured at"
+          },
+          "publishedAt": {
+            "label": "Published at"
+          },
+          "uploadedBy": {
+            "label": "Uploaded by"
+          },
+          "metadataJson": {
+            "label": "Metadata JSON",
+            "placeholder": "Photo metadata JSON"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "ticketMessages": {
@@ -2114,8 +2851,14 @@
         "updateError": "Failed to update message."
       },
       "index": {
-        "header": { "section": "Admin / Messages", "title": "Ticket messages" },
-        "actions": { "new": "New message", "refresh": "@:common.actions.refresh" },
+        "header": {
+          "section": "Admin / Messages",
+          "title": "Ticket messages"
+        },
+        "actions": {
+          "new": "New message",
+          "refresh": "@:common.actions.refresh"
+        },
         "list": {
           "ticket": "ticket",
           "attachments": "attachments",
@@ -2125,23 +2868,77 @@
           "empty": "No messages loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Messages", "title": "New message" }, "actions": { "submit": "Create message" } },
-      "edit": { "header": { "section": "Admin / Messages", "title": "Edit message" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Messages", "title": "Message details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Message not found." },
-      "form": {
-        "sections": { "identification": "Identification", "message": "Message" },
-        "fields": {
-          "ticketId": { "label": "Ticket ID" },
-          "senderUserId": { "label": "Sender User ID" },
-          "senderCustomerId": { "label": "Sender Customer ID" },
-          "messageFormat": { "label": "Message format", "options": { "plain": "Plain text", "markdown": "Markdown", "html": "HTML" } },
-          "attachmentCount": { "label": "Attachment count" },
-          "encryptionKeyVersion": { "label": "Encryption key version" },
-          "createdAt": { "label": "Created at" },
-          "internalOnly": { "label": "Internal only" },
-          "messageEncryptedRaw": { "label": "Encrypted message", "placeholder": "Base64 or JSON byte array" }
+      "new": {
+        "header": {
+          "section": "Admin / Messages",
+          "title": "New message"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "submit": "Create message"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Messages",
+          "title": "Edit message"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Messages",
+          "title": "Message details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Message not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "message": "Message"
+        },
+        "fields": {
+          "ticketId": {
+            "label": "Ticket ID"
+          },
+          "senderUserId": {
+            "label": "Sender User ID"
+          },
+          "senderCustomerId": {
+            "label": "Sender Customer ID"
+          },
+          "messageFormat": {
+            "label": "Message format",
+            "options": {
+              "plain": "Plain text",
+              "markdown": "Markdown",
+              "html": "HTML"
+            }
+          },
+          "attachmentCount": {
+            "label": "Attachment count"
+          },
+          "encryptionKeyVersion": {
+            "label": "Encryption key version"
+          },
+          "createdAt": {
+            "label": "Created at"
+          },
+          "internalOnly": {
+            "label": "Internal only"
+          },
+          "messageEncryptedRaw": {
+            "label": "Encrypted message",
+            "placeholder": "Base64 or JSON byte array"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     },
     "auditLogs": {
@@ -2153,8 +2950,14 @@
         "updateError": "Failed to update audit log."
       },
       "index": {
-        "header": { "section": "Admin / Audit", "title": "Audit logs" },
-        "actions": { "new": "New log", "refresh": "@:common.actions.refresh" },
+        "header": {
+          "section": "Admin / Audit",
+          "title": "Audit logs"
+        },
+        "actions": {
+          "new": "New log",
+          "refresh": "@:common.actions.refresh"
+        },
         "table": {
           "action": "Action",
           "resourceType": "Resource",
@@ -2166,27 +2969,86 @@
           "empty": "No logs loaded."
         }
       },
-      "new": { "header": { "section": "Admin / Audit", "title": "New audit log" }, "actions": { "submit": "Create log" } },
-      "edit": { "header": { "section": "Admin / Audit", "title": "Edit audit log" }, "actions": { "submit": "@:common.actions.saveChanges" } },
-      "show": { "header": { "section": "Admin / Audit", "title": "Audit log details" }, "actions": { "edit": "@:common.actions.edit" }, "empty": "Log not found." },
-      "form": {
-        "sections": { "identification": "Identification", "request": "Request", "payload": "Payload" },
-        "fields": {
-          "companyId": { "label": "Company ID" },
-          "actorUserId": { "label": "Actor User ID" },
-          "actorRoleSnapshot": { "label": "Actor role snapshot" },
-          "targetCustomerId": { "label": "Target Customer ID" },
-          "action": { "label": "Action" },
-          "resourceType": { "label": "Resource type" },
-          "resourceId": { "label": "Resource ID" },
-          "ipAddress": { "label": "IP Address" },
-          "userAgent": { "label": "User agent" },
-          "requestId": { "label": "Request ID" },
-          "createdAt": { "label": "Created at" },
-          "changesJson": { "label": "Changes JSON", "placeholder": "JSON with applied changes" },
-          "metadataJson": { "label": "Metadata JSON", "placeholder": "JSON with extra event metadata" }
+      "new": {
+        "header": {
+          "section": "Admin / Audit",
+          "title": "New audit log"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "actions": {
+          "submit": "Create log"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Audit",
+          "title": "Edit audit log"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
+      "show": {
+        "header": {
+          "section": "Admin / Audit",
+          "title": "Audit log details"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "empty": "Log not found."
+      },
+      "form": {
+        "sections": {
+          "identification": "Identification",
+          "request": "Request",
+          "payload": "Payload"
+        },
+        "fields": {
+          "companyId": {
+            "label": "Company ID"
+          },
+          "actorUserId": {
+            "label": "Actor User ID"
+          },
+          "actorRoleSnapshot": {
+            "label": "Actor role snapshot"
+          },
+          "targetCustomerId": {
+            "label": "Target Customer ID"
+          },
+          "action": {
+            "label": "Action"
+          },
+          "resourceType": {
+            "label": "Resource type"
+          },
+          "resourceId": {
+            "label": "Resource ID"
+          },
+          "ipAddress": {
+            "label": "IP Address"
+          },
+          "userAgent": {
+            "label": "User agent"
+          },
+          "requestId": {
+            "label": "Request ID"
+          },
+          "createdAt": {
+            "label": "Created at"
+          },
+          "changesJson": {
+            "label": "Changes JSON",
+            "placeholder": "JSON with applied changes"
+          },
+          "metadataJson": {
+            "label": "Metadata JSON",
+            "placeholder": "JSON with extra event metadata"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     }
   },
@@ -2378,7 +3240,7 @@
         "privacy": "Privacy",
         "contact": "Contact"
       },
-      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. ALL RIGHTS RESERVED.",
+      "copyright": "\u00a9 2024 BuildTrack Sistemas T\u00e9cnicos S.A. ALL RIGHTS RESERVED.",
       "cnpj": "CNPJ {number}",
       "location": "{city}, {state}"
     }
@@ -2551,10 +3413,8 @@
     }
   },
   "proxy": {
-    "errors": {
-      "unavailable_session": "Backend API unavailable for auth session",
-      "unavailable_refresh": "Backend API unavailable for auth refresh",
-      "unavailable": "Backend API unavailable"
-    }
+    "unavailable": "Backend API unavailable",
+    "unavailableForAuthSession": "Backend API unavailable for auth session",
+    "unavailableForAuthRefresh": "Backend API unavailable for auth refresh"
   }
 }

@@ -1,6 +1,6 @@
 {
   "common": {
-    "success": "Éxito",
+    "success": "\u00c9xito",
     "error": "Error",
     "loading": "Cargando...",
     "save": "Guardar",
@@ -10,143 +10,123 @@
     "next": "Siguiente",
     "previous": "Anterior",
     "close": "Cerrar",
-    "yes": "Sí",
+    "yes": "S\u00ed",
     "no": "No",
     "or": "o",
-    "and": "y",
-    "actions": {
-      "show": "Ver",
-      "edit": "Editar",
-      "new": "Nuevo",
-      "refresh": "Actualizar",
-      "saveChanges": "Guardar cambios",
-      "saving": "Guardando...",
-      "send": "Enviar",
-      "cancel": "Cancelar",
-      "back": "Volver",
-      "submit": "Enviar"
-    },
-    "table": {
-      "actions": "Acciones"
-    }
-  },
-  "proxy": {
-    "unavailable": "API de backend no disponible",
-    "unavailableForAuthSession": "API de backend no disponible para sesión de autenticación",
-    "unavailableForAuthRefresh": "API de backend no disponible para refresco de autenticación"
+    "and": "y"
   },
   "auth": {
     "login": {
       "title": "Bienvenido de nuevo",
-      "noAccount": "¿No tienes una cuenta?",
+      "noAccount": "\u00bfNo tienes una cuenta?",
       "createAccount": "Crear una cuenta",
-      "forgotPassword": "¿Olvidaste tu contraseña?",
-      "email": "Correo electrónico",
-      "password": "Contraseña",
+      "forgotPassword": "\u00bfOlvidaste tu contrase\u00f1a?",
+      "email": "Correo electr\u00f3nico",
+      "password": "Contrase\u00f1a",
       "emailPlaceholder": "tu-correo{'@'}ejemplo.com",
-      "passwordPlaceholder": "ingresa tu contraseña",
+      "passwordPlaceholder": "ingresa tu contrase\u00f1a",
       "rememberMe": "Recordarme",
-      "submit": "Iniciar sesión",
-      "submitWithGoogle": "Iniciar sesión con Google",
-      "magicLink": "Enlace mágico",
+      "submit": "Iniciar sesi\u00f3n",
+      "submitWithGoogle": "Iniciar sesi\u00f3n con Google",
+      "magicLink": "Enlace m\u00e1gico",
       "loginWith": "Iniciar con",
       "loginAsUser": "Iniciar como Usuario",
       "loginAsAdmin": "Iniciar como Admin",
       "otp": {
-        "label": "Ingresa el código enviado a tu correo",
-        "title": "Verificar código",
+        "label": "Ingresa el c\u00f3digo enviado a tu correo",
+        "title": "Verificar c\u00f3digo",
         "placeholder": "------",
-        "invalidCode": "Código de verificación inválido"
+        "invalidCode": "C\u00f3digo de verificaci\u00f3n inv\u00e1lido"
       },
       "error": {
-        "invalidCredentials": "Credenciales inválidas"
+        "invalidCredentials": "Credenciales inv\u00e1lidas"
       },
-      "success": "Inicio de sesión exitoso"
+      "success": "Inicio de sesi\u00f3n exitoso"
     },
     "register": {
       "title": "Crea tu cuenta",
-      "hasAccount": "¿Ya tienes una cuenta?",
-      "loginLink": "Iniciar sesión",
-      "login": "Iniciar sesión",
-      "email": "Correo electrónico",
-      "password": "Contraseña",
-      "confirmPassword": "Confirmar contraseña",
+      "hasAccount": "\u00bfYa tienes una cuenta?",
+      "loginLink": "Iniciar sesi\u00f3n",
+      "login": "Iniciar sesi\u00f3n",
+      "email": "Correo electr\u00f3nico",
+      "password": "Contrase\u00f1a",
+      "confirmPassword": "Confirmar contrase\u00f1a",
       "emailPlaceholder": "tu-correo{'@'}ejemplo.com",
-      "passwordPlaceholder": "crea una contraseña segura",
-      "confirmPasswordPlaceholder": "repite tu contraseña",
+      "passwordPlaceholder": "crea una contrase\u00f1a segura",
+      "confirmPasswordPlaceholder": "repite tu contrase\u00f1a",
       "submit": "Crear cuenta",
       "terms": {
-        "consent": "Confirmo que tengo 18 años o más y acepto los",
-        "termsOfUse": "Términos de Uso",
-        "privacyPolicy": "Política de Privacidad",
+        "consent": "Confirmo que tengo 18 a\u00f1os o m\u00e1s y acepto los",
+        "termsOfUse": "T\u00e9rminos de Uso",
+        "privacyPolicy": "Pol\u00edtica de Privacidad",
         "and": "y la"
       },
       "strength": {
-        "label": "Fortaleza de contraseña: {strength}",
-        "weak": "Débil",
+        "label": "Fortaleza de contrase\u00f1a: {strength}",
+        "weak": "D\u00e9bil",
         "fair": "Regular",
         "good": "Buena",
         "strong": "Fuerte"
       },
       "errors": {
-        "setStrongPassword": "Establece una contraseña segura para continuar.",
-        "passwordMismatch": "Las contraseñas no coinciden",
+        "setStrongPassword": "Establece una contrase\u00f1a segura para continuar.",
+        "passwordMismatch": "Las contrase\u00f1as no coinciden",
         "generic": "Error en el registro"
       },
       "success": {
-        "title": "¡Cuenta creada!",
-        "message": "Enviamos un correo de confirmación a {email}. Por favor verifica tu bandeja de entrada.",
-        "goToLogin": "Ir a Iniciar sesión"
+        "title": "\u00a1Cuenta creada!",
+        "message": "Enviamos un correo de confirmaci\u00f3n a {email}. Por favor verifica tu bandeja de entrada.",
+        "goToLogin": "Ir a Iniciar sesi\u00f3n"
       }
     },
     "forgotPassword": {
-      "title": "¿Olvidaste tu contraseña?",
-      "remembered": "¿Recordaste tu contraseña?",
-      "backToLogin": "Iniciar sesión",
-      "description": "Ingresa tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.",
-      "email": "Correo electrónico",
+      "title": "\u00bfOlvidaste tu contrase\u00f1a?",
+      "remembered": "\u00bfRecordaste tu contrase\u00f1a?",
+      "backToLogin": "Iniciar sesi\u00f3n",
+      "description": "Ingresa tu correo electr\u00f3nico y te enviaremos un enlace para restablecer tu contrase\u00f1a.",
+      "email": "Correo electr\u00f3nico",
       "emailPlaceholder": "tu-correo{'@'}ejemplo.com",
-      "submit": "Enviar enlace de recuperación",
+      "submit": "Enviar enlace de recuperaci\u00f3n",
       "success": {
         "title": "Revisa tu correo",
-        "message": "Enviamos un enlace para restablecer tu contraseña a tu correo."
+        "message": "Enviamos un enlace para restablecer tu contrase\u00f1a a tu correo."
       }
     },
     "resetPassword": {
-      "title": "Restablecer contraseña",
-      "newPassword": "Nueva contraseña",
-      "confirmPassword": "Confirmar contraseña",
-      "newPasswordPlaceholder": "ingresa nueva contraseña",
-      "confirmPasswordPlaceholder": "repite nueva contraseña",
-      "submit": "Restablecer contraseña",
+      "title": "Restablecer contrase\u00f1a",
+      "newPassword": "Nueva contrase\u00f1a",
+      "confirmPassword": "Confirmar contrase\u00f1a",
+      "newPasswordPlaceholder": "ingresa nueva contrase\u00f1a",
+      "confirmPasswordPlaceholder": "repite nueva contrase\u00f1a",
+      "submit": "Restablecer contrase\u00f1a",
       "success": {
-        "title": "¡Contraseña restablecida!",
-        "login": "Ir a Iniciar sesión"
+        "title": "\u00a1Contrase\u00f1a restablecida!",
+        "login": "Ir a Iniciar sesi\u00f3n"
       },
       "error": {
-        "invalidToken": "Token inválido o expirado",
+        "invalidToken": "Token inv\u00e1lido o expirado",
         "requestNew": "Solicitar nuevo enlace",
-        "passwordMismatch": "Las contraseñas no coinciden"
+        "passwordMismatch": "Las contrase\u00f1as no coinciden"
       }
     },
     "confirm": {
       "loading": "Confirmando tu cuenta...",
       "success": {
-        "title": "¡Cuenta confirmada!",
-        "message": "Tu correo ha sido verificado. Ahora puedes iniciar sesión.",
-        "login": "Ir a Iniciar sesión"
+        "title": "\u00a1Cuenta confirmada!",
+        "message": "Tu correo ha sido verificado. Ahora puedes iniciar sesi\u00f3n.",
+        "login": "Ir a Iniciar sesi\u00f3n"
       },
       "error": {
-        "title": "Error en la confirmación",
-        "message": "El enlace de confirmación es inválido o ha expirado.",
-        "backToLogin": "Volver a Iniciar sesión"
+        "title": "Error en la confirmaci\u00f3n",
+        "message": "El enlace de confirmaci\u00f3n es inv\u00e1lido o ha expirado.",
+        "backToLogin": "Volver a Iniciar sesi\u00f3n"
       }
     }
   },
   "admin": {
     "section": "Admin",
     "title": "Resumen operativo",
-    "description": "Monitorea los módulos críticos y acompaña el estado actual de la administración.",
+    "description": "Monitorea los m\u00f3dulos cr\u00edticos y acompa\u00f1a el estado actual de la administraci\u00f3n.",
     "statusLabels": {
       "active": "Activo",
       "inactive": "Inactivo",
@@ -161,19 +141,25 @@
       "unknown": "Desconocido"
     },
     "quickActions": {
-      "title": "Acciones rápidas",
+      "title": "Acciones r\u00e1pidas",
       "reviewTickets": "Revisar tickets abiertos y definir prioridades.",
       "publishAnnouncements": "Publicar anuncios pendientes para clientes.",
       "updateProgress": "Actualizar snapshots de avance de los proyectos."
     },
-    "module": "Módulo",
+    "module": "M\u00f3dulo",
     "modules": {
-      "dashboard": { "description": "KPIs consolidados y visibilidad operacional." },
-      "projects": { "description": "Acompaña entregas, hitos y estado de los proyectos." },
-      "announcements": { "description": "Gestiona comunicaciones enviadas a los clientes." },
+      "dashboard": {
+        "description": "KPIs consolidados y visibilidad operacional."
+      },
+      "projects": {
+        "description": "Acompa\u00f1a entregas, hitos y estado de los proyectos."
+      },
+      "announcements": {
+        "description": "Gestiona comunicaciones enviadas a los clientes."
+      },
       "settings": {
-        "title": "Configuración",
-        "description": "Ajusta parámetros administrativos y políticas internas."
+        "title": "Configuraci\u00f3n",
+        "description": "Ajusta par\u00e1metros administrativos y pol\u00edticas internas."
       }
     },
     "navbar": {
@@ -185,8 +171,8 @@
         "ariaLabel": "Perfil",
         "avatarAlt": "Avatar del usuario",
         "myAccount": "Mi cuenta",
-        "settings": "Configuración",
-        "logout": "Cerrar sesión",
+        "settings": "Configuraci\u00f3n",
+        "logout": "Cerrar sesi\u00f3n",
         "defaultName": "Admin"
       },
       "activity": {
@@ -194,56 +180,56 @@
         "items": {
           "ticketCreated": "Nuevo ticket creado por Juan.",
           "projectUpdated": "Proyecto \"Aurora\" actualizado.",
-          "announcementsPending": "2 anuncios pendientes de publicación."
+          "announcementsPending": "2 anuncios pendientes de publicaci\u00f3n."
         }
       }
     },
     "account": {
       "section": "Cuenta",
       "title": "Mi cuenta",
-      "description": "Datos básicos del usuario autenticado en el panel administrativo.",
+      "description": "Datos b\u00e1sicos del usuario autenticado en el panel administrativo.",
       "profileTitle": "Perfil",
       "permissionsTitle": "Permisos",
       "fields": {
         "id": "ID",
-        "email": "Correo electrónico",
+        "email": "Correo electr\u00f3nico",
         "profile": "Perfil"
       },
-      "emptyRoles": "Ningún rol asignado.",
-      "goSettings": "Ir a configuración"
+      "emptyRoles": "Ning\u00fan rol asignado.",
+      "goSettings": "Ir a configuraci\u00f3n"
     },
     "sidebar": {
-      "closeSidebar": "Cerrar menú lateral",
+      "closeSidebar": "Cerrar men\u00fa lateral",
       "close": "Cerrar",
-      "sidebar": "Menú lateral",
-      "dropdown": "Menú desplegable",
+      "sidebar": "Men\u00fa lateral",
+      "dropdown": "Men\u00fa desplegable",
       "avatarAlt": "Avatar del usuario",
       "admin": "Admin",
-      "apiDocs": "Documentación de la API",
+      "apiDocs": "Documentaci\u00f3n de la API",
       "reports": "Informes",
       "alerts": "Alertas",
-      "telemetry": "Telemetría",
+      "telemetry": "Telemetr\u00eda",
       "dashboard": "Panel",
       "default": "Predeterminado",
-      "core": "Núcleo",
+      "core": "N\u00facleo",
       "coreResources": "Recursos Principales",
       "operations": "Operaciones",
       "fieldOperations": "Operaciones de Campo",
       "monitoring": "Monitoreo",
       "monitoringAndReports": "Monitoreo e Informes",
       "financial": "Financiero",
-      "management": "Gestión",
-      "quickLinks": "Enlaces Rápidos",
-      "terms": "Términos",
+      "management": "Gesti\u00f3n",
+      "quickLinks": "Enlaces R\u00e1pidos",
+      "terms": "T\u00e9rminos",
       "privacy": "Privacidad",
       "workspace": "Espacio de Trabajo",
       "alertsHub": "Centro de Alertas",
       "reportsHub": "Centro de Informes",
-      "openApiDocs": "Abrir Documentación de la API",
+      "openApiDocs": "Abrir Documentaci\u00f3n de la API",
       "debts": "Deudas",
       "documents": "Documentos",
       "payments": "Pagos",
-      "audit": "Auditoría",
+      "audit": "Auditor\u00eda",
       "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
     },
     "dashboard": {
@@ -254,58 +240,58 @@
       "profile": {
         "title": "Perfil",
         "myAccount": "Mi cuenta",
-        "settings": "Configuración",
-        "billing": "Facturación",
+        "settings": "Configuraci\u00f3n",
+        "billing": "Facturaci\u00f3n",
         "manageTeam": "Administrar equipo",
-        "customisation": "Personalización",
+        "customisation": "Personalizaci\u00f3n",
         "addTeamAccount": "Agregar cuenta de equipo",
-        "logout": "Cerrar sesión"
+        "logout": "Cerrar sesi\u00f3n"
       },
       "activity": {
         "title": "Actividad",
-        "mentionedYou": "te mencionó en el tema de tendencias",
-        "requestedFeedback": "solicitó comentarios sobre su diseño.",
+        "mentionedYou": "te mencion\u00f3 en el tema de tendencias",
+        "requestedFeedback": "solicit\u00f3 comentarios sobre su dise\u00f1o.",
         "invitesYou": "te invita a revisar un archivo.",
-        "sharedUpdate": "ha compartido una actualización del proyecto.",
-        "wantsView": "quiere ver tu proyecto de diseño",
-        "inviteFromLink": "Invitación desde enlace",
+        "sharedUpdate": "ha compartido una actualizaci\u00f3n del proyecto.",
+        "wantsView": "quiere ver tu proyecto de dise\u00f1o",
+        "inviteFromLink": "Invitaci\u00f3n desde enlace",
         "newTags": "nuevas etiquetas a Web Redesign",
         "reply": "Responder",
         "time": {
           "minsAgo": "Hace {n} min",
           "hourAgo": "Hace 1 hora",
           "hoursAgo": "Hace {n} horas",
-          "daysAgo": "Hace {n} días"
+          "daysAgo": "Hace {n} d\u00edas"
         }
       },
       "sidebar": {
-        "pages": "Páginas",
+        "pages": "P\u00e1ginas",
         "dashboard": "Panel",
         "default": "Predeterminado",
-        "analytics": "Analíticas",
+        "analytics": "Anal\u00edticas",
         "ecommerce": "Comercio",
-        "accountSetting": "Configuración de cuenta",
+        "accountSetting": "Configuraci\u00f3n de cuenta",
         "account": "Cuenta",
         "security": "Seguridad",
-        "billingPlans": "Facturación y planes",
+        "billingPlans": "Facturaci\u00f3n y planes",
         "notifications": "Notificaciones",
         "connections": "Conexiones",
         "misc": "Varios",
         "error": "Error",
         "underMaintenance": "En mantenimiento",
         "authentications": "Autenticaciones",
-        "loginBasic": "Inicio - Básico",
+        "loginBasic": "Inicio - B\u00e1sico",
         "loginCover": "Inicio - Portada",
-        "registerBasic": "Registro - Básico",
+        "registerBasic": "Registro - B\u00e1sico",
         "registerCover": "Registro - Portada",
-        "forgotPasswordBasic": "Olvidé contraseña - Básico",
-        "forgotPasswordCover": "Olvidé contraseña - Portada",
+        "forgotPasswordBasic": "Olvid\u00e9 contrase\u00f1a - B\u00e1sico",
+        "forgotPasswordCover": "Olvid\u00e9 contrase\u00f1a - Portada",
         "faq": "Preguntas frecuentes",
         "pricing": "Precios",
         "formsTables": "Formularios y tablas",
-        "formValidation": "Validación de formularios",
+        "formValidation": "Validaci\u00f3n de formularios",
         "dataTables": "Tablas de datos",
-        "basic": "Básico",
+        "basic": "B\u00e1sico",
         "advanced": "Avanzado",
         "extensions": "Extensiones",
         "applications": "Aplicaciones",
@@ -331,7 +317,7 @@
     },
     "projects": {
       "status": {
-        "planning": "Planificación",
+        "planning": "Planificaci\u00f3n",
         "inProgress": "En progreso",
         "paused": "Pausado",
         "completed": "Concluido"
@@ -340,8 +326,14 @@
         "loadError": "Error al cargar proyectos."
       },
       "index": {
-        "header": { "section": "Admin / Proyectos", "title": "Proyectos" },
-        "actions": { "new": "Nuevo", "refresh": "Actualizar" },
+        "header": {
+          "section": "Admin / Proyectos",
+          "title": "Proyectos"
+        },
+        "actions": {
+          "new": "Nuevo",
+          "refresh": "Actualizar"
+        },
         "metrics": {
           "total": "Total",
           "active": "Activos",
@@ -350,7 +342,7 @@
         },
         "table": {
           "name": "Nombre",
-          "code": "Código",
+          "code": "C\u00f3digo",
           "status": "Estado",
           "actions": "Acciones",
           "empty": "No hay proyectos cargados."
@@ -359,30 +351,36 @@
     },
     "stages": {
       "index": {
-        "header": { "title": "Etapas de obra" }
+        "header": {
+          "title": "Etapas de obra"
+        }
       }
     },
     "announcements": {
       "index": {
-        "header": { "title": "Anuncios" }
+        "header": {
+          "title": "Anuncios"
+        }
       }
     },
     "tickets": {
       "index": {
-        "header": { "title": "Tickets" }
+        "header": {
+          "title": "Tickets"
+        }
       }
     },
     "companies": {
       "index": {
         "table": {
-          "legalName": "Razón social",
+          "legalName": "Raz\u00f3n social",
           "slug": "Slug",
           "subdomain": "Subdominio"
         }
       },
       "show": {
         "fields": {
-          "legalName": "Razón social",
+          "legalName": "Raz\u00f3n social",
           "slug": "Slug",
           "subdomain": "Subdominio"
         }
@@ -390,32 +388,32 @@
       "form": {
         "sections": {
           "companyData": "Datos de la empresa",
-          "statusPolicies": "Estado y políticas",
+          "statusPolicies": "Estado y pol\u00edticas",
           "featureFlags": "Feature flags (checkboxes FlyonUI)",
           "advancedWarning": "Usa Base64 o un arreglo JSON de bytes para los campos cifrados (ej: [1,2,3])."
         },
         "fields": {
           "legalName": {
-            "label": "Razón social",
+            "label": "Raz\u00f3n social",
             "placeholder": "Build Track Empreendimentos LTDA",
-            "helper": "Ingresa la razón social completa."
+            "helper": "Ingresa la raz\u00f3n social completa."
           },
           "tradeName": {
             "label": "Nombre comercial",
             "placeholder": "Build Track",
-            "helper": "Nombre de exhibición opcional."
+            "helper": "Nombre de exhibici\u00f3n opcional."
           },
           "slug": {
             "label": "Slug",
             "placeholder": "build-track",
             "prefix": "org/",
-            "helper": "Identificador interno único."
+            "helper": "Identificador interno \u00fanico."
           },
           "subdomain": {
             "label": "Subdominio",
             "placeholder": "buildtrack",
             "suffix": ".platform",
-            "helper": "Usa minúsculas, números y guion."
+            "helper": "Usa min\u00fasculas, n\u00fameros y guion."
           },
           "visualTheme": {
             "label": "Tema visual",
@@ -427,7 +425,7 @@
             }
           },
           "encryptionKeyVersion": {
-            "label": "Versión de clave de cifrado"
+            "label": "Versi\u00f3n de clave de cifrado"
           },
           "status": {
             "label": "Estado",
@@ -439,16 +437,16 @@
           },
           "logoFile": {
             "label": "Selecciona un archivo",
-            "helper": "El nombre del archivo del logo se guardará en settings."
+            "helper": "El nombre del archivo del logo se guardar\u00e1 en settings."
           },
-          "advancedSwitch": "Campos criptográficos avanzados",
+          "advancedSwitch": "Campos criptogr\u00e1ficos avanzados",
           "flags": {
             "portalEnabled": "Portal habilitado",
             "notifications": "Notificaciones",
             "ticketing": "Tickets",
             "financePreview": "Vista previa financiera",
-            "publicGallery": "Galería pública",
-            "autoTimeline": "Timeline automática",
+            "publicGallery": "Galer\u00eda p\u00fablica",
+            "autoTimeline": "Timeline autom\u00e1tica",
             "requireLgpd": "Requerir LGPD",
             "maintenanceMode": "Modo mantenimiento"
           },
@@ -465,8 +463,8 @@
             "cnpjBlindIndex": "Blind index de CNPJ",
             "contactEmailEncrypted": "Email de contacto cifrado",
             "contactEmailBlindIndex": "Blind index de email de contacto",
-            "contactPhoneEncrypted": "Teléfono de contacto cifrado",
-            "contactPhoneBlindIndex": "Blind index de teléfono de contacto"
+            "contactPhoneEncrypted": "Tel\u00e9fono de contacto cifrado",
+            "contactPhoneBlindIndex": "Blind index de tel\u00e9fono de contacto"
           }
         },
         "actions": {
@@ -475,19 +473,38 @@
       }
     },
     "memberships": {
-      "roles": { "admin": "Admin", "manager": "Manager", "editor": "Editor", "viewer": "Viewer" },
-      "status": { "active": "Activo", "invited": "Invitado", "suspended": "Suspendido" },
+      "roles": {
+        "admin": "Admin",
+        "manager": "Manager",
+        "editor": "Editor",
+        "viewer": "Viewer"
+      },
+      "status": {
+        "active": "Activo",
+        "invited": "Invitado",
+        "suspended": "Suspendido"
+      },
       "messages": {
-        "loadError": "Error al cargar vínculos.",
-        "createSuccess": "Vínculo creado con éxito.",
-        "createError": "Error al crear vínculo.",
-        "updateSuccess": "Vínculo actualizado con éxito.",
-        "updateError": "Error al actualizar vínculo."
+        "loadError": "Error al cargar v\u00ednculos.",
+        "createSuccess": "V\u00ednculo creado con \u00e9xito.",
+        "createError": "Error al crear v\u00ednculo.",
+        "updateSuccess": "V\u00ednculo actualizado con \u00e9xito.",
+        "updateError": "Error al actualizar v\u00ednculo."
       },
       "index": {
-        "header": { "section": "Admin / Membresías", "title": "Vínculos Usuario-Empresa" },
-        "actions": { "new": "Nuevo vínculo", "refresh": "@:common.actions.refresh" },
-        "metrics": { "total": "Total", "active": "Activos", "primary": "Principales" },
+        "header": {
+          "section": "Admin / Membres\u00edas",
+          "title": "V\u00ednculos Usuario-Empresa"
+        },
+        "actions": {
+          "new": "Nuevo v\u00ednculo",
+          "refresh": "@:common.actions.refresh"
+        },
+        "metrics": {
+          "total": "Total",
+          "active": "Activos",
+          "primary": "Principales"
+        },
         "table": {
           "user": "Usuario",
           "company": "Empresa",
@@ -497,75 +514,127 @@
           "actions": "@:common.table.actions",
           "show": "@:common.actions.show",
           "edit": "@:common.actions.edit",
-          "empty": "No hay vínculos cargados."
+          "empty": "No hay v\u00ednculos cargados."
         }
       },
-      "new": { "header": { "section": "Admin / Membresías", "title": "Nuevo vínculo" }, "actions": { "submit": "Crear vínculo" } },
-      "edit": { "header": { "section": "Admin / Membresías", "title": "Editar vínculo" }, "actions": { "submit": "@:common.actions.saveChanges" } },
+      "new": {
+        "header": {
+          "section": "Admin / Membres\u00edas",
+          "title": "Nuevo v\u00ednculo"
+        },
+        "actions": {
+          "submit": "Crear v\u00ednculo"
+        }
+      },
+      "edit": {
+        "header": {
+          "section": "Admin / Membres\u00edas",
+          "title": "Editar v\u00ednculo"
+        },
+        "actions": {
+          "submit": "@:common.actions.saveChanges"
+        }
+      },
       "show": {
-        "header": { "section": "Admin / Membresías", "title": "Detalles del vínculo" },
-        "actions": { "edit": "@:common.actions.edit" },
-        "fields": { "primary": "Principal" },
-        "empty": "Vínculo no encontrado."
+        "header": {
+          "section": "Admin / Membres\u00edas",
+          "title": "Detalles del v\u00ednculo"
+        },
+        "actions": {
+          "edit": "@:common.actions.edit"
+        },
+        "fields": {
+          "primary": "Principal"
+        },
+        "empty": "V\u00ednculo no encontrado."
       },
       "form": {
-        "sections": { "main": "Datos principales", "audit": "Auditoría" },
-        "fields": {
-          "userId": { "label": "Usuario" },
-          "companyId": { "label": "Empresa" },
-          "membershipRole": {
-            "label": "Rol del vínculo",
-            "options": { "admin": "Admin", "manager": "Manager", "editor": "Editor", "viewer": "Viewer" }
-          },
-          "status": { "label": "Estado", "options": { "active": "Activo", "invited": "Invitado", "suspended": "Suspendido" } },
-          "isPrimary": { "label": "Vínculo principal" },
-          "invitedBy": { "label": "Invitado por" },
-          "joinedAt": { "label": "Fecha de ingreso" },
-          "lastAccessedAt": { "label": "Último acceso en" }
+        "sections": {
+          "main": "Datos principales",
+          "audit": "Auditor\u00eda"
         },
-        "actions": { "saving": "@:common.actions.saving" }
+        "fields": {
+          "userId": {
+            "label": "Usuario"
+          },
+          "companyId": {
+            "label": "Empresa"
+          },
+          "membershipRole": {
+            "label": "Rol del v\u00ednculo",
+            "options": {
+              "admin": "Admin",
+              "manager": "Manager",
+              "editor": "Editor",
+              "viewer": "Viewer"
+            }
+          },
+          "status": {
+            "label": "Estado",
+            "options": {
+              "active": "Activo",
+              "invited": "Invitado",
+              "suspended": "Suspendido"
+            }
+          },
+          "isPrimary": {
+            "label": "V\u00ednculo principal"
+          },
+          "invitedBy": {
+            "label": "Invitado por"
+          },
+          "joinedAt": {
+            "label": "Fecha de ingreso"
+          },
+          "lastAccessedAt": {
+            "label": "\u00daltimo acceso en"
+          }
+        },
+        "actions": {
+          "saving": "@:common.actions.saving"
+        }
       }
     }
   },
   "landing": {
     "nav": {
-      "technology": "Tecnología",
-      "cases": "Casos de éxito",
+      "technology": "Tecnolog\u00eda",
+      "cases": "Casos de \u00e9xito",
       "impact": "Impacto",
       "support": "Soporte",
       "teamAccess": "Acceso Equipo",
       "buyerPortal": "Portal Comprador"
     },
     "hero": {
-      "badge": "Edición 2024 / Gestión Industrial",
+      "badge": "Edici\u00f3n 2024 / Gesti\u00f3n Industrial",
       "heading": "Comanda tu Obra con",
-      "highlight": "Precisión Absoluta.",
-      "description": "La nueva frontera de la ingeniería civil donde datos y ejecución convergen en una única visión panorámica de alto rendimiento.",
-      "cta": "Solicitar Demostración"
+      "highlight": "Precisi\u00f3n Absoluta.",
+      "description": "La nueva frontera de la ingenier\u00eda civil donde datos y ejecuci\u00f3n convergen en una \u00fanica visi\u00f3n panor\u00e1mica de alto rendimiento.",
+      "cta": "Solicitar Demostraci\u00f3n"
     },
     "features": {
       "sectionTitle": "Diferenciales",
       "transparency": {
         "title": "Transparencia Total",
-        "description": "Visibilidad completa para clientes y equipo técnico en cada etapa crítica del proyecto."
+        "description": "Visibilidad completa para clientes y equipo t\u00e9cnico en cada etapa cr\u00edtica del proyecto."
       },
       "precision": {
-        "title": "Precisión de Datos",
-        "description": "Información exacta recopilada en tiempo real para una toma de decisiones basada en evidencia."
+        "title": "Precisi\u00f3n de Datos",
+        "description": "Informaci\u00f3n exacta recopilada en tiempo real para una toma de decisiones basada en evidencia."
       },
       "technology": {
-        "title": "Tecnología de Punta",
-        "description": "Sistemas de gestión industrial integrados nativamente con herramientas de campo móviles."
+        "title": "Tecnolog\u00eda de Punta",
+        "description": "Sistemas de gesti\u00f3n industrial integrados nativamente con herramientas de campo m\u00f3viles."
       }
     },
     "schedule": {
       "title": "Cronograma Vivo",
-      "description": "El pulso de tu construcción transformado en visualizaciones métricas precisas.",
+      "description": "El pulso de tu construcci\u00f3n transformado en visualizaciones m\u00e9tricas precisas.",
       "globalAverage": "Promedio Global",
       "task": {
-        "foundation": "Fundación y Estructura",
-        "masonry": "Albañilería y Paredes",
-        "electrical": "Instalaciones Eléctricas"
+        "foundation": "Fundaci\u00f3n y Estructura",
+        "masonry": "Alba\u00f1iler\u00eda y Paredes",
+        "electrical": "Instalaciones El\u00e9ctricas"
       },
       "status": {
         "completed": "Completado {percent}%",
@@ -585,23 +654,23 @@
       "badge": "Insight del Inversor",
       "title": "Portal del Inversor",
       "assetOnSite": "Patrimonio en Obra",
-      "description": "Sigue el ROI de tu construcción con gráficos de evolución física versus financiera. Transparencia que valoriza tu inversión.",
+      "description": "Sigue el ROI de tu construcci\u00f3n con gr\u00e1ficos de evoluci\u00f3n f\u00edsica versus financiera. Transparencia que valoriza tu inversi\u00f3n.",
       "reports": "Informes Semanales",
-      "audit": "Auditoría de Materiales",
+      "audit": "Auditor\u00eda de Materiales",
       "financialControl": "Control financiero en la palma de tu mano.",
-      "mobileDescription": "Nuestra interfaz fue diseñada para el tomador de decisiones casual que exige datos técnicos precisos sin la complejidad burocrática."
+      "mobileDescription": "Nuestra interfaz fue dise\u00f1ada para el tomador de decisiones casual que exige datos t\u00e9cnicos precisos sin la complejidad burocr\u00e1tica."
     },
     "field": {
       "badge": "Operaciones de Campo",
-      "title": "El Motor del Área",
-      "description": "Desde el RDO (Registro Diario de Obra) hasta la gestión de insumos, el equipo de campo opera con máxima eficiencia a través de flujos de trabajo optimizados.",
+      "title": "El Motor del \u00c1rea",
+      "description": "Desde el RDO (Registro Diario de Obra) hasta la gesti\u00f3n de insumos, el equipo de campo opera con m\u00e1xima eficiencia a trav\u00e9s de flujos de trabajo optimizados.",
       "offlineFirst": {
         "title": "Offline-First",
-        "description": "Funciona incluso sin conexión estable en el área."
+        "description": "Funciona incluso sin conexi\u00f3n estable en el \u00e1rea."
       },
       "geoTracking": {
         "title": "Geo-Tracking",
-        "description": "Validación espacial de todas las mediciones."
+        "description": "Validaci\u00f3n espacial de todas las mediciones."
       },
       "rdos": {
         "status": "Activo",
@@ -615,11 +684,11 @@
       "title": "Infraestructura Operacional",
       "rdos": {
         "title": "RDO Digital",
-        "description": "Firma biométrica y georreferenciación."
+        "description": "Firma biom\u00e9trica y georreferenciaci\u00f3n."
       },
       "measurements": {
         "title": "Mediciones",
-        "description": "Conferencia vía láser y escaneo de proyectos."
+        "description": "Conferencia v\u00eda l\u00e1ser y escaneo de proyectos."
       },
       "inventory": {
         "title": "Inventario",
@@ -627,17 +696,17 @@
       },
       "bi": {
         "title": "BI & Analytics",
-        "description": "Pronóstico de desviaciones basado en historial."
+        "description": "Pron\u00f3stico de desviaciones basado en historial."
       }
     },
     "cases": {
       "badge": "Rendimiento Probado",
-      "title": "Casos de Éxito",
-      "description": "Navega por los proyectos que redefinieron el estándar de eficiencia con la plataforma BuildTrack.",
+      "title": "Casos de \u00c9xito",
+      "description": "Navega por los proyectos que redefinieron el est\u00e1ndar de eficiencia con la plataforma BuildTrack.",
       "project": {
         "name": "Complejo Industrial Delta",
-        "result": "Reducción del 15% en Desperdicio",
-        "quote": "La implementación del sistema de seguimiento de insumos cambió nuestra margem de ganancia en solo 6 meses.",
+        "result": "Reducci\u00f3n del 15% en Desperdicio",
+        "quote": "La implementaci\u00f3n del sistema de seguimiento de insumos cambi\u00f3 nuestra margem de ganancia en solo 6 meses.",
         "author": "Ricardo Almeida",
         "role": "Ingeniero Jefe"
       }
@@ -645,24 +714,24 @@
     "esg": {
       "title": "Sostenibilidad y Cumplimiento ESG",
       "waste": {
-        "title": "Gestión de Residuos",
-        "description": "Seguimiento digital de eliminación y reutilización de escombros, garantindo vertederos certificados y cumplimiento legal."
+        "title": "Gesti\u00f3n de Residuos",
+        "description": "Seguimiento digital de eliminaci\u00f3n y reutilizaci\u00f3n de escombros, garantindo vertederos certificados y cumplimiento legal."
       },
       "carbon": {
         "title": "Huella de Carbono",
-        "description": "Monitoreo de logística y consumo energético para proyectos carbono-cero o de bajo impacto ambiental."
+        "description": "Monitoreo de log\u00edstica y consumo energ\u00e9tico para proyectos carbono-cero o de bajo impacto ambiental."
       },
       "wasteAvoided": "Residuos Evitados",
       "certification": {
-        "title": "Certificación GreenFlow",
-        "description": "BuildTrack emite certificados de gestión de residuos en tiempo real para auditorías de sostenibilidad."
+        "title": "Certificaci\u00f3n GreenFlow",
+        "description": "BuildTrack emite certificados de gesti\u00f3n de residuos en tiempo real para auditor\u00edas de sostenibilidad."
       },
       "impact": "IMPACTO",
       "metric": "{value} Ton"
     },
     "security": {
       "title": "Inmutabilidad de Datos",
-      "description": "Nuestra infraestructura utiliza protocolos de seguridad que hacen registros fotográficos y RDOs inmutables una vez validados, garantizando seguridad jurídica absoluta.",
+      "description": "Nuestra infraestructura utiliza protocolos de seguridad que hacen registros fotogr\u00e1ficos y RDOs inmutables una vez validados, garantizando seguridad jur\u00eddica absoluta.",
       "certifications": {
         "iso": "ISO 27001",
         "lgpd": "Cumplimiento LGPD",
@@ -673,30 +742,30 @@
       "title": "Voces del Mercado",
       "badge": "Historias de Clientes",
       "quote1": {
-        "quote": "La transparencia de BuildTrack eliminó los ruidos de comunicación con nuestros inversores. El portal del comprador se convirtió en nuestra principal herramienta de cierre.",
+        "quote": "La transparencia de BuildTrack elimin\u00f3 los ruidos de comunicaci\u00f3n con nuestros inversores. El portal del comprador se convirti\u00f3 en nuestra principal herramienta de cierre.",
         "author": "Carlos Mendes",
         "role": "Director Constructora Apex"
       },
       "quote2": {
         "quote": "Identificar desviaciones en el cronograma antes de que se conviertan en costos es lo que diferencia una obra rentable de un dolor de cabeza.",
         "author": "Mariana Silva",
-        "role": "Planificación Estratégica"
+        "role": "Planificaci\u00f3n Estrat\u00e9gica"
       }
     },
     "faq": {
-      "title": "Especificaciones Técnicas",
+      "title": "Especificaciones T\u00e9cnicas",
       "items": {
         "erp": {
-          "question": "¿Integración con ERPs del mercado?",
-          "answer": "Sí. Nuestra API RESTful nativa se conecta con Sienge, TOTVS y SAP, garantizando sincronía bidireccional entre financiero y obra."
+          "question": "\u00bfIntegraci\u00f3n con ERPs del mercado?",
+          "answer": "S\u00ed. Nuestra API RESTful nativa se conecta con Sienge, TOTVS y SAP, garantizando sincron\u00eda bidireccional entre financiero y obra."
         },
         "offline": {
-          "question": "¿Funcionamiento sin conexión?",
-          "answer": "La aplicación móvil es offline-first. Almacena fotos y datos localmente y sincroniza automáticamente tan pronto como hay red disponible."
+          "question": "\u00bfFuncionamiento sin conexi\u00f3n?",
+          "answer": "La aplicaci\u00f3n m\u00f3vil es offline-first. Almacena fotos y datos localmente y sincroniza autom\u00e1ticamente tan pronto como hay red disponible."
         },
         "storage": {
-          "question": "¿Límites de almacenamiento?",
-          "answer": "Nuestros planes Enterprise incluyen almacenamiento ilimitado para proyectos y registros fotográficos en la nube AWS."
+          "question": "\u00bfL\u00edmites de almacenamiento?",
+          "answer": "Nuestros planes Enterprise incluyen almacenamiento ilimitado para proyectos y registros fotogr\u00e1ficos en la nube AWS."
         }
       }
     },
@@ -715,7 +784,7 @@
         "privacy": "Privacidad",
         "contact": "Contacto"
       },
-      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. TODOS LOS DERECHOS RESERVADOS.",
+      "copyright": "\u00a9 2024 BuildTrack Sistemas T\u00e9cnicos S.A. TODOS LOS DERECHOS RESERVADOS.",
       "cnpj": "CNPJ {number}",
       "location": "{city}, {state}"
     }
@@ -724,24 +793,24 @@
     "title": "Sobre Nosotros",
     "hero": {
       "title": "Sobre BuildTrack",
-      "subtitle": "Transformando la ingeniería civil con tecnología"
+      "subtitle": "Transformando la ingenier\u00eda civil con tecnolog\u00eda"
     }
   },
   "contact": {
-    "title": "Contáctanos",
+    "title": "Cont\u00e1ctanos",
     "form": {
       "name": "Nombre",
-      "email": "Correo electrónico",
+      "email": "Correo electr\u00f3nico",
       "subject": "Asunto",
       "message": "Mensaje",
       "submit": "Enviar mensaje"
     }
   },
   "terms": {
-    "title": "Términos de Uso"
+    "title": "T\u00e9rminos de Uso"
   },
   "privacy": {
-    "title": "Política de Privacidad"
+    "title": "Pol\u00edtica de Privacidad"
   },
   "seed": {
     "action": {
@@ -750,5 +819,10 @@
       "3": "Accion de seed 3",
       "4": "Accion de seed 4"
     }
+  },
+  "proxy": {
+    "unavailable": "API de backend no disponible",
+    "unavailableForAuthSession": "API de backend no disponible para sesi\u00f3n de autenticaci\u00f3n",
+    "unavailableForAuthRefresh": "API de backend no disponible para actualizaci\u00f3n de autenticaci\u00f3n"
   }
 }

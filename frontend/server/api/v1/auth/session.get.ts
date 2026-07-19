@@ -55,14 +55,14 @@ export default defineEventHandler(async (event) => {
     }
 
     throw lastError
-  } catch (error: any) {
-    const response = error?.response
-    if (!response) {
-      throw createError({
-        statusCode: 502,
-        statusMessage: 'Backend API unavailable',
-      })
-    }
+} catch (error: any) {
+      const response = error?.response
+      if (!response) {
+        throw createError({
+          statusCode: 502,
+          statusMessage: 'Backend API unavailable for auth session',
+        })
+      }
 
     return applyProxyResponse(event, response) ?? {
       error: response.statusText || 'Request failed',

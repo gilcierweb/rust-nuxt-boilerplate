@@ -66,7 +66,7 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    if (!response) {
+if (!response) {
       throw lastError
     }
 
