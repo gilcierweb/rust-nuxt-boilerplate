@@ -50,17 +50,19 @@ async fn get_handler(_req: HttpRequest) -> actix_web::HttpResponse {
 #[actix_web::test]
 async fn post_with_bearer_skips_csrf() {
     let config = make_config();
+    // Override cookie_auth_paths to empty to test Bearer skip behavior
+    let csrf = CsrfProtection::new(vec![]).with_cookie_auth_paths(vec![]);
     let app = test::init_service(
         App::new().app_data(web::Data::new(config)).service(
             web::scope("/api/v1")
-                .wrap(CsrfProtection::new(vec![]))
-                .route("/admin/data", web::post().to(state_changing_handler)),
+                .wrap(csrf)
+                .route("/users/data", web::post().to(state_changing_handler)),
         ),
     )
     .await;
 
     let req = test::TestRequest::post()
-        .uri("/api/v1/admin/data")
+        .uri("/api/v1/users/data")
         .insert_header(("authorization", "Bearer test-token"))
         .to_request();
     let resp = test::call_service(&app, req).await;

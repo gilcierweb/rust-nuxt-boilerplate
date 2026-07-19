@@ -549,7 +549,10 @@ mod tests {
     fn test_cookie_auth_paths_defaults_to_admin() {
         let csrf = CsrfProtection::new(vec![]);
         assert!(!csrf.cookie_auth_paths.is_empty());
-        assert!(csrf.cookie_auth_paths.contains(&"/api/v1/admin".to_string()));
+        assert!(
+            csrf.cookie_auth_paths
+                .contains(&"/api/v1/admin".to_string())
+        );
     }
 
     #[test]

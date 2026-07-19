@@ -285,7 +285,7 @@ where
             match allowed {
                 Some(true) => {
                     // Allowed - continue to handler
-                }
+                },
                 Some(false) => {
                     // Rate limited
                     let response = HttpResponse::TooManyRequests()
@@ -304,7 +304,7 @@ where
 
                     let (http_req, _payload) = req.into_parts();
                     return Ok(ServiceResponse::new(http_req, response));
-                }
+                },
                 None => {
                     // Redis unavailable or error - fail closed with 503
                     tracing::warn!(
@@ -324,7 +324,7 @@ where
 
                     let (http_req, _payload) = req.into_parts();
                     return Ok(ServiceResponse::new(http_req, response));
-                }
+                },
             }
 
             let res = svc.call(req).await?;

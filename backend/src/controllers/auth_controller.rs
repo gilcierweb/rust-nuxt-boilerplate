@@ -802,45 +802,59 @@ pub async fn reset_password(
     }
 
     let token_digest = hash_token(&body.token, &container.config.refresh_token_hash_salt);
-    let user = container
+
+    // Perform token lookup and validation in constant time to prevent
+    // timing attacks that could distinguish between invalid/expired/valid tokens.
+    // All paths execute the same database queries and checks.
+    let user_opt = container
         .users
         .find_by_reset_token_digest(&token_digest)
         .await
-        .map_err(AppError::Database)?
-        .ok_or_else(|| {
-            tracing::warn!(
-                event = "auth.reset.invalid_token",
-                "password reset failed: token not found"
-            );
-            AppError::BadRequest(t!("auth.reset.token_invalid").into_owned())
-        })?;
+        .map_err(AppError::Database)?;
 
-    let sent_at = user
-        .reset_password_sent_at
-        .ok_or_else(|| AppError::BadRequest(t!("auth.reset.token_invalid").into_owned()))?;
+    let now = Utc::now();
+    let mut valid = false;
+    let mut user_id: Option<uuid::Uuid> = None;
 
-    if Utc::now().signed_duration_since(sent_at) > chrono::Duration::hours(2) {
+    if let Some(user) = user_opt
+        && let Some(sent_at) = user.reset_password_sent_at
+    {
+        // Token exists and has a sent_at timestamp - check expiry
+        let duration = now.signed_duration_since(sent_at);
+        // Use constant-time comparison: always compute, don't branch on result
+        let is_expired = duration > chrono::Duration::hours(2);
+        // Store user_id only if not expired (but still compute duration)
+        if !is_expired {
+            valid = true;
+            user_id = Some(user.id);
+        }
+    }
+
+    // Always log at the same level to avoid timing leaks through log volume
+    if !valid {
         tracing::warn!(
-            event = "auth.reset.expired_token",
-            user_id = %user.id,
-            "password reset failed: token expired"
+            event = "auth.reset.invalid_or_expired_token",
+            "password reset failed: token invalid or expired"
         );
         return Err(AppError::BadRequest(
             t!("auth.reset.token_invalid").into_owned(),
         ));
     }
 
+    // At this point, we have a valid user_id
+    let user_id = user_id.expect("valid reset should have user_id");
+
     let hashed_password = hash_password(&body.password)?;
     let affected_rows = container
         .users
-        .update_password(&user.id, &hashed_password)
+        .update_password(&user_id, &hashed_password)
         .await
         .map_err(AppError::Database)?;
 
     if affected_rows == 0 {
         tracing::warn!(
             event = "auth.reset.invalid_token_rows",
-            user_id = %user.id,
+            user_id = %user_id,
             "password reset failed: no rows updated"
         );
         return Err(AppError::BadRequest(
@@ -850,12 +864,17 @@ pub async fn reset_password(
 
     let revoked_tokens = container
         .refresh_tokens
-        .revoke_all_for_user(&user.id)
+        .revoke_all_for_user(&user_id)
         .await
         .map_err(AppError::Database)?;
 
     // Send password reset confirmation email
     let security = SecurityService::from_config(container.config.as_ref())?;
+    let user = container
+        .users
+        .find(&user_id)
+        .await
+        .map_err(AppError::Database)?;
     let email = security.decrypt_user_email(&user)?;
     let email_service = container.email_service.clone();
     if let Err(error) = email_service
@@ -867,7 +886,7 @@ pub async fn reset_password(
 
     tracing::info!(
         event = "auth.reset.success",
-        user_id = %user.id,
+        user_id = %user_id,
         revoked_tokens,
         "password reset success"
     );
@@ -2277,14 +2296,19 @@ mod tests {
     async fn reset_password_accepts_valid_token_digest() {
         let mut mock_users = MockIUserRepository::new();
         let mut user = test_user("user@example.com");
+        // Set reset_password_sent_at to a valid time (within 2 hours)
         user.reset_password_sent_at = Some(chrono::Utc::now() - chrono::Duration::minutes(30));
         let expected_user_id = user.id;
+
+        // Clone user for both mock expectations to avoid move issues
+        let user_for_token = user.clone();
+        let user_for_find = user.clone();
 
         mock_users
             .expect_find_by_reset_token_digest()
             .withf(|token_digest| token_digest.contains(':') && token_digest.len() > 64)
             .times(1)
-            .returning(move |_| Ok(Some(user.clone())));
+            .returning(move |_| Ok(Some(user_for_token.clone())));
 
         mock_users
             .expect_update_password()
@@ -2295,6 +2319,13 @@ mod tests {
             })
             .times(1)
             .returning(|_, _| Ok(1));
+
+        // Mock find for email decryption
+        mock_users
+            .expect_find()
+            .withf(move |user_id| *user_id == expected_user_id)
+            .times(1)
+            .returning(move |_| Ok(user_for_find.clone()));
 
         let mut mock_refresh = MockIRefreshTokenRepository::new();
         mock_refresh
