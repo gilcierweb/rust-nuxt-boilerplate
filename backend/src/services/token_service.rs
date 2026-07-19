@@ -67,8 +67,7 @@ pub fn hash_token(token: &str, key: &str) -> String {
 
     type HmacSha256 = Hmac<Sha256>;
 
-    let mut mac =
-        HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC accepts any key length");
+    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC accepts any key length");
     mac.update(token.as_bytes());
     let result = mac.finalize();
     format!("{}{}", HMAC_PREFIX, hex::encode(result.into_bytes()))
@@ -103,8 +102,7 @@ fn verify_hmac(token: &str, stored: &str, key: &str) -> bool {
         Err(_) => return false,
     };
 
-    let mut mac =
-        HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC accepts any key length");
+    let mut mac = HmacSha256::new_from_slice(key.as_bytes()).expect("HMAC accepts any key length");
     mac.update(token.as_bytes());
     let computed = mac.finalize().into_bytes();
 
