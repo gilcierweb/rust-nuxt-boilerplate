@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center gap-3">
-      <NuxtLink to="/" class="flex items-center gap-3">
+      <NuxtLink :to="localePath('/')" class="flex items-center gap-3">
         <span class="text-primary">
           <svg width="32" height="32" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="34" height="34" rx="8.5" fill="currentColor" fill-opacity="0.15" />
@@ -15,7 +15,7 @@
     <div>
       <h3 class="mb-1.5 text-2xl font-semibold text-base-content">{{ $t('auth.login.title') }}</h3>
       <p class="text-base-content/80">{{ $t('auth.login.noAccount') }}
-        <NuxtLink to="/auth/register" class="link link-animated link-primary font-normal">
+        <NuxtLink :to="localePath('/auth/register')" class="link link-animated link-primary font-normal">
           {{ $t('auth.login.createAccount') }}
         </NuxtLink>
       </p>
@@ -85,7 +85,7 @@
       <div>
         <div class="mb-1.5 flex items-center justify-between">
           <label class="label-text" for="password">{{ $t('auth.login.password') }}*</label>
-          <NuxtLink to="/auth/forgot-password" class="link link-animated link-primary font-normal">
+          <NuxtLink :to="localePath('/auth/forgot-password')" class="link link-animated link-primary font-normal">
             {{ $t('auth.login.forgotPassword') }}
           </NuxtLink>
         </div>
@@ -121,7 +121,7 @@
 
     <p class="text-center text-base-content/80">
       {{ $t('auth.login.noAccount') }}
-      <NuxtLink to="/auth/register" class="link link-animated link-primary font-normal">
+      <NuxtLink :to="localePath('/auth/register')" class="link link-animated link-primary font-normal">
         {{ $t('auth.login.createAccount') }}
       </NuxtLink>
     </p>
@@ -142,6 +142,7 @@ definePageMeta({
 const { t } = useI18n()
 const authStore = useAuthStore()
 const toast = useToast()
+const localePath = useLocalePath()
 
 const form = reactive({
   email: '',
@@ -183,7 +184,7 @@ async function handleLogin() {
     }
 
     toast.success(t('common.success'))
-    const returnUrl = authStore.returnUrl || '/admin/dashboard'
+    const returnUrl = authStore.returnUrl || localePath('/admin/dashboard')
     authStore.returnUrl = null
     await navigateTo(returnUrl)
   } catch (err: any) {
@@ -209,7 +210,7 @@ async function handleOtpVerify() {
       otp_code: form.otp_code,
     })
     toast.success(t('common.success'))
-    await navigateTo(authStore.returnUrl || '/admin/dashboard')
+    await navigateTo(authStore.returnUrl || localePath('/admin/dashboard'))
     authStore.returnUrl = null
   } catch (err: any) {
     const rawMessage = err.statusMessage || t('auth.login.otp.invalidCode')

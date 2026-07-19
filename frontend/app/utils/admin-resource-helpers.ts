@@ -34,20 +34,21 @@ export function useAdminResource(resource: string, options?: {
 }) {
   const api = useApi()
   const toast = useToast()
+  const localePath = useLocalePath()
   const basePath = options?.basePath || `/admin/${resource}`
 
   /**
    * Navigate to show page
    */
   function navigateToShow(id: string) {
-    return navigateTo(useShowPath(resource, id))
+    return navigateTo(localePath(useShowPath(resource, id)))
   }
 
   /**
    * Navigate to edit page
    */
   function navigateToEdit(id: string) {
-    return navigateTo(useEditPath(resource, id))
+    return navigateTo(localePath(useEditPath(resource, id)))
   }
 
   /**
@@ -87,7 +88,7 @@ export function useAdminResource(resource: string, options?: {
     navigateToShow,
     navigateToEdit,
     removeItem,
-    showPath: (id: string) => useShowPath(resource, id),
-    editPath: (id: string) => useEditPath(resource, id),
+    showPath: (id: string) => localePath(useShowPath(resource, id)),
+    editPath: (id: string) => localePath(useEditPath(resource, id)),
   }
 }

@@ -9,13 +9,13 @@
       <Icon name="heroicons:check-circle" class="h-10 w-10 mx-auto" />
       <div>
         <h3 class="font-semibold text-lg mb-1">{{ $t('auth.resetPassword.success.title') }}</h3>
-        <NuxtLink to="/auth/login" class="btn btn-primary mt-4 inline-flex">{{ $t('auth.resetPassword.success.login') }}</NuxtLink>
+        <NuxtLink :to="localePath('/auth/login')" class="btn btn-primary mt-4 inline-flex">{{ $t('auth.resetPassword.success.login') }}</NuxtLink>
       </div>
     </div>
 
     <div v-else-if="!token" class="alert alert-error alert-soft">
       <p class="text-sm">{{ $t('auth.resetPassword.error.invalidToken') }}</p>
-      <NuxtLink to="/auth/forgot-password" class="btn btn-outline btn-primary mt-4 inline-flex text-sm">{{ $t('auth.resetPassword.error.requestNew') }}</NuxtLink>
+      <NuxtLink :to="localePath('/auth/forgot-password')" class="btn btn-outline btn-primary mt-4 inline-flex text-sm">{{ $t('auth.resetPassword.error.requestNew') }}</NuxtLink>
     </div>
 
     <form v-else @submit.prevent="handleSubmit" class="space-y-4">
@@ -71,6 +71,7 @@
 definePageMeta({ layout: 'auth' })
 const { t } = useI18n()
 const { $api } = useNuxtApp()
+const localePath = useLocalePath()
 const route = useRoute()
 const token = route.query.token as string | undefined
 const password = ref('')

@@ -103,7 +103,7 @@
       </div>
 
       <div class="flex items-center justify-end gap-3 border-t border-base-content/10 pt-4">
-        <NuxtLink to="/admin/audit-logs" class="btn btn-ghost">Cancelar</NuxtLink>
+        <NuxtLink :to="localePath('/admin/audit-logs')" class="btn btn-ghost">Cancelar</NuxtLink>
         <button type="submit" class="btn btn-primary" :disabled="saving">
           <span v-if="saving" class="icon-[tabler--loader-2] size-5 animate-spin"></span>
           <span v-else class="icon-[tabler--check] size-5"></span>
@@ -131,6 +131,7 @@ const users = computed(() => lookup.getItems('users'))
 const customers = computed(() => lookup.getItems('customers'))
 
 const { formAlertMessage } = useFormAlert()
+const localePath = useLocalePath()
 
 const props = defineProps<{
   mode: 'create' | 'edit'

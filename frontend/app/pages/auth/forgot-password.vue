@@ -5,7 +5,7 @@
       <h3 class="text-base-content text-2xl font-semibold mb-1">{{ $t('auth.forgotPassword.title') }}</h3>
       <p class="text-base-content/70 text-sm">
         {{ $t('auth.forgotPassword.remembered') }}
-        <NuxtLink to="/auth/login" class="link link-primary font-medium">
+        <NuxtLink :to="localePath('/auth/login')" class="link link-primary font-medium">
           {{ $t('auth.forgotPassword.backToLogin') }}
         </NuxtLink>
       </p>
@@ -60,6 +60,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 const { $api } = useNuxtApp()
+const localePath = useLocalePath()
 const email = ref('')
 const loading = ref(false)
 const sent = ref(false)

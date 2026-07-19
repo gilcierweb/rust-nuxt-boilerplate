@@ -15,7 +15,7 @@
           </div>
 
           <div class="card-actions flex flex-wrap gap-2">
-            <NuxtLink to="/admin/roles" class="btn btn-ghost">
+            <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">
               <span class="icon-[tabler--arrow-left] size-4.5"></span>
               {{ $t('admin.common.back') }}
             </NuxtLink>
@@ -70,10 +70,11 @@ interface Role {
 definePageMeta({ layout: 'admin' })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 const breadcrumbItems = computed(() => [
-  { label: t('admin.common.dashboard'), to: '/admin/dashboard' },
-  { label: t('admin.roles.title'), to: '/admin/roles' },
+  { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
+  { label: t('admin.roles.title'), to: localePath('/admin/roles') },
   { label: t('admin.common.edit') },
 ])
 

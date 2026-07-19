@@ -7,9 +7,10 @@ function isAssetLikePath(path: string) {
 export default defineNuxtRouteMiddleware(async (to) => {
   const nuxtApp = useNuxtApp();
   const authStore = useAuthStore(nuxtApp.$pinia);
+  const localePath = useLocalePath();
   const isPublic = isPublicRoute(to.path);
   const authPage = isAuthPage(to.path);
-  const isAdminRoute = to.path.startsWith("/admin");
+  const isAdminRoute = to.path.startsWith("/admin") || to.path.startsWith("/en/admin") || to.path.startsWith("/es/admin");
 
   // Ignore dev/static-like paths accidentally routed through Vue Router.
   if (
@@ -66,14 +67,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   if (!isLoggedIn && !isPublic) {
     authStore.setReturnUrl(to.fullPath);
-    return navigateTo("/auth/login");
+    return navigateTo(localePath("/auth/login"));
   }
 
   if (isLoggedIn && authPage) {
-    return navigateTo(isAdmin ? "/admin/dashboard" : "/portal");
+    return navigateTo(isAdmin ? localePath("/admin/dashboard") : localePath("/portal"));
   }
 
   if (isLoggedIn && isAdminRoute && !isAdmin) {
-    return navigateTo("/portal");
+    return navigateTo(localePath("/portal"));
   }
 });

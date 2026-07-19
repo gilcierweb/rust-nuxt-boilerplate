@@ -11,7 +11,7 @@
       </div>
       <h1 class="text-2xl font-bold text-base-content font-display">{{ $t('auth.confirm.success.title') }}</h1>
       <p class="text-base-content/60 text-sm">{{ $t('auth.confirm.success.message') }}</p>
-      <NuxtLink to="/auth/login" class="btn btn-primary btn-lg inline-flex">
+      <NuxtLink :to="localePath('/auth/login')" class="btn btn-primary btn-lg inline-flex">
         {{ $t('auth.confirm.success.login') }}
         <Icon name="heroicons:arrow-right" class="h-4 w-4" />
       </NuxtLink>
@@ -23,7 +23,7 @@
       </div>
       <h1 class="text-2xl font-bold text-base-content font-display">{{ $t('auth.confirm.error.title') }}</h1>
       <p class="text-base-content/60 text-sm">{{ $t('auth.confirm.error.message') }}</p>
-      <NuxtLink to="/auth/login" class="btn btn-outline btn-primary inline-flex">
+      <NuxtLink :to="localePath('/auth/login')" class="btn btn-outline btn-primary inline-flex">
         {{ $t('auth.confirm.error.backToLogin') }}
       </NuxtLink>
     </div>
@@ -33,6 +33,7 @@
 <script setup lang="ts">
 definePageMeta({ layout: 'auth' })
 const { $api } = useNuxtApp()
+const localePath = useLocalePath()
 const route = useRoute()
 const token = route.query.token as string | undefined
 const loading = ref(true)

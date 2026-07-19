@@ -15,7 +15,7 @@
           </div>
 
           <div class="card-actions flex flex-wrap gap-2">
-            <NuxtLink to="/admin/roles" class="btn btn-ghost">
+            <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">
               <span class="icon-[tabler--arrow-left] size-4.5"></span>
               {{ $t('admin.common.back') }}
             </NuxtLink>
@@ -38,10 +38,11 @@ import RolesForm from '~/components/admin/roles/RolesForm.vue'
 definePageMeta({ layout: 'admin' })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 const breadcrumbItems = computed(() => [
-  { label: t('admin.common.dashboard'), to: '/admin/dashboard' },
-  { label: t('admin.roles.title'), to: '/admin/roles' },
+  { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
+  { label: t('admin.roles.title'), to: localePath('/admin/roles') },
   { label: t('admin.common.new') },
 ])
 
@@ -67,7 +68,7 @@ async function handleSubmit(values: typeof initialValues) {
       },
     })
     toast.success(t('admin.roles.messages.createSuccess'))
-    await navigateTo('/admin/roles')
+    await navigateTo(localePath('/admin/roles'))
   } catch (error: any) {
     toast.error(error?.message || t('admin.roles.messages.createError'))
   } finally {

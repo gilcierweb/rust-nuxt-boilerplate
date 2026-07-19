@@ -66,7 +66,7 @@
               <td>{{ item.first_name || '—' }}</td>
               <td>{{ item.last_name || '—' }}</td>
               <td class="text-right">
-                <NuxtLink :to="`/admin/users/${item.id}`" class="btn btn-circle btn-text btn-sm" :aria-label="$t('admin.common.view')" :title="$t('admin.common.view')">
+                <NuxtLink :to="localePath(`/admin/users/${item.id}`)" class="btn btn-circle btn-text btn-sm" :aria-label="$t('admin.common.view')" :title="$t('admin.common.view')">
                   <span class="icon-[tabler--eye] size-5"></span>
                 </NuxtLink>
               </td>
@@ -87,9 +87,10 @@ definePageMeta({
 })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 const breadcrumbItems = computed(() => [
-  { label: t('admin.common.dashboard'), to: '/admin/dashboard' },
+  { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
   { label: t('admin.users.title') },
 ])
 

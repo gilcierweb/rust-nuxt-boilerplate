@@ -14,7 +14,7 @@
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <NuxtLink to="/admin/users" class="btn btn-ghost">
+          <NuxtLink :to="localePath('/admin/users')" class="btn btn-ghost">
             <span class="icon-[tabler--arrow-left] size-4.5"></span>
             Voltar
           </NuxtLink>
@@ -98,10 +98,11 @@ type UserRow = {
 }
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 const breadcrumbItems = computed(() => [
-  { label: t('admin.common.dashboard'), to: '/admin/dashboard' },
-  { label: t('admin.users.title'), to: '/admin/users' },
+  { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
+  { label: t('admin.users.title'), to: localePath('/admin/users') },
   { label: t('admin.common.details') },
 ])
 

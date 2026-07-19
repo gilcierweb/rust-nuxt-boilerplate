@@ -9,5 +9,6 @@ definePageMeta({
   layout: 'admin'
 })
 
-await navigateTo('/admin/dashboard', { redirectCode: 302 })
+const localePath = useLocalePath()
+await navigateTo(localePath('/admin/dashboard'), { redirectCode: 302 })
 </script>

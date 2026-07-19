@@ -63,15 +63,15 @@
       <div class="rounded-box border border-base-content/10 bg-base-100 p-5 shadow-md shadow-base-content/5">
         <h2 class="text-lg font-semibold text-base-content">{{ $t('admin.dashboard.quickLinks') }}</h2>
         <div class="mt-4 space-y-3">
-          <NuxtLink to="/admin/users" class="btn btn-soft w-full justify-start gap-2">
+          <NuxtLink :to="localePath('/admin/users')" class="btn btn-soft w-full justify-start gap-2">
             <span class="icon-[tabler--users] size-4.5"></span>
             {{ $t('admin.sidebar.users') }}
           </NuxtLink>
-          <NuxtLink to="/admin/roles" class="btn btn-soft w-full justify-start gap-2">
+          <NuxtLink :to="localePath('/admin/roles')" class="btn btn-soft w-full justify-start gap-2">
             <span class="icon-[tabler--shield] size-4.5"></span>
             {{ $t('admin.sidebar.roles') }}
           </NuxtLink>
-          <NuxtLink to="/admin/audit-logs" class="btn btn-soft w-full justify-start gap-2">
+          <NuxtLink :to="localePath('/admin/audit-logs')" class="btn btn-soft w-full justify-start gap-2">
             <span class="icon-[tabler--history] size-4.5"></span>
             {{ $t('admin.sidebar.auditLogs') }}
           </NuxtLink>
@@ -109,6 +109,7 @@ import { formatDateTime } from '~/utils/admin-ui'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 definePageMeta({
   layout: 'admin',

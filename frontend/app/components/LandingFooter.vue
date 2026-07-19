@@ -24,9 +24,9 @@
       <div>
         <h4 class="font-bold text-on-surface mb-4 text-sm uppercase tracking-wider">Company</h4>
         <ul class="space-y-3">
-          <li><NuxtLink to="/about" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">About</NuxtLink></li>
-          <li><NuxtLink to="/how-work" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">How It Works</NuxtLink></li>
-          <li><NuxtLink to="/contact" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">Contact</NuxtLink></li>
+          <li><NuxtLink :to="localePath('/about')" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">About</NuxtLink></li>
+          <li><NuxtLink :to="localePath('/how-work')" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">How It Works</NuxtLink></li>
+          <li><NuxtLink :to="localePath('/contact')" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">Contact</NuxtLink></li>
         </ul>
       </div>
       <div>
@@ -40,8 +40,8 @@
       <div>
         <h4 class="font-bold text-on-surface mb-4 text-sm uppercase tracking-wider">Legal</h4>
         <ul class="space-y-3">
-          <li><NuxtLink to="/privacy" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">Privacy Policy</NuxtLink></li>
-          <li><NuxtLink to="/terms" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">Terms of Service</NuxtLink></li>
+          <li><NuxtLink :to="localePath('/privacy')" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">Privacy Policy</NuxtLink></li>
+          <li><NuxtLink :to="localePath('/terms')" class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none">Terms of Service</NuxtLink></li>
         </ul>
       </div>
     </div>
@@ -50,3 +50,7 @@
     </div>
   </footer>
 </template>
+
+<script setup lang="ts">
+const localePath = useLocalePath()
+</script>

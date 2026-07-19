@@ -9,9 +9,9 @@
 
       <div class="justify-enter flex items-center gap-4 max-sm:flex-col">
         <a href="/swagger-ui/" class="link link-primary link-animated font-normal" target="_blank">API Docs</a>
-        <NuxtLink to="/contact" class="link link-primary link-animated font-normal">Contact</NuxtLink>
-        <NuxtLink to="/privacy" class="link link-primary link-animated font-normal">Privacy</NuxtLink>
-        <NuxtLink to="/terms" class="link link-primary link-animated font-normal">Terms</NuxtLink>
+        <NuxtLink :to="localePath('/contact')" class="link link-primary link-animated font-normal">Contact</NuxtLink>
+        <NuxtLink :to="localePath('/privacy')" class="link link-primary link-animated font-normal">Privacy</NuxtLink>
+        <NuxtLink :to="localePath('/terms')" class="link link-primary link-animated font-normal">Terms</NuxtLink>
       </div>
     </div>
   </footer>
@@ -19,6 +19,7 @@
 
 <script setup lang="ts">
 const runtimeConfig = useRuntimeConfig()
+const localePath = useLocalePath()
 const appName = computed(() => runtimeConfig.public.appName || 'Buildtrack')
 const currentYear = new Date().getFullYear()
 </script>

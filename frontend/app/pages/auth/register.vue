@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-6">
     <div class="flex items-center gap-3">
-      <NuxtLink to="/" class="flex items-center gap-3">
+      <NuxtLink :to="localePath('/')" class="flex items-center gap-3">
         <span class="text-primary">
           <svg width="32" height="32" viewBox="0 0 34 34" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="34" height="34" rx="8.5" fill="currentColor" fill-opacity="0.15" />
@@ -16,7 +16,7 @@
       <h3 class="mb-1.5 text-2xl font-semibold text-base-content">{{ $t('auth.register.title') }}</h3>
       <p class="text-base-content/80">
         {{ $t('auth.register.hasAccount') }}
-        <NuxtLink to="/auth/login" class="link link-animated link-primary font-normal">
+        <NuxtLink :to="localePath('/auth/login')" class="link link-animated link-primary font-normal">
           {{ $t('auth.register.login') }}
         </NuxtLink>
       </p>
@@ -36,7 +36,7 @@
         </p>
       </div>
       <NuxtLink
-        to="/auth/login"
+        :to="localePath('/auth/login')"
         class="btn btn-primary btn-gradient btn-block"
       >
         {{ $t('auth.register.success.goToLogin') }}
@@ -114,9 +114,9 @@
           <input type="checkbox" v-model="form.age_confirmed" required class="checkbox checkbox-primary checkbox-sm mt-0.5" />
           <p class="text-sm text-base-content/80 leading-relaxed">
             {{ $t('auth.register.terms.consent') }}
-            <NuxtLink to="/terms" class="link link-primary font-normal">{{ $t('auth.register.terms.termsOfUse') }}</NuxtLink>
+            <NuxtLink :to="localePath('/terms')" class="link link-primary font-normal">{{ $t('auth.register.terms.termsOfUse') }}</NuxtLink>
             {{ $t('auth.register.terms.and') }}
-            <NuxtLink to="/privacy" class="link link-primary font-normal">{{ $t('auth.register.terms.privacyPolicy') }}</NuxtLink>.
+            <NuxtLink :to="localePath('/privacy')" class="link link-primary font-normal">{{ $t('auth.register.terms.privacyPolicy') }}</NuxtLink>.
           </p>
         </label>
       </div>
@@ -141,6 +141,7 @@ definePageMeta({
 
 const { t } = useI18n()
 const authStore = useAuthStore()
+const localePath = useLocalePath()
 
 const form = reactive({
   email: '',

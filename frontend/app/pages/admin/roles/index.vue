@@ -14,7 +14,7 @@
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <NuxtLink to="/admin/roles/new" class="btn btn-primary">
+          <NuxtLink :to="localePath('/admin/roles/new')" class="btn btn-primary">
             <span class="icon-[tabler--plus] size-4.5"></span>
             {{ $t('admin.roles.newTitle') }}
           </NuxtLink>
@@ -99,6 +99,7 @@ import { extractErrorMessage, formatDateTime } from '~/utils/admin-ui'
 definePageMeta({ layout: 'admin' })
 
 const { t } = useI18n()
+const localePath = useLocalePath()
 
 type RoleRow = {
   id: string
@@ -114,7 +115,7 @@ const deletePendingId = ref<string | null>(null)
 const basePath = '/admin/roles'
 
 const breadcrumbItems = computed(() => [
-  { label: t('admin.common.dashboard'), to: '/admin/dashboard' },
+  { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
   { label: t('admin.roles.title') },
 ])
 

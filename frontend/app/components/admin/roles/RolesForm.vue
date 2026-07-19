@@ -48,7 +48,7 @@
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-4 border-t border-base-content/10">
-        <NuxtLink to="/admin/roles" class="btn btn-ghost">{{ $t('admin.roles.form.cancel', 'Cancelar') }}</NuxtLink>
+        <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">{{ $t('admin.roles.form.cancel', 'Cancelar') }}</NuxtLink>
         <button type="submit" class="btn btn-primary" :disabled="saving">
           <span v-if="saving" class="icon-[tabler--loader-2] size-5 animate-spin"></span>
           <span v-else class="icon-[tabler--check] size-5"></span>
@@ -67,6 +67,7 @@ import AppAlert from '~/components/AppAlert.vue'
 
 const { t } = useI18n()
 const { formAlertMessage } = useFormAlert()
+const localePath = useLocalePath()
 
 const props = defineProps<{
   mode: 'create' | 'edit'

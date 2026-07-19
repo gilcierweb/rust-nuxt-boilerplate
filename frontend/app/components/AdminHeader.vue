@@ -57,25 +57,25 @@
                 </div>
               </li>
               <li>
-                <NuxtLink class="dropdown-item px-3" to="/admin/dashboard">
+                <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/dashboard')">
                   <span class="icon-[tabler--layout-dashboard] size-5"></span>
                   Dashboard
                 </NuxtLink>
               </li>
               <li>
-                <NuxtLink class="dropdown-item px-3" to="/admin/users">
+                <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/users')">
                   <span class="icon-[tabler--users] size-5"></span>
                   Users
                 </NuxtLink>
               </li>
               <li>
-                <NuxtLink class="dropdown-item px-3" to="/admin/roles">
+                <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/roles')">
                   <span class="icon-[tabler--shield] size-5"></span>
                   Roles
                 </NuxtLink>
               </li>
               <li>
-                <NuxtLink class="dropdown-item px-3" to="/admin/audit-logs">
+                <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/audit-logs')">
                   <span class="icon-[tabler--history] size-5"></span>
                   Audit Logs
                 </NuxtLink>
@@ -90,7 +90,7 @@
                 </a>
               </li>
               <li>
-                <NuxtLink class="dropdown-item px-3" to="/">
+                <NuxtLink class="dropdown-item px-3" :to="localePath('/')">
                   <span class="icon-[tabler--home] size-5"></span>
                   Back to site
                 </NuxtLink>
@@ -116,6 +116,7 @@
 <script setup lang="ts">
 const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
+const localePath = useLocalePath()
 const search = useState('admin-shell-search', () => '')
 const sidebarState = useState('admin-sidebar-open', () => false)
 
