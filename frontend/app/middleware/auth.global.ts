@@ -30,8 +30,13 @@ export default defineNuxtRouteMiddleware(async (to) => {
         const requestFetch = useRequestFetch();
         const header = event.node.req.headers.cookie;
         await authStore.fetchSessionSSR(event, requestFetch, header);
-      } catch {
-        authStore._clear();
+      } catch (error: any) {
+        // Only clear auth on authentication errors (401/403)
+        // Network blips, rate limits, server errors should NOT log out the user
+        const statusCode = error?.statusCode || error?.response?.status;
+        if (statusCode === 401 || statusCode === 403) {
+          authStore._clear();
+        }
         authStore.isInitialized = true;
       }
     } else if (!isPublic) {
