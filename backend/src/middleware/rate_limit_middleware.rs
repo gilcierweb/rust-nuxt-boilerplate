@@ -257,6 +257,7 @@ where
             );
             let key = format!("{}:{}", effective_limit.key_prefix, client_key);
 
+            // Attempt rate limiting with Redis. Fail closed on Redis errors.
             let allowed = async {
                 let mut conn = redis.get().await.ok()?;
 
@@ -279,26 +280,51 @@ where
 
                 Some(result == 1)
             }
-            .await
-            .unwrap_or(true);
+            .await;
 
-            if !allowed {
-                let response = HttpResponse::TooManyRequests()
-                    .insert_header(("Retry-After", effective_limit.window_secs.to_string()))
-                    .insert_header((
-                        "X-RateLimit-Limit",
-                        effective_limit.max_requests.to_string(),
-                    ))
-                    .json(json!({
-                        "error": {
-                            "code": "RATE_LIMITED",
-                            "message": t!("errors.rate_limited")
-                        }
-                    }))
-                    .map_into_boxed_body();
+            match allowed {
+                Some(true) => {
+                    // Allowed - continue to handler
+                }
+                Some(false) => {
+                    // Rate limited
+                    let response = HttpResponse::TooManyRequests()
+                        .insert_header(("Retry-After", effective_limit.window_secs.to_string()))
+                        .insert_header((
+                            "X-RateLimit-Limit",
+                            effective_limit.max_requests.to_string(),
+                        ))
+                        .json(json!({
+                            "error": {
+                                "code": "RATE_LIMITED",
+                                "message": t!("errors.rate_limited")
+                            }
+                        }))
+                        .map_into_boxed_body();
 
-                let (http_req, _payload) = req.into_parts();
-                return Ok(ServiceResponse::new(http_req, response));
+                    let (http_req, _payload) = req.into_parts();
+                    return Ok(ServiceResponse::new(http_req, response));
+                }
+                None => {
+                    // Redis unavailable or error - fail closed with 503
+                    tracing::warn!(
+                        event = "rate_limit.redis_unavailable",
+                        key = %key,
+                        "Rate limiter Redis unavailable, failing closed"
+                    );
+                    let response = HttpResponse::ServiceUnavailable()
+                        .insert_header(("Retry-After", "5"))
+                        .json(json!({
+                            "error": {
+                                "code": "SERVICE_UNAVAILABLE",
+                                "message": "Rate limiter unavailable, please try again"
+                            }
+                        }))
+                        .map_into_boxed_body();
+
+                    let (http_req, _payload) = req.into_parts();
+                    return Ok(ServiceResponse::new(http_req, response));
+                }
             }
 
             let res = svc.call(req).await?;
