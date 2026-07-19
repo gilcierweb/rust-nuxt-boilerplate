@@ -216,8 +216,7 @@ where
                                 }
                             }
 
-                            let warn_msg =
-                                t!("api.deprecated_warning", version = v);
+                            let warn_msg = t!("api.deprecated_warning", version = v);
                             if let Ok(val) = header::HeaderValue::from_str(&warn_msg) {
                                 headers.insert(HEADER_X_API_WARN, val);
                             }

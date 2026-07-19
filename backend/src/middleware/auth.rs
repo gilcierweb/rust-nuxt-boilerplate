@@ -179,9 +179,9 @@ impl FromRequest for AuthUser {
         let claims = req.extensions().get::<Claims>().cloned();
 
         ready(
-            claims
-                .map(|c| AuthUser { claims: c })
-                .ok_or_else(|| AppError::Unauthorized(t!("middleware.not_authenticated").into_owned())),
+            claims.map(|c| AuthUser { claims: c }).ok_or_else(|| {
+                AppError::Unauthorized(t!("middleware.not_authenticated").into_owned())
+            }),
         )
     }
 }
@@ -294,7 +294,9 @@ pub fn verify_token_with_secrets(
     let token_header = {
         let parts: Vec<&str> = token.split('.').collect();
         if parts.len() != 3 {
-            return Err(AppError::Unauthorized(t!("auth.token.invalid_format").into_owned()));
+            return Err(AppError::Unauthorized(
+                t!("auth.token.invalid_format").into_owned(),
+            ));
         }
         use base64::Engine;
         let decoded = base64::engine::general_purpose::URL_SAFE_NO_PAD
@@ -332,7 +334,9 @@ pub fn verify_token_with_secrets(
                         strategy = "direct",
                         "JWT kid matched but token verification failed (wrong secret or tampered token)"
                     );
-                    return Err(AppError::Unauthorized(t!("middleware.invalid_token").into_owned()));
+                    return Err(AppError::Unauthorized(
+                        t!("middleware.invalid_token").into_owned(),
+                    ));
                 },
             }
         }
@@ -392,7 +396,9 @@ pub fn verify_token_with_secrets(
         "JWT verification failed: no matching secret found"
     );
 
-    Err(AppError::Unauthorized(t!("middleware.invalid_token").into_owned()))
+    Err(AppError::Unauthorized(
+        t!("middleware.invalid_token").into_owned(),
+    ))
 }
 
 fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> AppResult<Claims> {
@@ -417,7 +423,9 @@ fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> Ap
     .map_err(|_| AppError::Unauthorized(t!("middleware.invalid_token").into_owned()))?;
 
     if claims.token_use != expected_use {
-        return Err(AppError::Unauthorized(t!("auth.token.invalid_use").into_owned()));
+        return Err(AppError::Unauthorized(
+            t!("auth.token.invalid_use").into_owned(),
+        ));
     }
 
     Ok(claims)

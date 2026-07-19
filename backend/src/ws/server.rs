@@ -624,12 +624,16 @@ pub async fn ws_handler(
                 },
                 Err(_) => {
                     tracing::warn!("WebSocket auth failed");
-                    return Err(AppError::Unauthorized(t!("middleware.invalid_token").into_owned()));
+                    return Err(AppError::Unauthorized(
+                        t!("middleware.invalid_token").into_owned(),
+                    ));
                 },
             }
         },
         None => {
-            return Err(AppError::Unauthorized(t!("auth.missing_token").into_owned()));
+            return Err(AppError::Unauthorized(
+                t!("auth.missing_token").into_owned(),
+            ));
         },
     };
 

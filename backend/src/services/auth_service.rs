@@ -68,7 +68,9 @@ pub fn needs_rehash(hash: &str, config: &AppConfig) -> bool {
         .and_then(|v| v.to_string().parse::<u32>().ok())
         .unwrap_or(0);
 
-    m_cost != config.argon2_m_cost || t_cost != config.argon2_t_cost || p_cost != config.argon2_p_cost
+    m_cost != config.argon2_m_cost
+        || t_cost != config.argon2_t_cost
+        || p_cost != config.argon2_p_cost
 }
 
 /// Rehash a password with current parameters. Returns the new hash.
@@ -127,7 +129,9 @@ pub fn find_user_by_id(conn: &mut PgConnection, user_id: Uuid) -> Result<User, A
         .select(User::as_select())
         .first::<User>(conn)
         .map_err(|e| match e {
-            diesel::result::Error::NotFound => AppError::NotFound(t!("validation.fields.user_id").into_owned()),
+            diesel::result::Error::NotFound => {
+                AppError::NotFound(t!("validation.fields.user_id").into_owned())
+            },
             _ => AppError::Database(e),
         })
 }
@@ -153,7 +157,9 @@ pub fn register_user(
     .map_err(AppError::Database)?;
 
     if exists {
-        return Err(AppError::Conflict(t!("auth.register.email_exists").into_owned()));
+        return Err(AppError::Conflict(
+            t!("auth.register.email_exists").into_owned(),
+        ));
     }
 
     let hashed = hash_password(password, config)?;

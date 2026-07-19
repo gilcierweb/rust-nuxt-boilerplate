@@ -149,7 +149,9 @@ where
                                 &token,
                             );
                         if blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
-                            return Err(actix_web::error::ErrorUnauthorized(t!("middleware.token_revoked").into_owned()));
+                            return Err(actix_web::error::ErrorUnauthorized(
+                                t!("middleware.token_revoked").into_owned(),
+                            ));
                         }
                     }
 
@@ -202,7 +204,9 @@ where
                             if let Some(m) = metrics {
                                 m.record_jwt_rejected();
                             }
-                            Err(actix_web::error::ErrorUnauthorized(t!("middleware.invalid_token").into_owned()))
+                            Err(actix_web::error::ErrorUnauthorized(
+                                t!("middleware.invalid_token").into_owned(),
+                            ))
                         },
                     }
                 },
@@ -212,8 +216,7 @@ where
 }
 
 pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::errors::AppError> {
-    req.extensions()
-        .get::<Claims>()
-        .cloned()
-        .ok_or_else(|| crate::errors::AppError::Unauthorized(t!("middleware.not_authenticated").into_owned()))
+    req.extensions().get::<Claims>().cloned().ok_or_else(|| {
+        crate::errors::AppError::Unauthorized(t!("middleware.not_authenticated").into_owned())
+    })
 }

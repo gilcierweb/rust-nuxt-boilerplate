@@ -15,11 +15,9 @@ pub fn require_role(req: &HttpRequest, role: &str) -> Result<(), AppError> {
     if claims.has_role(role) || claims.is_admin() {
         Ok(())
     } else {
-        Err(AppError::Forbidden(t!(
-            "middleware.role_required",
-            role = role
-        )
-        .into_owned()))
+        Err(AppError::Forbidden(
+            t!("middleware.role_required", role = role).into_owned(),
+        ))
     }
 }
 
@@ -55,6 +53,8 @@ pub async fn ensure_admin(user: &AuthUser, container: &AppContainer) -> AppResul
     if roles.iter().any(|role| role.eq_ignore_ascii_case("admin")) {
         Ok(())
     } else {
-        Err(AppError::Forbidden(t!("middleware.admin_required").into_owned()))
+        Err(AppError::Forbidden(
+            t!("middleware.admin_required").into_owned(),
+        ))
     }
 }

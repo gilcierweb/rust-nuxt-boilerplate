@@ -409,8 +409,14 @@ impl EmailService {
                 (html, body)
             });
 
-        self.dispatch(to, &subject, &text, Some(&html), tpl::USER_CONFIRMATION_HTML)
-            .await
+        self.dispatch(
+            to,
+            &subject,
+            &text,
+            Some(&html),
+            tpl::USER_CONFIRMATION_HTML,
+        )
+        .await
     }
 
     /// Send password reset email

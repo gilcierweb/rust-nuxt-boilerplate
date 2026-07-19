@@ -86,14 +86,20 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
     }
 
     // Layer 2: JSON parse
-    let parsed: RawClientMessage = serde_json::from_str(raw)
-        .map_err(|e| WsValidationError::new("INVALID_JSON", t!("ws.invalid_json", reason = e.to_string()).into_owned()))?;
+    let parsed: RawClientMessage = serde_json::from_str(raw).map_err(|e| {
+        WsValidationError::new(
+            "INVALID_JSON",
+            t!("ws.invalid_json", reason = e.to_string()).into_owned(),
+        )
+    })?;
 
     // Layer 3: action field validation
-    let action_str = parsed
-        .action
-        .as_deref()
-        .ok_or_else(|| WsValidationError::new("MISSING_FIELD", t!("ws.missing_field", field = "action").into_owned()))?;
+    let action_str = parsed.action.as_deref().ok_or_else(|| {
+        WsValidationError::new(
+            "MISSING_FIELD",
+            t!("ws.missing_field", field = "action").into_owned(),
+        )
+    })?;
 
     if action_str.is_empty() {
         return Err(WsValidationError::new(
@@ -126,10 +132,10 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
 
 fn validate_join_room(data: serde_json::Value) -> Result<WsClientAction, WsValidationError> {
     let room = data.get("room").and_then(|v| v.as_str()).ok_or_else(|| {
-            WsValidationError::new(
-                "MISSING_FIELD",
-                t!("ws.missing_field", field = "data.room").into_owned(),
-            )
+        WsValidationError::new(
+            "MISSING_FIELD",
+            t!("ws.missing_field", field = "data.room").into_owned(),
+        )
     })?;
 
     if room.is_empty() {
@@ -142,7 +148,12 @@ fn validate_join_room(data: serde_json::Value) -> Result<WsClientAction, WsValid
     if room.len() > MAX_ROOM_NAME_LENGTH {
         return Err(WsValidationError::new(
             "FIELD_TOO_LONG",
-            t!("ws.field_too_long", field = "data.room", limit = MAX_ROOM_NAME_LENGTH).into_owned(),
+            t!(
+                "ws.field_too_long",
+                field = "data.room",
+                limit = MAX_ROOM_NAME_LENGTH
+            )
+            .into_owned(),
         ));
     }
 
@@ -172,7 +183,12 @@ fn validate_chat(data: serde_json::Value) -> Result<WsClientAction, WsValidation
     if content.len() > MAX_CHAT_CONTENT_LENGTH {
         return Err(WsValidationError::new(
             "FIELD_TOO_LONG",
-            t!("ws.field_too_long", field = "data.content", limit = MAX_CHAT_CONTENT_LENGTH).into_owned(),
+            t!(
+                "ws.field_too_long",
+                field = "data.content",
+                limit = MAX_CHAT_CONTENT_LENGTH
+            )
+            .into_owned(),
         ));
     }
 
