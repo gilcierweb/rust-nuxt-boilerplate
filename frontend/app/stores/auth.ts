@@ -150,8 +150,9 @@ export const useAuthStore = defineStore('auth', {
           this.isInitialized = true
           return data
         } catch (err: any) {
-          // eslint-disable-next-line no-console
-          console.log('[AuthStore] refreshTokens - error:', err?.statusCode || err?.response?.status, err?.message)
+          if (import.meta.dev) {
+            console.log('[AuthStore] refreshTokens - error:', err?.statusCode || err?.response?.status, err?.message)
+          }
           this._clear()
           this.isInitialized = true
           // Preserve the original error with status code
