@@ -408,7 +408,12 @@ pub async fn login(
         .ok_or(AppError::Internal(
             t!("users.profile_not_found").into_owned(),
         ))?;
-    // Get user roles (with caching) and generate token with role claim
+    // Fetch user roles BEFORE generating the token.
+    // This is NOT redundant — the `role_claim` (primary role as i32) is embedded
+    // into the JWT and used by `Claims::has_role()` + `build_ability` for fine-grained
+    // authorization on every authenticated request. Without this call, the issued
+    // token would have a default/zero `role` and downstream authorization would fail.
+    // Cached for 10 min (see P3); explicit invalidation on role changes.
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
 
@@ -635,6 +640,7 @@ pub async fn refresh(
         .ok_or(AppError::Internal(
             t!("users.profile_not_found").into_owned(),
         ))?;
+    // Required for the new access token's role_claim (see login note above).
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
 
@@ -692,6 +698,7 @@ async fn session_impl(
             t!("users.profile_not_found").into_owned(),
         ))?;
 
+    // Required for the new access token's role_claim (see login note above).
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let role_claim = primary_role_claim(&roles);
     #[allow(clippy::get_first)]
