@@ -854,6 +854,17 @@ pub async fn reset_password(
         .await
         .map_err(AppError::Database)?;
 
+    // Send password reset confirmation email
+    let security = SecurityService::from_config(container.config.as_ref())?;
+    let email = security.decrypt_user_email(&user)?;
+    let email_service = container.email_service.clone();
+    if let Err(error) = email_service
+        .send_password_changed_notification(&email)
+        .await
+    {
+        tracing::warn!("password reset confirmation email failed: {}", error);
+    }
+
     tracing::info!(
         event = "auth.reset.success",
         user_id = %user.id,
@@ -955,6 +966,25 @@ pub async fn enable_2fa(
         .revoke_all_for_user(&user_id)
         .await
         .map_err(AppError::Database)?;
+
+    // Send 2FA setup email with secret and backup codes
+    let security = SecurityService::from_config(container.config.as_ref())?;
+    let email = security.decrypt_user_email(&user_data)?;
+    let qr_code_url = format!(
+        "otpauth://totp/{}:{}?secret={}&issuer={}",
+        container.config.totp_issuer,
+        email,
+        secret,
+        container.config.totp_issuer
+    );
+    
+    let email_service = container.email_service.clone();
+    if let Err(error) = email_service
+        .send_2fa_setup_email(&email, secret, &qr_code_url, &backup_codes)
+        .await
+    {
+        tracing::warn!("2fa setup email delivery failed: {}", error);
+    }
 
     tracing::info!(
         event = "auth.2fa.enabled",
@@ -1063,6 +1093,17 @@ pub async fn change_password(
         .revoke_all_for_user(&user_id)
         .await
         .map_err(AppError::Database)?;
+
+    // Send password changed notification email
+    let security = SecurityService::from_config(container.config.as_ref())?;
+    let email = security.decrypt_user_email(&user_data)?;
+    let email_service = container.email_service.clone();
+    if let Err(error) = email_service
+        .send_password_changed_notification(&email)
+        .await
+    {
+        tracing::warn!("password changed notification email failed: {}", error);
+    }
 
     tracing::info!(
         event = "auth.password.changed",
