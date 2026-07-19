@@ -541,6 +541,7 @@ pub async fn login(
         container.config.as_ref(),
         &refresh_token_plain,
     ));
+    response.cookie(clear_legacy_refresh_cookie(container.config.as_ref()));
 
     Ok(response.json(AuthResponse {
         access_token,
