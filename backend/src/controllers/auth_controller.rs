@@ -454,9 +454,20 @@ pub async fn login(
     // Store refresh token
     let ip_string = req.peer_addr().map(|addr| addr.ip().to_string());
 
-    let ip: Option<ipnet::IpNet> = ip_string
-        .as_ref()
-        .and_then(|s| s.parse::<ipnet::IpNet>().ok());
+    // Parse IP for IpNet type (used in DB). Since this comes from trusted peer_addr,
+    // parse should always succeed, but log a warning if it doesn't.
+    let ip: Option<ipnet::IpNet> = ip_string.as_ref().and_then(|s| {
+        s.parse::<ipnet::IpNet>()
+            .inspect_err(|e| {
+                tracing::warn!(
+                    event = "auth.ip_parse_error",
+                    ip = %s,
+                    error = %e,
+                    "Failed to parse trusted peer IP as IpNet"
+                );
+            })
+            .ok()
+    });
 
     let new_refresh = NewRefreshToken {
         id: Uuid::new_v4(),
