@@ -164,12 +164,18 @@ where
                         }
                     }
 
+                    // Optimized JWT secrets lookup:
+                    // 1. Single `app_data` lookup for `AppState` (the common case)
+                    // 2. Clone `Arc<Vec<JwtSecretKey>>` which is O(1) instead of cloning the Vec
+                    // 3. Fallback to `AppContainer` only when `AppState` is unavailable
                     let secrets = req
                         .app_data::<actix_web::web::Data<AppState>>()
-                        .map(|s| s.config.jwt_secrets.clone())
+                        .map(|s| s.jwt_secrets.clone())
                         .or_else(|| {
                             req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>()
-                                .map(|c| c.config.jwt_secrets.clone())
+                                .map(|c| {
+                                    Arc::new(c.config.jwt_secrets.clone())
+                                })
                         })
                         .ok_or_else(|| {
                             tracing::error!(

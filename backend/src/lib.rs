@@ -31,6 +31,10 @@ pub struct AppState {
     pub config: Arc<crate::config::AppConfig>,
     pub metrics: Arc<crate::services::metrics_service::MetricsRegistry>,
     pub ws: crate::ws::WsRedisState,
+    /// Cached `Arc<Vec<JwtSecretKey>>` for O(1) clones during JWT verification.
+    /// Avoids cloning the full `Vec<JwtSecretKey>` from `config.jwt_secrets`
+    /// on every authenticated request.
+    pub jwt_secrets: Arc<Vec<crate::config::app_config::JwtSecretKey>>,
 }
 
 i18n!("locales");

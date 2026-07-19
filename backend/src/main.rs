@@ -219,6 +219,9 @@ async fn main() -> std::io::Result<()> {
             redis_pool_for_container.clone(),
             backend::ws::WsLimits::default(),
         ),
+        // Cache Arc<Vec<JwtSecretKey>> for cheap O(1) clones in JWT middleware.
+        // Avoids cloning the full Vec on every authenticated request.
+        jwt_secrets: Arc::new(config.jwt_secrets.clone()),
     });
 
     // Record cold-start duration (time from boot_start to AppState ready)
