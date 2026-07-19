@@ -28,12 +28,22 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
-  # -- Redis 
+  # -- Redis
   redis:
     image: redis:7-alpine
     container_name: rust_nuxt_boilerplate_redis
     restart: unless-stopped
-    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --save 60 1000
+    # - maxmemory 2gb: Redis is used for rate limiting + caching + sessions +
+    #   token blacklisting + WS pub/sub. 512MB was insufficient under load.
+    # - volatile-lru: Evict only keys with TTL set. Critical for rate limit keys
+    #   which MUST persist for the full window — using allkeys-lru previously
+    #   caused rate limit keys to be evicted mid-window, leading to rate limit
+    #   failure (see SECURITY_AUDIT.md P7 / S3).
+    command: >
+      redis-server
+      --maxmemory 2gb
+      --maxmemory-policy volatile-lru
+      --save 60 1000
     volumes:
       - redis_data:/data
     ports:
