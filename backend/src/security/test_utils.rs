@@ -97,6 +97,9 @@ pub fn test_config() -> AppConfig {
         csrf_secret_key: generate_deterministic_string(32, 0xABCDEF),
         refresh_token_hash_salt: generate_deterministic_string(16, 0x1234),
         rate_limit_enabled: true,
+        argon2_m_cost: 65536,
+        argon2_t_cost: 3,
+        argon2_p_cost: 1,
     }
 }
 

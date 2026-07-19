@@ -94,6 +94,9 @@ pub mod mocks {
             csrf_secret_key: generate_deterministic_string(32, 0xCAFEBABE),
             refresh_token_hash_salt: generate_deterministic_string(16, 0xFEEDFACE),
             rate_limit_enabled: true,
+            argon2_m_cost: 65536,
+            argon2_t_cost: 3,
+            argon2_p_cost: 1,
             jwt_secrets: vec![crate::config::app_config::JwtSecretKey {
                 kid: "test-key-1".to_string(),
                 secret: generate_deterministic_string(32, 0x9E3779B97F4A7C15),
