@@ -719,7 +719,7 @@ mod placeholder_tests {
     fn minimal_valid_secret() -> String {
         // 48-byte base64 string that decodes to ≥32 bytes
         use base64::Engine as _;
-        base64::engine::general_purpose::STANDARD.encode(&[7u8; 32])
+        base64::engine::general_purpose::STANDARD.encode([7u8; 32])
     }
 
     /// Env vars that `AppConfig::from_env` requires with non-empty values.
@@ -727,7 +727,7 @@ mod placeholder_tests {
     /// from previous tests (which is what caused test ordering issues).
     fn setup_minimal_env() {
         use base64::Engine as _;
-        let valid = base64::engine::general_purpose::STANDARD.encode(&[7u8; 32]);
+        let valid = base64::engine::general_purpose::STANDARD.encode([7u8; 32]);
 
         let set = |k: &str, v: &str| unsafe { std::env::set_var(k, v) };
         set("DATABASE_URL", "postgres://u:p@localhost:5432/d");
@@ -756,7 +756,7 @@ mod placeholder_tests {
         unsafe { std::env::set_var("ENVIRONMENT", "production") };
         unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
         unsafe { std::env::set_var("POSTGRES_PASSWORD", "changeme_secure_password") };
-        unsafe { std::env::set_var("JWT_SECRET", &minimal_valid_secret()) };
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
         // DATABASE_URL interpolates POSTGRES_PASSWORD; URL embeds the placeholder.
         unsafe {
             std::env::set_var(
@@ -788,7 +788,7 @@ mod placeholder_tests {
         unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
         unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
         unsafe { std::env::set_var("JWT_SECRET", "REPLACE_WITH_GENERATED_64_CHAR_BASE64_SECRET") };
-        unsafe { std::env::set_var("MASTER_KEY", &minimal_valid_secret()) };
+        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
 
         let cfg = AppConfig::from_env().expect("config builds");
         let errors = cfg.validate();
@@ -809,7 +809,7 @@ mod placeholder_tests {
         // All-good values (no `changeme_` or `REPLACE_`).
         unsafe { std::env::set_var("DATABASE_URL", "postgres://u:dev_pwd@localhost:5432/d") };
         unsafe { std::env::set_var("POSTGRES_PASSWORD", "dev_pwd_xyz") };
-        unsafe { std::env::set_var("JWT_SECRET", &minimal_valid_secret()) };
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
 
         let cfg = AppConfig::from_env().expect("config builds");
         let errors = cfg.validate();
