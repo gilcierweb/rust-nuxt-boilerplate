@@ -30,6 +30,7 @@
         </div>
 
         <div class="navbar-end items-end gap-6">
+          <LanguageSwitcher />
           <!-- Profile Dropdown -->
           <div class="dropdown relative inline-flex [--offset:21]">
             <button
