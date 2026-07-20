@@ -391,7 +391,7 @@ jobs:
 
       - name: Start backend server
         run: |
-          backend/target/release/backend &
+          backend/target/release/backend > backend.log 2>&1 &
           echo "BACKEND_PID=$!" >> $GITHUB_ENV
         working-directory: ${{ github.workspace }}
         env:
@@ -404,6 +404,7 @@ jobs:
           REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT || 'ci-test-refresh-salt-32-chars-long!' }}
           FRONTEND_URL: "http://localhost:3000"
           ENVIRONMENT: "Test"
+          RUST_LOG: "debug"
 
       - name: Wait for backend to be ready
         run: |
@@ -413,9 +414,13 @@ jobs:
               echo "Backend is ready!"
               exit 0
             fi
+            echo "Attempt $i: Backend not ready yet..."
             sleep 1
           done
           echo "ERROR: Backend failed to start within 60 seconds"
+          echo "=== Backend logs ==="
+          cat backend.log || true
+          echo "===================="
           if [ -n "$BACKEND_PID" ]; then kill $BACKEND_PID || true; fi
           exit 1
 
