@@ -758,13 +758,20 @@ mod placeholder_tests {
         unsafe { std::env::set_var("POSTGRES_PASSWORD", "changeme_secure_password") };
         unsafe { std::env::set_var("JWT_SECRET", &minimal_valid_secret()) };
         // DATABASE_URL interpolates POSTGRES_PASSWORD; URL embeds the placeholder.
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:changeme_secure_password@localhost:5432/d") };
+        unsafe {
+            std::env::set_var(
+                "DATABASE_URL",
+                "postgres://u:changeme_secure_password@localhost:5432/d",
+            )
+        };
 
         let cfg = AppConfig::from_env().expect("config builds");
         let errors = cfg.validate();
 
         assert!(
-            errors.iter().any(|e| e.contains("placeholder") && e.contains("changeme")),
+            errors
+                .iter()
+                .any(|e| e.contains("placeholder") && e.contains("changeme")),
             "expected placeholder error mentioning 'changeme', got: {:?}",
             errors
         );
@@ -787,7 +794,9 @@ mod placeholder_tests {
         let errors = cfg.validate();
 
         assert!(
-            errors.iter().any(|e| e.contains("JWT_SECRET") && e.contains("placeholder")),
+            errors
+                .iter()
+                .any(|e| e.contains("JWT_SECRET") && e.contains("placeholder")),
             "expected JWT_SECRET placeholder error, got: {:?}",
             errors
         );

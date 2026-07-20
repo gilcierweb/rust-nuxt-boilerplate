@@ -140,8 +140,9 @@ fn verify_argon2id_legacy(token: &str, stored: &str) -> bool {
 
 pub fn generate_random_token(length: usize) -> String {
     use rand::Rng;
+    use rand::rngs::OsRng;
     const CHARSET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    let mut rng = rand::thread_rng();
+    let mut rng = OsRng;
     (0..length)
         .map(|_| {
             let idx = rng.gen_range(0..CHARSET.len());
