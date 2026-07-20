@@ -77,6 +77,69 @@ If you must ship Portainer CE in this stack for production, at minimum:
 - Front it with nginx + mTLS + IP allowlist (cf. `infra/nginx/conf.d/app.conf`)
 - Audit all `portainer_data` volume backups (they include access tokens)
 
+## Database Migrations (SECURITY_AUDIT.md I6)
+
+Migrations run as a **one-shot init container** rather than on every backend
+start. This pattern avoids:
+
+- Race conditions when multiple backend replicas start simultaneously
+- Re-running migrations during backend rollbacks
+- Coupling startup order (container up → schema migrated)
+
+### How it works
+
+The same backend image is used for both jobs, controlled by the
+`docker-entrypoint.sh` argument:
+
+```sh
+/app/docker-entrypoint.sh migrate   # Apply pending Diesel migrations, exit
+/app/docker-entrypoint.sh backend   # Default: start the HTTP API server
+```
+
+`docker-compose.yml` defines two services:
+
+```yaml
+services:
+  migrate:
+    command: ["migrate"]
+    restart: on-failure    # Retry on non-zero exit until DB is reachable, then stop
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  backend:
+    depends_on:
+      postgres: { condition: service_healthy }
+      migrate:  { condition: service_completed_successfully }
+```
+
+Diesel `migration run` is **idempotent** — re-running on an up-to-date DB exits 0.
+So restarting the backend container does NOT re-run migrations.
+
+### Kubernetes equivalent
+
+```yaml
+spec:
+  initContainers:
+    - name: migrate
+      image: my-registry/backend:tag
+      command: ["/app/docker-entrypoint.sh", "migrate"]
+  containers:
+    - name: backend
+      image: my-registry/backend:tag
+      # default CMD ["backend"]
+      # No migration step here — runs in initContainer above
+```
+
+The same image is reused; no separate migration image to maintain.
+
+### Adding new migrations
+
+1. Generate a new migration: `diesel migration generate <name>` (creates
+   `up.sql` and `down.sql` in `backend/migrations/`)
+2. Commit the files — they're read from the image, not from a volume
+3. On next deploy, the `migrate` init container applies them
+4. The `backend` containers start only after migrations succeed
+
 ## Production Secrets (SECURITY_AUDIT.md I3)
 
 In production, the backend reads critical secrets from files mounted via Docker

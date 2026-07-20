@@ -73,7 +73,48 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
+  # -- Database Migrations (SECURITY_AUDIT.md I6)
+  # One-shot job that applies pending Diesel migrations, then exits.
+  # The backend service depends on this and only starts once migrations
+  # complete successfully (`service_completed_successfully`).
+  #
+  # Re-running is safe: Diesel `migration run` is idempotent — already-applied
+  # migrations are no-ops and exit 0. `--no-deps` ensures compose doesn't
+  # also start the backend as a dependency.
+  #
+  # In Kubernetes, the same image can be used as an initContainer:
+  #   initContainers:
+  #     - name: migrate
+  #       command: ["/app/docker-entrypoint.sh", "migrate"]
+  #   containers:
+  #     - name: backend   # default CMD (no migration arg)
+  migrate:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: rust_nuxt_boilerplate_migrate
+    # One-shot job: restart on non-zero exit until database is reachable,
+    # then stop. Subsequent `docker compose up` runs are no-ops (Diesel
+    # applies only pending migrations).
+    restart: on-failure
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-rust_nuxt_boilerplate}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rust_nuxt_boilerplate_dev}
+    command: ["migrate"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - rust_nuxt_boilerplate_net
+    # No `ports:` — this is a one-shot background job, not exposed.
+    # No `secrets:` block — migrations only use DATABASE_URL which is
+    # populated from env_file. Critical secrets are for the running app.
+
   # -- Backend (Rust / Actix-Web)
+  # SECURITY_AUDIT.md I6: This service no longer runs migrations. The migrate
+  # service above completes first, then this service is started. Restarts of
+  # this container do NOT re-run migrations (Diesel is no longer invoked here).
   backend:
     build:
       context: ./backend
@@ -111,6 +152,9 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      # SECURITY_AUDIT.md I6: backend starts ONLY after migrations succeed.
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
