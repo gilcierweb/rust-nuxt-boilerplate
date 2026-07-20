@@ -77,19 +77,21 @@ pub fn hash_token(token: &str, key: &str) -> String {
 
 /// Verify a token against a stored hash.
 ///
-/// Supports two formats for backward compatibility:
-/// - `hmac:<hex>` — new HMAC-SHA256 format (fast, used for new hashes)
-/// - `<hex>:<hex>` — legacy Argon2id format (slow, only for existing hashes)
+/// Uses HMAC-SHA256 for fast (~µs) token verification.
+/// All tokens are now stored with `hmac:` prefix format.
 ///
-/// Existing Argon2id hashes migrate transparently: when `rotate_token` creates
-/// a new refresh token, it stores the fast HMAC format. Old tokens continue to
-/// verify correctly until they rotate or expire.
+/// Legacy Argon2id hashes have been migrated: refresh tokens rotate to HMAC format
+/// on each use, ensuring transparent migration without forcing user logout.
 pub fn verify_token_hash(token: &str, stored: &str, key: &str) -> bool {
-    if stored.starts_with(HMAC_PREFIX) {
-        verify_hmac(token, stored, key)
-    } else {
-        verify_argon2id_legacy(token, stored)
+    if !stored.starts_with(HMAC_PREFIX) {
+        // Non-HMAC hashes are invalid - migration should have occurred
+        tracing::warn!(
+            event = "token.legacy_hash_detected",
+            "Token stored with legacy Argon2id hash format. Should have been migrated to HMAC-SHA256."
+        );
+        return false;
     }
+    verify_hmac(token, stored, key)
 }
 
 fn verify_hmac(token: &str, stored: &str, key: &str) -> bool {
@@ -109,33 +111,6 @@ fn verify_hmac(token: &str, stored: &str, key: &str) -> bool {
     let computed = mac.finalize().into_bytes();
 
     subtle::ConstantTimeEq::ct_eq(&computed[..], &expected[..]).into()
-}
-
-fn verify_argon2id_legacy(token: &str, stored: &str) -> bool {
-    use argon2::Argon2;
-
-    let parts: Vec<&str> = stored.splitn(2, ':').collect();
-    if parts.len() != 2 {
-        return false;
-    }
-
-    let salt_bytes = match hex::decode(parts[0]) {
-        Ok(b) => b,
-        Err(_) => return false,
-    };
-    let expected_hash = match hex::decode(parts[1]) {
-        Ok(b) => b,
-        Err(_) => return false,
-    };
-
-    let mut output = vec![0u8; expected_hash.len()];
-    let params = argon2::Params::new(65536, 3, 1, Some(expected_hash.len())).unwrap();
-    let argon2 = Argon2::new(argon2::Algorithm::Argon2id, argon2::Version::V0x13, params);
-    argon2
-        .hash_password_into(token.as_bytes(), &salt_bytes, &mut output)
-        .expect("Argon2id hashing should not fail");
-
-    subtle::ConstantTimeEq::ct_eq(&output[..], &expected_hash[..]).into()
 }
 
 pub fn generate_random_token(length: usize) -> String {
