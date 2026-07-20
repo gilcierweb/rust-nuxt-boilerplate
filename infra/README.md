@@ -228,6 +228,27 @@ volumes:
 
 If you do not provide one, nginx falls back to a built-in 1024-bit DH group, which OpenSSL 3.x rejects with a "dh key too small" error. **For production, generate and mount your own.**
 
+## Placeholder Validation (SECURITY_AUDIT.md I7)
+
+The backend **refuses to start** if it detects well-known placeholder values
+(copied verbatim from `.env.example`) when running in a production-like
+environment (`ENVIRONMENT=staging|production`).
+
+| Value pattern | Detected in |
+|---------------|-------------|
+| `changeme_*` | `POSTGRES_PASSWORD`, `DATABASE_URL`, `REDIS_PASSWORD` |
+| `REPLACE_WITH_*` | `JWT_SECRET`, `MASTER_ENCRYPTION_KEY`, `BLIND_INDEX_KEY`, `CSRF_SECRET_KEY`, `REFRESH_TOKEN_HASH_SALT` |
+
+Detection happens in `backend/src/config/app_config.rs::validate()` and
+returns a clear error message via `validate_or_panic()` at startup. The
+application will exit 1 if any placeholder is found in a production env.
+
+**Why this matters:** A misconfigured deployment with `JWT_SECRET=REPLACE_WITH_*`
+would silently authenticate tokens using a known string — anyone could mint
+admin sessions. Validation at startup prevents this from leaking to prod.
+
+Coverage: 3 unit tests in `placeholder_tests` module.
+
 ## Nginx Configs
 
 All configs are validated with `nginx -t` and pass cleanly. To test locally:

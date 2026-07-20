@@ -567,6 +567,43 @@ impl AppConfig {
             ));
         }
 
+        // SECURITY_AUDIT.md I7: reject placeholder secret values in production.
+        // Values like "changeme_*" and "REPLACE_WITH_*" come from `.env.example`
+        // and MUST be replaced before deployment. Detected patterns:
+        //   - "changeme_*"           (POSTGRES_PASSWORD, REDIS_PASSWORD)
+        //   - "REPLACE_WITH_*"        (JWT_SECRET, encryption keys, etc.)
+        //   - "re_XXXXX", "sk_test_X" (Resend, Stripe test keys — never prod)
+        //   - "your-zone", "your-key" placeholder storage creds
+        if self.is_production_like() {
+            for (name, value) in [
+                ("POSTGRES_PASSWORD", &self.database_url), // Check string contents
+            ] {
+                if value.contains("changeme_") {
+                    errors.push(format!(
+                        "{} contains placeholder value 'changeme_*'. \
+                         Override the secret before deploying to production (see .env.example).",
+                        name
+                    ));
+                    break;
+                }
+            }
+            for (name, value) in &[
+                ("JWT_SECRET", &self.jwt_secret),
+                ("MASTER_ENCRYPTION_KEY", &self.master_key),
+                ("BLIND_INDEX_KEY", &self.blind_index_key),
+                ("CSRF_SECRET_KEY", &self.csrf_secret_key),
+                ("REFRESH_TOKEN_HASH_SALT", &self.refresh_token_hash_salt),
+            ] {
+                if value.contains("REPLACE_WITH_") {
+                    errors.push(format!(
+                        "{} contains placeholder value 'REPLACE_WITH_*'. \
+                         Override the secret before deploying to production (see .env.example).",
+                        name
+                    ));
+                }
+            }
+        }
+
         // Database URL validation
         if !self.database_url.starts_with("postgres://")
             && !self.database_url.starts_with("postgresql://")
@@ -665,6 +702,115 @@ impl AppConfig {
             eprintln!("║  See .env.example for configuration documentation.     ║");
             eprintln!("╚══════════════════════════════════════════════════════════╝");
             std::process::exit(1);
+        }
+    }
+}
+
+#[cfg(test)]
+mod placeholder_tests {
+    //! SECURITY_AUDIT.md I7 — placeholder rejection tests.
+    //!
+    //! These tests assert that production builds refuse placeholder secrets
+    //! such as "changeme_*" (POSTGRES_PASSWORD, REDIS_PASSWORD) and
+    //! "REPLACE_WITH_*" (JWT_SECRET, encryption keys). The development
+    //! environment intentionally allows these markers.
+    use super::*;
+
+    fn minimal_valid_secret() -> String {
+        // 48-byte base64 string that decodes to ≥32 bytes
+        use base64::Engine as _;
+        base64::engine::general_purpose::STANDARD.encode(&[7u8; 32])
+    }
+
+    /// Env vars that `AppConfig::from_env` requires with non-empty values.
+    /// Each test sets these fresh — they must NOT be shared via leaked env vars
+    /// from previous tests (which is what caused test ordering issues).
+    fn setup_minimal_env() {
+        use base64::Engine as _;
+        let valid = base64::engine::general_purpose::STANDARD.encode(&[7u8; 32]);
+
+        let set = |k: &str, v: &str| unsafe { std::env::set_var(k, v) };
+        set("DATABASE_URL", "postgres://u:p@localhost:5432/d");
+        set("DB_POOL_SIZE", "10");
+        set("DB_STATEMENT_TIMEOUT_SECS", "30");
+        set("DB_POOL_MIN_IDLE", "2");
+        set("DB_POOL_MAX_LIFETIME_SECS", "1800");
+        set("DB_POOL_IDLE_TIMEOUT_SECS", "600");
+        set("DB_POOL_CONNECTION_TIMEOUT_SECS", "10");
+        set("REDIS_URL", "redis://localhost:6379");
+        set("REDIS_POOL_SIZE", "10");
+        set("MAX_VIDEO_SIZE_BYTES", "1000");
+        set("MAX_PHOTO_SIZE_BYTES", "1000");
+        set("MAX_AUDIO_SIZE_BYTES", "1000");
+        set("JSON_PAYLOAD_LIMIT", "1048576");
+        set("FORM_PAYLOAD_LIMIT", "2097152");
+        set("CSRF_SECRET_KEY", &valid);
+        set("REFRESH_TOKEN_HASH_SALT", &valid);
+        set("BLIND_INDEX_KEY", &valid);
+        set("MASTER_KEY", &valid);
+    }
+
+    #[test]
+    fn production_rejects_postgres_password_changeme() {
+        setup_minimal_env();
+        unsafe { std::env::set_var("ENVIRONMENT", "production") };
+        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
+        unsafe { std::env::set_var("POSTGRES_PASSWORD", "changeme_secure_password") };
+        unsafe { std::env::set_var("JWT_SECRET", &minimal_valid_secret()) };
+        // DATABASE_URL interpolates POSTGRES_PASSWORD; URL embeds the placeholder.
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:changeme_secure_password@localhost:5432/d") };
+
+        let cfg = AppConfig::from_env().expect("config builds");
+        let errors = cfg.validate();
+
+        assert!(
+            errors.iter().any(|e| e.contains("placeholder") && e.contains("changeme")),
+            "expected placeholder error mentioning 'changeme', got: {:?}",
+            errors
+        );
+    }
+
+    #[test]
+    fn production_replaces_with_jwt_secret_placeholder() {
+        setup_minimal_env();
+        unsafe { std::env::set_var("ENVIRONMENT", "production") };
+        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
+        // Provide GOOD values for everything except JWT_SECRET.
+        // Importantly DON'T set POSTGRES_PASSWORD = "changeme_*" so the ping-pong
+        // between this and test #1 doesn't leak state.
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
+        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
+        unsafe { std::env::set_var("JWT_SECRET", "REPLACE_WITH_GENERATED_64_CHAR_BASE64_SECRET") };
+        unsafe { std::env::set_var("MASTER_KEY", &minimal_valid_secret()) };
+
+        let cfg = AppConfig::from_env().expect("config builds");
+        let errors = cfg.validate();
+
+        assert!(
+            errors.iter().any(|e| e.contains("JWT_SECRET") && e.contains("placeholder")),
+            "expected JWT_SECRET placeholder error, got: {:?}",
+            errors
+        );
+    }
+
+    #[test]
+    fn development_allows_changeme_placeholders() {
+        setup_minimal_env();
+        unsafe { std::env::set_var("ENVIRONMENT", "development") };
+        // All-good values (no `changeme_` or `REPLACE_`).
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:dev_pwd@localhost:5432/d") };
+        unsafe { std::env::set_var("POSTGRES_PASSWORD", "dev_pwd_xyz") };
+        unsafe { std::env::set_var("JWT_SECRET", &minimal_valid_secret()) };
+
+        let cfg = AppConfig::from_env().expect("config builds");
+        let errors = cfg.validate();
+
+        for e in &errors {
+            assert!(
+                !e.contains("placeholder"),
+                "dev config should NOT trigger placeholder error: {}",
+                e
+            );
         }
     }
 }
