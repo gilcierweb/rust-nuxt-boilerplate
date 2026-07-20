@@ -1,0 +1,16 @@
+[allowlist]
+  description = "Global allowlist"
+  paths = [
+    '''\.env\.example$''',
+    '''README\.md$''',
+    '''test_utils\.rs$''',
+    '''test_repositories\.rs$''',
+    '''test_security\.rs$''',
+  ]
+
+[[rules]]
+  id = "generic-api-key"
+  description = "Ignore test fixtures with fake keys"
+  regex = '''(?i)(master_key|blind_index_key|csrf_secret_key|backend_api_key|refresh_token_hash_salt)'''
+  path = '''(test_|\.example|README)'''
+  tags = ["test", "fixture"]

@@ -787,11 +787,23 @@ mod placeholder_tests {
             };
             set("DATABASE_URL", self.database_url.take());
             set("DB_POOL_SIZE", self.db_pool_size.take());
-            set("DB_STATEMENT_TIMEOUT_SECS", self.db_statement_timeout_secs.take());
+            set(
+                "DB_STATEMENT_TIMEOUT_SECS",
+                self.db_statement_timeout_secs.take(),
+            );
             set("DB_POOL_MIN_IDLE", self.db_pool_min_idle.take());
-            set("DB_POOL_MAX_LIFETIME_SECS", self.db_pool_max_lifetime_secs.take());
-            set("DB_POOL_IDLE_TIMEOUT_SECS", self.db_pool_idle_timeout_secs.take());
-            set("DB_POOL_CONNECTION_TIMEOUT_SECS", self.db_pool_connection_timeout_secs.take());
+            set(
+                "DB_POOL_MAX_LIFETIME_SECS",
+                self.db_pool_max_lifetime_secs.take(),
+            );
+            set(
+                "DB_POOL_IDLE_TIMEOUT_SECS",
+                self.db_pool_idle_timeout_secs.take(),
+            );
+            set(
+                "DB_POOL_CONNECTION_TIMEOUT_SECS",
+                self.db_pool_connection_timeout_secs.take(),
+            );
             set("REDIS_URL", self.redis_url.take());
             set("REDIS_POOL_SIZE", self.redis_pool_size.take());
             set("ENVIRONMENT", self.environment.take());
@@ -804,7 +816,10 @@ mod placeholder_tests {
             set("JSON_PAYLOAD_LIMIT", self.json_payload_limit.take());
             set("FORM_PAYLOAD_LIMIT", self.form_payload_limit.take());
             set("CSRF_SECRET_KEY", self.csrf_secret_key.take());
-            set("REFRESH_TOKEN_HASH_SALT", self.refresh_token_hash_salt.take());
+            set(
+                "REFRESH_TOKEN_HASH_SALT",
+                self.refresh_token_hash_salt.take(),
+            );
             set("BLIND_INDEX_KEY", self.blind_index_key.take());
         }
     }
