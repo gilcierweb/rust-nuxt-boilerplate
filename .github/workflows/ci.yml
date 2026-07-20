@@ -243,11 +243,11 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
-          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY }}
-          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY }}
-          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY }}
-          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT }}
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'ci-test-jwt-secret-32-chars-long!!' }}
+          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY || 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtMzItYg==' }}
+          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY || 'dGVzdC1ibGluZC1pbmRleC1rZXktMzItYg==' }}
+          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY || 'ci-test-csrf-secret-32-chars-long!' }}
+          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT || 'ci-test-refresh-salt-32-chars-long!' }}
 
       - name: Run integration tests (sequential, with DB)
         run: cargo test --test auth_integration -- --test-threads=1
@@ -381,11 +381,11 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
-          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY }}
-          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY }}
-          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY }}
-          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT }}
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'ci-test-jwt-secret-32-chars-long!!' }}
+          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY || 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtMzItYg==' }}
+          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY || 'dGVzdC1ibGluZC1pbmRleC1rZXktMzItYg==' }}
+          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY || 'ci-test-csrf-secret-32-chars-long!' }}
+          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT || 'ci-test-refresh-salt-32-chars-long!' }}
           FRONTEND_URL: "http://localhost:3000"
           ENVIRONMENT: "Test"
 
@@ -397,11 +397,11 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET }}
-          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY }}
-          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY }}
-          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY }}
-          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT }}
+          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'ci-test-jwt-secret-32-chars-long!!' }}
+          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY || 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtMzItYg==' }}
+          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY || 'dGVzdC1ibGluZC1pbmRleC1rZXktMzItYg==' }}
+          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY || 'ci-test-csrf-secret-32-chars-long!' }}
+          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT || 'ci-test-refresh-salt-32-chars-long!' }}
           FRONTEND_URL: "http://localhost:3000"
           ENVIRONMENT: "Test"
 
