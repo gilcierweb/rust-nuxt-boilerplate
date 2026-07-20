@@ -109,9 +109,24 @@ security: {
       // @ts-ignore
       appName: process.env.NUXT_PUBLIC_APP_NAME || "App Rust Nuxt Boilerplate",
       // @ts-ignore
-      // Optional: Direct backend URL for CSR requests (bypasses Nitro proxy).
-      // Leave empty to use relative proxy (recommended for production).
-      // WARNING: Setting this exposes backend URL in client bundle.
+      // ─────────────────────────────────────────────────────────────
+      // SECURITY_AUDIT.md I8 / S14:
+      //   Direct backend URL for client-side (CSR) requests. Bypasses
+      //   the Nitro /api/v1 reverse proxy.
+      //
+      //   ┌─ Risks when set ──────────────────────────────────────┐
+      //   │ • Bakes the backend URL into the client bundle.       │
+      //   │ • Exposes deployment topology to anyone (curl, DNS).   │
+      //   │ • Skips Nitro's auth/cookie mapping (csrf cookies, safe │  │
+      //   │   headers, request_id correlation).                    │  │
+      //   └────────────────────────────────────────────────────────┘  │
+      //
+      //   Leave empty (default) unless you have a deliberate reason
+      //   (e.g. public demo where the backend is also CDN-fronted).
+      //   The server plugin at server/plugins/security-check.ts
+      //   warns at Nitro startup if this is set in production.
+      //   Docs: see SECURITY_AUDIT.md and docs/.env.example.
+      // ------------------------------------------------------------
       apiDirectBase: process.env.NUXT_PUBLIC_API_BASE || "",
     },
   },
