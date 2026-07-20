@@ -231,6 +231,9 @@
       "documents": "Documentos",
       "payments": "Pagos",
       "audit": "Auditoría",
+      "users": "Usuarios",
+      "roles": "Roles",
+      "auditLogs": "Logs de Auditoría",
       "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
     },
     "dashboard": {

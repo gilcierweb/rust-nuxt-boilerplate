@@ -49,7 +49,7 @@
             <li class="active accordion-item" id="dashboard">
               <button
                 class="accordion-toggle accordion-item-active:bg-neutral/10 inline-flex w-full items-center p-2 text-start text-sm font-normal"
-                :class="{ 'accordion-item-active:bg-neutral/10': route.path === '/admin/dashboard' }"
+                :class="{ 'accordion-item-active:bg-neutral/10': isDashboardActive }"
                 aria-controls="dashboard-collapse"
                 :aria-expanded="dashboardOpen"
                 @click="toggleAccordion('dashboard')"
@@ -71,9 +71,9 @@
                 <ul class="space-y-1">
                   <li>
                     <NuxtLink
-                      to="/admin/dashboard"
+                      :to="localePath('/admin/dashboard')"
                       class="inline-flex w-full items-center px-2"
-                      :class="route.path === '/admin/dashboard' ? 'menu-active' : ''"
+                      :class="isDashboardActive ? 'menu-active' : ''"
                     >
                       <span>{{ $t('admin.sidebar.default') }}</span>
                     </NuxtLink>
@@ -110,7 +110,7 @@
                 <ul class="space-y-1">
                   <li v-for="item in managementItems" :key="item.slug">
                     <NuxtLink
-                      :to="`/admin/${item.slug}`"
+                      :to="localePath(`/admin/${item.slug}`)"
                       class="inline-flex w-full items-center px-2"
                       :class="item.slug === currentSlug ? 'menu-active' : ''"
                     >
@@ -140,9 +140,11 @@
 <script setup lang="ts">
 import { ADMIN_RESOURCES } from '~/utils/admin-resources'
 
+const { t } = useI18n()
 const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
+const localePath = useLocalePath()
 const sidebarState = useState('admin-sidebar-open', () => false)
 
 const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
@@ -156,14 +158,32 @@ const sidebarOpen = computed({
   },
 })
 
+const basePath = computed(() => {
+  const cleaned = route.path.replace(/^\/[a-z]{2}(-[A-Z]{2})?/, '')
+  return cleaned || '/'
+})
+
 const currentSlug = computed(() => {
-  const segments = route.path.replace('/admin/', '').split('/').filter(Boolean)
+  const segments = basePath.value.replace('/admin/', '').split('/').filter(Boolean)
   return segments[0] || 'dashboard'
 })
 
-const managementItems = computed(() => ADMIN_RESOURCES.filter((item) => item.group === 'management'))
+const isDashboardActive = computed(() => basePath.value === '/admin/dashboard')
 
-const dashboardOpen = ref(route.path === '/admin/dashboard')
+const SLUG_TO_I18N: Record<string, string> = {
+  'audit-logs': 'auditLogs',
+}
+
+const managementItems = computed(() => {
+  return ADMIN_RESOURCES
+    .filter((item) => item.group === 'management')
+    .map((item) => ({
+      ...item,
+      label: t(`admin.sidebar.${SLUG_TO_I18N[item.slug] || item.slug}`),
+    }))
+})
+
+const dashboardOpen = ref(isDashboardActive.value)
 const managementOpen = ref(managementItems.value.some((item) => item.slug === currentSlug.value))
 
 function toggleAccordion(id: string) {
@@ -187,7 +207,7 @@ watch(
 watch(
   () => route.path,
   () => {
-    dashboardOpen.value = route.path === '/admin/dashboard'
+    dashboardOpen.value = isDashboardActive.value
     managementOpen.value = managementItems.value.some((item) => item.slug === currentSlug.value)
   },
   { immediate: true },

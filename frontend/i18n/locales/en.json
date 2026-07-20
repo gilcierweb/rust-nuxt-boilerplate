@@ -833,6 +833,9 @@
       "payments": "Payments",
       "customers": "Customers",
       "audit": "Audit",
+      "users": "Users",
+      "roles": "Roles",
+      "auditLogs": "Audit Logs",
       "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
     },
     "dashboard": {

@@ -722,6 +722,93 @@ mod placeholder_tests {
         base64::engine::general_purpose::STANDARD.encode([7u8; 32])
     }
 
+    #[derive(Default)]
+    struct EnvBackup {
+        database_url: Option<String>,
+        db_pool_size: Option<String>,
+        db_statement_timeout_secs: Option<String>,
+        db_pool_min_idle: Option<String>,
+        db_pool_max_lifetime_secs: Option<String>,
+        db_pool_idle_timeout_secs: Option<String>,
+        db_pool_connection_timeout_secs: Option<String>,
+        redis_url: Option<String>,
+        redis_pool_size: Option<String>,
+        environment: Option<String>,
+        jwt_secret: Option<String>,
+        master_key: Option<String>,
+        postgres_password: Option<String>,
+        max_video_size_bytes: Option<String>,
+        max_photo_size_bytes: Option<String>,
+        max_audio_size_bytes: Option<String>,
+        json_payload_limit: Option<String>,
+        form_payload_limit: Option<String>,
+        csrf_secret_key: Option<String>,
+        refresh_token_hash_salt: Option<String>,
+        blind_index_key: Option<String>,
+    }
+
+    impl EnvBackup {
+        fn new() -> Self {
+            let read = |k: &str| std::env::var(k).ok();
+            Self {
+                database_url: read("DATABASE_URL"),
+                db_pool_size: read("DB_POOL_SIZE"),
+                db_statement_timeout_secs: read("DB_STATEMENT_TIMEOUT_SECS"),
+                db_pool_min_idle: read("DB_POOL_MIN_IDLE"),
+                db_pool_max_lifetime_secs: read("DB_POOL_MAX_LIFETIME_SECS"),
+                db_pool_idle_timeout_secs: read("DB_POOL_IDLE_TIMEOUT_SECS"),
+                db_pool_connection_timeout_secs: read("DB_POOL_CONNECTION_TIMEOUT_SECS"),
+                redis_url: read("REDIS_URL"),
+                redis_pool_size: read("REDIS_POOL_SIZE"),
+                environment: read("ENVIRONMENT"),
+                jwt_secret: read("JWT_SECRET"),
+                master_key: read("MASTER_KEY"),
+                postgres_password: read("POSTGRES_PASSWORD"),
+                max_video_size_bytes: read("MAX_VIDEO_SIZE_BYTES"),
+                max_photo_size_bytes: read("MAX_PHOTO_SIZE_BYTES"),
+                max_audio_size_bytes: read("MAX_AUDIO_SIZE_BYTES"),
+                json_payload_limit: read("JSON_PAYLOAD_LIMIT"),
+                form_payload_limit: read("FORM_PAYLOAD_LIMIT"),
+                csrf_secret_key: read("CSRF_SECRET_KEY"),
+                refresh_token_hash_salt: read("REFRESH_TOKEN_HASH_SALT"),
+                blind_index_key: read("BLIND_INDEX_KEY"),
+            }
+        }
+    }
+
+    impl Drop for EnvBackup {
+        fn drop(&mut self) {
+            let set = |k: &str, v: Option<String>| {
+                if let Some(v) = v {
+                    unsafe { std::env::set_var(k, v) };
+                } else {
+                    unsafe { std::env::remove_var(k) };
+                }
+            };
+            set("DATABASE_URL", self.database_url.take());
+            set("DB_POOL_SIZE", self.db_pool_size.take());
+            set("DB_STATEMENT_TIMEOUT_SECS", self.db_statement_timeout_secs.take());
+            set("DB_POOL_MIN_IDLE", self.db_pool_min_idle.take());
+            set("DB_POOL_MAX_LIFETIME_SECS", self.db_pool_max_lifetime_secs.take());
+            set("DB_POOL_IDLE_TIMEOUT_SECS", self.db_pool_idle_timeout_secs.take());
+            set("DB_POOL_CONNECTION_TIMEOUT_SECS", self.db_pool_connection_timeout_secs.take());
+            set("REDIS_URL", self.redis_url.take());
+            set("REDIS_POOL_SIZE", self.redis_pool_size.take());
+            set("ENVIRONMENT", self.environment.take());
+            set("JWT_SECRET", self.jwt_secret.take());
+            set("MASTER_KEY", self.master_key.take());
+            set("POSTGRES_PASSWORD", self.postgres_password.take());
+            set("MAX_VIDEO_SIZE_BYTES", self.max_video_size_bytes.take());
+            set("MAX_PHOTO_SIZE_BYTES", self.max_photo_size_bytes.take());
+            set("MAX_AUDIO_SIZE_BYTES", self.max_audio_size_bytes.take());
+            set("JSON_PAYLOAD_LIMIT", self.json_payload_limit.take());
+            set("FORM_PAYLOAD_LIMIT", self.form_payload_limit.take());
+            set("CSRF_SECRET_KEY", self.csrf_secret_key.take());
+            set("REFRESH_TOKEN_HASH_SALT", self.refresh_token_hash_salt.take());
+            set("BLIND_INDEX_KEY", self.blind_index_key.take());
+        }
+    }
+
     /// Env vars that `AppConfig::from_env` requires with non-empty values.
     /// Each test sets these fresh — they must NOT be shared via leaked env vars
     /// from previous tests (which is what caused test ordering issues).
@@ -751,7 +838,9 @@ mod placeholder_tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn production_rejects_postgres_password_changeme() {
+        let _backup = EnvBackup::new();
         setup_minimal_env();
         unsafe { std::env::set_var("ENVIRONMENT", "production") };
         unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
@@ -778,7 +867,9 @@ mod placeholder_tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn production_replaces_with_jwt_secret_placeholder() {
+        let _backup = EnvBackup::new();
         setup_minimal_env();
         unsafe { std::env::set_var("ENVIRONMENT", "production") };
         unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
@@ -803,7 +894,9 @@ mod placeholder_tests {
     }
 
     #[test]
+    #[serial_test::serial]
     fn development_allows_changeme_placeholders() {
+        let _backup = EnvBackup::new();
         setup_minimal_env();
         unsafe { std::env::set_var("ENVIRONMENT", "development") };
         // All-good values (no `changeme_` or `REPLACE_`).
