@@ -123,6 +123,7 @@ security: {
         code: "en",
         iso: "en-US",
         name: "English",
+        flag: "🇺🇸",
         files: [
           "en.json",
           "en/common.json",
@@ -139,6 +140,7 @@ security: {
         code: "es",
         iso: "es-ES",
         name: "Español",
+        flag: "🇪🇸",
         files: [
           "es.json",
           "es/common.json",
@@ -153,6 +155,7 @@ security: {
         code: "pt-BR",
         iso: "pt-BR",
         name: "Português Brasil",
+        flag: "🇧🇷",
         files: [
           "pt-BR.json",
           "pt-BR/common.json",
@@ -170,6 +173,8 @@ security: {
       {
         code: "pt",
         iso: "pt-BR",
+        name: "Português",
+        flag: "🇧🇷",
         files: [
           "pt-BR.json",
           "pt-BR/common.json",
