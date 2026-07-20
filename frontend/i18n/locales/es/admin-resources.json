@@ -15,7 +15,10 @@
       "management": "Gestión",
       "quickLinks": "Enlaces rápidos",
       "workspace": "Espacio de trabajo",
-      "openApiDocs": "Abrir docs API"
+      "openApiDocs": "Abrir docs API",
+      "users": "Usuarios",
+      "roles": "Roles",
+      "auditLogs": "Logs de Auditoria"
     },
     "statusLabels": {
       "active": "Activo",
@@ -148,7 +151,12 @@
       "totalDebts": "Total de deudas",
       "completedPayments": "Pagos completados",
       "visibleToCustomer": "Visible al cliente",
-      "noRecentActivity": "Sin actividad reciente."
+      "noRecentActivity": "Sin actividad reciente.",
+      "totalUsers": "Total de Usuarios",
+      "totalRoles": "Total de Roles",
+      "totalAuditLogs": "Total de Logs de Auditoria",
+      "quickLinks": "Enlaces rápidos",
+      "recentActivity": "Actividad Reciente"
     }
   }
 }

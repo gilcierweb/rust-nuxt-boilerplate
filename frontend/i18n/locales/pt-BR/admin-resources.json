@@ -1,6 +1,6 @@
 {
   "admin": {
-    "sidebar": {
+"sidebar": {
       "closeSidebar": "Fechar barra lateral",
       "sidebar": "Barra lateral",
       "close": "Fechar",
@@ -15,7 +15,10 @@
       "management": "Gestão",
       "quickLinks": "Links Rápidos",
       "workspace": "Espaço de Trabalho",
-      "openApiDocs": "Abrir Documentação da API"
+      "openApiDocs": "Abrir Documentação da API",
+      "users": "Usuários",
+      "roles": "Cargos",
+      "auditLogs": "Logs de Auditoria"
     },
     "statusLabels": {
       "active": "Ativo",
@@ -139,7 +142,7 @@
         "confirmDelete": "Tem certeza que deseja excluir este log?"
       }
     },
-    "dashboard": {
+"dashboard": {
       "activeCustomers": "Clientes ativos",
       "openDebts": "Débitos em aberto",
       "pendingPayments": "Pagamentos pendentes",
@@ -148,7 +151,12 @@
       "totalDebts": "Total de débitos",
       "completedPayments": "Pagamentos concluídos",
       "visibleToCustomer": "Visíveis ao cliente",
-      "noRecentActivity": "Sem movimentações recentes."
+      "noRecentActivity": "Sem movimentações recentes.",
+      "totalUsers": "Total de Usuários",
+      "totalRoles": "Total de Cargos",
+      "totalAuditLogs": "Total de Logs de Auditoria",
+      "quickLinks": "Links Rápidos",
+      "recentActivity": "Atividade Recente"
     }
   }
 }

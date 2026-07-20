@@ -15,7 +15,10 @@
       "management": "Management",
       "quickLinks": "Quick Links",
       "workspace": "Workspace",
-      "openApiDocs": "Open API Docs"
+      "openApiDocs": "Open API Docs",
+      "users": "Users",
+      "roles": "Roles",
+      "auditLogs": "Audit Logs"
     },
     "statusLabels": {
       "active": "Active",
@@ -139,15 +142,20 @@
         "confirmDelete": "Are you sure you want to delete this log?"
       }
     },
-    "dashboard": {
-      "activeCustomers": "Active customers",
-      "openDebts": "Open debts",
-      "pendingPayments": "Pending payments",
-      "pendingInvoices": "Pending invoices",
+"dashboard": {
+      "totalUsers": "Total Users",
+      "totalRoles": "Total Roles",
+      "totalAuditLogs": "Total Audit Logs",
+      "quickLinks": "Quick Links",
+      "recentActivity": "Recent Activity",
+      "activeCustomers": "Active Customers",
+      "openDebts": "Open Debts",
+      "pendingPayments": "Pending Payments",
+      "pendingInvoices": "Pending Invoices",
       "financialSummary": "Financial Summary",
-      "totalDebts": "Total debts",
-      "completedPayments": "Completed payments",
-      "visibleToCustomer": "Visible to customer",
+      "totalDebts": "Total Debts",
+      "completedPayments": "Completed Payments",
+      "visibleToCustomer": "Visible to Customer",
       "noRecentActivity": "No recent activity."
     }
   }

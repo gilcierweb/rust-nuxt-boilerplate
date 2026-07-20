@@ -110,7 +110,8 @@ export const useAuthStore = defineStore('auth', {
         method: 'POST',
       }).catch(() => {}) // ignore logout errors
       this._clear()
-      await navigateTo('/auth/login')
+      const localePath = useLocalePath()
+      await navigateTo(localePath('/auth/login'))
     },
 
     async refreshTokens() {
