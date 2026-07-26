@@ -95,7 +95,7 @@ unicode-normalization = "0.1.25"
 bigdecimal = { version = "0.4.10", features = ["serde"] }
 rust_decimal = { version = "1.38", features = ["serde"] }
 
-ammonia = "4.1.2"
+ammonia = "4.1.4"
 actix-multipart = "0.7"
 infer = "0.19"
 mime = "0.3"
