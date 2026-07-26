@@ -805,6 +805,22 @@ pub async fn recover_password(
     container: web::Data<AppContainer>,
     body: web::Json<RecoverRequest>,
 ) -> AppResult<HttpResponse> {
+    recover_password_handler(container, body).await
+}
+
+// POST /api/v1/auth/forgot-password (semantic alias for /auth/recover)
+#[post("/forgot-password")]
+pub async fn forgot_password(
+    container: web::Data<AppContainer>,
+    body: web::Json<RecoverRequest>,
+) -> AppResult<HttpResponse> {
+    recover_password_handler(container, body).await
+}
+
+async fn recover_password_handler(
+    container: web::Data<AppContainer>,
+    body: web::Json<RecoverRequest>,
+) -> AppResult<HttpResponse> {
     body.validate()
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
