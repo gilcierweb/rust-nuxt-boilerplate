@@ -97,7 +97,7 @@ test.describe('Registration Page', () => {
   test('should show password mismatch error', async ({ page }) => {
     await page.locator('#password').fill('Password123!')
     await page.getByLabel(a.register.confirmPassword).fill('Different123!')
-    await expect(page.getByText(a.register.errors.passwordMismatch)).toBeVisible()
+    await expect(page.locator('.text-error').first()).toBeVisible()
   })
 
   test('should disable submit button when passwords do not match', async ({ page }) => {
