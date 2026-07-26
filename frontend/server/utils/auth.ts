@@ -21,6 +21,7 @@ const PUBLIC_AUTH_PATHS = [
   '/auth/login',
   '/auth/register',
   '/auth/recover',
+  '/auth/forgot-password',
   '/auth/reset',
   '/auth/logout',
 ]

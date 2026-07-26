@@ -114,6 +114,7 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .service(auth_controller::login)
                     .service(auth_controller::register)
                     .service(auth_controller::recover_password)
+                    .route("/forgot-password", web::post().to(auth_controller::recover_password))
                     .service(auth_controller::reset_password)
                     .service(auth_controller::confirm)
                     .service(auth_controller::me)

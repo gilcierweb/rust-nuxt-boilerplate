@@ -456,6 +456,9 @@ jobs:
           NITRO_PORT=3000 pnpm run preview &
           echo "FRONTEND_PID=$!" >> $GITHUB_ENV
         working-directory: ./frontend
+        env:
+          BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY || '856dcbbb713e119963ff8de320f1f1f282889eafd68a6a54293fc24db290e531' }}
+          BACKEND_API_BASE: "http://localhost:8080/api/v1"
 
       - name: Wait for frontend to be ready
         run: |

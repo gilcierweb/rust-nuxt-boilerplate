@@ -45,7 +45,7 @@ test.describe('Login Page', () => {
     await page.getByLabel(a.login.password).fill('wrongpassword')
     await page.locator(SUBMIT).click()
     // Check for any error message (backend may return different text)
-    await expect(page.locator('.alert-error, .alert.soft, [role="alert"]').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.alert-error, .alert-soft, [role="alert"]').first()).toBeVisible({ timeout: 10000 })
   })
 })
 
