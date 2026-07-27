@@ -9,6 +9,7 @@ const SUBMIT = 'button[type="submit"]'
 test.describe('Login Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/auth/login')
+    await page.waitForLoadState('networkidle')
   })
 
   test('should display login form with all required fields', async ({ page }) => {
@@ -43,7 +44,7 @@ test.describe('Login Page', () => {
   test('should show error for invalid login credentials', async ({ page }) => {
     await page.getByLabel(a.login.email).fill('nonexistent@example.com')
     await page.getByLabel(a.login.password).fill('wrongpassword')
-    await page.locator(SUBMIT).click()
+    await page.getByLabel(a.login.password).press('Enter')
     await expect(page.locator('.alert-error, .alert-soft, [role="alert"]').first()).toBeVisible({ timeout: 15000 })
   })
 })
@@ -51,6 +52,7 @@ test.describe('Login Page', () => {
 test.describe('Registration Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/auth/register')
+    await page.waitForLoadState('networkidle')
   })
 
   test('should display registration form with all required fields', async ({ page }) => {
@@ -65,14 +67,14 @@ test.describe('Registration Page', () => {
     await expect(page.getByRole('link', { name: a.register.login }).first()).toHaveAttribute('href', '/auth/login')
   })
 
-  test('should toggle password visibility on both password fields', async ({ page }) => {
+test('should toggle password visibility on both password fields', async ({ page }) => {
     const pw = page.locator('#password')
     const confirm = page.locator('#password_confirmation')
 
     await expect(pw).toHaveAttribute('type', 'password')
     await expect(confirm).toHaveAttribute('type', 'password')
 
-    await page.getByRole('button', { name: 'toggle password visibility' }).click()
+    await page.getByLabel('toggle password visibility').click()
     await expect(pw).toHaveAttribute('type', 'text')
     await expect(confirm).toHaveAttribute('type', 'text')
   })
@@ -122,6 +124,7 @@ test.describe('Registration Page', () => {
 test.describe('Forgot Password Page', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/auth/forgot-password')
+    await page.waitForLoadState('networkidle')
   })
 
   test('should display forgot password form', async ({ page }) => {
