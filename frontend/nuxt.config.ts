@@ -222,8 +222,8 @@ security: {
       '/api/v1/**': {
         security: {
           rateLimiter: false,
+          csrf: false,
         },
-        csurf: false,
       },
       // Public marketing pages — Stale-While-Revalidate (ISR)
       // Pages revalidated in background; visitors always get a fast cached version

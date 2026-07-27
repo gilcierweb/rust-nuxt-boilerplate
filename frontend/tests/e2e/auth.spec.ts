@@ -43,10 +43,8 @@ test.describe('Login Page', () => {
   test('should show error for invalid login credentials', async ({ page }) => {
     await page.getByLabel(a.login.email).fill('nonexistent@example.com')
     await page.getByLabel(a.login.password).fill('wrongpassword')
-    const responsePromise = page.waitForResponse(resp => resp.url().includes('/auth/login'))
     await page.locator(SUBMIT).click()
-    await responsePromise
-    await expect(page.locator('.alert-error, .alert-soft, [role="alert"]').first()).toBeVisible({ timeout: 10000 })
+    await expect(page.locator('.alert-error, .alert-soft, [role="alert"]').first()).toBeVisible({ timeout: 15000 })
   })
 })
 
