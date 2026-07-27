@@ -43,8 +43,9 @@ test.describe('Login Page', () => {
   test('should show error for invalid login credentials', async ({ page }) => {
     await page.getByLabel(a.login.email).fill('nonexistent@example.com')
     await page.getByLabel(a.login.password).fill('wrongpassword')
+    const responsePromise = page.waitForResponse(resp => resp.url().includes('/auth/login'))
     await page.locator(SUBMIT).click()
-    // Check for any error message (backend may return different text)
+    await responsePromise
     await expect(page.locator('.alert-error, .alert-soft, [role="alert"]').first()).toBeVisible({ timeout: 10000 })
   })
 })
@@ -68,12 +69,12 @@ test.describe('Registration Page', () => {
 
   test('should toggle password visibility on both password fields', async ({ page }) => {
     const pw = page.locator('#password')
-    const confirm = page.getByLabel(a.register.confirmPassword)
+    const confirm = page.locator('#password_confirmation')
 
     await expect(pw).toHaveAttribute('type', 'password')
     await expect(confirm).toHaveAttribute('type', 'password')
 
-    await page.getByLabel('toggle password visibility').first().click()
+    await page.getByRole('button', { name: 'toggle password visibility' }).click()
     await expect(pw).toHaveAttribute('type', 'text')
     await expect(confirm).toHaveAttribute('type', 'text')
   })
