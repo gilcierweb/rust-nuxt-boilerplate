@@ -621,7 +621,7 @@ impl IUserRepository for UsersRepository {
                             if desc { ord.reverse() } else { ord }
                         });
                     } else {
-                        items.sort_by(|a, b| a.email.cmp(&b.email));
+                        items.sort_by_key(|a| a.email.clone());
                     }
 
                     let total = items.len() as i64;

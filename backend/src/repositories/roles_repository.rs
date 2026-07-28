@@ -116,7 +116,7 @@ impl IRoleRepository for RolesRepository {
                             if desc { ord.reverse() } else { ord }
                         });
                     } else {
-                        data.sort_by(|a, b| a.name.cmp(&b.name));
+                        data.sort_by_key(|a| a.name.clone());
                     }
 
                     // Apply pagination

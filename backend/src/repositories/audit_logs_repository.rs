@@ -146,7 +146,7 @@ impl IAuditLogRepository for AuditLogsRepository {
                             if desc { ord.reverse() } else { ord }
                         });
                     } else {
-                        data.sort_by(|a, b| a.created_at.cmp(&b.created_at));
+                        data.sort_by_key(|a| a.created_at);
                     }
 
                     // Apply pagination
