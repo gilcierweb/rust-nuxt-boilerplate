@@ -46,7 +46,7 @@
 
         <div class="h-full overflow-y-auto">
           <ul class="accordion menu menu-sm gap-1 p-3">
-            <li class="active accordion-item" id="dashboard">
+            <li id="dashboard" class="active accordion-item">
               <button
                 class="accordion-toggle accordion-item-active:bg-neutral/10 inline-flex w-full items-center p-2 text-start text-sm font-normal"
                 :class="{ 'accordion-item-active:bg-neutral/10': isDashboardActive }"
@@ -85,7 +85,7 @@
             <li class="text-base-content/50 before:bg-base-content/20 mt-2 p-2 text-xs uppercase before:absolute before:-start-3 before:top-1/2 before:h-0.5 before:w-2.5">
               {{ $t('admin.sidebar.management') }}
             </li>
-            <li class="accordion-item" id="management">
+            <li id="management" class="accordion-item">
               <button
                 class="accordion-toggle accordion-item-active:bg-neutral/10 inline-flex w-full items-center p-2 text-start text-sm font-normal"
                 :class="{ 'accordion-item-active:bg-neutral/10': managementOpen }"

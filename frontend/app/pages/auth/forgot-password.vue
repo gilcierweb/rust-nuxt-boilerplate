@@ -25,7 +25,7 @@
       </div>
     </div>
 
-    <form v-else @submit.prevent="handleSubmit" class="space-y-4">
+    <form v-else class="space-y-4" @submit.prevent="handleSubmit">
       <p class="text-base-content/70 text-sm leading-relaxed">
         {{ $t('auth.forgotPassword.description') }}
       </p>

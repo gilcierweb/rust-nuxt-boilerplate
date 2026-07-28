@@ -66,21 +66,17 @@ export function useTablePagination<T extends Record<string, any>>(
       ? resolvedFetcher.url 
       : `${apiBase}${resolvedFetcher.url.startsWith('/') ? '' : '/'}${resolvedFetcher.url}`
 
-    try {
-      const response = await $api<any>(url, {
-        method: 'GET',
-        ...baseOptions,
-        query: {
-          page: pageQuery.value,
-          per_page: perPageQuery.value,
-          sort_by: sortByQuery.value,
-          sort_dir: sortDirQuery.value,
-        },
-      })
-      return response
-    } catch (err) {
-      throw err
-    }
+    const response = await $api<any>(url, {
+      method: 'GET',
+      ...baseOptions,
+      query: {
+        page: pageQuery.value,
+        per_page: perPageQuery.value,
+        sort_by: sortByQuery.value,
+        sort_dir: sortDirQuery.value,
+      },
+    })
+    return response
   }
 
   const { data, pending, error, refresh, execute } = useAsyncData(

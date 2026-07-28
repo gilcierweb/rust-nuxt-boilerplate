@@ -5,7 +5,7 @@
     </button>
     <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-32 shadow-xl border border-base-content/10 mt-2" role="menu">
       <li v-for="lang in locales" :key="lang.code">
-        <button @click="switchLocale(lang.code)" class="dropdown-item flex items-center gap-2" :class="{ 'active': locale === lang.code }">
+        <button class="dropdown-item flex items-center gap-2" :class="{ 'active': locale === lang.code }" @click="switchLocale(lang.code)">
           <span class="text-lg">{{ (lang as any).flag }}</span>
           <span>{{ lang.name }}</span>
         </button>

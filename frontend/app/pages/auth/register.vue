@@ -111,7 +111,7 @@
 
       <div class="rounded-lg border border-base-300 bg-base-100 p-4">
         <label class="flex items-start gap-3">
-          <input type="checkbox" v-model="form.age_confirmed" required class="checkbox checkbox-primary checkbox-sm mt-0.5" />
+          <input v-model="form.age_confirmed" type="checkbox" required class="checkbox checkbox-primary checkbox-sm mt-0.5" />
           <p class="text-sm text-base-content/80 leading-relaxed">
             {{ $t('auth.register.terms.consent') }}
             <NuxtLink :to="localePath('/terms')" class="link link-primary font-normal">{{ $t('auth.register.terms.termsOfUse') }}</NuxtLink>

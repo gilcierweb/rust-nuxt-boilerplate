@@ -76,7 +76,7 @@
                   Send a Message
                 </h2>
                 
-                <form @submit.prevent="handleSubmit" class="space-y-6">
+                <form class="space-y-6" @submit.prevent="handleSubmit">
                   <div class="grid md:grid-cols-2 gap-6">
                     <!-- Name -->
                     <div class="form-control">

@@ -319,8 +319,8 @@
               <!-- Back to Top -->
               <div class="mt-8 flex justify-center">
                 <button 
-                  @click="scrollToTop"
                   class="btn btn-ghost gap-2"
+                  @click="scrollToTop"
                 >
                   <span class="material-symbols-outlined" data-icon="arrow_upward">arrow_upward</span>
                   Voltar ao topo

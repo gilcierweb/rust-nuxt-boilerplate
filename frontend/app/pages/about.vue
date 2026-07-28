@@ -227,7 +227,8 @@
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-24 h-24 rounded-full bg-tertiary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-tertiary"
+                <span
+class="material-symbols-outlined text-4xl text-tertiary"
                       data-icon="architecture">architecture</span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Clean Architecture</h3>
@@ -266,12 +267,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Rust + Actix Web</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">Memory safety without GC, async runtime,
-                compiled speed. Actix for high-performance HTTP.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+Memory safety without GC, async runtime,
+                compiled speed. Actix for high-performance HTTP.
+</p>
             </div>
 
             <div
@@ -279,12 +282,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Diesel ORM</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">Compile-time checked SQL, migrations,
-                connection pooling. Type-safe database access.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+Compile-time checked SQL, migrations,
+                connection pooling. Type-safe database access.
+</p>
             </div>
 
             <div
@@ -292,12 +297,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">PostgreSQL</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">Robust, ACID-compliant, JSON support,
-                excellent ecosystem. Production-proven at scale.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+Robust, ACID-compliant, JSON support,
+                excellent ecosystem. Production-proven at scale.
+</p>
             </div>
 
             <div
@@ -305,12 +312,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Redis</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">Caching, sessions, rate limiting, WebSocket
-                pub/sub. High-performance in-memory store.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+Caching, sessions, rate limiting, WebSocket
+                pub/sub. High-performance in-memory store.
+</p>
             </div>
 
             <div
@@ -318,12 +327,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Nuxt 4 + Vue 3</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">SSR, auto-imports, file-based routing,
-                composables. Modern Vue with TypeScript.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+SSR, auto-imports, file-based routing,
+                composables. Modern Vue with TypeScript.
+</p>
             </div>
 
             <div
@@ -331,12 +342,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Tailwind CSS 4</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">Utility-first, CSS-first config, lightning
-                fast, dark mode, design tokens.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+Utility-first, CSS-first config, lightning
+                fast, dark mode, design tokens.
+</p>
             </div>
 
             <div
@@ -344,12 +357,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Pinia</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">Lightweight, type-safe state management.
-                DevTools support, SSR compatible.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+Lightweight, type-safe state management.
+                DevTools support, SSR compatible.
+</p>
             </div>
 
             <div
@@ -357,12 +372,14 @@
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
                 <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                 </svg>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Docker</h3>
-              <p class="font-body-sm text-body-sm text-on-surface-variant">Consistent dev/prod environments, multi-stage
-                builds, compose for local stack.</p>
+              <p class="font-body-sm text-body-sm text-on-surface-variant">
+Consistent dev/prod environments, multi-stage
+                builds, compose for local stack.
+</p>
             </div>
           </div>
         </div>
@@ -471,11 +488,13 @@
                 minutes.
               </p>
               <div class="flex flex-wrap justify-center gap-4">
-                <NuxtLink to="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"
+                <NuxtLink
+to="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"
                           class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
                   View on GitHub <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
                 </NuxtLink>
-                <NuxtLink to="/contact"
+                <NuxtLink
+to="/contact"
                           class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
                   Get in Touch
                 </NuxtLink>

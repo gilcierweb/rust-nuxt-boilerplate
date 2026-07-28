@@ -20,8 +20,8 @@
           <p class="flex-1 text-sm font-medium">{{ toast.message }}</p>
           <button
             class="ms-auto cursor-pointer leading-none opacity-60 hover:opacity-100 transition-opacity"
-            @click="dismiss(toast.id)"
             aria-label="Close Button"
+            @click="dismiss(toast.id)"
           >
             <span class="icon-[tabler--x] size-5"></span>
           </button>

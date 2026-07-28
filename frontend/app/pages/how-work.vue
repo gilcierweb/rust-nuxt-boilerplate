@@ -19,7 +19,7 @@
       </section>
 
       <!-- Steps Section -->
-      <section class="py-24 bg-surface" id="steps">
+      <section id="steps" class="py-24 bg-surface">
         <div class="max-w-[1440px] mx-auto px-6">
           <div class="grid md:grid-cols-2 lg:grid-cols-5 gap-8">
             <!-- Step 1 -->
@@ -168,14 +168,15 @@
                     <span class="icon-[tabler--check] text-primary text-sm"></span>
                     Deploy to production
                   </li>
-                </ul>              </div>
+                </ul>
+</div>
             </div>
           </div>
         </div>
       </section>
 
       <!-- Deep Dive Features -->
-      <section class="py-24 bg-surface" id="features">
+      <section id="features" class="py-24 bg-surface">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12 md:mb-16">
             <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Key Capabilities</h2>
@@ -279,7 +280,7 @@
       </section>
 
       <!-- Architecture Overview -->
-      <section class="py-24 bg-surface-container-lowest" id="architecture">
+      <section id="architecture" class="py-24 bg-surface-container-lowest">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -327,34 +328,34 @@
                   <div class="text-center">
                     <svg viewBox="0 0 400 400" class="w-full h-full max-w-full" style="max-width: 400px; max-height: 400px;">
                       <!-- Domain Layer (center) -->
-                      <circle cx="200" cy="200" r="60" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+                      <circle cx="200" cy="200" r="60" fill="#E3F2FD" stroke="#1976D2" stroke-width="2" />
                       <text x="200" y="205" text-anchor="middle" font-size="14" fill="#1976D2" font-weight="bold" font-family="system-ui">Domain</text>
                       <text x="200" y="220" text-anchor="middle" font-size="11" fill="#1976D2" font-family="system-ui">Entities • Rules</text>
                       
                       <!-- Data Layer -->
-                      <ellipse cx="200" cy="200" rx="110" ry="90" fill="none" stroke="#388E3C" stroke-width="2" stroke-dasharray="5,5"/>
+                      <ellipse cx="200" cy="200" rx="110" ry="90" fill="none" stroke="#388E3C" stroke-width="2" stroke-dasharray="5,5" />
                       <text x="200" y="110" text-anchor="middle" font-size="12" fill="#388E3C" font-weight="bold" font-family="system-ui">Data Layer</text>
                       <text x="200" y="125" text-anchor="middle" font-size="10" fill="#388E3C" font-family="system-ui">Repositories • Migrations</text>
                       
                       <!-- Application Layer -->
-                      <ellipse cx="200" cy="200" rx="160" ry="130" fill="none" stroke="#F57C00" stroke-width="2" stroke-dasharray="5,5"/>
+                      <ellipse cx="200" cy="200" rx="160" ry="130" fill="none" stroke="#F57C00" stroke-width="2" stroke-dasharray="5,5" />
                       <text x="200" y="320" text-anchor="middle" font-size="12" fill="#F57C00" font-weight="bold" font-family="system-ui">Application Layer</text>
                       <text x="200" y="335" text-anchor="middle" font-size="10" fill="#F57C00" font-family="system-ui">Services • DTOs • Transactions</text>
                       
                       <!-- Interface Layer -->
-                      <ellipse cx="200" cy="200" rx="200" ry="165" fill="none" stroke="#7B1FA2" stroke-width="2" stroke-dasharray="5,5"/>
+                      <ellipse cx="200" cy="200" rx="200" ry="165" fill="none" stroke="#7B1FA2" stroke-width="2" stroke-dasharray="5,5" />
                       <text x="380" y="205" text-anchor="middle" font-size="12" fill="#7B1FA2" font-weight="bold" font-family="system-ui">Interface</text>
                       <text x="380" y="220" text-anchor="middle" font-size="10" fill="#7B1FA2" font-family="system-ui">API • WebSocket • UI</text>
                       
                       <!-- Arrows showing dependency direction -->
-                      <path d="M260 200 L300 200" stroke="#7B1FA2" stroke-width="2" marker-end="url(#arrowhead)"/>
-                      <path d="M140 200 L100 200" stroke="#7B1FA2" stroke-width="2" marker-end="url(#arrowhead)"/>
-                      <path d="M200 140 L200 100" stroke="#388E3C" stroke-width="2" marker-end="url(#arrowhead)"/>
-                      <path d="M200 260 L200 300" stroke="#F57C00" stroke-width="2" marker-end="url(#arrowhead)"/>
+                      <path d="M260 200 L300 200" stroke="#7B1FA2" stroke-width="2" marker-end="url(#arrowhead)" />
+                      <path d="M140 200 L100 200" stroke="#7B1FA2" stroke-width="2" marker-end="url(#arrowhead)" />
+                      <path d="M200 140 L200 100" stroke="#388E3C" stroke-width="2" marker-end="url(#arrowhead)" />
+                      <path d="M200 260 L200 300" stroke="#F57C00" stroke-width="2" marker-end="url(#arrowhead)" />
                       
                       <defs>
                         <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                          <polygon points="0 0, 10 3.5, 0 7" fill="#7B1FA2"/>
+                          <polygon points="0 0, 10 3.5, 0 7" fill="#7B1FA2" />
                         </marker>
                       </defs>
                     </svg>
@@ -367,7 +368,7 @@
       </section>
 
       <!-- Integration Section -->
-      <section class="py-24 bg-surface border-y border-outline-variant/20" id="integrations">
+      <section id="integrations" class="py-24 bg-surface border-y border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -439,11 +440,12 @@
       </section>
 
       <!-- Pricing / License -->
-      <section class="py-24 bg-surface-container-lowest" id="pricing">
+      <section id="pricing" class="py-24 bg-surface-container-lowest">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-16">
             <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Simple, Transparent Licensing</h2>
-            <p class="font-body-lg text-body-lg text-on-surface-variant">Choose the option that fits your needs. All tiers include the complete source code.
+            <p class="font-body-lg text-body-lg text-on-surface-variant">
+Choose the option that fits your needs. All tiers include the complete source code.
             </p>
           </div>
           <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -505,7 +507,7 @@
       </section>
 
       <!-- FAQ Section -->
-      <section class="py-24 bg-surface border-y border-outline-variant/20" id="faq">
+      <section id="faq" class="py-24 bg-surface border-y border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12">
             <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Frequently Asked Questions</h2>
@@ -599,7 +601,7 @@
       </section>
 
       <!-- CTA Section -->
-      <section class="py-24 bg-surface-container-lowest" id="cta">
+      <section id="cta" class="py-24 bg-surface-container-lowest">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="bg-surface p-8 md:p-16 rounded-3xl border border-outline-variant/30 text-center relative overflow-hidden">
             <div class="absolute -right-20 -top-20 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>

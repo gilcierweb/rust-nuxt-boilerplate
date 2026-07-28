@@ -413,8 +413,8 @@
               <!-- Back to Top -->
               <div class="mt-8 flex justify-center">
                 <button 
-                  @click="scrollToTop"
                   class="btn btn-ghost gap-2"
+                  @click="scrollToTop"
                 >
                   <span class="icon-[tabler--arrow-up]" />
                   Voltar ao topo

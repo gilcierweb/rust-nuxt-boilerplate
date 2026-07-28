@@ -18,7 +18,7 @@
       <NuxtLink :to="localePath('/auth/forgot-password')" class="btn btn-outline btn-primary mt-4 inline-flex text-sm">{{ $t('auth.resetPassword.error.requestNew') }}</NuxtLink>
     </div>
 
-    <form v-else @submit.prevent="handleSubmit" class="space-y-4">
+    <form v-else class="space-y-4" @submit.prevent="handleSubmit">
       <div v-if="errorMsg" class="alert alert-error alert-soft" role="alert">
         <Icon name="heroicons:exclamation-circle" class="h-5 w-5" />
         <p class="text-sm">{{ errorMsg }}</p>

@@ -14,7 +14,8 @@
 
     <div>
       <h3 class="mb-1.5 text-2xl font-semibold text-base-content">{{ $t('auth.login.title') }}</h3>
-      <p class="text-base-content/80">{{ $t('auth.login.noAccount') }}
+      <p class="text-base-content/80">
+{{ $t('auth.login.noAccount') }}
         <NuxtLink :to="localePath('/auth/register')" class="link link-animated link-primary font-normal">
           {{ $t('auth.login.createAccount') }}
         </NuxtLink>
