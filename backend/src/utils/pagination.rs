@@ -12,6 +12,9 @@ pub const MAX_PAGE: i64 = 10_000;
 /// Sort direction
 pub type SortDir = String;
 
+/// List parameters (alias for PaginationParams)
+pub type ListParams = PaginationParams;
+
 /// Pagination and sorting parameters for list endpoints
 #[allow(dead_code)]
 #[derive(Debug, Deserialize, Clone)]

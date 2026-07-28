@@ -12,7 +12,7 @@ use crate::{
     models::role::NewRole,
     repositories::container::AppContainer,
     utils::{
-        pagination::{PaginatedResponse, PaginationParams},
+        pagination::PaginationParams,
         sanitize::{sanitize_input, strip_html},
         validation::first_validation_error_message,
     },
@@ -61,26 +61,11 @@ pub async fn list_roles(
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::Roles, AbilityAction::Read)?;
     let pagination = pagination.into_inner().validated();
-    let items = container.roles.all().await.map_err(AppError::Database)?;
-
-    let response =
-        PaginatedResponse::from_sorted_list(items, &pagination, |data, field, desc| {
-            data.sort_by(|a, b| {
-                let ord = match field {
-                    "name" => a.name.cmp(&b.name),
-                    "resource_type" => a.resource_type.cmp(&b.resource_type),
-                    "created_at" => a.created_at.cmp(&b.created_at),
-                    "updated_at" => a.updated_at.cmp(&b.updated_at),
-                    "id" => a.id.cmp(&b.id),
-                    _ => a.name.cmp(&b.name),
-                };
-                if desc {
-                    ord.reverse()
-                } else {
-                    ord
-                }
-            });
-        });
+    let response = container
+        .roles
+        .list_paginated(&pagination)
+        .await
+        .map_err(AppError::Database)?;
 
     Ok(HttpResponse::Ok().json(response))
 }

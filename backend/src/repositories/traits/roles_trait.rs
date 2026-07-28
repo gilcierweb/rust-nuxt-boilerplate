@@ -5,6 +5,7 @@ use diesel::QueryResult;
 use uuid::Uuid;
 
 use crate::models::role::{NewRole, Role};
+use crate::utils::pagination::{PaginationParams, PaginatedResponse};
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -14,4 +15,5 @@ pub trait IRoleRepository: Send + Sync {
     async fn create(&self, item: &NewRole) -> QueryResult<Role>;
     async fn update(&self, id: &Uuid, item: &NewRole) -> QueryResult<Role>;
     async fn destroy(&self, id: &Uuid) -> QueryResult<usize>;
+    async fn list_paginated(&self, params: &PaginationParams) -> QueryResult<PaginatedResponse<Role>>;
 }

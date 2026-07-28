@@ -1,12 +1,15 @@
 use crate::db::database::DBPool;
 use crate::db::schema::users as users_table;
+use crate::models::profile::Profile;
 use crate::models::user::{NewUser, User};
 use crate::repositories::base::BaseRepo;
-pub use crate::repositories::traits::users_trait::{IUserRepository, IUserRepositoryTransaction};
+use crate::utils::pagination::{ListParams, PaginationParams, PaginatedResponse};
+pub use crate::repositories::traits::users_trait::{IUserRepository, IUserRepositoryTransaction, AdminUserLookupItem};
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use ipnet::IpNet;
+use std::collections::HashMap;
 use uuid::Uuid;
 
 pub struct UsersRepository {
@@ -519,7 +522,7 @@ impl IUserRepository for UsersRepository {
             .await
     }
 
-    async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
+async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
         self.base
@@ -534,6 +537,105 @@ impl IUserRepository for UsersRepository {
                         ))
                         .execute(conn)
                         .await
+                })
+            })
+            .await
+    }
+
+    async fn list_paginated(
+        &self,
+        params: &PaginationParams,
+    ) -> diesel::QueryResult<PaginatedResponse<AdminUserLookupItem>> {
+        let list_params = ListParams::from(params.clone());
+
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    // Get all users and profiles for the lookup
+                    let users = users_table::table
+                        .select(User::as_select())
+                        .load::<User>(conn)
+                        .await?;
+                    let profiles = crate::db::schema::profiles::table
+                        .select(Profile::as_select())
+                        .load::<Profile>(conn)
+                        .await?;
+
+                    // Get security service from config
+                    let security = crate::security::SecurityService::from_config(
+                        &crate::config::AppConfig::from_env().map_err(|e| {
+                            diesel::result::Error::DatabaseError(
+                                diesel::result::DatabaseErrorKind::Unknown,
+                                Box::new(e.to_string()),
+                            )
+                        })?,
+                    ).map_err(|e| {
+                        diesel::result::Error::DatabaseError(
+                            diesel::result::DatabaseErrorKind::Unknown,
+                            Box::new(e.to_string()),
+                        )
+                    })?;
+
+                    let profiles_by_user_id = profiles
+                        .into_iter()
+                        .map(|profile| (profile.user_id, profile))
+                        .collect::<HashMap<Uuid, _>>();
+
+                    let mut items = Vec::with_capacity(users.len());
+
+                    for user in users {
+                        let email = security.decrypt_user_email(&user).map_err(|e| {
+                            diesel::result::Error::DatabaseError(
+                                diesel::result::DatabaseErrorKind::Unknown,
+                                Box::new(e.to_string()),
+                            )
+                        })?;
+                        let profile = profiles_by_user_id.get(&user.id);
+
+                        items.push(AdminUserLookupItem {
+                            id: user.id,
+                            email,
+                            first_name: profile.and_then(|p| p.first_name.clone()),
+                            last_name: profile.and_then(|p| p.last_name.clone()),
+                            full_name: profile.and_then(|p| p.full_name.clone()),
+                            nickname: profile.and_then(|p| p.nickname.clone()),
+                        });
+                    }
+
+                    // Sort items
+                    if let Some(sort_by) = list_params.sort_by.as_deref() {
+                        let desc = list_params.sort_dir.as_deref() == Some("desc");
+                        items.sort_by(|a, b| {
+                            let ord = match sort_by {
+                                "email" => a.email.cmp(&b.email),
+                                "first_name" => a.first_name.cmp(&b.first_name),
+                                "last_name" => a.last_name.cmp(&b.last_name),
+                                "full_name" => a.full_name.cmp(&b.full_name),
+                                "nickname" => a.nickname.cmp(&b.nickname),
+                                "id" => a.id.cmp(&b.id),
+                                _ => a.email.cmp(&b.email),
+                            };
+                            if desc {
+                                ord.reverse()
+                            } else {
+                                ord
+                            }
+                        });
+                    } else {
+                        items.sort_by(|a, b| a.email.cmp(&b.email));
+                    }
+
+                    let total = items.len() as i64;
+                    let offset = list_params.offset() as usize;
+                    let limit = list_params.limit() as usize;
+
+                    let paginated_data: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
+                    Ok(PaginatedResponse::new(
+                        paginated_data,
+                        total,
+                        list_params.page,
+                        list_params.per_page,
+                    ))
                 })
             })
             .await

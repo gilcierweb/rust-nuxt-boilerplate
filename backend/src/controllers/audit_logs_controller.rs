@@ -10,7 +10,7 @@ use crate::{
     models::audit_log::NewAuditLog,
     repositories::container::AppContainer,
     utils::{
-        pagination::{PaginatedResponse, PaginationParams},
+        pagination::PaginationParams,
         validation::first_validation_error_message,
     },
 };
@@ -30,29 +30,11 @@ pub async fn list_audit_logs(
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::AuditLogs, AbilityAction::Read)?;
     let pagination = pagination.into_inner().validated();
-    let items = container
+    let response = container
         .domain_audit_logs
-        .all()
+        .list_paginated(&pagination)
         .await
         .map_err(AppError::Database)?;
-
-    let response =
-        PaginatedResponse::from_sorted_list(items, &pagination, |data, field, desc| {
-            data.sort_by(|a, b| {
-                let ord = match field {
-                    "action" => a.action.cmp(&b.action),
-                    "resource_type" => a.resource_type.cmp(&b.resource_type),
-                    "created_at" => a.created_at.cmp(&b.created_at),
-                    "id" => a.id.cmp(&b.id),
-                    _ => a.created_at.cmp(&b.created_at),
-                };
-                if desc {
-                    ord.reverse()
-                } else {
-                    ord
-                }
-            });
-        });
 
     Ok(HttpResponse::Ok().json(response))
 }

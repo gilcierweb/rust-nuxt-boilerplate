@@ -1,27 +1,14 @@
-use std::collections::HashMap;
-
 use actix_web::{HttpResponse, get, web};
 use actix_web_grants::authorities::AuthDetails;
-use serde::Serialize;
-use uuid::Uuid;
 
 use crate::{
     authz::ability::{AbilityAction, AbilityResource, authorize},
     errors::{AppError, AppResult},
     repositories::container::AppContainer,
-    security::SecurityService,
-    utils::pagination::{PaginatedResponse, PaginationParams},
+    utils::pagination::PaginationParams,
 };
 
-#[derive(Debug, Serialize)]
-struct AdminUserLookupItem {
-    id: Uuid,
-    email: String,
-    first_name: Option<String>,
-    last_name: Option<String>,
-    full_name: Option<String>,
-    nickname: Option<String>,
-}
+pub use crate::repositories::traits::users_trait::AdminUserLookupItem;
 
 #[get("/users")]
 pub async fn list_users(
@@ -32,51 +19,11 @@ pub async fn list_users(
     authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
 
     let pagination = pagination.into_inner().validated();
-
-    let users = container.users.all().await.map_err(AppError::Database)?;
-    let profiles = container.profiles.all().await.map_err(AppError::Database)?;
-    let security = SecurityService::from_config(container.config.as_ref())?;
-
-    let profiles_by_user_id = profiles
-        .into_iter()
-        .map(|profile| (profile.user_id, profile))
-        .collect::<HashMap<Uuid, _>>();
-
-    let mut items = Vec::with_capacity(users.len());
-
-    for user in users {
-        let email = security.decrypt_user_email(&user)?;
-        let profile = profiles_by_user_id.get(&user.id);
-
-        items.push(AdminUserLookupItem {
-            id: user.id,
-            email,
-            first_name: profile.and_then(|p| p.first_name.clone()),
-            last_name: profile.and_then(|p| p.last_name.clone()),
-            full_name: profile.and_then(|p| p.full_name.clone()),
-            nickname: profile.and_then(|p| p.nickname.clone()),
-        });
-    }
-
-    let response =
-        PaginatedResponse::from_sorted_list(items, &pagination, |data, field, desc| {
-            data.sort_by(|a, b| {
-                let ord = match field {
-                    "email" => a.email.cmp(&b.email),
-                    "first_name" => a.first_name.cmp(&b.first_name),
-                    "last_name" => a.last_name.cmp(&b.last_name),
-                    "full_name" => a.full_name.cmp(&b.full_name),
-                    "nickname" => a.nickname.cmp(&b.nickname),
-                    "id" => a.id.cmp(&b.id),
-                    _ => a.email.cmp(&b.email),
-                };
-                if desc {
-                    ord.reverse()
-                } else {
-                    ord
-                }
-            });
-        });
+    let response = container
+        .users
+        .list_paginated(&pagination)
+        .await
+        .map_err(AppError::Database)?;
 
     Ok(HttpResponse::Ok().json(response))
 }
