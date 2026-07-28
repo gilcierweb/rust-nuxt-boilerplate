@@ -24,6 +24,8 @@
 
       <slot name="right" />
 
+      <span v-if="loading" class="loading loading-spinner loading-sm text-primary" />
+
       <button
         v-if="showRefresh"
         type="button"

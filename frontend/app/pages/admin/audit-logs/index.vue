@@ -70,7 +70,7 @@ import { useAdminResource } from '~/utils/admin-resource-helpers'
 import { formatDateTime } from '~/utils/admin-ui'
 import type { DataTableColumn } from '~/types/data-table'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', keepalive: true })
 
 const { t } = useI18n()
 const localePath = useLocalePath()

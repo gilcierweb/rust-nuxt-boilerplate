@@ -64,7 +64,7 @@
 import { computed, h, resolveComponent } from 'vue'
 import type { DataTableColumn } from '~/types/data-table'
 
-definePageMeta({ layout: 'admin' })
+definePageMeta({ layout: 'admin', keepalive: true })
 
 const { t } = useI18n()
 const localePath = useLocalePath()

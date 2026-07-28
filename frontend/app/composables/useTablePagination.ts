@@ -63,6 +63,7 @@ export function useTablePagination<T extends Record<string, any>>(
     {
       ...baseOptions,
       server: true,
+      lazy: false,
       default: () => ({ data: [], pagination: null }),
       query: {
         page: pageQuery,

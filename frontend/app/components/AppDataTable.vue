@@ -25,7 +25,7 @@
       {{ error }}
     </div>
 
-    <div class="overflow-auto rounded-box border border-base-content/10 bg-base-100" :style="containerStyle">
+    <div class="relative overflow-auto rounded-box border border-base-content/10 bg-base-100" :style="containerStyle">
       <table class="table table-zebra table-pin-rows">
         <thead>
           <tr>
@@ -58,33 +58,35 @@
         </thead>
 
         <tbody>
-          <template v-if="loading || error || !rows.length">
-            <tr>
-              <td :colspan="table.getAllLeafColumns().length">
-                <AppDataTableStatus
-                  :state="statusState"
-                  :label="statusLabel"
-                />
-              </td>
-            </tr>
-          </template>
-
-          <template v-else>
-            <tr
-              v-for="row in rows"
-              :key="row.id"
-              class="cursor-pointer"
-              @click="(event: MouseEvent) => onRowClick(row, event)"
+          <tr
+            v-for="row in rows"
+            :key="row.id"
+            class="cursor-pointer"
+            @click="(event: MouseEvent) => onRowClick(row, event)"
+          >
+            <td
+              v-for="cell in row.getVisibleCells()"
+              :key="cell.id"
+              :class="cellClass(cell.column.columnDef.meta)"
             >
-              <td
-                v-for="cell in row.getVisibleCells()"
-                :key="cell.id"
-                :class="cellClass(cell.column.columnDef.meta)"
-              >
-                <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
-              </td>
-            </tr>
-          </template>
+              <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
+            </td>
+          </tr>
+          <tr v-if="loading && !rows.length">
+            <td :colspan="table.getAllLeafColumns().length">
+              <AppDataTableStatus state="loading" :label="loadingLabel ?? 'Carregando registros...'" />
+            </td>
+          </tr>
+          <tr v-if="error">
+            <td :colspan="table.getAllLeafColumns().length">
+              <AppDataTableStatus state="error" :label="errorLabel ?? error ?? 'Erro ao carregar dados'" />
+            </td>
+          </tr>
+          <tr v-if="!loading && !error && !rows.length">
+            <td :colspan="table.getAllLeafColumns().length">
+              <AppDataTableStatus state="empty" :label="emptyLabel ?? 'Nenhum registro encontrado.'" />
+            </td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -362,18 +364,6 @@ const visiblePages = computed(() => {
   pages.push(total)
 
   return pages
-})
-
-const statusState = computed<'loading' | 'error' | 'empty'>(() => {
-  if (props.loading) return 'loading'
-  if (props.error) return 'error'
-  return 'empty'
-})
-
-const statusLabel = computed(() => {
-  if (props.loading) return props.loadingLabel ?? 'Carregando registros...'
-  if (props.error) return props.errorLabel ?? props.error ?? 'Erro ao carregar dados'
-  return props.emptyLabel ?? 'Nenhum registro encontrado.'
 })
 
 function headerClass(meta?: DataTableColumnMeta) {
