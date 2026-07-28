@@ -503,7 +503,7 @@ fn main() -> SeedResult<()> {
             }
         }
 
-        for index in 1..=10 {
+        for index in 1..=100 {
             let user_data = generate_user_data(index);
             let user_id = ensure_user(conn, index)?;
             let _profile_id = ensure_profile(conn, user_id, index, &user_data)?;

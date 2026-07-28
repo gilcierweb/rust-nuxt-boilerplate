@@ -148,7 +148,9 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
   },
 ])
 
-function onRowClick(row: UserRow) {
-  navigateTo(localePath(`/admin/users/${row.id}`))
+function onRowClick(row: UserRow, rowId?: string) {
+  const id = rowId ?? row?.id
+  if (!id) return
+  navigateTo(localePath(`/admin/users/${id}`))
 }
 </script>

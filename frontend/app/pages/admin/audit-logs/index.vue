@@ -215,7 +215,9 @@ async function removeEntity(item: AuditLogRow) {
   }
 }
 
-function onRowClick(row: AuditLogRow) {
-  navigateTo(localePath(`/admin/audit-logs/${row.id}`))
+function onRowClick(row: AuditLogRow, rowId?: string) {
+  const id = rowId ?? row?.id
+  if (!id) return
+  navigateTo(localePath(`/admin/audit-logs/${id}`))
 }
 </script>

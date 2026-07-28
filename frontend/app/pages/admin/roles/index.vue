@@ -199,7 +199,9 @@ async function removeRole(item: RoleRow) {
   }
 }
 
-function onRowClick(row: RoleRow) {
-  navigateTo(localePath(`/admin/roles/${row.id}`))
+function onRowClick(row: RoleRow, rowId?: string) {
+  const id = rowId ?? row?.id
+  if (!id) return
+  navigateTo(localePath(`/admin/roles/${id}`))
 }
 </script>

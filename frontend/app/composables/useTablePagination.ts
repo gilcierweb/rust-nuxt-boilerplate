@@ -45,16 +45,23 @@ export async function useTablePagination<T extends Record<string, any>>(
   const pagination = ref<TablePaginationState>({ page: 1, perPage: initialSize })
 
   const resolvedFetcher = await Promise.resolve(fetcher())
+  const baseOptions = resolvedFetcher.options ?? {}
+
+  const pageQuery = computed(() => pagination.value.page)
+  const perPageQuery = computed(() => pagination.value.perPage)
 
   const { data, pending, error, refresh } = await useApiFetch<any>(
     () => resolvedFetcher.url,
-    () => ({
-      ...(resolvedFetcher.options ?? {}),
+    {
+      ...baseOptions,
       server: true,
       default: () => ({ data: [], pagination: null }),
-      query: { page: pagination.value.page, per_page: pagination.value.perPage },
+      query: {
+        page: pageQuery,
+        per_page: perPageQuery,
+      },
       watch: [pagination],
-    }),
+    },
   )
 
   const items = computed<T[]>(() => normalizeResourceResponse(data.value) as T[])

@@ -74,7 +74,7 @@
               v-for="row in rows"
               :key="row.id"
               class="cursor-pointer"
-              @click="onRowClick(row)"
+              @click="(event: MouseEvent) => onRowClick(row, event)"
             >
               <td
                 v-for="cell in row.getVisibleCells()"
@@ -245,7 +245,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   refresh: []
-  rowClick: [row: TData]
+  rowClick: [row: TData, rowId: string]
   'action:click': [action: DataTableRowAction<TData>, row: TData]
   'update:search': [value: string]
   'update:sorting': [state: SortingState]
@@ -395,9 +395,15 @@ function onHeaderClick(header: Header<TData, unknown>) {
   header.column.getToggleSortingHandler()?.(undefined)
 }
 
-function onRowClick(row: Row<TData> | undefined) {
+function onRowClick(row: Row<TData> | undefined, event?: MouseEvent) {
   if (!row) return
-  emit('rowClick', row.original)
+  if (event) {
+    const target = event.target as HTMLElement | null
+    if (target?.closest('a, button, [role="button"]')) {
+      return
+    }
+  }
+  emit('rowClick', row.original, row.id)
 }
 
 function goToPage(page: number) {
