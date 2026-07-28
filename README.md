@@ -64,6 +64,7 @@
 - **User Portal**: Dashboard, support tickets, profile management
 - **Auth Pages**: Login, register, email confirmation, password reset, 2FA setup
 - **Internationalization**: @nuxtjs/i18n (pt-BR, en, es)
+- **Data Tables**: TanStack Table v8 with server-side pagination, sorting, and filtering - optimized for zero-flash navigation (persisted state via `keepalive`, manual fetch, no re-render on sort/page)
 
 ### DevOps & Infrastructure
 - **Multi-stage Docker**: Optimized dev/prod images for both services
@@ -523,7 +524,20 @@ See [`.env.example`](.env.example) for complete list.
 
 ---
 
-## 🔄 Process Management
+## 🔧 Technical Notes
+
+### TanStack Table Optimization (Admin Panel)
+
+Admin list pages (`/admin/users`, `/admin/roles`, `/admin/audit-logs`) use **TanStack Table v8** with server-side pagination/sorting. To eliminate flash/re-mount on pagination, sort, or navigation:
+
+- **`keepalive: true`** on index pages - preserves component state (scroll position, sort, page) when navigating to detail pages and back
+- **`useAsyncData` with `execute()`** - manual fetch instead of reactive query params; avoids `pending` toggling on every param change
+- **No `v-if` on table rows** - rows stay mounted; loading shown via overlay spinner in toolbar
+- **`transition-none` on controls** - disables daisyUI/flyonUI disabled-state transitions on pagination buttons/select
+
+See: `frontend/app/composables/useTablePagination.ts`, `frontend/app/components/AppDataTable.vue`
+
+---
 
 ### Proctor (Recommended for Local Dev)
 
