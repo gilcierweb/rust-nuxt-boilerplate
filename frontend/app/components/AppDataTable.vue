@@ -99,10 +99,9 @@
         <span v-if="totalLabelCount !== null">
           {{ totalLabelCount }} {{ totalLabelCount === 1 ? 'registro' : 'registros' }}
         </span>
-        <select
+<select
           :value="currentPageSize"
-          :disabled="loading"
-          class="select select-sm select-bordered bg-base-100"
+          class="select select-sm select-bordered bg-base-100 transition-none"
           @change="onPageSizeChange"
         >
           <option
@@ -118,16 +117,14 @@
       <nav class="flex items-center gap-x-1">
         <button
           type="button"
-          class="btn btn-soft btn-sm"
-          :disabled="!canPreviousPage || loading"
+          class="btn btn-soft btn-sm transition-none"
           @click="goToPage(1)"
         >
           <span class="icon-[tabler--chevrons-left] size-4"></span>
         </button>
         <button
           type="button"
-          class="btn btn-soft btn-sm"
-          :disabled="!canPreviousPage || loading"
+          class="btn btn-soft btn-sm transition-none"
           @click="goToPage(currentPage - 1)"
         >
           <span class="icon-[tabler--chevron-left] size-4 rtl:rotate-180"></span>
@@ -143,11 +140,10 @@
           <button
             v-else
             type="button"
-            class="btn btn-sm"
+            class="btn btn-sm transition-none"
             :class="page === currentPage
               ? 'btn-primary'
               : 'btn-soft btn-square'"
-            :disabled="loading"
             @click="goToPage(page)"
           >
             {{ page }}
@@ -156,16 +152,14 @@
 
         <button
           type="button"
-          class="btn btn-soft btn-sm"
-          :disabled="!canNextPage || loading"
+          class="btn btn-soft btn-sm transition-none"
           @click="goToPage(currentPage + 1)"
         >
           <span class="icon-[tabler--chevron-right] size-5 rtl:rotate-180"></span>
         </button>
         <button
           type="button"
-          class="btn btn-soft btn-sm"
-          :disabled="!canNextPage || loading"
+          class="btn btn-soft btn-sm transition-none"
           @click="goToPage(totalPages)"
         >
           <span class="icon-[tabler--chevrons-right] size-4"></span>
@@ -417,6 +411,7 @@ function goToPage(page: number) {
   if (props.loading) return
   const target = Math.max(1, Math.min(totalPages.value, page))
   if (target === currentPage.value) return
+  if (target < 1 || target > totalPages.value) return
 
   if (isServer.value) {
     emit('update:page', target)

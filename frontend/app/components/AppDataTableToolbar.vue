@@ -24,12 +24,14 @@
 
       <slot name="right" />
 
-      <span v-if="loading" class="loading loading-spinner loading-sm text-primary" />
+      <span class="w-5 h-5 flex items-center justify-center">
+        <span v-if="loading" class="loading loading-spinner loading-sm text-primary" />
+      </span>
 
       <button
         v-if="showRefresh"
         type="button"
-        class="btn btn-soft"
+        class="btn btn-soft transition-none"
         :disabled="loading"
         @click="$emit('refresh')"
       >

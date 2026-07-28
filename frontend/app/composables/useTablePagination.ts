@@ -58,20 +58,40 @@ export function useTablePagination<T extends Record<string, any>>(
     sorting.value[0] ? (sorting.value[0].desc ? 'desc' : 'asc') : null,
   )
 
-  const { data, pending, error, refresh } = useApiFetch<any>(
+  const fetchData = async () => {
+    const { $api } = useNuxtApp()
+    const config = useRuntimeConfig()
+    const apiBase = config.public.apiBase || '/api/v1'
+    const url = resolvedFetcher.url.startsWith('/api/') 
+      ? resolvedFetcher.url 
+      : `${apiBase}${resolvedFetcher.url.startsWith('/') ? '' : '/'}${resolvedFetcher.url}`
+
+    try {
+      const response = await $api<any>(url, {
+        method: 'GET',
+        ...baseOptions,
+        query: {
+          page: pageQuery.value,
+          per_page: perPageQuery.value,
+          sort_by: sortByQuery.value,
+          sort_dir: sortDirQuery.value,
+        },
+      })
+      return response
+    } catch (err) {
+      throw err
+    }
+  }
+
+  const { data, pending, error, refresh, execute } = useAsyncData(
     () => resolvedFetcher.url,
+    fetchData,
     {
       ...baseOptions,
       server: true,
-      lazy: false,
       default: () => ({ data: [], pagination: null }),
-      query: {
-        page: pageQuery,
-        per_page: perPageQuery,
-        sort_by: sortByQuery,
-        sort_dir: sortDirQuery,
-      },
-    },
+      immediate: true,
+    }
   )
 
   const items = computed<T[]>(() => normalizeResourceResponse(data.value) as T[])
@@ -90,17 +110,20 @@ export function useTablePagination<T extends Record<string, any>>(
     const next = Math.max(1, Math.floor(page))
     if (next === pagination.value.page) return
     pagination.value = { ...pagination.value, page: next }
+    execute()
   }
 
   function setPageSize(size: number) {
     if (size === pagination.value.perPage) return
     pagination.value = { page: 1, perPage: size }
+    execute()
   }
 
   function setSorting(state: SortingState) {
     if (state === sorting.value) return
     pagination.value = { ...pagination.value, page: 1 }
     sorting.value = state
+    execute()
   }
 
   return {
@@ -110,7 +133,7 @@ export function useTablePagination<T extends Record<string, any>>(
     items: items as ComputedRef<T[]>,
     pending: computed(() => pending.value),
     error: requestError,
-    refresh,
+    refresh: execute,
     setPage,
     setPageSize,
     sorting: sorting as Ref<SortingState>,
