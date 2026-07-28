@@ -90,13 +90,16 @@
     </div>
 
     <div
-      v-if="showPagination && !loading && !error && rows.length"
+      v-if="showPagination"
       class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
     >
       <div class="flex items-center gap-2 text-sm text-base-content/60">
-        <span>{{ totalLabelCount }} registros</span>
+        <span v-if="totalLabelCount !== null">
+          {{ totalLabelCount }} {{ totalLabelCount === 1 ? 'registro' : 'registros' }}
+        </span>
         <select
-          :value="table.getState().pagination.pageSize"
+          :value="currentPageSize"
+          :disabled="loading"
           class="select select-sm select-bordered bg-base-100"
           @change="onPageSizeChange"
         >
@@ -114,16 +117,16 @@
         <button
           type="button"
           class="btn btn-soft btn-sm"
-          :disabled="!table.getCanPreviousPage()"
-          @click="table.setPageIndex(0)"
+          :disabled="!canPreviousPage || loading"
+          @click="goToPage(1)"
         >
           <span class="icon-[tabler--chevrons-left] size-4"></span>
         </button>
         <button
           type="button"
           class="btn btn-soft btn-sm"
-          :disabled="!table.getCanPreviousPage()"
-          @click="table.previousPage()"
+          :disabled="!canPreviousPage || loading"
+          @click="goToPage(currentPage - 1)"
         >
           <span class="icon-[tabler--chevron-left] size-4 rtl:rotate-180"></span>
         </button>
@@ -139,10 +142,11 @@
             v-else
             type="button"
             class="btn btn-sm"
-            :class="page === table.getState().pagination.pageIndex + 1
+            :class="page === currentPage
               ? 'btn-primary'
               : 'btn-soft btn-square'"
-            @click="table.setPageIndex(page - 1)"
+            :disabled="loading"
+            @click="goToPage(page)"
           >
             {{ page }}
           </button>
@@ -151,16 +155,16 @@
         <button
           type="button"
           class="btn btn-soft btn-sm"
-          :disabled="!table.getCanNextPage()"
-          @click="table.nextPage()"
+          :disabled="!canNextPage || loading"
+          @click="goToPage(currentPage + 1)"
         >
           <span class="icon-[tabler--chevron-right] size-5 rtl:rotate-180"></span>
         </button>
         <button
           type="button"
           class="btn btn-soft btn-sm"
-          :disabled="!table.getCanNextPage()"
-          @click="table.setPageIndex(table.getPageCount() - 1)"
+          :disabled="!canNextPage || loading"
+          @click="goToPage(totalPages)"
         >
           <span class="icon-[tabler--chevrons-right] size-4"></span>
         </button>
@@ -199,7 +203,7 @@ interface Props {
   rowIdKey?: string
   searchPlaceholder?: string
   totalLabel?: string
-  total?: number
+  total?: number | null
   loading?: boolean
   error?: string
   emptyLabel?: string
@@ -215,8 +219,10 @@ interface Props {
   showRefresh?: boolean
   refreshLabel?: string
   showPagination?: boolean
+  page?: number
   pageSize?: number
   pageSizes?: number[]
+  pageCount?: number
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -230,8 +236,11 @@ const props = withDefaults(defineProps<Props>(), {
   showRefresh: false,
   refreshLabel: 'Atualizar',
   showPagination: true,
+  page: 1,
   pageSize: 10,
   pageSizes: () => [10, 20, 30, 50],
+  pageCount: 0,
+  total: null,
 })
 
 const emit = defineEmits<{
@@ -240,7 +249,8 @@ const emit = defineEmits<{
   'action:click': [action: DataTableRowAction<TData>, row: TData]
   'update:search': [value: string]
   'update:sorting': [state: SortingState]
-  'update:pagination': [pageIndex: number, pageSize: number]
+  'update:page': [page: number]
+  'update:pageSize': [size: number]
 }>()
 
 const searchModel = ref('')
@@ -249,7 +259,9 @@ const sorting = ref<SortingState>([])
 watch(searchModel, (value) => emit('update:search', value))
 watch(sorting, (value) => emit('update:sorting', value))
 
-const table = useVueTable<TData>({
+const isServer = computed(() => props.mode === 'server')
+
+const clientTable = useVueTable<TData>({
   get data() {
     return props.data
   },
@@ -261,7 +273,7 @@ const table = useVueTable<TData>({
       return sorting.value
     },
     get globalFilter() {
-      return props.mode === 'server' ? '' : searchModel.value
+      return isServer.value ? '' : searchModel.value
     },
   },
   onSortingChange: (updater) => {
@@ -272,44 +284,52 @@ const table = useVueTable<TData>({
     searchModel.value = next as string
   },
   enableSorting: props.enableSorting,
-  enableGlobalFilter: props.mode === 'server' ? false : props.enableGlobalFilter,
+  enableGlobalFilter: isServer.value ? false : props.enableGlobalFilter,
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
-  getPaginationRowModel: getPaginationRowModel(),
   getRowId: (row, index) => String(row?.[props.rowIdKey] ?? index),
-  initialState: {
-    pagination: {
-      pageIndex: 0,
-      pageSize: props.pageSize,
-    },
-  },
 })
 
-const rows = computed(() => table.getRowModel().rows)
+const table = computed(() => {
+  if (isServer.value) return clientTable
+  return clientTable
+})
+
+const rows = computed(() => clientTable.getRowModel().rows)
 
 const containerStyle = computed(() => {
   const height = typeof props.height === 'number' ? `${props.height}px` : props.height
   return { maxHeight: height }
 })
 
-const totalLabelCount = computed(() => props.total ?? table.getPrePaginationRowModel().rows.length)
-
-const statusState = computed<'loading' | 'error' | 'empty'>(() => {
-  if (props.loading) return 'loading'
-  if (props.error) return 'error'
-  return 'empty'
+const totalLabelCount = computed(() => {
+  if (props.total !== null && props.total !== undefined) return props.total
+  if (isServer.value) return 0
+  return clientTable.getPrePaginationRowModel().rows.length
 })
 
-const statusLabel = computed(() => {
-  if (props.loading) return props.loadingLabel ?? 'Carregando registros...'
-  if (props.error) return props.errorLabel ?? props.error ?? 'Erro ao carregar dados'
-  return props.emptyLabel ?? 'Nenhum registro encontrado.'
+const currentPage = computed(() => {
+  if (isServer.value) return Math.max(1, props.page)
+  return clientTable.getState().pagination.pageIndex + 1
 })
+
+const currentPageSize = computed(() => {
+  if (isServer.value) return props.pageSize
+  return clientTable.getState().pagination.pageSize
+})
+
+const totalPages = computed(() => {
+  if (isServer.value) return Math.max(1, props.pageCount || 1)
+  return Math.max(1, clientTable.getPageCount())
+})
+
+const canPreviousPage = computed(() => currentPage.value > 1)
+const canNextPage = computed(() => currentPage.value < totalPages.value)
 
 const visiblePages = computed(() => {
-  const total = table.getPageCount()
-  const current = table.getState().pagination.pageIndex + 1
+  const total = totalPages.value
+  const current = currentPage.value
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
 
   const pages: (number | string)[] = []
@@ -325,6 +345,18 @@ const visiblePages = computed(() => {
   pages.push(total)
 
   return pages
+})
+
+const statusState = computed<'loading' | 'error' | 'empty'>(() => {
+  if (props.loading) return 'loading'
+  if (props.error) return 'error'
+  return 'empty'
+})
+
+const statusLabel = computed(() => {
+  if (props.loading) return props.loadingLabel ?? 'Carregando registros...'
+  if (props.error) return props.errorLabel ?? props.error ?? 'Erro ao carregar dados'
+  return props.emptyLabel ?? 'Nenhum registro encontrado.'
 })
 
 function headerClass(meta?: DataTableColumnMeta) {
@@ -368,17 +400,40 @@ function onRowClick(row: Row<TData> | undefined) {
   emit('rowClick', row.original)
 }
 
+function goToPage(page: number) {
+  if (props.loading) return
+  const target = Math.max(1, Math.min(totalPages.value, page))
+  if (target === currentPage.value) return
+
+  if (isServer.value) {
+    emit('update:page', target)
+  } else {
+    clientTable.setPageIndex(target - 1)
+  }
+}
+
 function onPageSizeChange(e: Event) {
   const value = Number((e.target as HTMLSelectElement).value)
-  table.setPageSize(value)
+  if (!value || value === currentPageSize.value) return
+
+  if (isServer.value) {
+    emit('update:pageSize', value)
+    emit('update:page', 1)
+  } else {
+    clientTable.setPageSize(value)
+  }
 }
 
 defineExpose({
-  table,
+  table: clientTable,
   reset: () => {
     searchModel.value = ''
     sorting.value = []
-    table.setPageIndex(0)
+    if (isServer.value) {
+      emit('update:page', 1)
+    } else {
+      clientTable.setPageIndex(0)
+    }
   },
 })
 </script>

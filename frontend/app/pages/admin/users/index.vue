@@ -28,7 +28,11 @@
       :row-id-key="'id'"
       :search-placeholder="$t('admin.users.searchPlaceholder')"
       :total-label="$t('admin.common.total')"
-      :total="items.length"
+      :total="paginationMeta.total"
+      :page="pagination.page"
+      :page-size="pagination.perPage"
+      :page-count="paginationMeta.totalPages"
+      :page-sizes="pageSizes"
       :loading="pending"
       :error="requestError"
       :empty-label="$t('admin.users.empty')"
@@ -37,13 +41,15 @@
       :height="540"
       :enable-sorting="true"
       :enable-global-filter="true"
-      mode="client"
+      mode="server"
       @row-click="onRowClick"
+      @update:page="setPage"
+      @update:page-size="setPageSize"
     >
       <template #footer>
         <div class="flex flex-col gap-3 rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3 text-xs text-base-content/60 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex flex-wrap items-center gap-3">
-            <span class="font-semibold">{{ $t('admin.common.total') }}: {{ items.length }}</span>
+            <span class="font-semibold">{{ $t('admin.common.total') }}: {{ paginationMeta.total }}</span>
             <span class="badge badge-soft badge-sm">{{ $t('admin.common.endpoint') }}: /admin/users</span>
           </div>
         </div>
@@ -54,8 +60,6 @@
 
 <script setup lang="ts">
 import { computed, h, resolveComponent } from 'vue'
-import { normalizeResourceResponse } from '~/utils/admin-resources'
-import { extractErrorMessage } from '~/utils/admin-ui'
 import type { DataTableColumn } from '~/types/data-table'
 
 definePageMeta({ layout: 'admin' })
@@ -76,10 +80,20 @@ interface UserRow {
   last_name?: string
 }
 
-const search = ref('')
-const { data, pending, error, refresh } = await useApiFetch<any>(() => '/admin/users', { key: 'admin-users-index', server: true, default: () => [] })
-const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
-const items = computed<UserRow[]>(() => normalizeResourceResponse(data.value) as UserRow[])
+const {
+  pagination,
+  paginationMeta,
+  pageSizes,
+  items,
+  pending,
+  requestError,
+  refresh,
+  setPage,
+  setPageSize,
+} = await useTablePagination<UserRow>(() => ({
+  key: 'admin-users-index',
+  url: '/admin/users',
+}))
 
 const columns = computed<DataTableColumn<UserRow>[]>(() => [
   {

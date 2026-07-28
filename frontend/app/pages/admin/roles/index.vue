@@ -27,12 +27,16 @@
     </div>
 
     <AppDataTable
-      :data="sortedItems"
+      :data="items"
       :columns="columns"
       row-id-key="id"
       :search-placeholder="$t('admin.roles.searchPlaceholder')"
       :total-label="$t('admin.common.total')"
-      :total="sortedItems.length"
+      :total="paginationMeta.total"
+      :page="pagination.page"
+      :page-size="pagination.perPage"
+      :page-count="paginationMeta.totalPages"
+      :page-sizes="pageSizes"
       :loading="pending"
       :error="requestError"
       :empty-label="$t('admin.roles.empty')"
@@ -41,13 +45,15 @@
       :height="540"
       :enable-sorting="true"
       :enable-global-filter="true"
-      mode="client"
+      mode="server"
       @row-click="onRowClick"
+      @update:page="setPage"
+      @update:page-size="setPageSize"
     >
       <template #footer>
         <div class="flex flex-col gap-3 rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3 text-xs text-base-content/60 lg:flex-row lg:items-center lg:justify-between">
           <div class="flex flex-wrap items-center gap-3">
-            <span class="font-semibold">{{ $t('admin.common.total') }}: {{ sortedItems.length }}</span>
+            <span class="font-semibold">{{ $t('admin.common.total') }}: {{ paginationMeta.total }}</span>
             <span class="badge badge-soft badge-sm">{{ $t('admin.common.endpoint') }}: /admin/roles</span>
           </div>
         </div>
@@ -58,9 +64,8 @@
 
 <script setup lang="ts">
 import { computed, h, resolveComponent } from 'vue'
-import { normalizeResourceResponse } from '~/utils/admin-resources'
 import { useAdminResource } from '~/utils/admin-resource-helpers'
-import { extractErrorMessage, formatDateTime } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/admin-ui'
 import type { DataTableColumn } from '~/types/data-table'
 
 definePageMeta({ layout: 'admin' })
@@ -84,15 +89,20 @@ const breadcrumbItems = computed(() => [
   { label: t('admin.roles.title') },
 ])
 
-const { data, pending, error, refresh } = await useApiFetch<any>(() => '/admin/roles', { key: 'admin-roles-index', server: true, default: () => [] })
-const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
-const sortedItems = computed<RoleRow[]>(() => {
-  const normalized = normalizeResourceResponse(data.value) as RoleRow[]
-  return [...normalized].sort((left, right) =>
-    new Date(right.updated_at || right.created_at || 0).getTime() -
-    new Date(left.updated_at || left.created_at || 0).getTime(),
-  )
-})
+const {
+  pagination,
+  paginationMeta,
+  pageSizes,
+  items,
+  pending,
+  requestError,
+  refresh,
+  setPage,
+  setPageSize,
+} = await useTablePagination<RoleRow>(() => ({
+  key: 'admin-roles-index',
+  url: '/admin/roles',
+}))
 
 const columns = computed<DataTableColumn<RoleRow>[]>(() => [
   {

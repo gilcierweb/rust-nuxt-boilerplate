@@ -335,6 +335,37 @@ export function normalizeResourceResponse(payload: any): Record<string, any>[] {
   return []
 }
 
+export interface ResourcePaginationMeta {
+  page: number
+  perPage: number
+  total: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
+}
+
+export const EMPTY_PAGINATION_META: ResourcePaginationMeta = {
+  page: 1,
+  perPage: 0,
+  total: 0,
+  totalPages: 1,
+  hasNext: false,
+  hasPrev: false,
+}
+
+export function extractPaginationMeta(payload: any): ResourcePaginationMeta {
+  if (!payload || !payload.pagination) return EMPTY_PAGINATION_META
+  const meta = payload.pagination
+  return {
+    page: Number(meta.page ?? 1),
+    perPage: Number(meta.per_page ?? meta.perPage ?? 0),
+    total: Number(meta.total ?? 0),
+    totalPages: Number(meta.total_pages ?? meta.totalPages ?? 1),
+    hasNext: Boolean(meta.has_next ?? meta.hasNext ?? false),
+    hasPrev: Boolean(meta.has_prev ?? meta.hasPrev ?? false),
+  }
+}
+
 export function extractResourceItem(payload: any): Record<string, any> | null {
   if (!payload) return null
   if (Array.isArray(payload)) return payload[0] ?? null
