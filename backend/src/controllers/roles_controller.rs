@@ -246,17 +246,24 @@ mod tests {
 
     #[actix_web::test]
     async fn list_roles_returns_ok_when_authority_is_present() {
+        use crate::utils::pagination::PaginatedResponse;
+
         let mut container = mock_container();
         let mut roles_repo = MockIRoleRepository::new();
-        roles_repo.expect_all().times(1).returning(|| {
-            Ok(vec![Role {
-                id: Uuid::new_v4(),
-                name: "admin".to_string(),
-                resource_type: None,
-                resource_id: None,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
-            }])
+        roles_repo.expect_list_paginated().times(1).returning(|_| {
+            Ok(PaginatedResponse::new(
+                vec![Role {
+                    id: Uuid::new_v4(),
+                    name: "admin".to_string(),
+                    resource_type: None,
+                    resource_id: None,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                }],
+                1,
+                1,
+                20,
+            ))
         });
         container.roles = Arc::new(roles_repo);
 

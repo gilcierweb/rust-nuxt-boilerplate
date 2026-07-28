@@ -149,25 +149,32 @@ mod tests {
 
     #[actix_web::test]
     async fn list_audit_logs_returns_ok_with_read_authority() {
+        use crate::utils::pagination::PaginatedResponse;
+
         let mut container = mock_container();
         let mut repo = MockIAuditLogRepository::new();
-        repo.expect_all().times(1).returning(|| {
-            Ok(vec![AuditLog {
-                id: Uuid::new_v4(),
-                actor_user_id: Some(Uuid::new_v4()),
-                actor_role_snapshot: Some("admin".to_string()),
-                action: "create".to_string(),
-                resource_type: "User".to_string(),
-                resource_id: Some(Uuid::new_v4()),
-                ip_address: None,
-                user_agent: None,
-                request_id: None,
-                changes: json!({}),
-                metadata: json!({}),
-                created_at: Utc::now(),
-                prev_hash: None,
-                hash: "a".repeat(64),
-            }])
+        repo.expect_list_paginated().times(1).returning(|_| {
+            Ok(PaginatedResponse::new(
+                vec![AuditLog {
+                    id: Uuid::new_v4(),
+                    actor_user_id: Some(Uuid::new_v4()),
+                    actor_role_snapshot: Some("admin".to_string()),
+                    action: "create".to_string(),
+                    resource_type: "User".to_string(),
+                    resource_id: Some(Uuid::new_v4()),
+                    ip_address: None,
+                    user_agent: None,
+                    request_id: None,
+                    changes: json!({}),
+                    metadata: json!({}),
+                    created_at: Utc::now(),
+                    prev_hash: None,
+                    hash: "a".repeat(64),
+                }],
+                1,
+                1,
+                20,
+            ))
         });
         container.domain_audit_logs = Arc::new(repo);
 

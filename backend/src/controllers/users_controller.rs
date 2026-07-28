@@ -46,7 +46,6 @@ mod tests {
     use actix_web::{App, body::to_bytes, http::StatusCode, test, web};
     use serde_json::Value;
 
-    use crate::repositories::profiles_repository::MockIProfileRepository;
     use crate::repositories::test_utils::mocks::mock_container;
     use crate::repositories::users_repository::MockIUserRepository;
 
@@ -72,21 +71,16 @@ mod tests {
 
     #[actix_web::test]
     async fn list_users_returns_ok_for_admin_with_read_authority() {
+        use crate::utils::pagination::PaginatedResponse;
+
         let mut container = mock_container();
 
         let mut users_repo = MockIUserRepository::new();
         users_repo
-            .expect_all()
+            .expect_list_paginated()
             .times(1)
-            .returning(|| Ok(Vec::new()));
+            .returning(|_| Ok(PaginatedResponse::new(Vec::new(), 0, 1, 20)));
         container.users = Arc::new(users_repo);
-
-        let mut profiles_repo = MockIProfileRepository::new();
-        profiles_repo
-            .expect_all()
-            .times(1)
-            .returning(|| Ok(Vec::new()));
-        container.profiles = Arc::new(profiles_repo);
 
         let app = test::init_service(
             App::new()
