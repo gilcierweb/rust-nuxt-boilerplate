@@ -81,14 +81,13 @@ const breadcrumbItems = computed(() => [
 ])
 
 const lookup = useAdminLookup()
-await Promise.all([lookup.load('users'), lookup.load('customers')])
+await lookup.load('users')
 
 interface AuditLogRow {
   id: string
   action: string
   resource_type: string
   actor_user_id?: string
-  target_customer_id?: string
   created_at?: string
 }
 
@@ -137,16 +136,6 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
     meta: { align: 'left' },
   },
   {
-    id: 'target_customer_id',
-    accessorKey: 'target_customer_id',
-    header: () => t('admin.auditLogs.table.customer'),
-    cell: (info) => {
-      const row = info.row.original as AuditLogRow
-      return lookup.resolveLabel('customers', row.target_customer_id)
-    },
-    meta: { align: 'left' },
-  },
-  {
     id: 'created_at',
     accessorKey: 'created_at',
     header: () => t('admin.auditLogs.table.createdAt'),
@@ -159,8 +148,9 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
     enableSorting: false,
     cell: (info) => {
       const row = info.row.original as AuditLogRow
-      const rowId = info.row.id
+      const rowId = row?.id
       const NuxtLink = resolveComponent('NuxtLink')
+      if (!rowId) return null
       return h('div', { class: 'flex justify-end gap-1' }, [
         h(
           NuxtLink,
@@ -169,6 +159,7 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.view'),
             title: t('admin.common.view'),
+            prefetch: false,
           },
           { default: () => h('span', { class: 'icon-[tabler--eye] size-5' }) },
         ),
@@ -179,6 +170,7 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.edit'),
             title: t('admin.common.edit'),
+            prefetch: false,
           },
           { default: () => h('span', { class: 'icon-[tabler--pencil] size-5' }) },
         ),
@@ -206,6 +198,7 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
 const { removeItem } = useAdminResource('audit-logs')
 
 async function removeEntity(item: AuditLogRow) {
+  if (!item.id) return
   deletePendingId.value = item.id
   try {
     const success = await removeItem(item, {
@@ -220,9 +213,8 @@ async function removeEntity(item: AuditLogRow) {
   }
 }
 
-function onRowClick(row: AuditLogRow, rowId?: string) {
-  const id = rowId ?? row?.id
-  if (!id) return
-  navigateTo(localePath(`/admin/audit-logs/${id}`))
+function onRowClick(row: AuditLogRow) {
+  if (!row?.id) return
+  navigateTo(localePath(`/admin/audit-logs/${row.id}`))
 }
 </script>

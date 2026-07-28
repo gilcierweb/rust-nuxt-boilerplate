@@ -18,6 +18,27 @@ import "flyonui/flyonui";
 
 export default defineNuxtPlugin(() => {
   const router = useRouter();
+
+  router.beforeEach((to) => {
+    // Block any navigation containing "undefined" as a path segment
+    // This prevents spurious XHR requests from NuxtLink prefetch or other sources
+    if (/\/undefined(\/|$)/.test(to.path)) {
+      const segments = to.path.split('/').filter(Boolean)
+      const undefinedIndex = segments.findIndex((s) => s === 'undefined')
+      
+      // Extract resource name dynamically (segment before "undefined")
+      let redirectPath = '/admin/dashboard'
+      if (undefinedIndex > 0) {
+        const resource = segments[undefinedIndex - 1]
+        if (resource !== 'admin') {
+          redirectPath = `/admin/${resource}`
+        }
+      }
+      
+      return redirectPath
+    }
+  })
+
   router.afterEach(async () => {
     setTimeout(() => window.HSStaticMethods.autoInit());
   });

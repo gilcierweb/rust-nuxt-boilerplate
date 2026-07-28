@@ -4,6 +4,18 @@ function isAssetLikePath(path: string) {
   return /\.[a-zA-Z0-9]+$/.test(path);
 }
 
+/**
+ * Detect if the route contains "undefined" as a path segment (e.g., /admin/audit-logs/undefined)
+ * This catches malformed navigations before they reach components.
+ */
+function hasUndefinedSegment(path: string): string | null {
+  const segments = path.split('/').filter(Boolean)
+  const undefinedIndex = segments.findIndex((s) => s === 'undefined')
+  if (undefinedIndex === -1) return null
+  // Return the resource name (segment before "undefined") for proper redirect
+  return segments[undefinedIndex - 1] ?? null
+}
+
 export default defineNuxtRouteMiddleware(async (to) => {
   const nuxtApp = useNuxtApp();
   const authStore = useAuthStore(nuxtApp.$pinia);
@@ -11,6 +23,19 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const isPublic = isPublicRoute(to.path);
   const authPage = isAuthPage(to.path);
   const isAdminRoute = to.path.startsWith("/admin") || to.path.startsWith("/en/admin") || to.path.startsWith("/es/admin");
+
+  // BLOCK: intercept any route containing "undefined" as a path segment
+  // This prevents `/admin/resource/undefined` navigations that were causing
+  // spurious SSR requests and prefetches.
+  const undefinedResource = hasUndefinedSegment(to.path)
+  if (undefinedResource) {
+    const redirectMap: Record<string, string> = {
+      'audit-logs': localePath('/admin/audit-logs'),
+      'roles': localePath('/admin/roles'),
+      'users': localePath('/admin/users'),
+    }
+    return navigateTo(redirectMap[undefinedResource] ?? localePath('/admin/dashboard'), { redirectCode: 302 })
+  }
 
   // Ignore dev/static-like paths accidentally routed through Vue Router.
   if (
@@ -20,6 +45,8 @@ export default defineNuxtRouteMiddleware(async (to) => {
   ) {
     return;
   }
+
+  // ... rest of existing middleware
 
   if (import.meta.server) {
     const event = useRequestEvent();

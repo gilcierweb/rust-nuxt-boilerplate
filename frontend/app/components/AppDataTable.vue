@@ -243,7 +243,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   refresh: []
-  rowClick: [row: TData, rowId: string]
+  rowClick: [row: TData]
   'action:click': [action: DataTableRowAction<TData>, row: TData]
   'update:search': [value: string]
   'update:sorting': [state: SortingState]
@@ -255,6 +255,12 @@ const searchModel = ref('')
 const sorting = ref<SortingState>(props.sorting ?? [])
 
 const isServer = computed(() => props.mode === 'server')
+
+function resolveRowId(row: TData): string | null {
+  const raw = row?.[props.rowIdKey as keyof TData]
+  if (raw === undefined || raw === null || raw === '') return null
+  return String(raw)
+}
 
 watch(
   () => props.sorting,
@@ -305,7 +311,7 @@ const clientTable = useVueTable<TData>({
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
-  getRowId: (row, index) => String(row?.[props.rowIdKey] ?? index),
+  getRowId: (row, index) => resolveRowId(row) ?? `__row_${index}`,
 })
 
 const table = clientTable
@@ -404,7 +410,7 @@ function onRowClick(row: Row<TData> | undefined, event?: MouseEvent) {
       return
     }
   }
-  emit('rowClick', row.original, row.id)
+  emit('rowClick', row.original)
 }
 
 function goToPage(page: number) {

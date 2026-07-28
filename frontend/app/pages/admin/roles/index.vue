@@ -143,8 +143,9 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
     enableSorting: false,
     cell: (info) => {
       const row = info.row.original as RoleRow
-      const rowId = info.row.id
+      const rowId = row?.id
       const NuxtLink = resolveComponent('NuxtLink')
+      if (!rowId) return null
       return h('div', { class: 'flex justify-end gap-1.5' }, [
         h(
           NuxtLink,
@@ -153,6 +154,7 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.view'),
             title: t('admin.common.view'),
+            prefetch: false,
           },
           { default: () => h('span', { class: 'icon-[tabler--eye] size-5' }) },
         ),
@@ -163,6 +165,7 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.edit'),
             title: t('admin.common.edit'),
+            prefetch: false,
           },
           { default: () => h('span', { class: 'icon-[tabler--pencil] size-5' }) },
         ),
@@ -190,6 +193,7 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
 const { removeItem } = useAdminResource('roles')
 
 async function removeRole(item: RoleRow) {
+  if (!item.id) return
   deletePendingId.value = item.id
   try {
     const success = await removeItem(item, {
@@ -204,9 +208,8 @@ async function removeRole(item: RoleRow) {
   }
 }
 
-function onRowClick(row: RoleRow, rowId?: string) {
-  const id = rowId ?? row?.id
-  if (!id) return
-  navigateTo(localePath(`/admin/roles/${id}`))
+function onRowClick(row: RoleRow) {
+  if (!row?.id) return
+  navigateTo(localePath(`/admin/roles/${row.id}`))
 }
 </script>

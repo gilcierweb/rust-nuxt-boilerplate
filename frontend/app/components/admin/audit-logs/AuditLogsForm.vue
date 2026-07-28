@@ -16,16 +16,6 @@
 
       <div class="grid gap-6 md:grid-cols-2">
         <div>
-          <label class="label-text font-semibold" for="auditLogCompanyId">Empresa</label>
-          <select id="auditLogCompanyId" v-model="form.company_id" class="select w-full" :disabled="lookup.isLoading('companies')">
-            <option value="">Selecione uma empresa</option>
-            <option v-for="company in companies" :key="company.id" :value="company.id">
-              {{ company.legal_name || company.trade_name || company.name }}
-            </option>
-          </select>
-        </div>
-
-        <div>
           <label class="label-text font-semibold" for="auditLogActorUserId">Usuário executor</label>
           <select id="auditLogActorUserId" v-model="form.actor_user_id" class="select w-full" :disabled="lookup.isLoading('users')">
             <option value="">Selecione um usuário</option>
@@ -38,16 +28,6 @@
         <div>
           <label class="label-text font-semibold" for="auditLogActorRoleSnapshot">Perfil capturado</label>
           <input id="auditLogActorRoleSnapshot" v-model="form.actor_role_snapshot" type="text" class="input w-full" />
-        </div>
-
-        <div>
-          <label class="label-text font-semibold" for="auditLogTargetCustomerId">Cliente alvo</label>
-          <select id="auditLogTargetCustomerId" v-model="form.target_customer_id" class="select w-full" :disabled="lookup.isLoading('customers')">
-            <option value="">Selecione um cliente</option>
-            <option v-for="customer in customers" :key="customer.id" :value="customer.id">
-              {{ customer.customer_code || customer.display_name || customer.email || customer.id }}
-            </option>
-          </select>
         </div>
 
         <div>
@@ -121,14 +101,10 @@ import AppAlert from '~/components/AppAlert.vue'
 const lookup = useAdminLookup()
 
 onMounted(() => {
-  lookup.load('companies')
   lookup.load('users')
-  lookup.load('customers')
 })
 
-const companies = computed(() => lookup.getItems('companies'))
 const users = computed(() => lookup.getItems('users'))
-const customers = computed(() => lookup.getItems('customers'))
 
 const { formAlertMessage } = useFormAlert()
 const localePath = useLocalePath()
@@ -137,13 +113,11 @@ const props = defineProps<{
   mode: 'create' | 'edit'
   initialValues: {
     id?: string
-    company_id?: string
     actor_user_id?: string
     actor_role_snapshot?: string
     action: string
     resource_type: string
     resource_id?: string
-    target_customer_id?: string
     ip_address?: string
     user_agent?: string
     request_id?: string

@@ -134,8 +134,9 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     enableSorting: false,
     cell: (info) => {
       const row = info.row.original as UserRow
-      const rowId = info.row.id
+      const rowId = row?.id
       const NuxtLink = resolveComponent('NuxtLink')
+      if (!rowId) return null
       return h('div', { class: 'flex justify-end gap-1' }, [
         h(
           NuxtLink,
@@ -144,6 +145,7 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.view'),
             title: t('admin.common.view'),
+            prefetch: false,
           },
           { default: () => h('span', { class: 'icon-[tabler--eye] size-5' }) },
         ),
@@ -153,9 +155,8 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
   },
 ])
 
-function onRowClick(row: UserRow, rowId?: string) {
-  const id = rowId ?? row?.id
-  if (!id) return
-  navigateTo(localePath(`/admin/users/${id}`))
+function onRowClick(row: UserRow) {
+  if (!row?.id) return
+  navigateTo(localePath(`/admin/users/${row.id}`))
 }
 </script>

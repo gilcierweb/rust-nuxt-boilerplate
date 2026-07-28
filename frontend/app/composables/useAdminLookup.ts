@@ -68,9 +68,17 @@ export function useAdminLookup() {
   async function load(entity: LookupEntity) {
     if (loadedByEntity.value[entity] || loadingByEntity.value[entity]) return
 
+    const endpoint = ENDPOINTS[entity]
+    if (!endpoint) {
+      if (import.meta.dev) {
+        console.warn(`[useAdminLookup] Unknown entity: "${entity}". Add it to ENDPOINTS to enable loading.`)
+      }
+      return
+    }
+
     loadingByEntity.value = { ...loadingByEntity.value, [entity]: true }
     try {
-      const payload = await api.get<any>(ENDPOINTS[entity])
+      const payload = await api.get<any>(endpoint)
       itemsByEntity.value = {
         ...itemsByEntity.value,
         [entity]: normalizeResourceResponse(payload) as EntityItem[],

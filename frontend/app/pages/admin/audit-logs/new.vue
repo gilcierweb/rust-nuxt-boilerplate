@@ -24,13 +24,11 @@ const api = useApi()
 const toast = useToast()
 
 const initialValues = {
-  company_id: '',
   actor_user_id: '',
   actor_role_snapshot: '',
   action: '',
   resource_type: '',
   resource_id: '',
-  target_customer_id: '',
   ip_address: '',
   user_agent: '',
   request_id: '',
@@ -45,13 +43,11 @@ async function handleSubmit(values: typeof initialValues) {
   try {
     await api.post('/admin/audit-logs', {
       body: {
-        ...(values.company_id ? { company_id: values.company_id } : {}),
         ...(values.actor_user_id ? { actor_user_id: values.actor_user_id } : {}),
         ...(values.actor_role_snapshot ? { actor_role_snapshot: values.actor_role_snapshot } : {}),
         action: values.action,
         resource_type: values.resource_type,
         ...(values.resource_id ? { resource_id: values.resource_id } : {}),
-        ...(values.target_customer_id ? { target_customer_id: values.target_customer_id } : {}),
         ...(values.ip_address ? { ip_address: values.ip_address } : {}),
         ...(values.user_agent ? { user_agent: values.user_agent } : {}),
         ...(values.request_id ? { request_id: values.request_id } : {}),

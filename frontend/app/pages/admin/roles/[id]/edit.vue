@@ -39,7 +39,7 @@
           <span class="icon-[tabler--alert-circle] size-6"></span>
           <div>
             <p class="font-semibold">{{ $t('admin.common.errorLoadingData') }}</p>
-            <p class="text-sm">{{ requestError }}</p>
+            <p class="text-sm">{{ error }}</p>
           </div>
         </div>
         <button class="btn btn-soft mt-4" @click="refresh()">{{ $t('admin.common.tryAgain') }}</button>
@@ -56,7 +56,6 @@
 
 <script setup lang="ts">
 import RolesForm from '~/components/admin/roles/RolesForm.vue'
-import { extractErrorMessage } from '~/utils/admin-ui'
 
 interface Role {
   id: string
@@ -80,22 +79,11 @@ const breadcrumbItems = computed(() => [
 
 const api = useApi()
 const toast = useToast()
-const route = useRoute()
-const roleId = computed(() => route.params.id as string)
+const { itemId: roleId, item: rawRole, pending, error, refresh } = useAdminResourceItem<Role>('roles', { keyPrefix: 'admin-roles-edit' })
 
-const { data, pending, error, refresh } = await useApiFetch<Role | { data: Role }>(
-  () => `/admin/roles/${roleId.value}`,
-  {
-    key: `admin-roles-edit-${roleId.value}`,
-    server: true,
-    default: () => null,
-  },
-)
-
-const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
 const role = computed(() => {
-  if (!data.value) return null
-  const item = 'data' in data.value ? data.value.data : data.value
+  const item = rawRole.value
+  if (!item) return null
   return {
     ...item,
     resource_type: item.resource_type || '',
@@ -106,6 +94,7 @@ const role = computed(() => {
 const saving = ref(false)
 
 async function handleSubmit(values: Role) {
+  if (!roleId.value) return
   saving.value = true
   try {
     await api.patch(`/admin/roles/${roleId.value}`, {

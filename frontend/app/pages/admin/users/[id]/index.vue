@@ -14,9 +14,9 @@
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <NuxtLink :to="localePath('/admin/users')" class="btn btn-ghost">
+          <NuxtLink :to="localePath('/admin/users')" class="btn btn-ghost" :prefetch="false">
             <span class="icon-[tabler--arrow-left] size-4.5"></span>
-            Voltar
+            {{ $t('admin.common.back') }}
           </NuxtLink>
         </div>
       </div>
@@ -29,50 +29,50 @@
       </div>
     </div>
 
-    <div v-else-if="requestError" class="rounded-box border border-error/20 bg-error/10 p-6">
+    <div v-else-if="error" class="rounded-box border border-error/20 bg-error/10 p-6">
       <div class="flex items-center gap-3 text-error">
         <span class="icon-[tabler--alert-circle] size-6"></span>
         <div>
           <p class="font-semibold">{{ $t('admin.common.errorLoadingData') }}</p>
-          <p class="text-sm">{{ requestError }}</p>
+          <p class="text-sm">{{ error }}</p>
         </div>
       </div>
       <button class="btn btn-soft mt-4" @click="refresh()">{{ $t('admin.common.tryAgain') }}</button>
     </div>
 
-    <div v-else-if="!user" class="rounded-box border border-warning/20 bg-warning/10 p-6 text-warning">
-      Usuário não encontrado.
+    <div v-else-if="!item" class="rounded-box border border-warning/20 bg-warning/10 p-6 text-warning">
+      {{ $t('admin.users.notFound') }}
     </div>
 
     <div v-else class="rounded-box border border-base-content/10 bg-base-100 p-6 shadow-md shadow-base-content/5">
       <div class="grid gap-6 md:grid-cols-2">
         <div>
           <p class="text-sm font-semibold text-base-content/70">ID</p>
-          <p class="mt-1 break-all text-base-content">{{ user.id }}</p>
+          <p class="mt-1 break-all text-base-content">{{ item.id }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.account.fields.email') }}</p>
-          <p class="mt-1 text-base-content">{{ user.email || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.email || '—' }}</p>
         </div>
         <div>
-          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.table.displayName') }}</p>
-          <p class="mt-1 text-base-content">{{ user.display_name || '—' }}</p>
+          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.displayName') }}</p>
+          <p class="mt-1 text-base-content">{{ item.display_name || '—' }}</p>
         </div>
         <div>
-          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.table.displayName') }}</p>
-          <p class="mt-1 text-base-content">{{ user.full_name || '—' }}</p>
+          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.fullName') }}</p>
+          <p class="mt-1 text-base-content">{{ item.full_name || '—' }}</p>
         </div>
         <div>
-          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.table.displayName') }}</p>
-          <p class="mt-1 text-base-content">{{ user.first_name || '—' }}</p>
+          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.firstName') }}</p>
+          <p class="mt-1 text-base-content">{{ item.first_name || '—' }}</p>
         </div>
         <div>
-          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.table.displayName') }}</p>
-          <p class="mt-1 text-base-content">{{ user.last_name || '—' }}</p>
+          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.lastName') }}</p>
+          <p class="mt-1 text-base-content">{{ item.last_name || '—' }}</p>
         </div>
         <div>
-          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.table.displayName') }}</p>
-          <p class="mt-1 text-base-content">{{ user.nickname || '—' }}</p>
+          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.nickname') }}</p>
+          <p class="mt-1 text-base-content">{{ item.nickname || '—' }}</p>
         </div>
       </div>
     </div>
@@ -80,9 +80,6 @@
 </template>
 
 <script setup lang="ts">
-import { extractErrorMessage } from '~/utils/admin-ui'
-import { normalizeResourceResponse } from '~/utils/admin-resources'
-
 definePageMeta({
   layout: 'admin',
 })
@@ -106,16 +103,7 @@ const breadcrumbItems = computed(() => [
   { label: t('admin.common.details') },
 ])
 
-const route = useRoute()
-const userId = computed(() => String(route.params.id || ''))
-
-const { data, pending, error, refresh } = await useApiFetch<any>(() => '/admin/users', {
-  key: `admin-users-show-${userId.value}`,
-  server: true,
-  default: () => [],
+const { itemId, item, pending, error, refresh } = useAdminResourceItem<UserRow>('users', {
+  keyPrefix: 'admin-users-show',
 })
-
-const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
-const items = computed<UserRow[]>(() => normalizeResourceResponse(data.value) as UserRow[])
-const user = computed(() => items.value.find((item) => item.id === userId.value) || null)
 </script>

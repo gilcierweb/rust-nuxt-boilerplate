@@ -14,11 +14,11 @@
         </div>
 
         <div class="flex flex-wrap gap-2">
-          <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">
+          <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost" :prefetch="false">
             <span class="icon-[tabler--arrow-left] size-4.5"></span>
             {{ $t('admin.common.back') }}
           </NuxtLink>
-          <NuxtLink :to="localePath(`/admin/roles/${roleId}/edit`)" class="btn btn-primary">
+          <NuxtLink v-if="roleId" :to="localePath(`/admin/roles/${roleId}/edit`)" class="btn btn-primary" :prefetch="false">
             <span class="icon-[tabler--edit] size-4.5"></span>
             {{ $t('admin.common.edit') }}
           </NuxtLink>
@@ -38,7 +38,7 @@
         <span class="icon-[tabler--alert-circle] size-6"></span>
         <div>
           <p class="font-semibold">{{ $t('admin.common.errorLoadingData') }}</p>
-          <p class="text-sm">{{ requestError }}</p>
+          <p class="text-sm">{{ error }}</p>
         </div>
       </div>
       <button class="btn btn-soft mt-4" @click="refresh()">{{ $t('admin.common.tryAgain') }}</button>
@@ -79,7 +79,7 @@
 </template>
 
 <script setup lang="ts">
-import { extractErrorMessage, formatDateTime } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/admin-ui'
 
 interface Role {
   id: string
@@ -103,21 +103,5 @@ const breadcrumbItems = computed(() => [
   { label: t('admin.common.details') },
 ])
 
-const route = useRoute()
-const roleId = computed(() => route.params.id as string)
-
-const { data, pending, error, refresh } = await useApiFetch<Role | { data: Role }>(
-  () => `/admin/roles/${roleId.value}`,
-  {
-    key: `admin-roles-show-${roleId.value}`,
-    server: true,
-    default: () => null,
-  },
-)
-
-const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
-const role = computed(() => {
-  if (!data.value) return null
-  return 'data' in data.value ? data.value.data : data.value
-})
+const { itemId: roleId, item: role, pending, error, refresh } = useAdminResourceItem<Role>('roles', { keyPrefix: 'admin-roles-show' })
 </script>
