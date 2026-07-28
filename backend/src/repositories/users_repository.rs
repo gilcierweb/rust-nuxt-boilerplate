@@ -3,8 +3,10 @@ use crate::db::schema::users as users_table;
 use crate::models::profile::Profile;
 use crate::models::user::{NewUser, User};
 use crate::repositories::base::BaseRepo;
-use crate::utils::pagination::{ListParams, PaginationParams, PaginatedResponse};
-pub use crate::repositories::traits::users_trait::{IUserRepository, IUserRepositoryTransaction, AdminUserLookupItem};
+pub use crate::repositories::traits::users_trait::{
+    AdminUserLookupItem, IUserRepository, IUserRepositoryTransaction,
+};
+use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
@@ -522,7 +524,7 @@ impl IUserRepository for UsersRepository {
             .await
     }
 
-async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
+    async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
         self.base
@@ -569,7 +571,8 @@ async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
                                 Box::new(e.to_string()),
                             )
                         })?,
-                    ).map_err(|e| {
+                    )
+                    .map_err(|e| {
                         diesel::result::Error::DatabaseError(
                             diesel::result::DatabaseErrorKind::Unknown,
                             Box::new(e.to_string()),
@@ -615,11 +618,7 @@ async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
                                 "id" => a.id.cmp(&b.id),
                                 _ => a.email.cmp(&b.email),
                             };
-                            if desc {
-                                ord.reverse()
-                            } else {
-                                ord
-                            }
+                            if desc { ord.reverse() } else { ord }
                         });
                     } else {
                         items.sort_by(|a, b| a.email.cmp(&b.email));
@@ -629,7 +628,8 @@ async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
                     let offset = list_params.offset() as usize;
                     let limit = list_params.limit() as usize;
 
-                    let paginated_data: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
+                    let paginated_data: Vec<_> =
+                        items.into_iter().skip(offset).take(limit).collect();
                     Ok(PaginatedResponse::new(
                         paginated_data,
                         total,

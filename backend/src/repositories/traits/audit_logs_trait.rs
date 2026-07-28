@@ -5,7 +5,7 @@ use diesel::QueryResult;
 use uuid::Uuid;
 
 use crate::models::audit_log::{AuditLog, NewAuditLog};
-use crate::utils::pagination::{PaginationParams, PaginatedResponse};
+use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -19,5 +19,8 @@ pub trait IAuditLogRepository: Send + Sync {
         cursor_id: Option<Uuid>,
         limit: i64,
     ) -> QueryResult<Vec<AuditLog>>;
-    async fn list_paginated(&self, params: &PaginationParams) -> QueryResult<PaginatedResponse<AuditLog>>;
+    async fn list_paginated(
+        &self,
+        params: &PaginationParams,
+    ) -> QueryResult<PaginatedResponse<AuditLog>>;
 }

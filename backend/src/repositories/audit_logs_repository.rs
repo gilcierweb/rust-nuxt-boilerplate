@@ -4,7 +4,7 @@ use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::audit_logs_trait::IAuditLogRepository;
 use crate::services::audit_log_service::compute_audit_log_hash;
-use crate::utils::pagination::{ListParams, PaginationParams, PaginatedResponse};
+use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
@@ -121,16 +121,17 @@ impl IAuditLogRepository for AuditLogsRepository {
             .await
     }
 
-    async fn list_paginated(&self, params: &PaginationParams) -> diesel::QueryResult<PaginatedResponse<AuditLog>> {
+    async fn list_paginated(
+        &self,
+        params: &PaginationParams,
+    ) -> diesel::QueryResult<PaginatedResponse<AuditLog>> {
         let list_params = ListParams::from(params.clone());
-        
+
         self.base
             .run(move |conn| {
                 Box::pin(async move {
                     // Load all data then sort in memory
-                    let mut data = audit_logs_table::table
-                        .load::<AuditLog>(conn)
-                        .await?;
+                    let mut data = audit_logs_table::table.load::<AuditLog>(conn).await?;
 
                     if let Some(sort_by) = list_params.sort_by.as_deref() {
                         let desc = list_params.sort_dir.as_deref() == Some("desc");
@@ -154,7 +155,12 @@ impl IAuditLogRepository for AuditLogsRepository {
                     let limit = list_params.limit() as usize;
                     let data: Vec<_> = data.into_iter().skip(offset).take(limit).collect();
 
-                    Ok(PaginatedResponse::new(data, total_count, list_params.page, list_params.per_page))
+                    Ok(PaginatedResponse::new(
+                        data,
+                        total_count,
+                        list_params.page,
+                        list_params.per_page,
+                    ))
                 })
             })
             .await

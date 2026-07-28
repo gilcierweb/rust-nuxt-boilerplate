@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 use crate::models::user::{NewUser, User};
-use crate::utils::pagination::{PaginationParams, PaginatedResponse};
+use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -69,13 +69,12 @@ pub trait IUserRepository: Send + Sync {
     ) -> QueryResult<usize>;
     async fn reset_password(&self, token_digest: &str, new_password: &str) -> QueryResult<usize>;
     async fn set_otp_secret(&self, user_id: &Uuid, secret: &str) -> QueryResult<usize>;
-    async fn enable_2fa(
-        &self,
-        user_id: &Uuid,
-        backup_codes: &[String],
-    ) -> QueryResult<usize>;
+    async fn enable_2fa(&self, user_id: &Uuid, backup_codes: &[String]) -> QueryResult<usize>;
     async fn disable_2fa(&self, user_id: &Uuid) -> QueryResult<usize>;
-    async fn list_paginated(&self, params: &PaginationParams) -> QueryResult<PaginatedResponse<AdminUserLookupItem>>;
+    async fn list_paginated(
+        &self,
+        params: &PaginationParams,
+    ) -> QueryResult<PaginatedResponse<AdminUserLookupItem>>;
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -83,9 +82,7 @@ pub trait IUserRepository: Send + Sync {
 pub trait IUserRepositoryTransaction: Send + Sync {
     async fn run_transaction<F, T, E>(&self, f: F) -> Result<T, E>
     where
-        F: for<'a> FnOnce(
-                &'a mut AsyncPgConnection,
-            ) -> BoxFuture<'a, Result<T, E>>
+        F: for<'a> FnOnce(&'a mut AsyncPgConnection) -> BoxFuture<'a, Result<T, E>>
             + Send
             + 'static,
         T: Send + 'static,

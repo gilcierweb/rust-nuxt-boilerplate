@@ -9,10 +9,7 @@ use crate::{
     errors::{AppError, AppResult},
     models::audit_log::NewAuditLog,
     repositories::container::AppContainer,
-    utils::{
-        pagination::PaginationParams,
-        validation::first_validation_error_message,
-    },
+    utils::{pagination::PaginationParams, validation::first_validation_error_message},
 };
 
 fn map_repo_error(error: DieselError, entity: &str) -> AppError {

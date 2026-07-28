@@ -3,7 +3,7 @@ use crate::db::schema::roles as roles_table;
 use crate::models::role::{NewRole, Role};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::roles_trait::IRoleRepository;
-use crate::utils::pagination::{ListParams, PaginationParams, PaginatedResponse};
+use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
@@ -90,16 +90,17 @@ impl IRoleRepository for RolesRepository {
             .await
     }
 
-    async fn list_paginated(&self, params: &PaginationParams) -> diesel::QueryResult<PaginatedResponse<Role>> {
+    async fn list_paginated(
+        &self,
+        params: &PaginationParams,
+    ) -> diesel::QueryResult<PaginatedResponse<Role>> {
         let list_params = ListParams::from(params.clone());
-        
+
         self.base
             .run(move |conn| {
                 Box::pin(async move {
                     // Load all data then sort in memory
-                    let mut data = roles_table::table
-                        .load::<Role>(conn)
-                        .await?;
+                    let mut data = roles_table::table.load::<Role>(conn).await?;
 
                     if let Some(sort_by) = list_params.sort_by.as_deref() {
                         let desc = list_params.sort_dir.as_deref() == Some("desc");
@@ -124,7 +125,12 @@ impl IRoleRepository for RolesRepository {
                     let limit = list_params.limit() as usize;
                     let data: Vec<_> = data.into_iter().skip(offset).take(limit).collect();
 
-                    Ok(PaginatedResponse::new(data, total_count, list_params.page, list_params.per_page))
+                    Ok(PaginatedResponse::new(
+                        data,
+                        total_count,
+                        list_params.page,
+                        list_params.per_page,
+                    ))
                 })
             })
             .await
