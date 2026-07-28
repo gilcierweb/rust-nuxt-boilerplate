@@ -46,9 +46,11 @@
       :enable-sorting="true"
       :enable-global-filter="true"
       mode="server"
+      :sorting="sorting"
       @row-click="onRowClick"
       @update:page="setPage"
       @update:page-size="setPageSize"
+      @update:sorting="setSorting"
     >
       <template #footer>
         <div class="flex flex-col gap-3 rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3 text-xs text-base-content/60 lg:flex-row lg:items-center lg:justify-between">
@@ -99,7 +101,9 @@ const {
   refresh,
   setPage,
   setPageSize,
-} = await useTablePagination<RoleRow>(() => ({
+  sorting,
+  setSorting,
+} = useTablePagination<RoleRow>(() => ({
   key: 'admin-roles-index',
   url: '/admin/roles',
 }))
@@ -139,12 +143,13 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
     enableSorting: false,
     cell: (info) => {
       const row = info.row.original as RoleRow
+      const rowId = info.row.id
       const NuxtLink = resolveComponent('NuxtLink')
       return h('div', { class: 'flex justify-end gap-1.5' }, [
         h(
           NuxtLink,
           {
-            to: localePath(`/admin/roles/${row.id}`),
+            to: localePath(`/admin/roles/${rowId}`),
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.view'),
             title: t('admin.common.view'),
@@ -154,7 +159,7 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
         h(
           NuxtLink,
           {
-            to: localePath(`/admin/roles/${row.id}/edit`),
+            to: localePath(`/admin/roles/${rowId}/edit`),
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.edit'),
             title: t('admin.common.edit'),
@@ -166,12 +171,12 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
           {
             type: 'button',
             class: 'btn btn-circle btn-text btn-sm text-error',
-            disabled: deletePendingId.value === row.id,
+            disabled: deletePendingId.value === rowId,
             onClick: () => removeRole(row),
           },
           {
             default: () =>
-              deletePendingId.value === row.id
+              deletePendingId.value === rowId
                 ? h('span', { class: 'icon-[tabler--loader-2] size-5 animate-spin' })
                 : h('span', { class: 'icon-[tabler--trash] size-5' }),
           },

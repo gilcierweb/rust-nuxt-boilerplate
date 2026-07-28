@@ -9,9 +9,12 @@ pub const MAX_PAGE_SIZE: i64 = 100;
 /// Maximum allowed page number to prevent abuse
 pub const MAX_PAGE: i64 = 10_000;
 
-/// Pagination parameters for list endpoints
+/// Sort direction
+pub type SortDir = String;
+
+/// Pagination and sorting parameters for list endpoints
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct PaginationParams {
     /// Page number (1-based)
     #[serde(default = "default_page")]
@@ -19,6 +22,10 @@ pub struct PaginationParams {
     /// Items per page (max 100)
     #[serde(default = "default_per_page")]
     pub per_page: i64,
+    /// Sort field name (e.g. "created_at", "email", "name")
+    pub sort_by: Option<String>,
+    /// Sort direction: "asc" or "desc"
+    pub sort_dir: Option<String>,
 }
 
 impl PaginationParams {
@@ -40,6 +47,8 @@ impl PaginationParams {
         Self {
             page: page.clamp(1, MAX_PAGE),
             per_page: per_page.clamp(1, MAX_PAGE_SIZE),
+            sort_by: None,
+            sort_dir: None,
         }
     }
 
@@ -48,6 +57,24 @@ impl PaginationParams {
         Self {
             page: self.page.clamp(1, MAX_PAGE),
             per_page: self.per_page.clamp(1, MAX_PAGE_SIZE),
+            sort_by: self.sort_by.clone(),
+            sort_dir: self.sort_dir.clone(),
+        }
+    }
+
+    /// Returns true if sorting is requested
+    pub fn has_sort(&self) -> bool {
+        self.sort_by
+            .as_ref()
+            .map(|s| !s.is_empty())
+            .unwrap_or(false)
+    }
+
+    /// Returns normalized sort direction (lowercase), defaulting to "asc"
+    pub fn sort_direction(&self) -> &'static str {
+        match self.sort_dir.as_deref() {
+            Some("desc") => "desc",
+            _ => "asc",
         }
     }
 }
@@ -57,6 +84,8 @@ impl Default for PaginationParams {
         Self {
             page: 1,
             per_page: DEFAULT_PAGE_SIZE,
+            sort_by: None,
+            sort_dir: None,
         }
     }
 }
@@ -98,6 +127,29 @@ impl<T> PaginatedResponse<T> {
                 has_prev: page > 1,
             },
         }
+    }
+
+    /// Build a paginated response from a full list, applying in-memory sorting first
+    pub fn from_sorted_list(
+        mut data: Vec<T>,
+        params: &PaginationParams,
+        sort_fn: impl Fn(&mut Vec<T>, &str, bool),
+    ) -> Self
+    where
+        T: serde::Serialize,
+    {
+        if params.has_sort() {
+            let field = params.sort_by.as_deref().unwrap_or("");
+            let desc = params.sort_direction() == "desc";
+            sort_fn(&mut data, field, desc);
+        }
+
+        let total = data.len() as i64;
+        let offset = params.offset() as usize;
+        let limit = params.limit() as usize;
+
+        let paginated_data: Vec<T> = data.into_iter().skip(offset).take(limit).collect();
+        Self::new(paginated_data, total, params.page, params.per_page)
     }
 }
 

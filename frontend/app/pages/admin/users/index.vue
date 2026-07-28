@@ -42,9 +42,11 @@
       :enable-sorting="true"
       :enable-global-filter="true"
       mode="server"
+      :sorting="sorting"
       @row-click="onRowClick"
       @update:page="setPage"
       @update:page-size="setPageSize"
+      @update:sorting="setSorting"
     >
       <template #footer>
         <div class="flex flex-col gap-3 rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3 text-xs text-base-content/60 lg:flex-row lg:items-center lg:justify-between">
@@ -90,7 +92,9 @@ const {
   refresh,
   setPage,
   setPageSize,
-} = await useTablePagination<UserRow>(() => ({
+  sorting,
+  setSorting,
+} = useTablePagination<UserRow>(() => ({
   key: 'admin-users-index',
   url: '/admin/users',
 }))
@@ -130,12 +134,13 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     enableSorting: false,
     cell: (info) => {
       const row = info.row.original as UserRow
+      const rowId = info.row.id
       const NuxtLink = resolveComponent('NuxtLink')
       return h('div', { class: 'flex justify-end gap-1' }, [
         h(
           NuxtLink,
           {
-            to: localePath(`/admin/users/${row.id}`),
+            to: localePath(`/admin/users/${rowId}`),
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.view'),
             title: t('admin.common.view'),

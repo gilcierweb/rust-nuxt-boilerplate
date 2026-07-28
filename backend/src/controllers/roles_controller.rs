@@ -63,13 +63,24 @@ pub async fn list_roles(
     let pagination = pagination.into_inner().validated();
     let items = container.roles.all().await.map_err(AppError::Database)?;
 
-    let total = items.len() as i64;
-    let offset = pagination.offset() as usize;
-    let limit = pagination.limit() as usize;
-
-    let paginated_data: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
     let response =
-        PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
+        PaginatedResponse::from_sorted_list(items, &pagination, |data, field, desc| {
+            data.sort_by(|a, b| {
+                let ord = match field {
+                    "name" => a.name.cmp(&b.name),
+                    "resource_type" => a.resource_type.cmp(&b.resource_type),
+                    "created_at" => a.created_at.cmp(&b.created_at),
+                    "updated_at" => a.updated_at.cmp(&b.updated_at),
+                    "id" => a.id.cmp(&b.id),
+                    _ => a.name.cmp(&b.name),
+                };
+                if desc {
+                    ord.reverse()
+                } else {
+                    ord
+                }
+            });
+        });
 
     Ok(HttpResponse::Ok().json(response))
 }

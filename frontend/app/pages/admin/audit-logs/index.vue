@@ -46,9 +46,11 @@
       :enable-sorting="true"
       :enable-global-filter="true"
       mode="server"
+      :sorting="sorting"
       @row-click="onRowClick"
       @update:page="setPage"
       @update:page-size="setPageSize"
+      @update:sorting="setSorting"
     >
       <template #footer>
         <div class="flex flex-col gap-3 rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3 text-xs text-base-content/60 lg:flex-row lg:items-center lg:justify-between">
@@ -102,7 +104,9 @@ const {
   refresh,
   setPage,
   setPageSize,
-} = await useTablePagination<AuditLogRow>(() => ({
+  sorting,
+  setSorting,
+} = useTablePagination<AuditLogRow>(() => ({
   key: 'admin-audit-logs-index',
   url: '/admin/audit-logs',
 }))
@@ -155,12 +159,13 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
     enableSorting: false,
     cell: (info) => {
       const row = info.row.original as AuditLogRow
+      const rowId = info.row.id
       const NuxtLink = resolveComponent('NuxtLink')
       return h('div', { class: 'flex justify-end gap-1' }, [
         h(
           NuxtLink,
           {
-            to: localePath(`/admin/audit-logs/${row.id}`),
+            to: localePath(`/admin/audit-logs/${rowId}`),
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.view'),
             title: t('admin.common.view'),
@@ -170,7 +175,7 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
         h(
           NuxtLink,
           {
-            to: localePath(`/admin/audit-logs/${row.id}/edit`),
+            to: localePath(`/admin/audit-logs/${rowId}/edit`),
             class: 'btn btn-circle btn-text btn-sm',
             'aria-label': t('admin.common.edit'),
             title: t('admin.common.edit'),
@@ -182,12 +187,12 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
           {
             type: 'button',
             class: 'btn btn-circle btn-text btn-sm text-error',
-            disabled: deletePendingId.value === row.id,
+            disabled: deletePendingId.value === rowId,
             onClick: () => removeEntity(row),
           },
           {
             default: () =>
-              deletePendingId.value === row.id
+              deletePendingId.value === rowId
                 ? h('span', { class: 'icon-[tabler--loader-2] size-5 animate-spin' })
                 : h('span', { class: 'icon-[tabler--trash] size-5' }),
           },

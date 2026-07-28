@@ -33,7 +33,7 @@
               v-for="col in table.getFlatHeaders()"
               :key="col.id"
               :class="headerClass(col.column.columnDef.meta)"
-              @click="onHeaderClick(col)"
+              @click="onHeaderClick(col, $event)"
             >
               <span
                 class="inline-flex items-center gap-1"
@@ -223,6 +223,7 @@ interface Props {
   pageSize?: number
   pageSizes?: number[]
   pageCount?: number
+  sorting?: SortingState
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -241,6 +242,7 @@ const props = withDefaults(defineProps<Props>(), {
   pageSizes: () => [10, 20, 30, 50],
   pageCount: 0,
   total: null,
+  sorting: () => [],
 })
 
 const emit = defineEmits<{
@@ -254,48 +256,63 @@ const emit = defineEmits<{
 }>()
 
 const searchModel = ref('')
-const sorting = ref<SortingState>([])
-
-watch(searchModel, (value) => emit('update:search', value))
-watch(sorting, (value) => emit('update:sorting', value))
+const sorting = ref<SortingState>(props.sorting ?? [])
 
 const isServer = computed(() => props.mode === 'server')
+
+watch(
+  () => props.sorting,
+  (value) => {
+    if (isServer.value && JSON.stringify(value) !== JSON.stringify(sorting.value)) {
+      sorting.value = value ?? []
+    }
+  },
+)
+
+watch(searchModel, (value) => {
+  if (!isServer.value) emit('update:search', value)
+})
+
+watch(sorting, (value) => {
+  if (!isServer.value) emit('update:sorting', value)
+})
 
 const clientTable = useVueTable<TData>({
   get data() {
     return props.data
   },
-  get columns() {
-    return props.columns as unknown as ColumnDef<TData, any>[]
-  },
+  columns: props.columns as unknown as ColumnDef<TData, any>[],
   state: {
     get sorting() {
       return sorting.value
     },
     get globalFilter() {
-      return isServer.value ? '' : searchModel.value
+      return isServer.value ? undefined : searchModel.value
     },
   },
   onSortingChange: (updater) => {
-    sorting.value = typeof updater === 'function' ? updater(sorting.value) : updater
+    const next = typeof updater === 'function' ? updater(sorting.value) : updater
+    sorting.value = next
+    if (isServer.value) emit('update:sorting', next)
   },
   onGlobalFilterChange: (updater) => {
-    const next = typeof updater === 'function' ? updater(searchModel.value) : updater
-    searchModel.value = next as string
+    if (!isServer.value) {
+      const next = typeof updater === 'function' ? updater(searchModel.value) : updater
+      searchModel.value = next
+    }
   },
   enableSorting: props.enableSorting,
-  enableGlobalFilter: isServer.value ? false : props.enableGlobalFilter,
+  enableGlobalFilter: !isServer.value && props.enableGlobalFilter,
+  manualSorting: isServer.value,
+  manualFiltering: isServer.value,
+  manualPagination: isServer.value,
   getCoreRowModel: getCoreRowModel(),
   getSortedRowModel: getSortedRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
   getRowId: (row, index) => String(row?.[props.rowIdKey] ?? index),
 })
 
-const table = computed(() => {
-  if (isServer.value) return clientTable
-  return clientTable
-})
-
+const table = clientTable
 const rows = computed(() => clientTable.getRowModel().rows)
 
 const containerStyle = computed(() => {
@@ -389,10 +406,10 @@ function alignClass(align?: 'left' | 'center' | 'right') {
   }
 }
 
-function onHeaderClick(header: Header<TData, unknown>) {
+function onHeaderClick(header: Header<TData, unknown>, event: MouseEvent) {
   if (!props.enableSorting) return
   if (!header.column.getCanSort()) return
-  header.column.getToggleSortingHandler()?.(undefined)
+  header.column.getToggleSortingHandler()?.(event)
 }
 
 function onRowClick(row: Row<TData> | undefined, event?: MouseEvent) {

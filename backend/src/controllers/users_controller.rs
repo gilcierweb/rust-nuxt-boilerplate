@@ -58,14 +58,25 @@ pub async fn list_users(
         });
     }
 
-    let total = items.len() as i64;
-    let offset = pagination.offset() as usize;
-    let limit = pagination.limit() as usize;
-
-    let paginated_data: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
-
     let response =
-        PaginatedResponse::new(paginated_data, total, pagination.page, pagination.per_page);
+        PaginatedResponse::from_sorted_list(items, &pagination, |data, field, desc| {
+            data.sort_by(|a, b| {
+                let ord = match field {
+                    "email" => a.email.cmp(&b.email),
+                    "first_name" => a.first_name.cmp(&b.first_name),
+                    "last_name" => a.last_name.cmp(&b.last_name),
+                    "full_name" => a.full_name.cmp(&b.full_name),
+                    "nickname" => a.nickname.cmp(&b.nickname),
+                    "id" => a.id.cmp(&b.id),
+                    _ => a.email.cmp(&b.email),
+                };
+                if desc {
+                    ord.reverse()
+                } else {
+                    ord
+                }
+            });
+        });
 
     Ok(HttpResponse::Ok().json(response))
 }
