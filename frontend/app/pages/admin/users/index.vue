@@ -22,69 +22,43 @@
       </div>
     </div>
 
-    <div class="rounded-box bg-base-100 p-5 pb-2 shadow-md shadow-base-300/10">
-      <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div class="rounded-box bg-base-200/70 px-4 py-3">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">{{ $t('admin.common.total') }}</p>
-          <p class="mt-2 text-2xl font-semibold text-base-content">{{ filteredItems.length }}</p>
+    <AppDataTable
+      :data="items"
+      :columns="columns"
+      :row-id-key="'id'"
+      :search-placeholder="$t('admin.users.searchPlaceholder')"
+      :total-label="$t('admin.common.total')"
+      :total="items.length"
+      :loading="pending"
+      :error="requestError"
+      :empty-label="$t('admin.users.empty')"
+      :loading-label="$t('admin.common.loadingRecords')"
+      :show-refresh="false"
+      :height="540"
+      :enable-sorting="true"
+      :enable-global-filter="true"
+      mode="client"
+      @row-click="onRowClick"
+    >
+      <template #footer>
+        <div class="flex flex-col gap-3 rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3 text-xs text-base-content/60 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="font-semibold">{{ $t('admin.common.total') }}: {{ items.length }}</span>
+            <span class="badge badge-soft badge-sm">{{ $t('admin.common.endpoint') }}: /admin/users</span>
+          </div>
         </div>
-
-        <label class="flex min-w-72 items-center gap-3 rounded-box border border-base-content/10 bg-base-200/70 px-3 py-2.5">
-          <span class="icon-[tabler--search] size-4 text-base-content/55"></span>
-          <input v-model="search" type="search" class="w-full bg-transparent text-sm outline-none placeholder:text-base-content/45" :placeholder="$t('admin.users.searchPlaceholder')" />
-        </label>
-      </div>
-
-      <div v-if="requestError" class="mb-4 rounded-box border border-error/20 bg-error/10 px-4 py-3 text-sm text-error">
-        {{ requestError }}
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>{{ $t('admin.users.table.displayName') }}</th>
-              <th>{{ $t('admin.users.table.email') }}</th>
-              <th>{{ $t('admin.users.table.displayName') }}</th>
-              <th>{{ $t('admin.users.table.email') }}</th>
-              <th class="w-20 text-right">{{ $t('admin.common.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="pending">
-              <td colspan="5" class="py-10 text-center text-base-content/55">
-                <span class="icon-[tabler--loader-2] mr-2 inline-block size-6 animate-spin"></span>
-                {{ $t('admin.common.loadingRecords') }}
-              </td>
-            </tr>
-            <tr v-else-if="!filteredItems.length">
-              <td colspan="5" class="py-10 text-center text-base-content/55">{{ $t('admin.users.empty') }}</td>
-            </tr>
-            <tr v-for="item in filteredItems" :key="item.id">
-              <td>{{ item.display_name || '—' }}</td>
-              <td>{{ item.email }}</td>
-              <td>{{ item.first_name || '—' }}</td>
-              <td>{{ item.last_name || '—' }}</td>
-              <td class="text-right">
-                <NuxtLink :to="localePath(`/admin/users/${item.id}`)" class="btn btn-circle btn-text btn-sm" :aria-label="$t('admin.common.view')" :title="$t('admin.common.view')">
-                  <span class="icon-[tabler--eye] size-5"></span>
-                </NuxtLink>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      </template>
+    </AppDataTable>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed, h, resolveComponent } from 'vue'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
 import { extractErrorMessage } from '~/utils/admin-ui'
+import type { DataTableColumn } from '~/types/data-table'
 
-definePageMeta({
-  layout: 'admin'
-})
+definePageMeta({ layout: 'admin' })
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -103,17 +77,64 @@ interface UserRow {
 }
 
 const search = ref('')
-const { data, pending, error, refresh } = await useApiFetch<any>(() => '/admin/users', {
-  key: 'admin-users-index',
-  server: true,
-  default: () => [],
-})
-
+const { data, pending, error, refresh } = await useApiFetch<any>(() => '/admin/users', { key: 'admin-users-index', server: true, default: () => [] })
 const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
 const items = computed<UserRow[]>(() => normalizeResourceResponse(data.value) as UserRow[])
-const filteredItems = computed(() => {
-  const query = search.value.trim().toLowerCase()
-  if (!query) return items.value
-  return items.value.filter((item) => JSON.stringify(item).toLowerCase().includes(query))
-})
+
+const columns = computed<DataTableColumn<UserRow>[]>(() => [
+  {
+    id: 'display_name',
+    accessorKey: 'display_name',
+    header: () => t('admin.users.table.displayName'),
+    cell: (info) => info.getValue() || '—',
+    meta: { align: 'left' },
+  },
+  {
+    id: 'email',
+    accessorKey: 'email',
+    header: () => t('admin.users.table.email'),
+    cell: (info) => info.getValue(),
+    meta: { align: 'left' },
+  },
+  {
+    id: 'first_name',
+    accessorKey: 'first_name',
+    header: () => t('admin.users.table.firstName'),
+    cell: (info) => info.getValue() || '—',
+    meta: { align: 'left' },
+  },
+  {
+    id: 'last_name',
+    accessorKey: 'last_name',
+    header: () => t('admin.users.table.lastName'),
+    cell: (info) => info.getValue() || '—',
+    meta: { align: 'left' },
+  },
+  {
+    id: 'actions',
+    header: () => t('admin.common.actions'),
+    enableSorting: false,
+    cell: (info) => {
+      const row = info.row.original as UserRow
+      const NuxtLink = resolveComponent('NuxtLink')
+      return h('div', { class: 'flex justify-end gap-1' }, [
+        h(
+          NuxtLink,
+          {
+            to: localePath(`/admin/users/${row.id}`),
+            class: 'btn btn-circle btn-text btn-sm',
+            'aria-label': t('admin.common.view'),
+            title: t('admin.common.view'),
+          },
+          { default: () => h('span', { class: 'icon-[tabler--eye] size-5' }) },
+        ),
+      ])
+    },
+    meta: { align: 'right' },
+  },
+])
+
+function onRowClick(row: UserRow) {
+  navigateTo(localePath(`/admin/users/${row.id}`))
+}
 </script>

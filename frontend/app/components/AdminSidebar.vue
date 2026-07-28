@@ -138,7 +138,7 @@
 </template>
 
 <script setup lang="ts">
-import { ADMIN_RESOURCES } from '~/utils/admin-resources'
+import { ADMIN_RESOURCES, ADMIN_RESOURCE_SIDEBAR_LABELS } from '~/utils/admin-resources'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -170,17 +170,16 @@ const currentSlug = computed(() => {
 
 const isDashboardActive = computed(() => basePath.value === '/admin/dashboard')
 
-const SLUG_TO_I18N: Record<string, string> = {
-  'audit-logs': 'auditLogs',
-}
-
 const managementItems = computed(() => {
   return ADMIN_RESOURCES
     .filter((item) => item.group === 'management')
-    .map((item) => ({
-      ...item,
-      label: t(`admin.sidebar.${SLUG_TO_I18N[item.slug] || item.slug}`),
-    }))
+    .map((item) => {
+      const key = ADMIN_RESOURCE_SIDEBAR_LABELS[item.slug] || item.slug
+      return {
+        ...item,
+        label: t(`admin.sidebar.${key}`),
+      }
+    })
 })
 
 const dashboardOpen = ref(isDashboardActive.value)

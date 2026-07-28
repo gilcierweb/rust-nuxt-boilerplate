@@ -26,82 +26,49 @@
       </div>
     </div>
 
-    <div class="rounded-box bg-base-100 p-5 pb-2 shadow-md shadow-base-300/10">
-      <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div class="rounded-box bg-base-200/70 px-4 py-3">
-          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">{{ $t('admin.common.total') }}</p>
-          <p class="mt-2 text-2xl font-semibold text-base-content">{{ filteredItems.length }}</p>
+    <AppDataTable
+      :data="sortedItems"
+      :columns="columns"
+      row-id-key="id"
+      :search-placeholder="$t('admin.roles.searchPlaceholder')"
+      :total-label="$t('admin.common.total')"
+      :total="sortedItems.length"
+      :loading="pending"
+      :error="requestError"
+      :empty-label="$t('admin.roles.empty')"
+      :loading-label="$t('admin.common.loadingRecords')"
+      :show-refresh="false"
+      :height="540"
+      :enable-sorting="true"
+      :enable-global-filter="true"
+      mode="client"
+      @row-click="onRowClick"
+    >
+      <template #footer>
+        <div class="flex flex-col gap-3 rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3 text-xs text-base-content/60 lg:flex-row lg:items-center lg:justify-between">
+          <div class="flex flex-wrap items-center gap-3">
+            <span class="font-semibold">{{ $t('admin.common.total') }}: {{ sortedItems.length }}</span>
+            <span class="badge badge-soft badge-sm">{{ $t('admin.common.endpoint') }}: /admin/roles</span>
+          </div>
         </div>
-
-        <label class="flex min-w-72 items-center gap-3 rounded-box border border-base-content/10 bg-base-200/70 px-3 py-2.5">
-          <span class="icon-[tabler--search] size-4 text-base-content/55"></span>
-          <input v-model="search" type="search" class="w-full bg-transparent text-sm outline-none placeholder:text-base-content/45" :placeholder="$t('admin.roles.searchPlaceholder')" />
-        </label>
-      </div>
-
-      <div v-if="requestError" class="mb-4 rounded-box border border-error/20 bg-error/10 px-4 py-3 text-sm text-error">
-        {{ requestError }}
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>{{ $t('admin.roles.table.name') }}</th>
-              <th>{{ $t('admin.roles.table.resourceType') }}</th>
-              <th>{{ $t('admin.roles.form.resource_id') }}</th>
-              <th>{{ $t('admin.roles.form.updated_at') }}</th>
-              <th class="w-36 text-right">{{ $t('admin.common.actions') }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-if="pending">
-              <td colspan="5" class="py-10 text-center text-base-content/55">
-                <span class="icon-[tabler--loader-2] mr-2 inline-block size-6 animate-spin"></span>
-                {{ $t('admin.common.loadingRecords') }}
-              </td>
-            </tr>
-            <tr v-else-if="!filteredItems.length">
-              <td colspan="5" class="py-10 text-center text-base-content/55">{{ $t('admin.roles.empty') }}</td>
-            </tr>
-            <tr v-for="item in filteredItems" :key="item.id">
-              <td>{{ item.name }}</td>
-              <td>{{ item.resource_type || '—' }}</td>
-              <td class="max-w-56 truncate">{{ item.resource_id || '—' }}</td>
-              <td>{{ formatDateTime(item.updated_at) }}</td>
-              <td>
-                <div class="flex justify-end gap-1.5">
-                  <NuxtLink :to="showPath(item.id)" class="btn btn-circle btn-text btn-sm" :aria-label="$t('admin.common.view')" :title="$t('admin.common.view')">
-                    <span class="icon-[tabler--eye] size-5"></span>
-                  </NuxtLink>
-                  <NuxtLink :to="editPath(item.id)" class="btn btn-circle btn-text btn-sm" :aria-label="$t('admin.common.edit')" :title="$t('admin.common.edit')">
-                    <span class="icon-[tabler--pencil] size-5"></span>
-                  </NuxtLink>
-                  <button type="button" class="btn btn-circle btn-text btn-sm text-error" :disabled="deletePendingId === item.id" @click="removeRole(item)">
-                    <span v-if="deletePendingId === item.id" class="icon-[tabler--loader-2] size-5 animate-spin"></span>
-                    <span v-else class="icon-[tabler--trash] size-5"></span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+      </template>
+    </AppDataTable>
   </section>
 </template>
 
 <script setup lang="ts">
+import { computed, h, resolveComponent } from 'vue'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
 import { useAdminResource } from '~/utils/admin-resource-helpers'
 import { extractErrorMessage, formatDateTime } from '~/utils/admin-ui'
+import type { DataTableColumn } from '~/types/data-table'
 
 definePageMeta({ layout: 'admin' })
 
 const { t } = useI18n()
 const localePath = useLocalePath()
 
-type RoleRow = {
+interface RoleRow {
   id: string
   name: string
   resource_type?: string
@@ -110,33 +77,102 @@ type RoleRow = {
   created_at?: string
 }
 
-const search = ref('')
 const deletePendingId = ref<string | null>(null)
-const basePath = '/admin/roles'
 
 const breadcrumbItems = computed(() => [
   { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
   { label: t('admin.roles.title') },
 ])
 
-const { data, pending, error, refresh } = await useApiFetch<any>(() => '/admin/roles', {
-  key: 'admin-roles-index',
-  server: true,
-  default: () => [],
-})
-
+const { data, pending, error, refresh } = await useApiFetch<any>(() => '/admin/roles', { key: 'admin-roles-index', server: true, default: () => [] })
 const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
-const items = computed<RoleRow[]>(() => {
+const sortedItems = computed<RoleRow[]>(() => {
   const normalized = normalizeResourceResponse(data.value) as RoleRow[]
-  return [...normalized].sort((left, right) => new Date(right.updated_at || right.created_at || 0).getTime() - new Date(left.updated_at || left.created_at || 0).getTime())
-})
-const filteredItems = computed(() => {
-  const query = search.value.trim().toLowerCase()
-  if (!query) return items.value
-  return items.value.filter((item) => JSON.stringify(item).toLowerCase().includes(query))
+  return [...normalized].sort((left, right) =>
+    new Date(right.updated_at || right.created_at || 0).getTime() -
+    new Date(left.updated_at || left.created_at || 0).getTime(),
+  )
 })
 
-const { showPath, editPath, removeItem } = useAdminResource('roles')
+const columns = computed<DataTableColumn<RoleRow>[]>(() => [
+  {
+    id: 'name',
+    accessorKey: 'name',
+    header: () => t('admin.roles.table.name'),
+    cell: (info) => info.getValue(),
+    meta: { align: 'left' },
+  },
+  {
+    id: 'resource_type',
+    accessorKey: 'resource_type',
+    header: () => t('admin.roles.table.resourceType'),
+    cell: (info) => info.getValue() || '—',
+    meta: { align: 'left' },
+  },
+  {
+    id: 'resource_id',
+    accessorKey: 'resource_id',
+    header: () => t('admin.roles.form.resource_id'),
+    cell: (info) => info.getValue() || '—',
+    meta: { align: 'left', truncate: true },
+  },
+  {
+    id: 'updated_at',
+    accessorKey: 'updated_at',
+    header: () => t('admin.roles.form.updated_at'),
+    cell: (info) => formatDateTime(info.getValue() as string | undefined),
+    meta: { align: 'right' },
+  },
+  {
+    id: 'actions',
+    header: () => t('admin.common.actions'),
+    enableSorting: false,
+    cell: (info) => {
+      const row = info.row.original as RoleRow
+      const NuxtLink = resolveComponent('NuxtLink')
+      return h('div', { class: 'flex justify-end gap-1.5' }, [
+        h(
+          NuxtLink,
+          {
+            to: localePath(`/admin/roles/${row.id}`),
+            class: 'btn btn-circle btn-text btn-sm',
+            'aria-label': t('admin.common.view'),
+            title: t('admin.common.view'),
+          },
+          { default: () => h('span', { class: 'icon-[tabler--eye] size-5' }) },
+        ),
+        h(
+          NuxtLink,
+          {
+            to: localePath(`/admin/roles/${row.id}/edit`),
+            class: 'btn btn-circle btn-text btn-sm',
+            'aria-label': t('admin.common.edit'),
+            title: t('admin.common.edit'),
+          },
+          { default: () => h('span', { class: 'icon-[tabler--pencil] size-5' }) },
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            class: 'btn btn-circle btn-text btn-sm text-error',
+            disabled: deletePendingId.value === row.id,
+            onClick: () => removeRole(row),
+          },
+          {
+            default: () =>
+              deletePendingId.value === row.id
+                ? h('span', { class: 'icon-[tabler--loader-2] size-5 animate-spin' })
+                : h('span', { class: 'icon-[tabler--trash] size-5' }),
+          },
+        ),
+      ])
+    },
+    meta: { align: 'right' },
+  },
+])
+
+const { removeItem } = useAdminResource('roles')
 
 async function removeRole(item: RoleRow) {
   deletePendingId.value = item.id
@@ -151,5 +187,9 @@ async function removeRole(item: RoleRow) {
   } finally {
     deletePendingId.value = null
   }
+}
+
+function onRowClick(row: RoleRow) {
+  navigateTo(localePath(`/admin/roles/${row.id}`))
 }
 </script>

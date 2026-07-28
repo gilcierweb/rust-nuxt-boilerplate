@@ -95,7 +95,9 @@
       "searchPlaceholder": "Filtrar usuarios...",
       "table": {
         "displayName": "Nombre para mostrar",
-        "email": "Correo"
+        "email": "Correo",
+        "firstName": "Nombre",
+        "lastName": "Apellido"
       },
       "empty": "No se encontraron usuarios."
     },

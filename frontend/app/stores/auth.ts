@@ -62,6 +62,8 @@ export const useAuthStore = defineStore('auth', {
     hasSession: false,
   }),
 
+  persist: false,
+
   getters: {
     isAuthenticated: (state) => !!state.accessToken && !!state.user,
     hasActiveSession: (state) => state.hasSession && !!state.user,

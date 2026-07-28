@@ -88,6 +88,9 @@ security: {
         "script-src-attr": ["'none'"],
       },
     },
+    // CSRF disabled at Nitro level for API proxy routes via routeRules above.
+    // The Actix backend has its own HMAC-SHA256 CSRF protection (CsrfProtection
+    // middleware) with token rotation, expiry, and grace period.
     csrf: true,
   },
 
@@ -224,6 +227,8 @@ security: {
           rateLimiter: false,
           csrf: false,
         },
+        // nuxt-csurf reads `csurf` from route rules (NOT security.csrf)
+        csurf: false,
       },
       // Public marketing pages — Stale-While-Revalidate (ISR)
       // Pages revalidated in background; visitors always get a fast cached version

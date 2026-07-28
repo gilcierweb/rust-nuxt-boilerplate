@@ -197,6 +197,12 @@ export const ADMIN_RESOURCE_GROUP_LABELS: Record<AdminResourceGroup, string> = {
   management: 'Gestão',
 }
 
+export const ADMIN_RESOURCE_SIDEBAR_LABELS: Record<string, string> = {
+  users: 'users',
+  roles: 'roles',
+  'audit-logs': 'auditLogs',
+}
+
 function formatDateTimeLocalValue(value: unknown) {
   if (!value) return ''
 
