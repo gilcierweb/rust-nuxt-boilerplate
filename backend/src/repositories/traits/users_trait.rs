@@ -75,6 +75,8 @@ pub trait IUserRepository: Send + Sync {
         &self,
         params: &PaginationParams,
     ) -> QueryResult<PaginatedResponse<AdminUserLookupItem>>;
+
+    async fn find_by_id_with_profile(&self, id: &Uuid) -> QueryResult<AdminUserItem>;
 }
 
 #[cfg_attr(test, mockall::automock)]
@@ -98,4 +100,16 @@ pub struct AdminUserLookupItem {
     pub last_name: Option<String>,
     pub full_name: Option<String>,
     pub nickname: Option<String>,
+}
+
+/// DTO for single user detail (includes profile data)
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AdminUserItem {
+    pub id: Uuid,
+    pub email: String,
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub full_name: Option<String>,
+    pub nickname: Option<String>,
+    pub display_name: Option<String>,
 }

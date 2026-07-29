@@ -116,4 +116,18 @@ impl AppError {
     pub fn should_log_internal_details(&self) -> bool {
         matches!(self, AppError::Database(_) | AppError::Internal(_))
     }
+
+    /// Convert a Diesel query error to an `AppError`, mapping `NotFound` to
+    /// `AppError::NotFound(entity)` and everything else to `AppError::Database`.
+    ///
+    /// Use this in controllers instead of duplicating the match pattern:
+    /// ```rust
+    /// .map_err(|e| AppError::from_diesel(e, "Role"))?;
+    /// ```
+    pub fn from_diesel(error: DieselError, entity: &str) -> Self {
+        match error {
+            DieselError::NotFound => AppError::NotFound(entity.to_string()),
+            other => AppError::Database(other),
+        }
+    }
 }

@@ -10,6 +10,13 @@ use crate::{
 
 pub use crate::repositories::traits::users_trait::AdminUserLookupItem;
 
+fn map_repo_error(error: diesel::result::Error, entity: &str) -> AppError {
+    match error {
+        diesel::result::Error::NotFound => AppError::NotFound(entity.to_string()),
+        other => AppError::Database(other),
+    }
+}
+
 #[get("/users")]
 pub async fn list_users(
     details: AuthDetails,
@@ -28,8 +35,25 @@ pub async fn list_users(
     Ok(HttpResponse::Ok().json(response))
 }
 
+#[get("/users/{id}")]
+pub async fn get_user(
+    details: AuthDetails,
+    container: web::Data<AppContainer>,
+    user_id: web::Path<uuid::Uuid>,
+) -> AppResult<HttpResponse> {
+    authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
+
+    let item = container
+        .users
+        .find_by_id_with_profile(&user_id.into_inner())
+        .await
+        .map_err(|error| map_repo_error(error, "User"))?;
+
+    Ok(HttpResponse::Ok().json(item))
+}
+
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(list_users);
+    cfg.service(list_users).service(get_user);
 }
 
 #[cfg(test)]

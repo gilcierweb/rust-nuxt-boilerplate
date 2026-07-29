@@ -4,7 +4,7 @@ use crate::models::profile::Profile;
 use crate::models::user::{NewUser, User};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::users_trait::{
-    AdminUserLookupItem, IUserRepository, IUserRepositoryTransaction,
+    AdminUserItem, AdminUserLookupItem, IUserRepository, IUserRepositoryTransaction,
 };
 use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
 use chrono::NaiveDateTime;
@@ -636,6 +636,81 @@ impl IUserRepository for UsersRepository {
                         list_params.page,
                         list_params.per_page,
                     ))
+                })
+            })
+            .await
+    }
+    async fn find_by_id_with_profile(&self, uid: &Uuid) -> diesel::QueryResult<AdminUserItem> {
+        let uid_val = *uid;
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    let user = users_table::table
+                        .find(uid_val)
+                        .select(User::as_select())
+                        .first::<User>(conn)
+                        .await?;
+
+                    let profile = crate::db::schema::profiles::table
+                        .filter(
+                            crate::db::schema::profiles::dsl::user_id.eq(uid_val),
+                        )
+                        .select(Profile::as_select())
+                        .first::<Profile>(conn)
+                        .await
+                        .optional()?;
+
+                    let security = crate::security::SecurityService::from_config(
+                        &crate::config::AppConfig::from_env().map_err(|e| {
+                            diesel::result::Error::DatabaseError(
+                                diesel::result::DatabaseErrorKind::Unknown,
+                                Box::new(e.to_string()),
+                            )
+                        })?,
+                    )
+                    .map_err(|e| {
+                        diesel::result::Error::DatabaseError(
+                            diesel::result::DatabaseErrorKind::Unknown,
+                            Box::new(e.to_string()),
+                        )
+                    })?;
+
+                    let email = security.decrypt_user_email(&user).map_err(|e| {
+                        diesel::result::Error::DatabaseError(
+                            diesel::result::DatabaseErrorKind::Unknown,
+                            Box::new(e.to_string()),
+                        )
+                    })?;
+
+                    let first_name = profile.as_ref().and_then(|p| p.first_name.clone());
+                    let last_name = profile.as_ref().and_then(|p| p.last_name.clone());
+                    let full_name = profile.as_ref().and_then(|p| p.full_name.clone());
+                    let nickname = profile.as_ref().and_then(|p| p.nickname.clone());
+
+                    let display_name = profile
+                        .as_ref()
+                        .and_then(|p| p.full_name.clone())
+                        .or_else(|| {
+                            let parts: Vec<&str> = [first_name.as_deref(), last_name.as_deref()]
+                                .iter()
+                                .filter_map(|s| *s)
+                                .collect();
+                            if parts.is_empty() {
+                                None
+                            } else {
+                                Some(parts.join(" "))
+                            }
+                        });
+
+                    Ok(AdminUserItem {
+                        id: user.id,
+                        email,
+                        first_name,
+                        last_name,
+                        full_name,
+                        nickname,
+                        display_name,
+                    })
                 })
             })
             .await

@@ -1,6 +1,5 @@
 use actix_web::{HttpResponse, delete, get, patch, post, web};
 use actix_web_grants::authorities::AuthDetails;
-use diesel::result::Error as DieselError;
 use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
@@ -17,13 +16,6 @@ use crate::{
         validation::first_validation_error_message,
     },
 };
-
-fn map_repo_error(error: DieselError, entity: &str) -> AppError {
-    match error {
-        DieselError::NotFound => AppError::NotFound(entity.to_string()),
-        other => AppError::Database(other),
-    }
-}
 
 #[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function = "validate_role_scope", skip_on_field_errors = false))]
@@ -81,7 +73,7 @@ pub async fn get_role(
         .roles
         .find(&id.into_inner())
         .await
-        .map_err(|error| map_repo_error(error, "Role"))?;
+        .map_err(|e| AppError::from_diesel(e, "Role"))?;
     Ok(HttpResponse::Ok().json(item))
 }
 
@@ -137,7 +129,7 @@ pub async fn update_role(
         .roles
         .update(&role_id, &new_role)
         .await
-        .map_err(|error| map_repo_error(error, "Role"))?;
+        .map_err(|e| AppError::from_diesel(e, "Role"))?;
 
     // Invalidate cached roles for all users assigned to this role
     invalidate_role_cache(&container, &role_id).await;

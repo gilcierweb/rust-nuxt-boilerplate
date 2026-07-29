@@ -97,7 +97,16 @@
         "displayName": "Display Name",
         "email": "Email",
         "firstName": "First Name",
-        "lastName": "Last Name"
+        "lastName": "Last Name",
+        "nickname": "Nickname"
+      },
+      "fields": {
+        "displayName": "Display Name",
+        "email": "Email",
+        "firstName": "First Name",
+        "lastName": "Last Name",
+        "fullName": "Full Name",
+        "nickname": "Nickname"
       },
       "empty": "No users found."
     },
@@ -133,6 +142,51 @@
         "changes": "Changes",
         "metadata": "Metadata",
         "createdAt": "Created At"
+      },
+      "form": {
+        "fields": {
+          "companyId": {
+            "label": "Company"
+          },
+          "actorUserId": {
+            "label": "Actor User"
+          },
+          "actorRoleSnapshot": {
+            "label": "Captured Role"
+          },
+          "action": {
+            "label": "Action"
+          },
+          "resourceType": {
+            "label": "Resource Type"
+          },
+          "resourceId": {
+            "label": "Resource ID"
+          },
+          "targetCustomerId": {
+            "label": "Target Customer"
+          },
+          "requestId": {
+            "label": "Request ID"
+          },
+          "ipAddress": {
+            "label": "IP Address"
+          },
+          "userAgent": {
+            "label": "User Agent"
+          },
+          "changesJson": {
+            "label": "Changes",
+            "placeholder": "JSON object"
+          },
+          "metadataJson": {
+            "label": "Metadata",
+            "placeholder": "JSON object"
+          },
+          "createdAt": {
+            "label": "Created At"
+          }
+        }
       },
       "messages": {
         "createSuccess": "Log created successfully",

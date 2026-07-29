@@ -1,6 +1,5 @@
 use actix_web::{HttpResponse, get, post, web};
 use actix_web_grants::authorities::AuthDetails;
-use diesel::result::Error as DieselError;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -11,13 +10,6 @@ use crate::{
     repositories::container::AppContainer,
     utils::{pagination::PaginationParams, validation::first_validation_error_message},
 };
-
-fn map_repo_error(error: DieselError, entity: &str) -> AppError {
-    match error {
-        DieselError::NotFound => AppError::NotFound(entity.to_string()),
-        other => AppError::Database(other),
-    }
-}
 
 #[get("/audit-logs")]
 pub async fn list_audit_logs(
@@ -47,7 +39,7 @@ pub async fn get_audit_log(
         .domain_audit_logs
         .find(&id.into_inner())
         .await
-        .map_err(|error| map_repo_error(error, "AuditLog"))?;
+        .map_err(|e| AppError::from_diesel(e, "AuditLog"))?;
     Ok(HttpResponse::Ok().json(item))
 }
 
