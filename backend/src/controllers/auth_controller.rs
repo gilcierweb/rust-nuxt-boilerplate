@@ -32,52 +32,69 @@ use crate::utils::validation::first_validation_error_message;
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct RegisterRequest {
-    #[validate(email(message = "auth.validation.invalid_email"))]
+    // RFC 5321 §4.5.3 limits the full forward-path to 256 chars; 254 is the
+    // practical max for the email address itself.
+    #[validate(email(message = "auth.validation.invalid_email"), length(max = 254, message = "auth.validation.email_too_long"))]
     pub email: String,
-    // NOTE: The `length` validator here is a fast-fail for obviously short inputs
-    // before the full strength check. The real policy (12 chars, digit, uppercase,
-    // special char) is enforced by `validate_password_strength` in the handler.
-    #[validate(length(min = 12, message = "auth.validation.password_too_short"))]
+    // min=12: fast-fail for obviously short inputs before the full strength
+    // check. max=128: prevents multi-MB strings from reaching Argon2id.
+    #[validate(length(min = 12, max = 128, message = "auth.validation.password_invalid_length"))]
     pub password: String,
+    // password_confirmation is compared in the handler; cap at same max to
+    // avoid asymmetric allocation.
+    #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub password_confirmation: String,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct LoginRequest {
-    #[validate(email(message = "auth.validation.invalid_email"))]
+    #[validate(email(message = "auth.validation.invalid_email"), length(max = 254, message = "auth.validation.email_too_long"))]
     pub email: String,
+    // No min check here — wrong passwords should still hit the DB lookup so
+    // timing is consistent. max=128 prevents large payloads reaching Argon2id.
+    #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub password: String,
-    /// Optional TOTP code if 2FA is enabled
+    /// Optional TOTP code if 2FA is enabled (exactly 6 decimal digits)
+    #[validate(length(min = 6, max = 6, message = "auth.validation.otp_invalid"))]
     pub otp_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct RecoverRequest {
-    #[validate(email(message = "auth.validation.invalid_email"))]
+    #[validate(email(message = "auth.validation.invalid_email"), length(max = 254, message = "auth.validation.email_too_long"))]
     pub email: String,
 }
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct ResetPasswordRequest {
+    // Reset tokens are random hex strings; cap to avoid unbounded allocations.
+    #[validate(length(min = 1, max = 512, message = "auth.validation.token_invalid"))]
     pub token: String,
-    // NOTE: The `length` validator here is a fast-fail for obviously short inputs
-    // before the full strength check. The real policy (12 chars, digit, uppercase,
-    // special char) is enforced by `validate_password_strength` in the handler.
-    #[validate(length(min = 12, message = "auth.validation.password_too_short"))]
+    // min=12: fast-fail. max=128: prevents large payloads reaching Argon2id.
+    #[validate(length(min = 12, max = 128, message = "auth.validation.password_invalid_length"))]
     pub password: String,
+    #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub password_confirmation: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Validate)]
 pub struct Enable2FARequest {
+    /// TOTP codes are exactly 6 decimal digits.
+    #[validate(length(min = 6, max = 6, message = "auth.validation.otp_invalid"))]
     pub otp_code: String,
 }
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct ChangePasswordRequest {
+    // Current password: cap at 128 to prevent large payloads reaching Argon2id.
+    // No min check — wrong passwords should still reach the verify step so
+    // timing stays consistent.
+    #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub current_password: String,
-    #[validate(length(min = 8, message = "auth.validation.password_too_short"))]
+    // Align min with the password strength policy (12 chars) and cap at 128.
+    #[validate(length(min = 12, max = 128, message = "auth.validation.password_invalid_length"))]
     pub new_password: String,
+    #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub password_confirmation: String,
 }
 
@@ -1039,6 +1056,9 @@ pub async fn enable_2fa(
     container: web::Data<AppContainer>,
     body: web::Json<Enable2FARequest>,
 ) -> AppResult<HttpResponse> {
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+
     let user_id = user.claims().sub;
 
     let user_data = container
@@ -1108,6 +1128,9 @@ pub async fn disable_2fa(
     container: web::Data<AppContainer>,
     body: web::Json<Enable2FARequest>,
 ) -> AppResult<HttpResponse> {
+    body.validate()
+        .map_err(|e| AppError::Validation(e.to_string()))?;
+
     let user_id = user.claims().sub;
 
     let user_data = container
