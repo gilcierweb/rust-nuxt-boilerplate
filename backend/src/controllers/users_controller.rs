@@ -1,10 +1,12 @@
 use actix_web::{HttpResponse, get, web};
 use actix_web_grants::authorities::AuthDetails;
+use std::sync::Arc;
 
 use crate::{
     authz::ability::{AbilityAction, AbilityResource, authorize},
     errors::{AppError, AppResult},
     repositories::container::AppContainer,
+    security::SecurityService,
     utils::pagination::PaginationParams,
 };
 
@@ -25,10 +27,15 @@ pub async fn list_users(
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
 
+    let security = Arc::new(
+        SecurityService::from_config(&container.config)
+            .map_err(|e| AppError::Internal(e.to_string()))?,
+    );
+
     let pagination = pagination.into_inner().validated();
     let response = container
         .users
-        .list_paginated(&pagination)
+        .list_paginated(&pagination, security)
         .await
         .map_err(AppError::Database)?;
 
@@ -43,9 +50,14 @@ pub async fn get_user(
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
 
+    let security = Arc::new(
+        SecurityService::from_config(&container.config)
+            .map_err(|e| AppError::Internal(e.to_string()))?,
+    );
+
     let item = container
         .users
-        .find_by_id_with_profile(&user_id.into_inner())
+        .find_by_id_with_profile(&user_id.into_inner(), security)
         .await
         .map_err(|error| map_repo_error(error, "User"))?;
 
@@ -103,7 +115,7 @@ mod tests {
         users_repo
             .expect_list_paginated()
             .times(1)
-            .returning(|_| Ok(PaginatedResponse::new(Vec::new(), 0, 1, 20)));
+            .returning(|_, _| Ok(PaginatedResponse::new(Vec::new(), 0, 1, 20)));
         container.users = Arc::new(users_repo);
 
         let app = test::init_service(

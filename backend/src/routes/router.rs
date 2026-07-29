@@ -76,6 +76,11 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 crate::middleware::rate_limit_middleware::RATE_API,
             ))
             // 2. API Key auth - for service-to-service
+            // NOTE: /metrics is intentionally NOT in this exempt list.
+            // The Prometheus metrics endpoint must require a valid API key
+            // (X-API-Key or Authorization: ApiKey <key>) to prevent exposing
+            // internal counters, latencies, route names, and system resource
+            // information to unauthenticated callers.
             .wrap(crate::middleware::api_key_middleware::RequireApiKey::new(vec![
                 "/api/v1/webhooks/*",
                 "/api/v1/ws",
@@ -97,8 +102,6 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 "/api/v1/auth/confirm/",
                 "/api/v1/health",
                 "/api/v1/health/",
-                "/api/v1/metrics",
-                "/api/v1/metrics/",
             ]))
             .service(
                 SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
@@ -150,8 +153,9 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .configure(audit_logs_controller::config)
                     .service(upload_controller::upload_file),
             )
-            // Health check
             .route("/health", web::get().to(health_controller::health_check))
+            // NOTE: /metrics requires API key — protected by RequireApiKey middleware on this scope.
+            // Access via: X-API-Key: <key> or Authorization: ApiKey <key>
             .route("/metrics", web::get().to(metrics_controller::metrics))
             // WebSocket route (inside /api/v1 scope)
             .service(web::resource("/ws").route(web::get().to(crate::ws::redis_handler::ws_handler))),

@@ -202,13 +202,10 @@ where
 
                 let cookie_token = req.cookie(CSRF_COOKIE_NAME).map(|c| c.value().to_string());
 
-                let secret_key = req
-                    .app_data::<AppConfig>()
-                    .map(|c| c.csrf_secret_key.clone())
-                    .or_else(|| {
-                        req.app_data::<actix_web::web::Data<crate::AppState>>()
-                            .map(|s| s.config.csrf_secret_key.clone())
-                    });
+                // Extract CSRF secret key from whichever app_data source is registered.
+                // Priority: bare AppConfig (test setups) → AppState (main app) → AppContainer.
+                let secret_key = extract_csrf_config_from_request(&req)
+                    .map(|c| c.csrf_secret_key);
 
                 let is_valid = match (&header_token, &cookie_token, &secret_key) {
                     (Some(header), Some(cookie), Some(key)) => {
@@ -234,37 +231,96 @@ where
 
             let mut res = svc.call(req).await?;
 
-            // Rotate CSRF token on successful state-changing requests
-            if should_check
-                && is_state_changing
-                && let Some(config) = res.request().app_data::<AppConfig>().cloned()
-            {
-                let new_token = generate_csrf_token(&config.csrf_secret_key);
-                let cookie = build_csrf_cookie(&config, &new_token);
+            // Rotate CSRF token on successful state-changing requests.
+            // Uses the same three-source lookup so rotation works regardless of
+            // which app_data variant is registered.
+            if should_check && is_state_changing {
+                if let Some(config) = extract_csrf_config_from_response(&res) {
+                    let new_token = generate_csrf_token(&config.csrf_secret_key);
+                    let cookie = build_csrf_cookie(&config, &new_token);
 
-                res.response_mut().headers_mut().append(
-                    actix_web::http::header::SET_COOKIE,
-                    cookie.to_string().parse().unwrap(),
-                );
+                    res.response_mut().headers_mut().append(
+                        actix_web::http::header::SET_COOKIE,
+                        cookie.to_string().parse().unwrap(),
+                    );
+                } else {
+                    tracing::warn!(
+                        event = "csrf.config_missing_on_rotation",
+                        path = %res.request().uri().path(),
+                        "CSRF middleware: AppConfig not found in app_data — \
+                         token rotation skipped. Register AppState or AppContainer \
+                         in the middleware chain."
+                    );
+                }
             }
 
-            // Set CSRF token cookie on GET responses if not already present
-            if !is_state_changing
-                && !res.response().headers().contains_key("set-cookie")
-                && let Some(config) = res.request().app_data::<AppConfig>().cloned()
-            {
-                let csrf_token = generate_csrf_token(&config.csrf_secret_key);
-                let cookie = build_csrf_cookie(&config, &csrf_token);
+            // Set CSRF token cookie on GET responses if not already present.
+            // Uses the same three-source lookup so the initial cookie is always
+            // emitted regardless of which app_data variant is registered.
+            if !is_state_changing && !res.response().headers().contains_key("set-cookie") {
+                if let Some(config) = extract_csrf_config_from_response(&res) {
+                    let csrf_token = generate_csrf_token(&config.csrf_secret_key);
+                    let cookie = build_csrf_cookie(&config, &csrf_token);
 
-                res.response_mut().headers_mut().append(
-                    actix_web::http::header::SET_COOKIE,
-                    cookie.to_string().parse().unwrap(),
-                );
+                    res.response_mut().headers_mut().append(
+                        actix_web::http::header::SET_COOKIE,
+                        cookie.to_string().parse().unwrap(),
+                    );
+                } else {
+                    tracing::warn!(
+                        event = "csrf.config_missing_on_get",
+                        path = %res.request().uri().path(),
+                        "CSRF middleware: AppConfig not found in app_data — \
+                         initial CSRF cookie not set. Register AppState or \
+                         AppContainer in the middleware chain."
+                    );
+                }
             }
 
             Ok(res.map_into_boxed_body())
         })
     }
+}
+
+/// Extract a cloned `AppConfig` from a `ServiceRequest`, trying all registered
+/// `app_data` sources in priority order:
+///
+/// 1. Bare `AppConfig` — used in unit tests and lightweight test setups.
+/// 2. `Data<AppState>` — the primary source in the running server.
+/// 3. `Data<AppContainer>` — fallback; also has access to the full config.
+///
+/// Returns `None` only when none of the three sources is registered, which
+/// should never happen in production but is logged as a warning at call sites.
+fn extract_csrf_config_from_request(req: &actix_web::dev::ServiceRequest) -> Option<AppConfig> {
+    req.app_data::<AppConfig>()
+        .cloned()
+        .or_else(|| {
+            req.app_data::<actix_web::web::Data<crate::AppState>>()
+                .map(|s| (*s.config).clone())
+        })
+        .or_else(|| {
+            req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>()
+                .map(|c| (*c.config).clone())
+        })
+}
+
+/// Same lookup as [`extract_csrf_config_from_request`] but operates on the
+/// `ServiceResponse` after the inner service has run (used for cookie emission).
+/// Uses `HttpRequest` which is what `ServiceResponse::request()` returns.
+fn extract_csrf_config_from_response<B>(
+    res: &actix_web::dev::ServiceResponse<B>,
+) -> Option<AppConfig> {
+    let req = res.request();
+    req.app_data::<AppConfig>()
+        .cloned()
+        .or_else(|| {
+            req.app_data::<actix_web::web::Data<crate::AppState>>()
+                .map(|s| (*s.config).clone())
+        })
+        .or_else(|| {
+            req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>()
+                .map(|c| (*c.config).clone())
+        })
 }
 
 /// Generate a CSRF token with embedded timestamp: `{timestamp}.{nonce}.{hmac}`
@@ -375,7 +431,10 @@ fn build_csrf_cookie(config: &AppConfig, token: &str) -> Cookie<'static> {
             (CSRF_TOKEN_EXPIRY_SECS / 60) as i64,
         ));
 
-    if is_production_like(config) {
+    // Use `should_use_secure_cookies()` instead of bare `is_production_like()` so
+    // that developers tunnelling through HTTPS proxies (ngrok, Cloudflare Tunnel,
+    // etc.) can opt in via COOKIE_SECURE=true without changing the environment name.
+    if config.should_use_secure_cookies() {
         cookie = cookie.secure(true);
     }
 

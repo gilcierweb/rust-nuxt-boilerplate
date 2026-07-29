@@ -36,7 +36,10 @@ use validator::Validate;
 pub struct RegisterRequest {
     #[validate(email(message = "auth.validation.invalid_email"))]
     pub email: String,
-    #[validate(length(min = 8, message = "auth.validation.password_too_short"))]
+    // NOTE: The `length` validator here is a fast-fail for obviously short inputs
+    // before the full strength check. The real policy (12 chars, digit, uppercase,
+    // special char) is enforced by `validate_password_strength` in the handler.
+    #[validate(length(min = 12, message = "auth.validation.password_too_short"))]
     pub password: String,
     pub password_confirmation: String,
 }
@@ -59,7 +62,10 @@ pub struct RecoverRequest {
 #[derive(Debug, Deserialize, Validate)]
 pub struct ResetPasswordRequest {
     pub token: String,
-    #[validate(length(min = 8, message = "auth.validation.password_too_short"))]
+    // NOTE: The `length` validator here is a fast-fail for obviously short inputs
+    // before the full strength check. The real policy (12 chars, digit, uppercase,
+    // special char) is enforced by `validate_password_strength` in the handler.
+    #[validate(length(min = 12, message = "auth.validation.password_too_short"))]
     pub password: String,
     pub password_confirmation: String,
 }
@@ -126,6 +132,7 @@ pub async fn register(
         ));
     }
 
+    validate_password_strength(&body.password)?;
     let encrypted_password = hash_password(&body.password, container.config.as_ref())?;
     let now = Utc::now();
     let confirmation_token = Uuid::new_v4().to_string();
@@ -923,6 +930,7 @@ pub async fn reset_password(
     // At this point, we have a valid user_id
     let user_id = user_id.expect("valid reset should have user_id");
 
+    validate_password_strength(&body.password)?;
     let hashed_password = hash_password(&body.password, container.config.as_ref())?;
     let affected_rows = container
         .users
@@ -1345,7 +1353,11 @@ fn build_refresh_cookie_for_path(
         .same_site(same_site)
         .max_age(Duration::seconds(config.jwt_refresh_expiry_secs));
 
-    if config.is_production_like() {
+    // Use `should_use_secure_cookies()` instead of `is_production_like()` so
+    // that developers tunnelling through HTTPS proxies (ngrok, Cloudflare
+    // Tunnel, etc.) can opt in via COOKIE_SECURE=true without changing the
+    // environment name. The flag is always set in staging/production regardless.
+    if config.should_use_secure_cookies() {
         cookie = cookie.secure(true);
     }
 
@@ -1368,7 +1380,7 @@ fn clear_refresh_cookie_for_path(config: &AppConfig, path: &str) -> Cookie<'stat
         .same_site(same_site)
         .max_age(Duration::seconds(0));
 
-    if config.is_production_like() {
+    if config.should_use_secure_cookies() {
         cookie = cookie.secure(true);
     }
 
@@ -2360,8 +2372,8 @@ mod tests {
             .uri("/reset")
             .set_json(json!({
                 "token": "plain-reset-token",
-                "password": "Password123",
-                "password_confirmation": "Password123"
+                "password": "S3cur3P@ssw0rd!",
+                "password_confirmation": "S3cur3P@ssw0rd!"
             }))
             .to_request();
 
@@ -2392,8 +2404,8 @@ mod tests {
             .expect_update_password()
             .withf(move |user_id, hashed_password| {
                 *user_id == expected_user_id
-                    && hashed_password != "Password123"
-                    && verify_password("Password123", hashed_password).unwrap_or(false)
+                    && hashed_password != "S3cur3P@ssw0rd!"
+                    && verify_password("S3cur3P@ssw0rd!", hashed_password).unwrap_or(false)
             })
             .times(1)
             .returning(|_, _| Ok(1));
@@ -2427,8 +2439,8 @@ mod tests {
             .uri("/reset")
             .set_json(json!({
                 "token": "plain-reset-token",
-                "password": "Password123",
-                "password_confirmation": "Password123"
+                "password": "S3cur3P@ssw0rd!",
+                "password_confirmation": "S3cur3P@ssw0rd!"
             }))
             .to_request();
 

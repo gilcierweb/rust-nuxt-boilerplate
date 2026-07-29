@@ -7,9 +7,11 @@ use diesel_async::AsyncPgConnection;
 use futures::future::BoxFuture;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::models::user::{NewUser, User};
+use crate::security::SecurityService;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 
 #[cfg_attr(test, mockall::automock)]
@@ -74,9 +76,14 @@ pub trait IUserRepository: Send + Sync {
     async fn list_paginated(
         &self,
         params: &PaginationParams,
+        security: Arc<SecurityService>,
     ) -> QueryResult<PaginatedResponse<AdminUserLookupItem>>;
 
-    async fn find_by_id_with_profile(&self, id: &Uuid) -> QueryResult<AdminUserItem>;
+    async fn find_by_id_with_profile(
+        &self,
+        id: &Uuid,
+        security: Arc<SecurityService>,
+    ) -> QueryResult<AdminUserItem>;
 }
 
 #[cfg_attr(test, mockall::automock)]

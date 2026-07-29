@@ -124,6 +124,23 @@ impl SecurityService {
         String::from_utf8(plaintext)
             .map_err(|_| AppError::Internal("decrypted email is not valid UTF-8".to_string()))
     }
+
+    /// Decrypt an email given its raw encrypted bytes and key version.
+    ///
+    /// Used by paginated list queries that fetch raw columns via `sql_query`
+    /// instead of full `User` model instances, avoiding full-table-scan.
+    pub fn decrypt_email_fields(
+        &self,
+        email_encrypted: &[u8],
+        encryption_key_version: i32,
+    ) -> AppResult<String> {
+        let key_version = encryption_key_version.max(1) as u32;
+        let encryption_key = self.key_manager.derive_encryption_key(key_version)?;
+        let plaintext = decrypt(email_encrypted, &encryption_key)?;
+
+        String::from_utf8(plaintext)
+            .map_err(|_| AppError::Internal("decrypted email is not valid UTF-8".to_string()))
+    }
 }
 
 #[cfg(test)]

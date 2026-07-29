@@ -127,8 +127,8 @@ pub fn bearer_exempt_routes() -> Vec<PublicRoute> {
         PublicRoute::method(Method::POST, "/api/v1/auth/reset/"),
         PublicRoute::method(Method::GET, "/api/v1/health"),
         PublicRoute::method(Method::GET, "/api/v1/health/"),
-        PublicRoute::method(Method::GET, "/api/v1/metrics"),
-        PublicRoute::method(Method::GET, "/api/v1/metrics/"),
+        // NOTE: /api/v1/metrics is intentionally NOT exempt from Bearer auth.
+        // It requires API key authentication (enforced by RequireApiKey middleware).
         PublicRoute::method(Method::POST, "/api/v1/webhooks/stripe"),
         PublicRoute::method(Method::POST, "/api/v1/webhooks/pix"),
         PublicRoute::method(Method::GET, "/api/v1/ws"),

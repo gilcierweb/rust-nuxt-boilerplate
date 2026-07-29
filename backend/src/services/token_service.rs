@@ -1,57 +1,18 @@
-#![allow(dead_code)]
-
-use crate::errors::AppResult;
-#[allow(unused_imports)]
-use crate::models::user::User;
-#[allow(unused_imports)]
-use crate::security::SecurityService;
-use chrono::Utc;
-use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
-use serde::{Deserialize, Serialize};
-use uuid::Uuid;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Claims {
-    pub sub: Uuid,
-    pub profile_id: Uuid,
-    pub role: i32,
-    pub exp: usize,
-    pub iat: usize,
-    pub jti: Option<String>,
-}
-
-pub fn create_token(
-    user_id: Uuid,
-    profile_id: Uuid,
-    role_claim: i32,
-    jwt_secret: &str,
-    expiry_secs: i64,
-) -> AppResult<String> {
-    let now = Utc::now().timestamp() as usize;
-    let claims = Claims {
-        sub: user_id,
-        profile_id,
-        role: role_claim,
-        exp: now + expiry_secs as usize,
-        iat: now,
-        jti: Some(uuid::Uuid::new_v4().to_string()),
-    };
-    let token = encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(jwt_secret.as_ref()),
-    )?;
-    Ok(token)
-}
-
-pub fn verify_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
-    let token_data = decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(jwt_secret.as_ref()),
-        &Validation::new(Algorithm::HS256),
-    )?;
-    Ok(token_data.claims)
-}
+//! Token utility functions: HMAC-SHA256 hashing and random token generation.
+//!
+//! # JWT tokens
+//!
+//! JWT creation and verification live exclusively in `crate::middleware::auth`
+//! (`create_token_with_kid`, `verify_token_with_secrets`). The `Claims` struct
+//! and all JWT helpers were consolidated there to avoid having two diverging
+//! implementations. Do **not** add JWT logic back to this module.
+//!
+//! # What belongs here
+//!
+//! Stateless, non-JWT token utilities:
+//! - `hash_token` / `verify_token_hash` — HMAC-SHA256 hashing for refresh,
+//!   confirmation, and password-reset tokens stored in the database.
+//! - `generate_random_token` — cryptographically-secure random token strings.
 
 /// Prefix identifying HMAC-SHA256 hashes (new format).
 const HMAC_PREFIX: &str = "hmac:";
@@ -129,37 +90,6 @@ pub fn generate_random_token(length: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_create_and_verify_token() {
-        let user_id = Uuid::new_v4();
-        let profile_id = Uuid::new_v4();
-        let role_claim = 1;
-        let jwt_secret = "test-secret-key-for-testing-only";
-        let expiry_secs = 3600;
-
-        let token = create_token(user_id, profile_id, role_claim, jwt_secret, expiry_secs).unwrap();
-        let claims = verify_token(&token, jwt_secret).unwrap();
-
-        assert_eq!(claims.sub, user_id);
-        assert_eq!(claims.profile_id, profile_id);
-        assert_eq!(claims.role, role_claim);
-    }
-
-    #[test]
-    fn test_verify_token_fails_with_wrong_secret() {
-        let user_id = Uuid::new_v4();
-        let profile_id = Uuid::new_v4();
-        let role_claim = 1;
-        let jwt_secret = "test-secret-key-for-testing-only";
-        let wrong_secret = "wrong-secret";
-        let expiry_secs = 3600;
-
-        let token = create_token(user_id, profile_id, role_claim, jwt_secret, expiry_secs).unwrap();
-        let result = verify_token(&token, wrong_secret);
-
-        assert!(result.is_err());
-    }
 
     #[test]
     fn test_hash_token_deterministic() {

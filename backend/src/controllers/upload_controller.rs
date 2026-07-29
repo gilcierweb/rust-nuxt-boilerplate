@@ -216,6 +216,7 @@ mod tests {
             csrf_secret_key: "test-csrf-key-32-chars-long!!!!!".to_string(),
             refresh_token_hash_salt: "test-salt-for-refresh-tokens-16b!".to_string(),
             rate_limit_enabled: false,
+            cookie_secure_override: false,
             argon2_m_cost: 65536,
             argon2_t_cost: 3,
             argon2_p_cost: 1,

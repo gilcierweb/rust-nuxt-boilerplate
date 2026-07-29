@@ -6,12 +6,13 @@ use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::users_trait::{
     AdminUserItem, AdminUserLookupItem, IUserRepository, IUserRepositoryTransaction,
 };
-use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
+use crate::security::SecurityService;
+use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 use chrono::NaiveDateTime;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use ipnet::IpNet;
-use std::collections::HashMap;
+use std::sync::Arc;
 use uuid::Uuid;
 
 pub struct UsersRepository {
@@ -547,103 +548,122 @@ impl IUserRepository for UsersRepository {
     async fn list_paginated(
         &self,
         params: &PaginationParams,
+        security: Arc<SecurityService>,
     ) -> diesel::QueryResult<PaginatedResponse<AdminUserLookupItem>> {
-        let list_params = ListParams::from(params.clone());
+        let params = params.validated();
+        let limit = params.limit();
+        let offset = params.offset();
+        let sort_by = params.sort_by.clone().unwrap_or_else(|| "email".to_string());
+        let sort_dir = params.sort_direction().to_string();
 
         self.base
             .run(move |conn| {
+                let security = security.clone();
                 Box::pin(async move {
-                    // Get all users and profiles for the lookup
-                    let users = users_table::table
-                        .select(User::as_select())
-                        .load::<User>(conn)
-                        .await?;
-                    let profiles = crate::db::schema::profiles::table
-                        .select(Profile::as_select())
-                        .load::<Profile>(conn)
+                    // ── 1. Total count — single COUNT(*) query, no data fetched ──────────
+                    let total: i64 = users_table::table
+                        .count()
+                        .get_result(conn)
                         .await?;
 
-                    // Get security service from config
-                    let security = crate::security::SecurityService::from_config(
-                        &crate::config::AppConfig::from_env().map_err(|e| {
-                            diesel::result::Error::DatabaseError(
-                                diesel::result::DatabaseErrorKind::Unknown,
-                                Box::new(e.to_string()),
-                            )
-                        })?,
-                    )
-                    .map_err(|e| {
-                        diesel::result::Error::DatabaseError(
-                            diesel::result::DatabaseErrorKind::Unknown,
-                            Box::new(e.to_string()),
-                        )
-                    })?;
+                    // ── 2. Page query — JOIN + ORDER + LIMIT + OFFSET in the database ────
+                    //
+                    // Column allow-list prevents SQL injection via `sort_by`.
+                    // Any unrecognised value falls back to `u.created_at DESC`.
+                    let order_sql = match sort_by.as_str() {
+                        "email"      => "u.email_blind_index ASC",
+                        "email_desc" => "u.email_blind_index DESC",
+                        "first_name" => "p.first_name ASC NULLS LAST",
+                        "first_name_desc" => "p.first_name DESC NULLS LAST",
+                        "last_name"  => "p.last_name ASC NULLS LAST",
+                        "last_name_desc" => "p.last_name DESC NULLS LAST",
+                        "id"  => if sort_dir == "desc" { "u.id DESC" } else { "u.id ASC" },
+                        _    => "u.created_at DESC",
+                    };
 
-                    let profiles_by_user_id = profiles
-                        .into_iter()
-                        .map(|profile| (profile.user_id, profile))
-                        .collect::<HashMap<Uuid, _>>();
+                    // diesel does not support dynamic ORDER BY via the query
+                    // builder for multi-table aliases, so we use sql_query here.
+                    // The query is parameterised for LIMIT/OFFSET; the ORDER BY
+                    // clause comes from the allow-list above and is never built
+                    // from user input directly.
+                    let raw_sql = format!(
+                        "SELECT \
+                            u.id            AS user_id, \
+                            u.email_encrypted, \
+                            u.encryption_key_version, \
+                            p.first_name, \
+                            p.last_name, \
+                            p.full_name, \
+                            p.nickname \
+                         FROM users u \
+                         LEFT JOIN profiles p ON p.user_id = u.id \
+                         ORDER BY {order_sql} \
+                         LIMIT $1 OFFSET $2"
+                    );
 
-                    let mut items = Vec::with_capacity(users.len());
+                    #[derive(diesel::QueryableByName)]
+                    struct UserProfileRow {
+                        #[diesel(sql_type = diesel::sql_types::Uuid)]
+                        user_id: uuid::Uuid,
+                        #[diesel(sql_type = diesel::sql_types::Bytea)]
+                        email_encrypted: Vec<u8>,
+                        #[diesel(sql_type = diesel::sql_types::Integer)]
+                        encryption_key_version: i32,
+                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+                        first_name: Option<String>,
+                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+                        last_name: Option<String>,
+                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+                        full_name: Option<String>,
+                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+                        nickname: Option<String>,
+                    }
 
-                    for user in users {
-                        let email = security.decrypt_user_email(&user).map_err(|e| {
-                            diesel::result::Error::DatabaseError(
-                                diesel::result::DatabaseErrorKind::Unknown,
-                                Box::new(e.to_string()),
-                            )
-                        })?;
-                        let profile = profiles_by_user_id.get(&user.id);
+                    let rows: Vec<UserProfileRow> = diesel::sql_query(raw_sql)
+                        .bind::<diesel::sql_types::BigInt, _>(limit)
+                        .bind::<diesel::sql_types::BigInt, _>(offset)
+                        .load(conn)
+                        .await?;
+
+                    // ── 3. Decrypt only the page (≤100 rows) ──────────────────────────────
+                    let mut items = Vec::with_capacity(rows.len());
+                    for row in rows {
+                        // Reconstruct a minimal User-like value for decrypt_user_email.
+                        // We only need the encrypted email fields + key version.
+                        let email = security
+                            .decrypt_email_fields(&row.email_encrypted, row.encryption_key_version)
+                            .map_err(|e| {
+                                diesel::result::Error::DatabaseError(
+                                    diesel::result::DatabaseErrorKind::Unknown,
+                                    Box::new(e.to_string()),
+                                )
+                            })?;
 
                         items.push(AdminUserLookupItem {
-                            id: user.id,
+                            id: row.user_id,
                             email,
-                            first_name: profile.and_then(|p| p.first_name.clone()),
-                            last_name: profile.and_then(|p| p.last_name.clone()),
-                            full_name: profile.and_then(|p| p.full_name.clone()),
-                            nickname: profile.and_then(|p| p.nickname.clone()),
+                            first_name: row.first_name,
+                            last_name: row.last_name,
+                            full_name: row.full_name,
+                            nickname: row.nickname,
                         });
                     }
 
-                    // Sort items
-                    if let Some(sort_by) = list_params.sort_by.as_deref() {
-                        let desc = list_params.sort_dir.as_deref() == Some("desc");
-                        items.sort_by(|a, b| {
-                            let ord = match sort_by {
-                                "email" => a.email.cmp(&b.email),
-                                "first_name" => a.first_name.cmp(&b.first_name),
-                                "last_name" => a.last_name.cmp(&b.last_name),
-                                "full_name" => a.full_name.cmp(&b.full_name),
-                                "nickname" => a.nickname.cmp(&b.nickname),
-                                "id" => a.id.cmp(&b.id),
-                                _ => a.email.cmp(&b.email),
-                            };
-                            if desc { ord.reverse() } else { ord }
-                        });
-                    } else {
-                        items.sort_by_key(|a| a.email.clone());
-                    }
-
-                    let total = items.len() as i64;
-                    let offset = list_params.offset() as usize;
-                    let limit = list_params.limit() as usize;
-
-                    let paginated_data: Vec<_> =
-                        items.into_iter().skip(offset).take(limit).collect();
-                    Ok(PaginatedResponse::new(
-                        paginated_data,
-                        total,
-                        list_params.page,
-                        list_params.per_page,
-                    ))
+                    Ok(PaginatedResponse::new(items, total, params.page, params.per_page))
                 })
             })
             .await
     }
-    async fn find_by_id_with_profile(&self, uid: &Uuid) -> diesel::QueryResult<AdminUserItem> {
+
+    async fn find_by_id_with_profile(
+        &self,
+        uid: &Uuid,
+        security: Arc<SecurityService>,
+    ) -> diesel::QueryResult<AdminUserItem> {
         let uid_val = *uid;
         self.base
             .run(move |conn| {
+                let security = security.clone();
                 Box::pin(async move {
                     let user = users_table::table
                         .find(uid_val)
@@ -658,21 +678,7 @@ impl IUserRepository for UsersRepository {
                         .await
                         .optional()?;
 
-                    let security = crate::security::SecurityService::from_config(
-                        &crate::config::AppConfig::from_env().map_err(|e| {
-                            diesel::result::Error::DatabaseError(
-                                diesel::result::DatabaseErrorKind::Unknown,
-                                Box::new(e.to_string()),
-                            )
-                        })?,
-                    )
-                    .map_err(|e| {
-                        diesel::result::Error::DatabaseError(
-                            diesel::result::DatabaseErrorKind::Unknown,
-                            Box::new(e.to_string()),
-                        )
-                    })?;
-
+                    // Use the injected SecurityService — no AppConfig::from_env() per request.
                     let email = security.decrypt_user_email(&user).map_err(|e| {
                         diesel::result::Error::DatabaseError(
                             diesel::result::DatabaseErrorKind::Unknown,

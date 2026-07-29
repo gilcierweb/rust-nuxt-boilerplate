@@ -315,10 +315,6 @@ async fn main() -> std::io::Result<()> {
             .wrap(backend::middleware::metrics_middleware::MetricsMiddleware)
             .wrap(backend::middleware::request_log_middleware::RequestLogMiddleware)
             .route(
-                "/metrics",
-                web::get().to(backend::controllers::metrics_controller::metrics),
-            )
-            .route(
                 "/health",
                 web::get().to(backend::controllers::health_controller::health_check),
             )

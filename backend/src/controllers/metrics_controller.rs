@@ -6,6 +6,30 @@ use crate::AppState;
 ///
 /// Exposes counters, histograms, P95/P99 gauges, DB/Redis probe timings,
 /// cold-start gauge, and system resource measures (memory/CPU).
+///
+/// # Authentication Required
+///
+/// This endpoint is protected by the `RequireApiKey` middleware and requires
+/// a valid internal API key on every request. Unauthenticated requests receive
+/// `401 Unauthorized`.
+///
+/// Send the key using either header:
+/// ```
+/// X-API-Key: <key>
+/// Authorization: ApiKey <key>
+/// ```
+///
+/// Keys are configured via the `INTERNAL_API_KEYS` environment variable
+/// (comma-separated list). See `.env.example` for details.
+///
+/// # Security Rationale
+///
+/// The metrics payload contains internal operational data — request counts,
+/// latency histograms, route names, pool utilisation, memory/CPU usage, and
+/// cold-start timings — that would allow an attacker to enumerate internal
+/// topology, infer traffic patterns, and time attacks. Restricting access to
+/// authenticated internal services (Prometheus scraper, monitoring dashboards)
+/// prevents this information from leaking to unauthenticated callers.
 pub async fn metrics(state: web::Data<AppState>) -> HttpResponse {
     state.metrics.refresh_system_measures();
     let body = state.metrics.render_prometheus();

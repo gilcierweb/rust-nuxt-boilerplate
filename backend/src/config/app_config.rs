@@ -231,6 +231,13 @@ pub struct AppConfig {
     // Rate limiting
     pub rate_limit_enabled: bool,
 
+    // Cookie security override — set COOKIE_SECURE=true in development when
+    // routing through an HTTPS tunnel (ngrok, Cloudflare Tunnel, etc.) to
+    // prevent the refresh_token and csrf_token cookies from being sent over
+    // plain HTTP by the tunnel client.
+    // In staging/production this is always true regardless of this setting.
+    pub cookie_secure_override: bool,
+
     // Argon2 password hashing parameters
     pub argon2_m_cost: u32,
     pub argon2_t_cost: u32,
@@ -447,6 +454,15 @@ impl AppConfig {
                 .and_then(|s| s.parse::<bool>().ok())
                 .unwrap_or(true),
 
+            // Cookie Secure flag override for development tunnels.
+            // Set COOKIE_SECURE=true when using ngrok/Cloudflare Tunnel in dev
+            // so that cookies are not sent in plaintext over the tunnel edge.
+            // In staging/production, the flag is always set regardless of this value.
+            cookie_secure_override: env::var("COOKIE_SECURE")
+                .ok()
+                .and_then(|s| s.parse::<bool>().ok())
+                .unwrap_or(false),
+
             // Argon2 password hashing parameters
             argon2_m_cost: env::var("ARGON2_M_COST")
                 .ok()
@@ -483,6 +499,27 @@ impl AppConfig {
             self.environment,
             Environment::Staging | Environment::Production
         )
+    }
+
+    /// Whether cookies should carry the `Secure` flag.
+    ///
+    /// Always `true` in staging/production (HTTPS required).
+    ///
+    /// In development/test, defaults to `false` so that the local HTTP server
+    /// (`http://localhost`) can set and read cookies normally. Set
+    /// `COOKIE_SECURE=true` in your `.env` when tunnelling through an HTTPS
+    /// proxy (ngrok, Cloudflare Tunnel, etc.) to prevent the refresh_token
+    /// and csrf_token cookies from being transmitted over the unencrypted
+    /// tunnel edge.
+    ///
+    /// # Security note
+    ///
+    /// Without `Secure`, a cookie can be read by any HTTP intermediary on the
+    /// network path (e.g. a transparent proxy or an attacker performing a
+    /// MitM on the tunnel). `COOKIE_SECURE=true` closes this window at the
+    /// cost of requiring HTTPS end-to-end in your local setup.
+    pub fn should_use_secure_cookies(&self) -> bool {
+        self.is_production_like() || self.cookie_secure_override
     }
 
     /// Validate configuration at startup.
@@ -652,6 +689,33 @@ impl AppConfig {
                 "MIN_SUBSCRIPTION_PRICE_CENTS must be less than MAX_SUBSCRIPTION_PRICE_CENTS"
                     .to_string(),
             );
+        }
+
+        // INTERNAL_API_KEYS validation
+        // The /api/v1/metrics endpoint (and other internal routes) are protected
+        // exclusively by RequireApiKey. An empty key list means the middleware
+        // will reject ALL requests to those routes, effectively disabling metrics
+        // scraping. In production this is a misconfiguration, not a safe default.
+        if self.internal_api_keys.is_empty() {
+            if self.is_production_like() {
+                errors.push(
+                    "INTERNAL_API_KEYS is empty. The /metrics endpoint (and other \
+                     internal routes) require at least one API key. Set \
+                     INTERNAL_API_KEYS=<key1>,<key2> before deploying to \
+                     staging/production. Generate a key with: \
+                     openssl rand -hex 32"
+                        .to_string(),
+                );
+            } else {
+                // In development, log a warning at startup via validate_or_panic.
+                // Not a hard error — devs may not have set up keys locally yet.
+                tracing::warn!(
+                    event = "config.missing_api_keys",
+                    "INTERNAL_API_KEYS is empty. /api/v1/metrics will reject all \
+                     requests. Set INTERNAL_API_KEYS in your .env file to enable \
+                     metrics scraping locally."
+                );
+            }
         }
 
         // CORS origin validation (FRONTEND_URL)

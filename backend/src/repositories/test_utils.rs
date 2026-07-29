@@ -109,6 +109,7 @@ pub mod mocks {
             csrf_secret_key: generate_deterministic_string(32, 0xCAFEBABE),
             refresh_token_hash_salt: generate_deterministic_string(16, 0xFEEDFACE),
             rate_limit_enabled: true,
+            cookie_secure_override: false,
             argon2_m_cost: 65536,
             argon2_t_cost: 3,
             argon2_p_cost: 1,
