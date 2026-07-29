@@ -652,9 +652,7 @@ impl IUserRepository for UsersRepository {
                         .await?;
 
                     let profile = crate::db::schema::profiles::table
-                        .filter(
-                            crate::db::schema::profiles::dsl::user_id.eq(uid_val),
-                        )
+                        .filter(crate::db::schema::profiles::dsl::user_id.eq(uid_val))
                         .select(Profile::as_select())
                         .first::<Profile>(conn)
                         .await
@@ -687,20 +685,22 @@ impl IUserRepository for UsersRepository {
                     let full_name = profile.as_ref().and_then(|p| p.full_name.clone());
                     let nickname = profile.as_ref().and_then(|p| p.nickname.clone());
 
-                    let display_name = profile
-                        .as_ref()
-                        .and_then(|p| p.full_name.clone())
-                        .or_else(|| {
-                            let parts: Vec<&str> = [first_name.as_deref(), last_name.as_deref()]
-                                .iter()
-                                .filter_map(|s| *s)
-                                .collect();
-                            if parts.is_empty() {
-                                None
-                            } else {
-                                Some(parts.join(" "))
-                            }
-                        });
+                    let display_name =
+                        profile
+                            .as_ref()
+                            .and_then(|p| p.full_name.clone())
+                            .or_else(|| {
+                                let parts: Vec<&str> =
+                                    [first_name.as_deref(), last_name.as_deref()]
+                                        .iter()
+                                        .filter_map(|s| *s)
+                                        .collect();
+                                if parts.is_empty() {
+                                    None
+                                } else {
+                                    Some(parts.join(" "))
+                                }
+                            });
 
                     Ok(AdminUserItem {
                         id: user.id,
