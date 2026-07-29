@@ -8,7 +8,12 @@ export default defineConfig({
     alias: {
       '~': resolve(__dirname),
       '@': resolve(__dirname),
+      '~~': resolve(__dirname),
       '#imports': resolve(__dirname, 'tests/mocks/imports.ts'),
+      // h3 is not a direct dependency — it ships with Nuxt/Nitro.
+      // vitest runs outside the Nitro runtime, so we resolve it explicitly
+      // from the pnpm virtual store so server utility tests can import it.
+      'h3': resolve(__dirname, 'node_modules/.pnpm/h3@1.15.11/node_modules/h3'),
     },
   },
   test: {

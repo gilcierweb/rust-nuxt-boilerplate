@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 
 use std::rc::Rc;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use actix_web::body::BoxBody;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
@@ -91,6 +94,99 @@ pub const RATE_MESSAGES: RateLimit = RateLimit::new(60, 60, "rl:msg");
 /// Limit: 120 requests per minute (per user)
 pub const RATE_MESSAGES_AUTHENTICATED: RateLimit = RateLimit::new(120, 60, "rl:msg");
 
+// ============================================================================
+// Circuit Breaker for Redis Failures
+// ============================================================================
+
+/// Circuit breaker state for graceful degradation when Redis is unavailable.
+///
+/// When Redis becomes unavailable, failing closed (503) on every request
+/// creates a denial-of-service vector. This circuit breaker:
+///
+/// 1. Tracks consecutive Redis failures
+/// 2. After `failure_threshold` consecutive errors, opens the circuit
+///    and starts failing OPEN (allowing requests to pass) for `reset_timeout`
+/// 3. After `reset_timeout`, enters half-open state and tries Redis again
+/// 4. On success, closes the circuit; on failure, reopens it
+///
+/// This trades rate-limiting accuracy for availability during Redis blips.
+/// The impact is bounded: at most `reset_timeout` seconds of untracked requests
+/// per circuit-open event.
+#[derive(Debug)]
+pub struct RedisCircuitBreaker {
+    /// Number of consecutive Redis failures
+    consecutive_failures: AtomicU64,
+    /// Threshold to open the circuit (default: 5)
+    failure_threshold: u64,
+    /// When the circuit was opened (None if closed)
+    opened_at: std::sync::Mutex<Option<Instant>>,
+    /// How long to stay open before retrying (default: 30s)
+    reset_timeout: Duration,
+}
+
+impl RedisCircuitBreaker {
+    pub fn new(failure_threshold: u64, reset_timeout: Duration) -> Self {
+        Self {
+            consecutive_failures: AtomicU64::new(0),
+            failure_threshold,
+            opened_at: std::sync::Mutex::new(None),
+            reset_timeout,
+        }
+    }
+
+    /// Check if the circuit is open (should fail open).
+    ///
+    /// Returns `true` if the circuit is open and the reset timeout hasn't elapsed.
+    /// After the timeout, the circuit enters half-open state and returns `false`
+    /// to allow a retry.
+    pub fn is_open(&self) -> bool {
+        let opened_at = self.opened_at.lock().unwrap();
+        if let Some(t) = *opened_at {
+            // Circuit was opened — check if reset_timeout has elapsed
+            if t.elapsed() < self.reset_timeout {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Record a successful Redis operation.
+    ///
+    /// Closes the circuit if it was open, resets the failure counter.
+    pub fn record_success(&self) {
+        self.consecutive_failures.store(0, Ordering::Relaxed);
+        let mut opened_at = self.opened_at.lock().unwrap();
+        *opened_at = None;
+    }
+
+    /// Record a Redis failure.
+    ///
+    /// Increments the failure counter and opens the circuit if the threshold
+    /// is reached.
+    pub fn record_failure(&self) {
+        let failures = self.consecutive_failures.fetch_add(1, Ordering::Relaxed) + 1;
+        if failures >= self.failure_threshold {
+            let mut opened_at = self.opened_at.lock().unwrap();
+            if opened_at.is_none() {
+                tracing::warn!(
+                    event = "rate_limit.circuit_breaker_opened",
+                    consecutive_failures = failures,
+                    threshold = self.failure_threshold,
+                    reset_timeout_secs = self.reset_timeout.as_secs(),
+                    "Rate limiter circuit breaker opened due to consecutive Redis failures"
+                );
+                *opened_at = Some(Instant::now());
+            }
+        }
+    }
+}
+
+impl Default for RedisCircuitBreaker {
+    fn default() -> Self {
+        Self::new(5, Duration::from_secs(30))
+    }
+}
+
 /// Lua script for atomic fixed-window rate limiting.
 ///
 /// Uses a single counter per window instead of sorted sets — reduces Redis
@@ -117,11 +213,30 @@ return 1
 pub struct RateLimiter {
     redis: deadpool_redis::Pool,
     limit: RateLimit,
+    circuit_breaker: Arc<RedisCircuitBreaker>,
 }
 
 impl RateLimiter {
     pub fn new(redis: deadpool_redis::Pool, limit: RateLimit) -> Self {
-        Self { redis, limit }
+        Self {
+            redis,
+            limit,
+            circuit_breaker: Arc::new(RedisCircuitBreaker::default()),
+        }
+    }
+
+    /// Create a RateLimiter with a custom circuit breaker configuration.
+    pub fn with_circuit_breaker(
+        redis: deadpool_redis::Pool,
+        limit: RateLimit,
+        failure_threshold: u64,
+        reset_timeout: Duration,
+    ) -> Self {
+        Self {
+            redis,
+            limit,
+            circuit_breaker: Arc::new(RedisCircuitBreaker::new(failure_threshold, reset_timeout)),
+        }
     }
 }
 
@@ -142,6 +257,7 @@ where
             service: Rc::new(service),
             redis: self.redis.clone(),
             limit: self.limit.clone(),
+            circuit_breaker: self.circuit_breaker.clone(),
         }))
     }
 }
@@ -150,14 +266,21 @@ pub struct RateLimiterMiddleware<S> {
     service: Rc<S>,
     redis: deadpool_redis::Pool,
     limit: RateLimit,
+    circuit_breaker: Arc<RedisCircuitBreaker>,
 }
 
 impl<S> RateLimiterMiddleware<S> {
-    fn new(service: Rc<S>, redis: deadpool_redis::Pool, limit: RateLimit) -> Self {
+    fn new(
+        service: Rc<S>,
+        redis: deadpool_redis::Pool,
+        limit: RateLimit,
+        circuit_breaker: Arc<RedisCircuitBreaker>,
+    ) -> Self {
         Self {
             service,
             redis,
             limit,
+            circuit_breaker,
         }
     }
 
@@ -214,6 +337,7 @@ where
         let svc = self.service.clone();
         let redis = self.redis.clone();
         let limit = self.limit.clone();
+        let circuit_breaker = self.circuit_breaker.clone();
         let rate_limit_enabled = req
             .app_data::<web::Data<AppContainer>>()
             .map(|container| container.config.rate_limit_enabled)
@@ -242,6 +366,17 @@ where
                 return Ok(res.map_into_boxed_body());
             }
 
+            // Circuit breaker check: if open, fail OPEN (allow request through)
+            // instead of repeatedly hitting a dead Redis.
+            if circuit_breaker.is_open() {
+                tracing::debug!(
+                    event = "rate_limit.circuit_breaker_bypass",
+                    "Circuit breaker open — allowing request without rate limit check"
+                );
+                let res = svc.call(req).await?;
+                return Ok(res.map_into_boxed_body());
+            }
+
             let effective_limit = RateLimiterMiddleware::<S>::pick_effective_limit(
                 &limit,
                 req.method(),
@@ -250,7 +385,8 @@ where
             );
             let key = format!("{}:{}", effective_limit.key_prefix, client_key);
 
-            // Attempt rate limiting with Redis. Fail closed on Redis errors.
+            // Attempt rate limiting with Redis.
+            // On failure, circuit breaker decides whether to fail closed or open.
             let allowed = async {
                 let mut conn = redis.get().await.ok()?;
 
@@ -271,10 +407,13 @@ where
 
             match allowed {
                 Some(true) => {
+                    // Success — close circuit if it was half-open
+                    circuit_breaker.record_success();
                     // Allowed - continue to handler
                 },
                 Some(false) => {
-                    // Rate limited
+                    // Rate limited — also counts as success (Redis is healthy)
+                    circuit_breaker.record_success();
                     let response = HttpResponse::TooManyRequests()
                         .insert_header(("Retry-After", effective_limit.window_secs.to_string()))
                         .insert_header((
@@ -293,7 +432,24 @@ where
                     return Ok(ServiceResponse::new(http_req, response));
                 },
                 None => {
-                    // Redis unavailable or error - fail closed with 503
+                    // Redis unavailable or error
+                    circuit_breaker.record_failure();
+
+                    // After recording the failure, check if circuit is now open
+                    if circuit_breaker.is_open() {
+                        // Circuit just opened — fail OPEN this request to avoid
+                        // cascading failures, but log the degradation
+                        tracing::warn!(
+                            event = "rate_limit.circuit_breaker_opened_on_failure",
+                            key = %key,
+                            "Redis failure triggered circuit breaker — allowing request through"
+                        );
+                        // Let the request proceed without rate limiting
+                        let res = svc.call(req).await?;
+                        return Ok(res.map_into_boxed_body());
+                    }
+
+                    // Circuit not yet open — fail closed with 503
                     tracing::warn!(
                         event = "rate_limit.redis_unavailable",
                         key = %key,
@@ -475,5 +631,62 @@ mod tests {
             RATE_MESSAGES.key_prefix,
             RATE_MESSAGES_AUTHENTICATED.key_prefix
         );
+    }
+
+    // =========================================================================
+    // Circuit Breaker Tests
+    // =========================================================================
+
+    #[test]
+    fn circuit_breaker_starts_closed() {
+        let cb = RedisCircuitBreaker::new(3, Duration::from_secs(30));
+        assert!(!cb.is_open());
+    }
+
+    #[test]
+    fn circuit_breaker_opens_after_threshold_failures() {
+        let cb = RedisCircuitBreaker::new(3, Duration::from_secs(30));
+        cb.record_failure();
+        assert!(!cb.is_open()); // 1 failure, not yet open
+        cb.record_failure();
+        assert!(!cb.is_open()); // 2 failures, not yet open
+        cb.record_failure();
+        assert!(cb.is_open()); // 3 failures = threshold, now open
+    }
+
+    #[test]
+    fn circuit_breaker_resets_on_success() {
+        let cb = RedisCircuitBreaker::new(2, Duration::from_secs(30));
+        cb.record_failure();
+        cb.record_failure();
+        assert!(cb.is_open()); // open after 2 failures
+        cb.record_success();
+        assert!(!cb.is_open()); // closed after success
+    }
+
+    #[test]
+    fn circuit_breaker_success_resets_failure_counter() {
+        let cb = RedisCircuitBreaker::new(3, Duration::from_secs(30));
+        cb.record_failure();
+        cb.record_failure();
+        cb.record_success(); // resets counter to 0
+        cb.record_failure();
+        assert!(!cb.is_open()); // only 1 failure after reset
+        cb.record_failure();
+        assert!(!cb.is_open()); // 2 failures after reset
+        cb.record_failure();
+        assert!(cb.is_open()); // 3 failures after reset, now open
+    }
+
+    #[test]
+    fn circuit_breaker_closes_after_timeout() {
+        let cb = RedisCircuitBreaker::new(2, Duration::from_millis(50));
+        cb.record_failure();
+        cb.record_failure();
+        assert!(cb.is_open());
+
+        // Wait for reset_timeout to elapse
+        std::thread::sleep(Duration::from_millis(60));
+        assert!(!cb.is_open()); // now in half-open state, allows retry
     }
 }
