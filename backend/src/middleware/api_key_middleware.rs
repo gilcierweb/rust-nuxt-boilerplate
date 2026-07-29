@@ -164,7 +164,7 @@ fn constant_time_eq(expected: &str, provided: &str) -> bool {
         let a = if i < expected.len() { expected[i] } else { 0 };
         let b = if i < provided.len() { provided[i] } else { 0 };
         // ct_ne returns Choice(1) if bytes differ
-        diff = diff | a.ct_ne(&b);
+        diff |= a.ct_ne(&b);
     }
 
     // Valid only when lengths match AND no bytes differ.

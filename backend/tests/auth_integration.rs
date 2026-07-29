@@ -164,6 +164,7 @@ fn test_config() -> backend::config::AppConfig {
             created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
             expires_at: None,
         }],
+        cookie_secure_override: false,
     }
 }
 
