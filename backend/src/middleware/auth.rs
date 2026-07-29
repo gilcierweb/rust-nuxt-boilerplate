@@ -18,6 +18,10 @@ pub struct Claims {
     pub token_use: String,
     pub exp: usize,
     pub iat: usize,
+    /// Not-before timestamp — equal to `iat`.
+    /// Required so that `validate_nbf = true` actually enforces the check
+    /// instead of silently passing because the claim is absent.
+    pub nbf: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jti: Option<String>,
 }
@@ -265,6 +269,11 @@ pub fn create_token_with_kid(
         token_use: token_use.to_string(),
         exp,
         iat,
+        // nbf = iat: the token is valid immediately upon issuance.
+        // This field MUST be present so that `validate_nbf = true` in the
+        // validator actually enforces the check rather than silently passing
+        // because the claim is absent.
+        nbf: iat,
         jti: Some(jti),
     };
 
@@ -405,14 +414,22 @@ pub fn verify_token_with_secrets(
 }
 
 fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> AppResult<Claims> {
-    use jsonwebtoken::{DecodingKey, Validation, decode};
+    use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
-    let mut validation = Validation::default();
+    // Explicitly pin the algorithm to HS256.
+    //
+    // `Validation::default()` also uses HS256, but the explicit form:
+    // 1. Guards against future library-default changes.
+    // 2. Prevents the `"alg": "none"` downgrade attack — `jsonwebtoken` v9+
+    //    rejects `none` by default, but explicit pinning adds a second layer.
+    // 3. Makes the security contract self-documenting.
+    let mut validation = Validation::new(Algorithm::HS256);
     validation.validate_exp = true;
     validation.validate_nbf = true;
     validation.required_spec_claims = HashSet::from([
         "exp".to_string(),
         "iat".to_string(),
+        "nbf".to_string(),
         "sub".to_string(),
         "token_use".to_string(),
     ]);
@@ -493,6 +510,7 @@ mod tests {
             token_use: "access".to_string(),
             exp: 0,
             iat: 0,
+            nbf: 0,
             jti: None,
         };
         assert!(claims.is_admin());
