@@ -18,6 +18,12 @@ declare global {
   interface Window {
     // FlyonUI static methods for component initialization
     HSStaticMethods: IStaticMethods;
+    // FlyonUI Overlay component (drawer, modal, etc.)
+    HSOverlay: {
+      open: (el: HTMLElement | string) => void;
+      close: (el: HTMLElement | string) => void;
+      getInstance: (el: HTMLElement | string, isInstance?: boolean) => unknown;
+    };
   }
 }
 

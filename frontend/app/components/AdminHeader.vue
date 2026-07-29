@@ -10,7 +10,6 @@
             aria-expanded="false"
             aria-controls="layout-sidebar"
             data-overlay="#layout-sidebar"
-            @click="sidebarOpen = true"
           >
             <span class="icon-[tabler--menu-2] size-4.5"></span>
           </button>
@@ -45,7 +44,7 @@
                 {{ initials }}
               </span>
             </button>
-            <ul class="dropdown-menu dropdown-open:opacity-100 max-w-75 hidden w-full space-y-0.5" role="menu" aria-orientation="vertical" aria-labelledby="profile-dropdown">
+            <ul class="dropdown-menu dropdown-open:opacity-100 max-w-75 hidden w-full space-y-0.5" role="menu" aria-orientation="vertical" aria-labelledby="profile-dropdown" tabindex="-1">
               <li class="dropdown-header pt-4.5 mb-1 gap-4 px-5 pb-3.5">
                 <div class="avatar avatar-online-top">
                   <div class="bg-primary text-primary-content flex w-10 items-center justify-center rounded-full text-sm font-semibold">
@@ -119,20 +118,12 @@ const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 const localePath = useLocalePath()
 const search = useState('admin-shell-search', () => '')
-const sidebarState = useState('admin-sidebar-open', () => false)
 
 const appName = computed(() => runtimeConfig.public.appName || 'Telosync')
 const userEmail = computed(() => authStore.user?.email || 'admin@telosync.local')
 const rolesLabel = computed(() => authStore.user?.roles?.join(' / ') || 'admin')
 const initials = computed(() => userEmail.value.slice(0, 2).toUpperCase())
 const displayName = computed(() => `${appName.value} Admin`)
-
-const sidebarOpen = computed({
-  get: () => sidebarState.value,
-  set: (value: boolean) => {
-    sidebarState.value = value
-  },
-})
 
 async function handleLogout() {
   await authStore.logout()

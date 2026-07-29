@@ -11,11 +11,6 @@ export default defineNuxtConfig({
     plugins: [
       tailwindcss(),
     ],
-    optimizeDeps: {
-      include: [
-        'flyonui/flyonui', // CJS
-      ]
-    }
   },
 
   modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', 'nuxt-security', '@vee-validate/nuxt'],

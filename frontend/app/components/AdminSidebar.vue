@@ -1,17 +1,7 @@
 <template>
-  <button
-    v-if="sidebarOpen"
-    type="button"
-    class="overlay overlay-open:bg-opacity-0 fixed inset-0 z-40 bg-base-content/50 lg:hidden"
-    :aria-label="$t('admin.sidebar.closeSidebar')"
-    data-overlay="#layout-sidebar"
-    @click="sidebarOpen = false"
-  ></button>
-
   <aside
     id="layout-sidebar"
     class="overlay overlay-open:translate-x-0 drawer drawer-start sm:w-75 inset-y-0 start-0 hidden h-full [--auto-close:lg] lg:z-50 lg:block lg:translate-x-0 lg:shadow-none"
-    :class="sidebarOpen ? '!block translate-x-0' : ''"
     :aria-label="$t('admin.sidebar.sidebar')"
     tabindex="-1"
   >
@@ -22,7 +12,6 @@
           class="btn btn-text btn-circle btn-sm absolute end-3 top-3 lg:hidden"
           :aria-label="$t('admin.sidebar.close')"
           data-overlay="#layout-sidebar"
-          @click="sidebarOpen = false"
         >
           <span class="icon-[tabler--x] size-4.5"></span>
         </button>
@@ -145,18 +134,10 @@ const route = useRoute()
 const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 const localePath = useLocalePath()
-const sidebarState = useState('admin-sidebar-open', () => false)
 
 const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
 const userEmail = computed(() => authStore.user?.email || 'admin@example.com')
 const initials = computed(() => userEmail.value.slice(0, 2).toUpperCase())
-
-const sidebarOpen = computed({
-  get: () => sidebarState.value,
-  set: (value: boolean) => {
-    sidebarState.value = value
-  },
-})
 
 const basePath = computed(() => {
   const cleaned = route.path.replace(/^\/[a-z]{2}(-[A-Z]{2})?/, '')
@@ -196,10 +177,14 @@ function toggleAccordion(id: string) {
   }
 }
 
+// Close the sidebar drawer via FlyonUI's native API on route change
 watch(
   () => route.fullPath,
   () => {
-    sidebarOpen.value = false
+    if (typeof window !== 'undefined' && window.HSOverlay) {
+      const el = document.querySelector('#layout-sidebar')
+      if (el) window.HSOverlay.close(el)
+    }
   },
 )
 

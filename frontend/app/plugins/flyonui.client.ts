@@ -25,7 +25,7 @@ export default defineNuxtPlugin(() => {
     if (/\/undefined(\/|$)/.test(to.path)) {
       const segments = to.path.split('/').filter(Boolean)
       const undefinedIndex = segments.findIndex((s) => s === 'undefined')
-      
+
       // Extract resource name dynamically (segment before "undefined")
       let redirectPath = '/admin/dashboard'
       if (undefinedIndex > 0) {
@@ -34,12 +34,16 @@ export default defineNuxtPlugin(() => {
           redirectPath = `/admin/${resource}`
         }
       }
-      
+
       return redirectPath
     }
   })
 
-  router.afterEach(async () => {
-    setTimeout(() => window.HSStaticMethods.autoInit());
-  });
-});
+  // setTimeout (macro-task) is intentional: it defers autoInit until after the
+  // browser has finished painting the new page DOM. nextTick/microtasks run too
+  // early — the DOM is not yet stable when FlyonUI tries to bind event listeners.
+  // This matches the official FlyonUI Nuxt integration guide exactly.
+  router.afterEach(() => {
+    setTimeout(() => window.HSStaticMethods.autoInit())
+  })
+})
