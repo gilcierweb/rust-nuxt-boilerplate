@@ -34,11 +34,18 @@ use crate::utils::validation::first_validation_error_message;
 pub struct RegisterRequest {
     // RFC 5321 §4.5.3 limits the full forward-path to 256 chars; 254 is the
     // practical max for the email address itself.
-    #[validate(email(message = "auth.validation.invalid_email"), length(max = 254, message = "auth.validation.email_too_long"))]
+    #[validate(
+        email(message = "auth.validation.invalid_email"),
+        length(max = 254, message = "auth.validation.email_too_long")
+    )]
     pub email: String,
     // min=12: fast-fail for obviously short inputs before the full strength
     // check. max=128: prevents multi-MB strings from reaching Argon2id.
-    #[validate(length(min = 12, max = 128, message = "auth.validation.password_invalid_length"))]
+    #[validate(length(
+        min = 12,
+        max = 128,
+        message = "auth.validation.password_invalid_length"
+    ))]
     pub password: String,
     // password_confirmation is compared in the handler; cap at same max to
     // avoid asymmetric allocation.
@@ -48,7 +55,10 @@ pub struct RegisterRequest {
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct LoginRequest {
-    #[validate(email(message = "auth.validation.invalid_email"), length(max = 254, message = "auth.validation.email_too_long"))]
+    #[validate(
+        email(message = "auth.validation.invalid_email"),
+        length(max = 254, message = "auth.validation.email_too_long")
+    )]
     pub email: String,
     // No min check here — wrong passwords should still hit the DB lookup so
     // timing is consistent. max=128 prevents large payloads reaching Argon2id.
@@ -61,7 +71,10 @@ pub struct LoginRequest {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct RecoverRequest {
-    #[validate(email(message = "auth.validation.invalid_email"), length(max = 254, message = "auth.validation.email_too_long"))]
+    #[validate(
+        email(message = "auth.validation.invalid_email"),
+        length(max = 254, message = "auth.validation.email_too_long")
+    )]
     pub email: String,
 }
 
@@ -71,7 +84,11 @@ pub struct ResetPasswordRequest {
     #[validate(length(min = 1, max = 512, message = "auth.validation.token_invalid"))]
     pub token: String,
     // min=12: fast-fail. max=128: prevents large payloads reaching Argon2id.
-    #[validate(length(min = 12, max = 128, message = "auth.validation.password_invalid_length"))]
+    #[validate(length(
+        min = 12,
+        max = 128,
+        message = "auth.validation.password_invalid_length"
+    ))]
     pub password: String,
     #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub password_confirmation: String,
@@ -92,7 +109,11 @@ pub struct ChangePasswordRequest {
     #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub current_password: String,
     // Align min with the password strength policy (12 chars) and cap at 128.
-    #[validate(length(min = 12, max = 128, message = "auth.validation.password_invalid_length"))]
+    #[validate(length(
+        min = 12,
+        max = 128,
+        message = "auth.validation.password_invalid_length"
+    ))]
     pub new_password: String,
     #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub password_confirmation: String,
