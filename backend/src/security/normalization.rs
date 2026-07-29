@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use crate::utils::email as email_utils;
 use unicode_normalization::UnicodeNormalization;
+
+use crate::utils::email as email_utils;
 
 pub fn normalize_email(email: &str) -> String {
     let normalized = email.trim().nfc().collect::<String>();

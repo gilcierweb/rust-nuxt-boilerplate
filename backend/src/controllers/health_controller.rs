@@ -1,4 +1,5 @@
-use actix_web::{HttpResponse, http::StatusCode, web};
+use actix_web::http::StatusCode;
+use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;

@@ -1,19 +1,20 @@
 #[macro_use]
 extern crate rust_i18n;
 
-use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, web};
-use deadpool_redis::{Config as RedisConfig, Runtime};
-use serde::Serialize;
 use std::borrow::Cow;
 use std::io::BufReader;
 use std::sync::Arc;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use actix_cors::Cors;
+use actix_web::{App, HttpResponse, HttpServer, web};
 use backend::AppState;
 use backend::config::AppConfig;
 use backend::db::database::Database;
 use backend::errors::AppError;
+use deadpool_redis::{Config as RedisConfig, Runtime};
+use serde::Serialize;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
 
 i18n!("locales");
 

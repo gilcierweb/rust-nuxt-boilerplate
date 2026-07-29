@@ -2,16 +2,15 @@
 
 use std::rc::Rc;
 
-use actix_web::{
-    Error,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-    http::Method,
-    web,
-};
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
+use actix_web::http::Method;
+use actix_web::{Error, web};
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
 
-use crate::{AppState, middleware::auth::verify_token, repositories::container::AppContainer};
+use crate::AppState;
+use crate::middleware::auth::verify_token;
+use crate::repositories::container::AppContainer;
 
 #[derive(Clone)]
 pub struct PublicRoute {
@@ -172,13 +171,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use actix_web::{App, HttpResponse, http::Method, test, web};
+    use actix_web::http::Method;
+    use actix_web::{App, HttpResponse, test, web};
 
     use super::{ApiAccessGate, PublicRoute};
-    use crate::{
-        middleware::auth::create_token,
-        repositories::test_utils::mocks::{mock_app_config, mock_container},
-    };
+    use crate::middleware::auth::create_token;
+    use crate::repositories::test_utils::mocks::{mock_app_config, mock_container};
 
     #[actix_web::test]
     async fn rejects_missing_bearer_token_on_protected_route() {

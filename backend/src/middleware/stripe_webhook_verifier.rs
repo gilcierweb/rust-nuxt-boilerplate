@@ -1,11 +1,10 @@
-use actix_web::{
-    Error as ActixError, HttpResponse,
-    body::BoxBody,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    web::Bytes,
-};
-use futures::future::{LocalBoxFuture, Ready, ready};
 use std::rc::Rc;
+
+use actix_web::body::BoxBody;
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::web::Bytes;
+use actix_web::{Error as ActixError, HttpResponse};
+use futures::future::{LocalBoxFuture, Ready, ready};
 
 use crate::config::AppConfig;
 
@@ -205,8 +204,9 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use sha2::Sha256;
+
+    use super::*;
 
     fn make_valid_signature(payload: &[u8], secret: &str, timestamp: i64) -> String {
         use hmac::{Hmac, Mac};

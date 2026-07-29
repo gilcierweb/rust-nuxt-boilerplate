@@ -52,9 +52,12 @@ impl ResponseError for AppError {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use actix_web::{ResponseError, body::to_bytes, http::StatusCode};
+    use actix_web::ResponseError;
+    use actix_web::body::to_bytes;
+    use actix_web::http::StatusCode;
     use serde_json::Value;
+
+    use super::*;
 
     #[actix_rt::test]
     async fn internal_errors_are_sanitized_in_http_responses() {

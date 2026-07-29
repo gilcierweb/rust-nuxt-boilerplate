@@ -1,8 +1,10 @@
-use crate::db::database::DBPool;
-use diesel::{QueryableByName, result::QueryResult, sql_query};
+use diesel::result::QueryResult;
+use diesel::{QueryableByName, sql_query};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use futures::future::BoxFuture;
 use tracing::Instrument;
+
+use crate::db::database::DBPool;
 
 #[derive(QueryableByName)]
 #[allow(dead_code)]

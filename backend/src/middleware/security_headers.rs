@@ -13,12 +13,10 @@
 
 use std::rc::Rc;
 
-use actix_web::{
-    Error,
-    body::MessageBody,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-    http::header::{self, HeaderValue},
-};
+use actix_web::Error;
+use actix_web::body::MessageBody;
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
+use actix_web::http::header::{self, HeaderValue};
 use futures::future::{LocalBoxFuture, Ready, ready};
 
 pub struct SecurityHeaders;
@@ -109,8 +107,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use actix_web::{App, HttpResponse, test, web};
+
+    use super::*;
 
     #[actix_web::test]
     async fn security_headers_are_added() {

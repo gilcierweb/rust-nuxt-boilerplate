@@ -1,21 +1,20 @@
 #![allow(dead_code)]
 
-#[allow(unused_imports)]
-use crate::errors::AppResult;
-use crate::{
-    config::AppConfig,
-    errors::AppError,
-    models::user::{NewUser, User},
-    security::SecurityService,
-    services::{token::generate_random_token, token_service::hash_token},
-};
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
-};
+use argon2::Argon2;
+use argon2::password_hash::rand_core::OsRng;
+use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
 use chrono::Utc;
 use diesel::prelude::*;
 use uuid::Uuid;
+
+use crate::config::AppConfig;
+use crate::errors::AppError;
+#[allow(unused_imports)]
+use crate::errors::AppResult;
+use crate::models::user::{NewUser, User};
+use crate::security::SecurityService;
+use crate::services::token::generate_random_token;
+use crate::services::token_service::hash_token;
 
 /// Hash a plaintext password using Argon2id with configurable parameters.
 pub fn hash_password(password: &str, config: &AppConfig) -> Result<String, AppError> {
@@ -200,8 +199,9 @@ pub fn confirm_email(
     token: &str,
     token_salt: &str,
 ) -> Result<User, AppError> {
-    use crate::db::schema::users::dsl::*;
     use diesel::dsl::sql;
+
+    use crate::db::schema::users::dsl::*;
 
     let user = users
         .filter(confirmation_token_digest.eq(hash_token(token, token_salt)))
@@ -262,11 +262,13 @@ pub fn record_successful_login(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::repositories::test_utils::mocks::mock_app_config;
-    use diesel::r2d2::{ConnectionManager, Pool};
     use std::ops::Deref;
     use std::sync::Arc;
+
+    use diesel::r2d2::{ConnectionManager, Pool};
+
+    use super::*;
+    use crate::repositories::test_utils::mocks::mock_app_config;
 
     fn setup_test_db() -> Arc<Pool<ConnectionManager<PgConnection>>> {
         let database_url = std::env::var("DATABASE_URL_TEST")

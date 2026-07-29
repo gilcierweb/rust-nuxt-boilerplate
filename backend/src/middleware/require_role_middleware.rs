@@ -1,12 +1,12 @@
 #![allow(dead_code)]
 
-use crate::{
-    errors::{AppError, AppResult},
-    middleware::{auth::AuthUser, auth_middleware::extract_claims},
-    models::role::ROLE_ADMIN,
-    repositories::container::AppContainer,
-};
 use actix_web::HttpRequest;
+
+use crate::errors::{AppError, AppResult};
+use crate::middleware::auth::AuthUser;
+use crate::middleware::auth_middleware::extract_claims;
+use crate::models::role::ROLE_ADMIN;
+use crate::repositories::container::AppContainer;
 
 /// Guard: ensure authenticated user has a specific role.
 /// Usage in handlers: `require_role(&req, "creator")?;`

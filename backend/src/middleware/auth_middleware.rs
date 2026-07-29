@@ -1,23 +1,21 @@
 #![allow(dead_code)]
 
-use actix_web::{
-    Error, HttpMessage,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-    http::Method,
-};
+use std::rc::Rc;
+use std::sync::Arc;
+
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
+use actix_web::http::Method;
+use actix_web::{Error, HttpMessage};
 use actix_web_grants::authorities::AttachAuthorities;
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
-use std::{rc::Rc, sync::Arc};
 
-use crate::{
-    AppState,
-    authz::grants_extractor::build_authorities_for_claims,
-    middleware::auth::{
-        ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, bearer_exempt_routes, verify_token_with_secrets,
-    },
-    repositories::access_token_blacklist::AccessTokenBlacklist,
+use crate::AppState;
+use crate::authz::grants_extractor::build_authorities_for_claims;
+use crate::middleware::auth::{
+    ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, bearer_exempt_routes, verify_token_with_secrets,
 };
+use crate::repositories::access_token_blacklist::AccessTokenBlacklist;
 
 #[derive(Clone)]
 pub struct JwtAuthConfig {

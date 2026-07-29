@@ -1,5 +1,7 @@
 #[cfg(test)]
 pub mod mocks {
+    use std::sync::Arc;
+
     use crate::config::app_config::{AppConfig, Environment};
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::container::AppContainer;
@@ -9,7 +11,6 @@ pub mod mocks {
     use crate::repositories::user_roles_repository::MockIUserRoleRepository;
     use crate::repositories::users_repository::{MockIUserRepository, UsersRepository};
     use crate::services::cache_service::CacheManager;
-    use std::sync::Arc;
 
     /// Create a dummy DB pool for fields that require a concrete type (e.g. users_tx).
     /// The pool is never actually used in mock tests — it only satisfies the type system.
@@ -30,8 +31,7 @@ pub mod mocks {
     /// This ensures tests are reproducible while still using realistic key formats.
     fn generate_deterministic_base64_key(byte_length: usize, seed: u64) -> String {
         use base64::Engine;
-        use rand::RngCore;
-        use rand::SeedableRng;
+        use rand::{RngCore, SeedableRng};
         let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
         let mut bytes = vec![0u8; byte_length];
         rng.fill_bytes(&mut bytes);
@@ -40,8 +40,7 @@ pub mod mocks {
 
     /// Generate a deterministic string using a seeded RNG.
     fn generate_deterministic_string(length: usize, seed: u64) -> String {
-        use rand::Rng;
-        use rand::SeedableRng;
+        use rand::{Rng, SeedableRng};
         let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
         let charset: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         (0..length)

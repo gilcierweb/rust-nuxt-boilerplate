@@ -1,12 +1,11 @@
-use actix_web::{
-    Error as ActixError, HttpResponse,
-    body::BoxBody,
-    cookie::{Cookie, SameSite},
-    dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    http::Method,
-};
-use futures::future::{LocalBoxFuture, Ready, ready};
 use std::rc::Rc;
+
+use actix_web::body::BoxBody;
+use actix_web::cookie::{Cookie, SameSite};
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::http::Method;
+use actix_web::{Error as ActixError, HttpResponse};
+use futures::future::{LocalBoxFuture, Ready, ready};
 
 use crate::config::AppConfig;
 
@@ -204,8 +203,7 @@ where
 
                 // Extract CSRF secret key from whichever app_data source is registered.
                 // Priority: bare AppConfig (test setups) → AppState (main app) → AppContainer.
-                let secret_key = extract_csrf_config_from_request(&req)
-                    .map(|c| c.csrf_secret_key);
+                let secret_key = extract_csrf_config_from_request(&req).map(|c| c.csrf_secret_key);
 
                 let is_valid = match (&header_token, &cookie_token, &secret_key) {
                     (Some(header), Some(cookie), Some(key)) => {
@@ -325,11 +323,12 @@ fn extract_csrf_config_from_response<B>(
 
 /// Generate a CSRF token with embedded timestamp: `{timestamp}.{nonce}.{hmac}`
 pub fn generate_csrf_token(secret_key: &str) -> String {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use hmac::{Hmac, Mac};
     use rand::RngCore;
     use rand::rngs::OsRng;
     use sha2::Sha256;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     type HmacSha256 = Hmac<Sha256>;
 
@@ -356,9 +355,10 @@ pub fn generate_csrf_token(secret_key: &str) -> String {
 /// Validate a CSRF token: check HMAC integrity and expiry.
 /// Also accepts tokens within the grace period after rotation.
 fn validate_csrf_token(token: &str, secret_key: &str) -> bool {
+    use std::time::{SystemTime, UNIX_EPOCH};
+
     use hmac::{Hmac, Mac};
     use sha2::Sha256;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     type HmacSha256 = Hmac<Sha256>;
 
@@ -534,9 +534,10 @@ mod tests {
 
     #[test]
     fn test_csrf_token_grace_period() {
+        use std::time::{SystemTime, UNIX_EPOCH};
+
         use hmac::{Hmac, Mac};
         use sha2::Sha256;
-        use std::time::{SystemTime, UNIX_EPOCH};
         type HmacSha256 = Hmac<Sha256>;
 
         let now = SystemTime::now()

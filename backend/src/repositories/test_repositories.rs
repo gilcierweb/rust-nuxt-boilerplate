@@ -14,14 +14,15 @@
 // mock_repo.expect_find().returning(|_| Ok(user_fixture()));
 // ```
 
+use chrono::Utc;
+use uuid::Uuid;
+
 use crate::models::audit_log::AuditLog;
 use crate::models::profile::Profile;
 use crate::models::refresh_token::RefreshToken;
 use crate::models::role::Role;
 use crate::models::user::User;
 use crate::models::user_role::UserRole;
-use chrono::Utc;
-use uuid::Uuid;
 
 /// Create a test user fixture.
 pub fn user_fixture() -> User {
@@ -226,8 +227,9 @@ pub fn setup_refresh_token_repo_find_by_hash(
 
 /// Test data module with commonly used test values.
 pub mod test_data {
-    use super::*;
     use std::sync::LazyLock;
+
+    use super::*;
 
     pub static TEST_USER_ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
     pub static TEST_ROLE_ID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
@@ -243,8 +245,9 @@ pub mod test_data {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use uuid::Uuid;
+
+    use super::*;
 
     #[test]
     fn test_user_fixture() {

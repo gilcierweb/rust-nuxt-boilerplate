@@ -1,7 +1,7 @@
-use argon2::{
-    Argon2,
-    password_hash::{PasswordHasher, SaltString},
-};
+use std::collections::HashMap;
+
+use argon2::Argon2;
+use argon2::password_hash::{PasswordHasher, SaltString};
 use base64::Engine;
 use chrono::Utc;
 use diesel::dsl::count_star;
@@ -11,7 +11,6 @@ use diesel::sql_types::{Text, Uuid as SqlUuid};
 use faker_rust::name;
 use ipnet::IpNet;
 use rand::RngCore;
-use std::collections::HashMap;
 use uuid::Uuid;
 
 #[path = "../db/schema.rs"]
@@ -399,11 +398,12 @@ fn ensure_audit_log(
 }
 
 fn print_counts(conn: &mut PgConnection) -> SeedResult<()> {
-    use schema::{
-        audit_logs::table as audit_logs_table, profiles::table as profiles_table,
-        refresh_tokens::table as refresh_tokens_table, roles::table as roles_table,
-        users::table as users_table, users_roles::table as users_roles_table,
-    };
+    use schema::audit_logs::table as audit_logs_table;
+    use schema::profiles::table as profiles_table;
+    use schema::refresh_tokens::table as refresh_tokens_table;
+    use schema::roles::table as roles_table;
+    use schema::users::table as users_table;
+    use schema::users_roles::table as users_roles_table;
 
     let users_count: i64 = users_table.select(count_star()).first(conn)?;
     let roles_count: i64 = roles_table.select(count_star()).first(conn)?;

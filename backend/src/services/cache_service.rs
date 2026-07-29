@@ -1,10 +1,12 @@
 #![allow(dead_code)]
 
-use deadpool_redis::{Config, Pool, Runtime};
-use redis::AsyncCommands;
-use serde::{Serialize, de::DeserializeOwned};
 use std::sync::Arc;
 use std::time::Duration;
+
+use deadpool_redis::{Config, Pool, Runtime};
+use redis::AsyncCommands;
+use serde::Serialize;
+use serde::de::DeserializeOwned;
 
 /// Redis cache manager for performance optimization
 pub struct CacheManager {

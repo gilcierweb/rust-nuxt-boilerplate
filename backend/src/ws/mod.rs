@@ -1,7 +1,8 @@
 #![allow(dead_code)]
 
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+
+use serde::{Deserialize, Serialize};
 
 pub mod redis_handler;
 pub mod redis_state;

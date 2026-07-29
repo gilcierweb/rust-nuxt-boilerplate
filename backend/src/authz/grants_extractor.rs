@@ -1,14 +1,13 @@
 use std::collections::HashSet;
 
-use actix_web::{Error, dev::ServiceRequest, web};
+use actix_web::dev::ServiceRequest;
+use actix_web::{Error, web};
 
-use crate::{
-    AppState,
-    authz::ability::{build_ability, build_authorities},
-    middleware::auth::{Claims, verify_token},
-    repositories::access_token_blacklist::hash_token_for_blacklist,
-    repositories::container::AppContainer,
-};
+use crate::AppState;
+use crate::authz::ability::{build_ability, build_authorities};
+use crate::middleware::auth::{Claims, verify_token};
+use crate::repositories::access_token_blacklist::hash_token_for_blacklist;
+use crate::repositories::container::AppContainer;
 
 pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>, Error> {
     let Some(raw_token) = req

@@ -1,14 +1,12 @@
-use crate::api_docs::ApiDoc;
+use actix_web::web;
 use utoipa::OpenApi;
 use utoipa_swagger_ui::SwaggerUi;
 
+use crate::api_docs::ApiDoc;
 pub use crate::controllers::{
     audit_logs_controller, auth_controller, health_controller, metrics_controller,
     roles_controller, upload_controller, users_controller,
 };
-
-use actix_web::web;
-
 use crate::middleware::csrf_protection::CsrfProtection;
 use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 

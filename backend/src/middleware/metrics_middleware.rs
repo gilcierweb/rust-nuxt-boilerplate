@@ -1,10 +1,9 @@
-use std::{rc::Rc, time::Instant};
+use std::rc::Rc;
+use std::time::Instant;
 
-use actix_web::{
-    Error,
-    body::MessageBody,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-};
+use actix_web::Error;
+use actix_web::body::MessageBody;
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
 use futures::future::{LocalBoxFuture, Ready, ready};
 
 use crate::AppState;

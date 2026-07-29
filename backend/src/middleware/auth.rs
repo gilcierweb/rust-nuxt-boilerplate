@@ -1,14 +1,13 @@
 #![allow(dead_code)]
 
-use actix_web::{FromRequest, HttpMessage, HttpRequest};
-use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::future::{Ready, ready};
 
-use crate::{
-    errors::{AppError, AppResult},
-    models::role::ROLE_ADMIN,
-};
+use actix_web::{FromRequest, HttpMessage, HttpRequest};
+use serde::{Deserialize, Serialize};
+
+use crate::errors::{AppError, AppResult};
+use crate::models::role::ROLE_ADMIN;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
@@ -509,8 +508,9 @@ mod tests {
 
     #[test]
     fn create_token_with_kid_sets_header_kid() {
-        use crate::config::app_config::JwtSecretKey;
         use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
 
         let sub = uuid::Uuid::new_v4();
         let profile_id = uuid::Uuid::new_v4();
@@ -546,8 +546,9 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_matches_kid() {
-        use crate::config::app_config::JwtSecretKey;
         use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
 
         let sub = uuid::Uuid::new_v4();
         let profile_id = uuid::Uuid::new_v4();
@@ -585,8 +586,9 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_falls_back_to_other_secrets() {
-        use crate::config::app_config::JwtSecretKey;
         use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
 
         let sub = uuid::Uuid::new_v4();
         let profile_id = uuid::Uuid::new_v4();
@@ -623,8 +625,9 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_rejects_expired_keys() {
-        use crate::config::app_config::JwtSecretKey;
         use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
 
         let sub = uuid::Uuid::new_v4();
         let profile_id = uuid::Uuid::new_v4();
@@ -653,8 +656,9 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_rejects_wrong_use() {
-        use crate::config::app_config::JwtSecretKey;
         use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
 
         let sub = uuid::Uuid::new_v4();
         let profile_id = uuid::Uuid::new_v4();
@@ -683,8 +687,9 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_unknown_kid_falls_back() {
-        use crate::config::app_config::JwtSecretKey;
         use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
 
         let sub = uuid::Uuid::new_v4();
         let profile_id = uuid::Uuid::new_v4();
@@ -716,8 +721,9 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_no_kid_header_falls_back() {
-        use crate::config::app_config::JwtSecretKey;
         use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
 
         let sub = uuid::Uuid::new_v4();
         let profile_id = uuid::Uuid::new_v4();

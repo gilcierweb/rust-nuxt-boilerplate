@@ -1,12 +1,14 @@
 #![allow(dead_code)]
 
+use std::collections::HashMap;
+use std::sync::Arc;
+
 use actix::prelude::*;
-use actix_web::{HttpRequest, HttpResponse, http::header::SEC_WEBSOCKET_PROTOCOL, web};
+use actix_web::http::header::SEC_WEBSOCKET_PROTOCOL;
+use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web_actors::ws;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::sync::Arc;
 use tokio::sync::Mutex as TokioMutex;
 use uuid::Uuid;
 
@@ -690,8 +692,10 @@ pub(crate) fn extract_ws_protocol_token(req: &HttpRequest) -> Option<String> {
 
 #[cfg(test)]
 mod tests {
+    use actix_web::http::header::SEC_WEBSOCKET_PROTOCOL;
+    use actix_web::test::TestRequest;
+
     use super::{WS_PROTOCOL, extract_ws_protocol_token};
-    use actix_web::{http::header::SEC_WEBSOCKET_PROTOCOL, test::TestRequest};
 
     #[test]
     fn extracts_websocket_token_from_subprotocol_header() {
@@ -781,10 +785,9 @@ mod tests {
 
     #[cfg(test)]
     mod ws_state_actor_tests {
+        use actix::{Actor, Addr, Context};
+
         use super::super::*;
-        use actix::Actor;
-        use actix::Addr;
-        use actix::Context;
 
         struct DummyActor;
 

@@ -1,6 +1,7 @@
+use std::env;
+
 use hmac::{Mac, SimpleHmac};
 use sha2::{Digest, Sha256};
-use std::env;
 
 use crate::errors::{AppError, AppResult};
 

@@ -8,6 +8,8 @@
 //! - Redis running at REDIS_URL_TEST (default: redis://127.0.0.1:6379)
 //! - Migrations applied: `diesel migration run --database-url $DATABASE_URL_TEST`
 
+use std::sync::Arc;
+
 use actix_web::{App, HttpMessage, test, web};
 use backend::middleware::auth::{ACCESS_TOKEN_USE, Claims};
 use chrono::Utc;
@@ -16,7 +18,6 @@ use deadpool_redis::{Config as RedisConfig, Runtime};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde_json::Value;
-use std::sync::Arc;
 use uuid::Uuid as UuidType;
 
 fn make_claims(sub: UuidType, profile_id: UuidType) -> Claims {
@@ -70,9 +71,8 @@ fn redis_pool() -> deadpool_redis::Pool {
 
 fn test_config() -> backend::config::AppConfig {
     use backend::config::app_config::Environment;
-    use rand::Rng;
-    use rand::SeedableRng;
     use rand::rngs::StdRng;
+    use rand::{Rng, SeedableRng};
 
     let database_url = std::env::var("DATABASE_URL_TEST")
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string());

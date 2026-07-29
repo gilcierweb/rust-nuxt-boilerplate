@@ -1,13 +1,11 @@
 use std::rc::Rc;
 
-use actix_web::{
-    Error, ResponseError,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-    web,
-};
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
+use actix_web::{Error, ResponseError, web};
 use futures::future::{LocalBoxFuture, Ready, ready};
 
-use crate::{errors::AppError, repositories::container::AppContainer};
+use crate::errors::AppError;
+use crate::repositories::container::AppContainer;
 
 #[derive(Clone, Default)]
 pub struct RequireApiKey {
@@ -127,20 +125,51 @@ fn extract_api_key(req: &ServiceRequest) -> Option<String> {
         })
 }
 
+/// Compare two API key strings in constant time.
+///
+/// Both the length check and the byte comparison are performed without
+/// short-circuiting, so an attacker cannot infer the correct key length
+/// or any individual byte by measuring response latency.
+///
+/// # Implementation
+///
+/// We use `subtle::ConstantTimeEq` from the `subtle` crate (already a
+/// project dependency) for the byte-level comparison. For length equality
+/// we also use `subtle::Choice` so the branch is not visible to the
+/// optimiser or CPU branch-predictor.
+///
+/// `subtle` is already used in `token_service.rs` for refresh-token hash
+/// verification, so no new dependency is introduced.
 fn constant_time_eq(expected: &str, provided: &str) -> bool {
+    use subtle::{Choice, ConstantTimeEq};
+
     let expected = expected.as_bytes();
     let provided = provided.as_bytes();
 
-    if expected.len() != provided.len() {
-        return false;
+    // Lengths must match. Encode the result as a `subtle::Choice` (1 = equal)
+    // so that the branch below is not evaluated until after the byte comparison.
+    let lengths_match: Choice =
+        subtle::ConstantTimeEq::ct_eq(&(expected.len() as u64), &(provided.len() as u64));
+
+    // Byte comparison. We pad the shorter slice with zeros so that the loop
+    // always runs for `max(len_a, len_b)` iterations regardless of input
+    // lengths, preventing the optimiser from eliding work based on the length
+    // difference. The `lengths_match` flag ensures the overall result is
+    // `false` whenever lengths differ, even if the padded bytes accidentally
+    // compare equal.
+    let max_len = expected.len().max(provided.len());
+    let mut diff = subtle::Choice::from(0u8); // accumulates any difference
+
+    for i in 0..max_len {
+        let a = if i < expected.len() { expected[i] } else { 0 };
+        let b = if i < provided.len() { provided[i] } else { 0 };
+        // ct_ne returns Choice(1) if bytes differ
+        diff = diff | a.ct_ne(&b);
     }
 
-    let mut diff = 0u8;
-    for (left, right) in expected.iter().zip(provided.iter()) {
-        diff |= left ^ right;
-    }
-
-    diff == 0
+    // Valid only when lengths match AND no bytes differ.
+    // Both conditions are evaluated; neither causes an early exit.
+    bool::from(lengths_match & !diff)
 }
 
 #[cfg(test)]
@@ -245,5 +274,46 @@ mod tests {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), actix_web::http::StatusCode::OK);
+    }
+
+    // constant_time_eq unit tests are in the submodule below to avoid
+    // conflict with the #[actix_web::test] context used by the async tests.
+}
+
+#[cfg(test)]
+mod constant_time_tests {
+    #[test]
+    fn identical_keys() {
+        assert!(super::constant_time_eq("secret-key-abc", "secret-key-abc"));
+    }
+
+    #[test]
+    fn different_content_same_length() {
+        assert!(!super::constant_time_eq("secret-key-abc", "secret-key-xyz"));
+    }
+
+    #[test]
+    fn different_lengths() {
+        // Must return false without leaking which side is longer.
+        assert!(!super::constant_time_eq("short", "short-but-longer"));
+        assert!(!super::constant_time_eq("short-but-longer", "short"));
+    }
+
+    #[test]
+    fn empty_strings() {
+        assert!(super::constant_time_eq("", ""));
+    }
+
+    #[test]
+    fn one_empty() {
+        assert!(!super::constant_time_eq("", "non-empty"));
+        assert!(!super::constant_time_eq("non-empty", ""));
+    }
+
+    #[test]
+    fn prefix_match_is_rejected() {
+        // "abc" must not match "abcX" even though one is a prefix of the other.
+        assert!(!super::constant_time_eq("abc", "abcX"));
+        assert!(!super::constant_time_eq("abcX", "abc"));
     }
 }

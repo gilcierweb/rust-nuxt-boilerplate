@@ -1,15 +1,12 @@
-use crate::config::AppConfig;
-use crate::config::app_config::Environment;
-use crate::config::app_config::JwtSecretKey;
-
 use super::key_manager::KeyManager;
+use crate::config::AppConfig;
+use crate::config::app_config::{Environment, JwtSecretKey};
 
 /// Generate a deterministic base64-encoded key using a seeded RNG.
 /// This ensures tests are reproducible while still using realistic key formats.
 fn generate_deterministic_base64_key(byte_length: usize, seed: u64) -> String {
     use base64::Engine;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::{RngCore, SeedableRng};
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
     let mut bytes = vec![0u8; byte_length];
     rng.fill_bytes(&mut bytes);
@@ -18,8 +15,7 @@ fn generate_deterministic_base64_key(byte_length: usize, seed: u64) -> String {
 
 /// Generate a deterministic string using a seeded RNG.
 fn generate_deterministic_string(length: usize, seed: u64) -> String {
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::{Rng, SeedableRng};
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
     let charset: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     (0..length)

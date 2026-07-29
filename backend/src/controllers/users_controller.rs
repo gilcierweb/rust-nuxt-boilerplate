@@ -1,16 +1,14 @@
-use actix_web::{HttpResponse, get, web};
-use actix_web_grants::authorities::AuthDetails;
 use std::sync::Arc;
 
-use crate::{
-    authz::ability::{AbilityAction, AbilityResource, authorize},
-    errors::{AppError, AppResult},
-    repositories::container::AppContainer,
-    security::SecurityService,
-    utils::pagination::PaginationParams,
-};
+use actix_web::{HttpResponse, get, web};
+use actix_web_grants::authorities::AuthDetails;
 
+use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
+use crate::errors::{AppError, AppResult};
+use crate::repositories::container::AppContainer;
 pub use crate::repositories::traits::users_trait::AdminUserLookupItem;
+use crate::security::SecurityService;
+use crate::utils::pagination::PaginationParams;
 
 fn map_repo_error(error: diesel::result::Error, entity: &str) -> AppError {
     match error {
@@ -79,13 +77,14 @@ pub fn test_config(cfg: &mut web::ServiceConfig) {
 mod tests {
     use std::sync::Arc;
 
-    use actix_web::{App, body::to_bytes, http::StatusCode, test, web};
+    use actix_web::body::to_bytes;
+    use actix_web::http::StatusCode;
+    use actix_web::{App, test, web};
     use serde_json::Value;
 
+    use super::test_config;
     use crate::repositories::test_utils::mocks::mock_container;
     use crate::repositories::users_repository::MockIUserRepository;
-
-    use super::test_config;
 
     #[actix_web::test]
     async fn list_users_returns_forbidden_for_customer_without_read_authority() {

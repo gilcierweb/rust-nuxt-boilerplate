@@ -6,14 +6,12 @@
 //!
 //! Usage: cargo run --bin cleanup_refresh_tokens
 
+use std::env;
+
 use chrono::Utc;
-use diesel::PgConnection;
-use diesel::delete;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use diesel::sql_query;
-
-use std::env;
+use diesel::{PgConnection, delete, sql_query};
 
 #[path = "../db/schema.rs"]
 mod schema;

@@ -1,18 +1,17 @@
 #![allow(dead_code)]
 
-use crate::middleware::auth::{Claims, RateLimitCategory, rate_limit_category};
-use actix_web::{
-    Error, HttpMessage, HttpResponse,
-    body::BoxBody,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-    http::Method,
-    web,
-};
-use futures::future::{LocalBoxFuture, Ready, ready};
-use serde_json::json;
 use std::rc::Rc;
 
-use crate::{AppState, repositories::container::AppContainer};
+use actix_web::body::BoxBody;
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
+use actix_web::http::Method;
+use actix_web::{Error, HttpMessage, HttpResponse, web};
+use futures::future::{LocalBoxFuture, Ready, ready};
+use serde_json::json;
+
+use crate::AppState;
+use crate::middleware::auth::{Claims, RateLimitCategory, rate_limit_category};
+use crate::repositories::container::AppContainer;
 
 const CSRF_COOKIE_NAME: &str = "csrf_token";
 
@@ -323,8 +322,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use actix_web::http::Method;
+
+    use super::*;
 
     #[test]
     fn anonymous_gets_base_api_limit() {

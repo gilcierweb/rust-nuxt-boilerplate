@@ -1,11 +1,12 @@
+use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
+use diesel_async::RunQueryDsl;
+use uuid::Uuid;
+
 use crate::DBPool;
 use crate::db::schema::users_roles as users_roles_table;
 use crate::models::user_role::{NewUserRole, UserRole};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::user_roles_trait::IUserRoleRepository;
-use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
-use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 pub struct UserRolesRepository {
     base: BaseRepo,

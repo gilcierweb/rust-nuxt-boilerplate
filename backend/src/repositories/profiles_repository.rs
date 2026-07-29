@@ -1,11 +1,12 @@
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel_async::RunQueryDsl;
+use uuid::Uuid;
+
 use crate::DBPool;
 use crate::db::schema::profiles as profiles_table;
 use crate::models::profile::{NewProfile, Profile};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::profiles_trait::IProfileRepository;
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
-use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 pub struct ProfilesRepository {
     base: BaseRepo,

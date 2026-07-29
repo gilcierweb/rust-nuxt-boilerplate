@@ -1,10 +1,9 @@
-use deadpool::managed::Pool;
-use deadpool::managed::Timeouts;
-use diesel_async::AsyncPgConnection;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
-use diesel_async::pooled_connection::ManagerConfig;
-use futures_util::FutureExt;
 use std::time::Duration;
+
+use deadpool::managed::{Pool, Timeouts};
+use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::{AsyncDieselConnectionManager, ManagerConfig};
+use futures_util::FutureExt;
 
 use crate::config::AppConfig;
 

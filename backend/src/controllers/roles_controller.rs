@@ -4,18 +4,14 @@ use serde::Deserialize;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::{
-    authz::ability::{AbilityAction, AbilityResource, authorize},
-    controllers::auth_controller::invalidate_role_cache,
-    errors::{AppError, AppResult},
-    models::role::NewRole,
-    repositories::container::AppContainer,
-    utils::{
-        pagination::PaginationParams,
-        sanitize::{sanitize_input, strip_html},
-        validation::first_validation_error_message,
-    },
-};
+use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
+use crate::controllers::auth_controller::invalidate_role_cache;
+use crate::errors::{AppError, AppResult};
+use crate::models::role::NewRole;
+use crate::repositories::container::AppContainer;
+use crate::utils::pagination::PaginationParams;
+use crate::utils::sanitize::{sanitize_input, strip_html};
+use crate::utils::validation::first_validation_error_message;
 
 #[derive(Debug, Deserialize, Validate)]
 #[validate(schema(function = "validate_role_scope", skip_on_field_errors = false))]
@@ -179,16 +175,17 @@ pub fn test_config(cfg: &mut web::ServiceConfig) {
 mod tests {
     use std::sync::Arc;
 
-    use actix_web::{App, body::to_bytes, http::StatusCode, test, web};
+    use actix_web::body::to_bytes;
+    use actix_web::http::StatusCode;
+    use actix_web::{App, test, web};
     use chrono::Utc;
     use serde_json::Value;
     use uuid::Uuid;
 
+    use super::test_config;
     use crate::models::role::Role;
     use crate::repositories::roles_repository::MockIRoleRepository;
     use crate::repositories::test_utils::mocks::mock_container;
-
-    use super::test_config;
 
     #[actix_web::test]
     async fn list_roles_returns_forbidden_without_authority() {

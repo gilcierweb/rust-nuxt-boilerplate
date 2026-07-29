@@ -8,8 +8,8 @@
 //! - Excluded paths (login, register, webhooks) skip CSRF
 //! - Cookie auth paths enforce CSRF even with Bearer token
 
-use actix_web::{App, HttpRequest, http::StatusCode, test, web};
-
+use actix_web::http::StatusCode;
+use actix_web::{App, HttpRequest, test, web};
 use backend::config::AppConfig;
 use backend::middleware::csrf_protection::CsrfProtection;
 

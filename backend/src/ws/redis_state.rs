@@ -1,17 +1,17 @@
-use crate::errors::{AppError, AppResult};
-use crate::ws::server::{ConnectionInfo, PresenceInfo, WsLimits, WsMessage};
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use actix::Recipient;
 use chrono::{DateTime, Utc};
 use deadpool_redis::Pool;
 use futures_util::StreamExt;
-use redis::AsyncCommands;
-use redis::cmd;
-use std::collections::HashMap;
-use std::sync::Arc;
+use redis::{AsyncCommands, cmd};
 use tokio::sync::Mutex as TokioMutex;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
 
-use actix::Recipient;
+use crate::errors::{AppError, AppResult};
+use crate::ws::server::{ConnectionInfo, PresenceInfo, WsLimits, WsMessage};
 
 const WS_CONN_PREFIX: &str = "ws:conn:";
 const WS_CONN_INDEX: &str = "ws:conn:index";
@@ -579,9 +579,10 @@ pub async fn run_pubsub_listener(state: Arc<WsRedisState>) -> AppResult<()> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use actix::Actor;
     use uuid::Uuid;
+
+    use super::*;
 
     #[test]
     fn test_redis_key_prefixes() {

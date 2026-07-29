@@ -1,3 +1,8 @@
+use chrono::Utc;
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel_async::RunQueryDsl;
+use uuid::Uuid;
+
 use crate::DBPool;
 use crate::db::schema::refresh_tokens as refresh_tokens_table;
 use crate::db::schema::refresh_tokens::dsl::{expires_at, revoked_at};
@@ -5,10 +10,6 @@ use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::refresh_tokens_trait::IRefreshTokenRepository;
 use crate::services::token_service::{generate_random_token, hash_token, verify_token_hash};
-use chrono::Utc;
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
-use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 pub struct RefreshTokensRepository {
     base: BaseRepo,
@@ -108,9 +109,10 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         plaintext_token: &str,
         hash_key: &str,
     ) -> diesel::QueryResult<Option<RefreshToken>> {
+        use chrono::Utc;
+
         use crate::db::schema::refresh_tokens::dsl::*;
         use crate::services::token_service::hash_token;
-        use chrono::Utc;
 
         let token = plaintext_token.to_string();
         let key = hash_key.to_string();

@@ -1,26 +1,6 @@
-use crate::db::schema::users as users_table;
-use crate::{
-    config::AppConfig,
-    errors::{AppError, AppResult},
-    middleware::auth::{AuthUser, create_token_with_kid},
-    models::profile::NewProfile,
-    models::refresh_token::{NewRefreshToken, RefreshToken},
-    models::role::{ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER},
-    models::user::{NewUser, User},
-    repositories::container::AppContainer,
-    repositories::traits::users_trait::IUserRepositoryTransaction,
-    security::SecurityService,
-    services::auth_service::{
-        hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password,
-    },
-    services::token_service::hash_token,
-    utils::{ip::extract_client_ip, validation::first_validation_error_message},
-};
-use actix_web::{
-    HttpRequest, HttpResponse,
-    cookie::{Cookie, SameSite, time::Duration},
-    get, post, web,
-};
+use actix_web::cookie::time::Duration;
+use actix_web::cookie::{Cookie, SameSite};
+use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use chrono::Utc;
 use diesel::result::Error as DieselError;
 use diesel::{ExpressionMethods, QueryDsl};
@@ -29,6 +9,24 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
+
+use crate::config::AppConfig;
+use crate::db::schema::users as users_table;
+use crate::errors::{AppError, AppResult};
+use crate::middleware::auth::{AuthUser, create_token_with_kid};
+use crate::models::profile::NewProfile;
+use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
+use crate::models::role::{ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER};
+use crate::models::user::{NewUser, User};
+use crate::repositories::container::AppContainer;
+use crate::repositories::traits::users_trait::IUserRepositoryTransaction;
+use crate::security::SecurityService;
+use crate::services::auth_service::{
+    hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password,
+};
+use crate::services::token_service::hash_token;
+use crate::utils::ip::extract_client_ip;
+use crate::utils::validation::first_validation_error_message;
 
 // -- Request/Response DTOs
 
@@ -1761,19 +1759,20 @@ pub async fn pix_webhook(
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use actix_web::{App, test, web};
+    use serde_json::json;
+
     use super::*;
     use crate::models::profile::Profile;
     use crate::models::refresh_token::RefreshToken;
     use crate::models::user::User;
     use crate::repositories::profiles_repository::MockIProfileRepository;
     use crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository;
-    use crate::repositories::test_utils::mocks::mock_app_config;
-    use crate::repositories::test_utils::mocks::mock_container;
+    use crate::repositories::test_utils::mocks::{mock_app_config, mock_container};
     use crate::repositories::users_repository::MockIUserRepository;
     use crate::security::SecurityService;
-    use actix_web::{App, test, web};
-    use serde_json::json;
-    use std::sync::Arc;
 
     fn test_user(email: &str) -> User {
         let security = SecurityService::from_config(&mock_app_config()).unwrap();

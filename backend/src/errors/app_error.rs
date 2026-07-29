@@ -1,6 +1,7 @@
+use std::error::Error;
+
 use derive_more::derive::Display;
 use diesel::result::Error as DieselError;
-use std::error::Error;
 
 #[derive(Debug, Display)]
 pub enum AppError {

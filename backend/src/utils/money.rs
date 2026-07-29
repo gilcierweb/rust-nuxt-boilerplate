@@ -1,7 +1,8 @@
-use bigdecimal::{BigDecimal, ToPrimitive};
-use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops::{Add, Sub};
+
+use bigdecimal::{BigDecimal, ToPrimitive};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Currency {

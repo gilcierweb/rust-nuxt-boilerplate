@@ -1,17 +1,12 @@
 #![allow(dead_code)]
 
-use crate::{
-    config::AppConfig,
-    errors::{AppError, AppResult},
-    models::user::User,
-};
-
-use super::{
-    blind_index::blind_index,
-    encryption::{decrypt, encrypt},
-    key_manager::KeyManager,
-    normalization::{normalize_cpf, normalize_email, normalize_phone},
-};
+use super::blind_index::blind_index;
+use super::encryption::{decrypt, encrypt};
+use super::key_manager::KeyManager;
+use super::normalization::{normalize_cpf, normalize_email, normalize_phone};
+use crate::config::AppConfig;
+use crate::errors::{AppError, AppResult};
+use crate::models::user::User;
 
 #[derive(Debug, Clone)]
 pub struct ProtectedValue {

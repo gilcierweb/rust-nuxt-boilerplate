@@ -1,11 +1,8 @@
 use actix_web_grants::authorities::{AuthDetails, AuthoritiesCheck};
 
+use super::engine::authority_for;
+use super::types::{AbilityAction, AbilityResource};
 use crate::errors::AppError;
-
-use super::{
-    engine::authority_for,
-    types::{AbilityAction, AbilityResource},
-};
 
 pub fn authorize(
     details: &AuthDetails,

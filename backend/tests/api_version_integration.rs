@@ -10,8 +10,8 @@
 //! Router audit: all 29 endpoints live under `web::scope("/api/v1")` with
 //! `ApiVersionGuard` applied at the outermost scope level (router.rs:69).
 
-use actix_web::{App, http::StatusCode, test, web};
-
+use actix_web::http::StatusCode;
+use actix_web::{App, test, web};
 use backend::middleware::api_version::{ApiVersionConfig, ApiVersionGuard, ApiVersionInfo};
 
 async fn ok_handler() -> actix_web::HttpResponse {

@@ -5,8 +5,7 @@ macro_rules! impl_crud {
         #[async_trait::async_trait]
         impl $trait_name for $repo {
             async fn all(&self) -> diesel::result::QueryResult<Vec<$model>> {
-                use diesel::QueryDsl;
-                use diesel::SelectableHelper;
+                use diesel::{QueryDsl, SelectableHelper};
                 use diesel_async::RunQueryDsl;
                 self.$field
                     .run(|conn| Box::pin(async move { $table.load::<$model>(conn).await }))
@@ -14,8 +13,7 @@ macro_rules! impl_crud {
             }
 
             async fn find(&self, id: &uuid::Uuid) -> diesel::result::QueryResult<$model> {
-                use diesel::QueryDsl;
-                use diesel::SelectableHelper;
+                use diesel::{QueryDsl, SelectableHelper};
                 use diesel_async::RunQueryDsl;
                 let id = *id;
                 self.$field
@@ -46,8 +44,7 @@ macro_rules! impl_crud {
                 id: &uuid::Uuid,
                 item: &$new_model,
             ) -> diesel::result::QueryResult<$model> {
-                use diesel::QueryDsl;
-                use diesel::SelectableHelper;
+                use diesel::{QueryDsl, SelectableHelper};
                 use diesel_async::RunQueryDsl;
                 let item = item.clone();
                 let id = *id;

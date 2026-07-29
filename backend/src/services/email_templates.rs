@@ -211,8 +211,9 @@ impl std::fmt::Debug for EmailTemplates {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::json;
+
+    use super::*;
 
     fn templates() -> EmailTemplates {
         EmailTemplates::new().expect("templates compile")

@@ -1,5 +1,6 @@
-use crate::models::audit_log::NewAuditLog;
 use serde_json::json;
+
+use crate::models::audit_log::NewAuditLog;
 
 /// Batch size for audit log chain verification to prevent OOM on large tables.
 const AUDIT_LOG_VERIFY_BATCH_SIZE: i64 = 1000;
@@ -183,9 +184,10 @@ pub async fn verify_audit_log_chain(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serde_json::json;
     use uuid::Uuid;
+
+    use super::*;
 
     fn make_test_audit_log() -> NewAuditLog {
         NewAuditLog {

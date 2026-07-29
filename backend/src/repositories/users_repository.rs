@@ -1,3 +1,11 @@
+use std::sync::Arc;
+
+use chrono::NaiveDateTime;
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel_async::RunQueryDsl;
+use ipnet::IpNet;
+use uuid::Uuid;
+
 use crate::db::database::DBPool;
 use crate::db::schema::users as users_table;
 use crate::models::profile::Profile;
@@ -8,12 +16,6 @@ pub use crate::repositories::traits::users_trait::{
 };
 use crate::security::SecurityService;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
-use chrono::NaiveDateTime;
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
-use diesel_async::RunQueryDsl;
-use ipnet::IpNet;
-use std::sync::Arc;
-use uuid::Uuid;
 
 pub struct UsersRepository {
     base: BaseRepo,
@@ -391,8 +393,7 @@ impl IUserRepository for UsersRepository {
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    use crate::db::schema::roles;
-                    use crate::db::schema::users_roles;
+                    use crate::db::schema::{roles, users_roles};
                     users_roles::table
                         .filter(users_roles::dsl::user_id.eq(user_id))
                         .inner_join(roles::table)
@@ -409,10 +410,9 @@ impl IUserRepository for UsersRepository {
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    use crate::db::schema::permissions;
-                    use crate::db::schema::roles_permissions;
-                    use crate::db::schema::users_roles;
                     use diesel::JoinOnDsl;
+
+                    use crate::db::schema::{permissions, roles_permissions, users_roles};
                     users_roles::table
                         .filter(users_roles::dsl::user_id.eq(user_id))
                         .inner_join(
@@ -553,7 +553,10 @@ impl IUserRepository for UsersRepository {
         let params = params.validated();
         let limit = params.limit();
         let offset = params.offset();
-        let sort_by = params.sort_by.clone().unwrap_or_else(|| "email".to_string());
+        let sort_by = params
+            .sort_by
+            .clone()
+            .unwrap_or_else(|| "email".to_string());
         let sort_dir = params.sort_direction().to_string();
 
         self.base
@@ -561,24 +564,27 @@ impl IUserRepository for UsersRepository {
                 let security = security.clone();
                 Box::pin(async move {
                     // ── 1. Total count — single COUNT(*) query, no data fetched ──────────
-                    let total: i64 = users_table::table
-                        .count()
-                        .get_result(conn)
-                        .await?;
+                    let total: i64 = users_table::table.count().get_result(conn).await?;
 
                     // ── 2. Page query — JOIN + ORDER + LIMIT + OFFSET in the database ────
                     //
                     // Column allow-list prevents SQL injection via `sort_by`.
                     // Any unrecognised value falls back to `u.created_at DESC`.
                     let order_sql = match sort_by.as_str() {
-                        "email"      => "u.email_blind_index ASC",
+                        "email" => "u.email_blind_index ASC",
                         "email_desc" => "u.email_blind_index DESC",
                         "first_name" => "p.first_name ASC NULLS LAST",
                         "first_name_desc" => "p.first_name DESC NULLS LAST",
-                        "last_name"  => "p.last_name ASC NULLS LAST",
+                        "last_name" => "p.last_name ASC NULLS LAST",
                         "last_name_desc" => "p.last_name DESC NULLS LAST",
-                        "id"  => if sort_dir == "desc" { "u.id DESC" } else { "u.id ASC" },
-                        _    => "u.created_at DESC",
+                        "id" => {
+                            if sort_dir == "desc" {
+                                "u.id DESC"
+                            } else {
+                                "u.id ASC"
+                            }
+                        },
+                        _ => "u.created_at DESC",
                     };
 
                     // diesel does not support dynamic ORDER BY via the query
@@ -649,7 +655,12 @@ impl IUserRepository for UsersRepository {
                         });
                     }
 
-                    Ok(PaginatedResponse::new(items, total, params.page, params.per_page))
+                    Ok(PaginatedResponse::new(
+                        items,
+                        total,
+                        params.page,
+                        params.per_page,
+                    ))
                 })
             })
             .await

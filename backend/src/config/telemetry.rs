@@ -146,8 +146,9 @@ impl Default for TelemetryConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use serial_test::serial;
+
+    use super::*;
 
     #[test]
     #[serial]

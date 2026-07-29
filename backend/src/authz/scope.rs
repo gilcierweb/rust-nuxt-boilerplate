@@ -3,11 +3,9 @@ use std::collections::HashSet;
 use actix_web_grants::authorities::{AuthDetails, AuthoritiesCheck};
 use uuid::Uuid;
 
-use crate::{
-    errors::{AppError, AppResult},
-    middleware::auth::AuthUser,
-    repositories::container::AppContainer,
-};
+use crate::errors::{AppError, AppResult};
+use crate::middleware::auth::AuthUser;
+use crate::repositories::container::AppContainer;
 
 fn customer_scope_denied() -> AppError {
     AppError::Forbidden(t!("authorization.customer_scope_denied").into_owned())

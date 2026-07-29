@@ -13,11 +13,9 @@
 use std::collections::HashSet;
 use std::rc::Rc;
 
-use actix_web::{
-    Error,
-    body::EitherBody,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready},
-};
+use actix_web::Error;
+use actix_web::body::EitherBody;
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
 use actix_web_grants::authorities::AttachAuthorities;
 use futures::future::{LocalBoxFuture, Ready, ready};
 

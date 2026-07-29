@@ -1,6 +1,7 @@
+use std::net::IpAddr;
+
 use actix_web::HttpRequest;
 use ipnet::IpNet;
-use std::net::IpAddr;
 
 /// Extract the real client IP from the request, considering trusted proxies.
 ///

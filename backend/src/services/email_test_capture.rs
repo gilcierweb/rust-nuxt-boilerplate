@@ -11,9 +11,10 @@
 //! Optionally usable from outside the email crate: import via
 //! `crate::services::email_test_capture::TestEmailCapture`.
 
+use std::sync::Arc;
+
 use chrono::{DateTime, Utc};
 use parking_lot::Mutex;
-use std::sync::Arc;
 
 /// A captured email payload. Mirrors the public-facing fields of an outbound
 /// email without exposing raw HTTP request bodies.

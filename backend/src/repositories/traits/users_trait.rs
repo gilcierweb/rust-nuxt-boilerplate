@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::sync::Arc;
+
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use diesel::QueryResult;
@@ -7,7 +9,6 @@ use diesel_async::AsyncPgConnection;
 use futures::future::BoxFuture;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::models::user::{NewUser, User};

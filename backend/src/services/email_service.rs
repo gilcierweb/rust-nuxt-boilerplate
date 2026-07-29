@@ -1,18 +1,18 @@
 #![allow(dead_code)]
 
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use thiserror::Error;
+
 use crate::config::app_config::{AppConfig, Environment, JwtSecretKey};
 use crate::services::email_templates::{EmailTemplateError, EmailTemplates, names as tpl};
 use crate::services::email_test_capture::{CapturedEmail, TestEmailCapture};
 use crate::services::http_client::{HttpClient, HttpClientConfig, HttpClientError};
 use crate::utils::sanitize::{sanitize_for_email, sanitize_for_html_email};
-use chrono::Utc;
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
 
 // Deterministic test key generation
 fn generate_deterministic_string(length: usize, seed: u64) -> String {
-    use rand::Rng;
-    use rand::SeedableRng;
+    use rand::{Rng, SeedableRng};
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
     const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     (0..length)
@@ -25,8 +25,7 @@ fn generate_deterministic_string(length: usize, seed: u64) -> String {
 
 fn generate_deterministic_base64_key(byte_length: usize, seed: u64) -> String {
     use base64::Engine;
-    use rand::RngCore;
-    use rand::SeedableRng;
+    use rand::{RngCore, SeedableRng};
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
     let mut bytes = vec![0u8; byte_length];
     rng.fill_bytes(&mut bytes);

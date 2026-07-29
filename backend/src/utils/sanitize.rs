@@ -1,5 +1,6 @@
-use ammonia;
 use std::collections::HashSet;
+
+use ammonia;
 
 pub fn sanitize_input(input: &str) -> String {
     input

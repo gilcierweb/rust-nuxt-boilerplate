@@ -3,13 +3,12 @@ use actix_web_grants::authorities::AuthDetails;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::{
-    authz::ability::{AbilityAction, AbilityResource, authorize},
-    errors::{AppError, AppResult},
-    models::audit_log::NewAuditLog,
-    repositories::container::AppContainer,
-    utils::{pagination::PaginationParams, validation::first_validation_error_message},
-};
+use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
+use crate::errors::{AppError, AppResult};
+use crate::models::audit_log::NewAuditLog;
+use crate::repositories::container::AppContainer;
+use crate::utils::pagination::PaginationParams;
+use crate::utils::validation::first_validation_error_message;
 
 #[get("/audit-logs")]
 pub async fn list_audit_logs(
@@ -80,17 +79,19 @@ mod tests {
     use std::collections::HashSet;
     use std::sync::Arc;
 
-    use actix_web::{App, body::to_bytes, dev::ServiceRequest, http::StatusCode, test, web};
+    use actix_web::body::to_bytes;
+    use actix_web::dev::ServiceRequest;
+    use actix_web::http::StatusCode;
+    use actix_web::{App, test, web};
     use chrono::Utc;
     use serde_json::{Value, json};
     use uuid::Uuid;
 
+    use super::test_config;
     use crate::middleware::auth::create_token;
     use crate::models::audit_log::AuditLog;
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::test_utils::mocks::mock_container;
-
-    use super::test_config;
 
     #[allow(dead_code)]
     async fn test_extract_authorities(

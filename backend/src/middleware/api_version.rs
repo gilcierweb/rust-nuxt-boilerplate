@@ -1,14 +1,13 @@
-use actix_web::{
-    Error as ActixError, HttpResponse,
-    body::BoxBody,
-    dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    http::header,
-};
-use futures::future::{LocalBoxFuture, Ready, ready};
-use serde::Serialize;
 use std::collections::HashMap;
 use std::rc::Rc;
 use std::str::FromStr;
+
+use actix_web::body::BoxBody;
+use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform};
+use actix_web::http::header;
+use actix_web::{Error as ActixError, HttpResponse};
+use futures::future::{LocalBoxFuture, Ready, ready};
+use serde::Serialize;
 
 /// Metadata for a single API version.
 #[derive(Clone, Debug)]

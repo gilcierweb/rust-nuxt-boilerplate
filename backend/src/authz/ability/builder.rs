@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
+use super::engine::Ability;
+use super::{admin_ability, customer_ability};
 use crate::models::role::ROLE_ADMIN;
-
-use super::{admin_ability, customer_ability, engine::Ability};
 
 pub fn build_ability(role_claim: i32, roles: &[String]) -> Ability {
     let mut ability = Ability::new();
@@ -43,10 +43,9 @@ fn is_admin(role_claim: i32, roles: &[String]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use crate::authz::ability::{AbilityAction, AbilityResource};
-
     use super::super::engine::authority_for;
     use super::{build_ability, build_authorities};
+    use crate::authz::ability::{AbilityAction, AbilityResource};
 
     #[test]
     fn admin_gets_users_crud_authorities() {

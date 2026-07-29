@@ -1,17 +1,16 @@
+use std::io::Write;
+
 use actix_multipart::Multipart;
 use actix_web::{HttpResponse, post, web};
 use futures_util::StreamExt;
 use serde::Serialize;
-use std::io::Write;
 use tempfile::NamedTempFile;
 
-use crate::{
-    config::AppConfig,
-    errors::{AppError, AppResult},
-    middleware::auth::AuthUser,
-    utils::file_validation::{
-        FileCategory, FileLimits, FileValidationError, ValidatedFile, validate_upload,
-    },
+use crate::config::AppConfig;
+use crate::errors::{AppError, AppResult};
+use crate::middleware::auth::AuthUser;
+use crate::utils::file_validation::{
+    FileCategory, FileLimits, FileValidationError, ValidatedFile, validate_upload,
 };
 
 /// Maximum bytes to buffer for magic byte detection before streaming the rest.

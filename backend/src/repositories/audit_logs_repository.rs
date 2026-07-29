@@ -1,3 +1,7 @@
+use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel_async::RunQueryDsl;
+use uuid::Uuid;
+
 use crate::DBPool;
 use crate::db::schema::audit_logs as audit_logs_table;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
@@ -5,9 +9,6 @@ use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::audit_logs_trait::IAuditLogRepository;
 use crate::services::audit_log_service::compute_audit_log_hash;
 use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
-use diesel_async::RunQueryDsl;
-use uuid::Uuid;
 
 pub struct AuditLogsRepository {
     base: BaseRepo,

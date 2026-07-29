@@ -44,8 +44,9 @@ pub fn first_validation_error_message(errors: &ValidationErrors) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use validator::{ValidationError, ValidationErrors};
+
+    use super::*;
 
     #[test]
     fn resolves_translated_label_for_legal_name_in_pt_br() {
