@@ -1,5 +1,6 @@
 use actix_web::web;
 use utoipa::OpenApi;
+use utoipa_scalar::{Scalar, Servable};
 use utoipa_swagger_ui::SwaggerUi;
 
 use crate::api_docs::ApiDoc;
@@ -95,6 +96,9 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
     if !require_api_key_for_docs {
         cfg.service(
             SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+        )
+        .service(
+            Scalar::with_url("/scalar", openapi.clone()),
         );
     }
 
@@ -213,6 +217,9 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 .service(
                     SwaggerUi::new("/swagger-ui/{_:.*}")
                         .url("/api-docs/openapi.json", openapi.clone()),
+                )
+                .service(
+                    Scalar::with_url("/scalar", openapi.clone()),
                 ),
         );
     }

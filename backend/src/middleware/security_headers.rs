@@ -94,13 +94,15 @@ where
                 HeaderValue::from_static("camera=(), microphone=(), geolocation=(), payment=()"),
             );
 
-            // Content Security Policy for API
+// Content Security Policy for API
             // More restrictive than frontend — API only serves JSON
-            // Skip restrictive CSP for Swagger UI which needs to load CSS/JS/assets
-            let is_swagger_ui = path.starts_with("/swagger-ui") || path.starts_with("/api-docs");
+            // Skip restrictive CSP for Swagger UI / Scalar which needs to load CSS/JS/assets
+            let is_docs_ui = path.starts_with("/swagger-ui") 
+                || path.starts_with("/api-docs") 
+                || path.starts_with("/scalar");
 
-            let csp_value = if is_swagger_ui {
-                "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; form-action 'none'"
+            let csp_value = if is_docs_ui {
+                "default-src 'self'; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; img-src 'self' data:; font-src 'self' https://fonts.scalar.com data:; connect-src 'self' https://api.scalar.com; frame-ancestors 'none'; form-action 'none'"
             } else {
                 "default-src 'none'; frame-ancestors 'none'; form-action 'none'"
             };
