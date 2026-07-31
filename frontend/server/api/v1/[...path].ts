@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
   const headers = createForwardHeaders(
     event,
     backendApiKey,
-    ['authorization', 'accept', 'content-type', 'cookie', 'user-agent'],
+    ['authorization', 'accept', 'content-type', 'cookie', 'user-agent', 'csrf-token'],
     accessToken,
     {
       filterCookies: true,

@@ -64,18 +64,21 @@ export default defineNuxtPlugin((nuxtApp) => {
       accessToken = event?.context?.authAccessToken ?? null;
     }
 
-    // Read CSRF token from cookie and send in header (client-side only)
-    if (import.meta.client) {
-      const csrfCookie = document.cookie
+    // Read CSRF token from cookie and send in header
+    // Client-side: read from document.cookie
+    // Server-side: parse from the forwarded cookie header
+    const csrfToken = (() => {
+      const cookieHeader = import.meta.client
+        ? document.cookie
+        : (headers.get("cookie") ?? "");
+      const match = cookieHeader
         .split('; ')
-        .find(row => row.startsWith('csrf_token='));
-      
-      if (csrfCookie) {
-        const csrfToken = csrfCookie.split('=')[1];
-        if (csrfToken && !headers.has("csrf-token")) {
-          headers.set("csrf-token", csrfToken);
-        }
-      }
+        .find((row) => row.startsWith('csrf_token='));
+      return match ? match.split('=')[1] : null;
+    })();
+
+    if (csrfToken && !headers.has("csrf-token")) {
+      headers.set("csrf-token", csrfToken);
     }
 
     return withAuthHeader(headers, accessToken);
