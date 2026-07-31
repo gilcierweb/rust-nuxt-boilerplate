@@ -1,0 +1,144 @@
+{
+  "admin": {
+    "common": {
+      "dashboard": "Dashboard",
+      "new": "Nuevo",
+      "edit": "Editar",
+      "details": "Detalles",
+      "back": "Volver",
+      "refresh": "Actualizar",
+      "view": "Ver",
+      "delete": "Eliminar",
+      "actions": "Acciones",
+      "total": "Total",
+      "endpoint": "Endpoint",
+      "status": "Estado",
+      "resourceActive": "Recurso activo",
+      "awaitingRecords": "Esperando registros",
+      "loadingData": "Cargando datos...",
+      "loadingRecords": "Cargando registros...",
+      "errorLoadingData": "Error al cargar datos.",
+      "tryAgain": "Intentar de nuevo",
+      "noRecords": "No se encontraron registros para este recurso.",
+      "filterPlaceholder": "Filtrar registros...",
+      "viewDetails": "Ver detalles del registro",
+      "yes": "Sí",
+      "no": "No"
+    },
+    "dashboard": {
+      "recentActivity": "Actividad reciente",
+      "noRecentActivity": "Sin actividad reciente.",
+      "quickLinks": "Enlaces rápidos",
+      "totalAuditLogs": "Registros de auditoría",
+      "totalRoles": "Roles",
+      "totalUsers": "Usuarios"
+    },
+    "sidebar": {
+      "sidebar": "Barra lateral",
+      "close": "Cerrar",
+      "admin": "Admin",
+      "management": "Gestión",
+      "dashboard": "Dashboard",
+      "auditLogs": "Registros de auditoría",
+      "roles": "Roles",
+      "users": "Usuarios",
+      "default": "Predeterminado",
+      "quickLinks": "Enlaces rápidos",
+      "apiDocs": "Documentación de la API"
+    },
+    "auditLogs": {
+      "title": "Auditoría",
+      "description": "Registro administrativo de acciones y cambios críticos.",
+      "newTitle": "Nuevo Registro",
+      "newDescription": "Registre manualmente un evento de auditoría.",
+      "editTitle": "Editar Registro",
+      "editDescription": "Actualice el evento de auditoría.",
+      "showTitle": "Detalles del Registro",
+      "showDescription": "Visualice el evento y sus datos de contexto.",
+      "empty": "No se encontraron registros.",
+      "searchPlaceholder": "Filtrar registros...",
+      "table": {
+        "action": "Acción",
+        "resource": "Recurso",
+        "actor": "Ejecutor",
+        "customer": "Cliente",
+        "createdAt": "Creado el"
+      },
+      "fields": {
+        "company": "Empresa",
+        "actorUser": "Usuario ejecutor",
+        "targetCustomer": "Cliente objetivo",
+        "actorRoleSnapshot": "Perfil capturado",
+        "action": "Acción",
+        "resourceType": "Tipo de recurso",
+        "resourceId": "ID del recurso",
+        "requestId": "Request ID",
+        "ipAddress": "IP",
+        "userAgent": "User agent",
+        "changes": "Cambios",
+        "metadata": "Metadata",
+        "createdAt": "Creado el"
+      },
+      "messages": {
+        "createSuccess": "Registro creado con éxito",
+        "createError": "Error al crear el registro",
+        "updateSuccess": "Registro actualizado con éxito",
+        "updateError": "Error al actualizar el registro",
+        "deleteSuccess": "Registro eliminado con éxito",
+        "deleteError": "Error al eliminar el registro",
+        "confirmDelete": "¿Está seguro de que desea eliminar este registro?"
+      }
+    },
+    "roles": {
+      "title": "Roles",
+      "description": "Roles administrativos y sus alcances opcionales.",
+      "newTitle": "Nuevo Rol",
+      "newDescription": "Cree un nuevo rol administrativo.",
+      "editTitle": "Editar Rol",
+      "editDescription": "Actualice el rol y su alcance opcional.",
+      "showTitle": "Detalles del Rol",
+      "showDescription": "Visualice los datos del rol y su alcance asociado.",
+      "empty": "No se encontraron roles.",
+      "searchPlaceholder": "Filtrar roles...",
+      "table": {
+        "name": "Nombre",
+        "resourceType": "Tipo de recurso"
+      },
+      "fields": {
+        "name": "Nombre",
+        "resourceType": "Tipo de recurso"
+      },
+      "messages": {
+        "createSuccess": "Rol creado con éxito",
+        "createError": "Error al crear el rol",
+        "updateSuccess": "Rol actualizado con éxito",
+        "updateError": "Error al actualizar el rol",
+        "deleteSuccess": "Rol eliminado con éxito",
+        "deleteError": "Error al eliminar el rol",
+        "confirmDelete": "¿Está seguro de que desea eliminar este rol?"
+      }
+    },
+    "users": {
+      "title": "Usuarios",
+      "description": "Vista operativa de los usuarios públicos disponibles en el panel.",
+      "showTitle": "Detalles del Usuario",
+      "showDescription": "Datos públicos de registro cargados en el panel administrativo.",
+      "searchPlaceholder": "Filtrar usuarios...",
+      "table": {
+        "displayName": "Nombre para mostrar",
+        "email": "Email"
+      },
+      "empty": "No se encontraron usuarios.",
+      "notFound": "Usuario no encontrado.",
+      "messages": {
+        "createSuccess": "Usuario creado con éxito",
+        "createError": "Error al crear el usuario",
+        "updateSuccess": "Usuario actualizado con éxito",
+        "updateError": "Error al actualizar el usuario",
+        "deleteSuccess": "Usuario eliminado con éxito",
+        "deleteError": "Error al eliminar el usuario",
+        "confirmDelete": "¿Está seguro de que desea eliminar este usuario?"
+      }
+    }
+  }
+}
