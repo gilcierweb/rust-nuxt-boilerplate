@@ -1,5 +1,6 @@
 {
   "common": {
+    "appName": "Boilerplate Rust Nuxt",
     "success": "Éxito",
     "error": "Error",
     "loading": "Cargando...",
@@ -13,6 +14,21 @@
     "yes": "Sí",
     "no": "No",
     "or": "o",
-    "and": "y"
+    "and": "y",
+    "actions": {
+      "show": "Ver",
+      "edit": "Editar",
+      "new": "Nuevo",
+      "refresh": "Actualizar",
+      "saveChanges": "Guardar cambios",
+      "saving": "Guardando...",
+      "send": "Enviar",
+      "cancel": "Cancelar",
+      "back": "Volver",
+      "submit": "Enviar"
+    },
+    "table": {
+      "actions": "Acciones"
+    }
   }
 }

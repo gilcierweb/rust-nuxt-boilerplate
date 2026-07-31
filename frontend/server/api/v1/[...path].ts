@@ -21,7 +21,15 @@ export default defineEventHandler(async (event) => {
   const headers = createForwardHeaders(
     event,
     backendApiKey,
-    ['authorization', 'accept', 'content-type', 'cookie', 'user-agent', 'csrf-token'],
+    [
+      'authorization',
+      'accept',
+      'accept-language',
+      'content-type',
+      'cookie',
+      'user-agent',
+      'csrf-token',
+    ],
     accessToken,
     {
       filterCookies: true,
@@ -47,16 +55,37 @@ export default defineEventHandler(async (event) => {
     })
 
     return applyProxyResponse(event, response)
-} catch (error: any) {
-      const response = error?.response
-      if (!response) {
-        // Unexpected error shape (no response) — log for debugging and rethrow
-        console.error('[proxy] request error without response:', error)
-        throw createError({
-          statusCode: 502,
-          statusMessage: 'Backend API unavailable',
-        })
-      }
+  } catch (error: any) {
+    const response = error?.response
+    if (!response) {
+      // Unexpected error shape (no response) — log for debugging and rethrow.
+      // The cause could be a network error (ECONNREFUSED, ENOTFOUND, abort),
+      // a JSON parse error, or an unhandled throw inside ofetch. We log the
+      // error name, message and any hint fields so the operator can diagnose
+      // quickly without enabling verbose logging.
+      const errorName = error?.name ?? 'UnknownError'
+      const errorMessage = error?.message ?? String(error)
+      const errorCode = error?.code ?? error?.cause?.code ?? null
+      console.error(
+        '[proxy] request error without response:',
+        JSON.stringify({
+          name: errorName,
+          message: errorMessage,
+          code: errorCode,
+          method,
+          path,
+        }),
+      )
+      throw createError({
+        statusCode: 502,
+        statusMessage: 'Backend API unavailable',
+        data: {
+          reason: errorName,
+          detail: errorMessage,
+          code: errorCode,
+        },
+      })
+    }
 
     const errorData = applyProxyResponse(event, response)
 

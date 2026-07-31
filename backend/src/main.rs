@@ -27,9 +27,16 @@ pub struct Response<'a> {
     pub message: Cow<'a, str>,
 }
 
-async fn not_found() -> Result<HttpResponse, actix_web::Error> {
+async fn not_found(req: actix_web::HttpRequest) -> Result<HttpResponse, actix_web::Error> {
+    // Fall back to the global rust_i18n (set_locale at startup) when the
+    // request extensions don't carry a RequestLocale (e.g., very early
+    // middleware failures). In normal operation the locale middleware has
+    // already populated this.
+    let message = backend::middleware::locale::locale_from_request(&req)
+        .map(|rl| rl.t_blocking("errors.not_found", None))
+        .unwrap_or_else(|| String::from("Resource not found"));
     let response = Response {
-        message: t!("errors.not_found", resource = "Resource"),
+        message: Cow::from(message),
     };
     Ok(HttpResponse::NotFound().json(response))
 }
@@ -116,7 +123,7 @@ async fn main() -> std::io::Result<()> {
     let registry = tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "backend_api=debug,actix_web=info,http.request=info".into()),
+                .unwrap_or_else(|_| "backend=info,actix_web=info,http.request=info".into()),
         )
         .with(
             tracing_subscriber::fmt::layer()
@@ -215,6 +222,32 @@ async fn main() -> std::io::Result<()> {
         backend::ws::WsLimits::default(),
     ));
 
+    // Load translation catalogues from the backend `locales/` directory. The
+    // resulting `Translations` handle is shared with every request via the
+    // locale middleware (see `middleware::locale::LocaleMiddleware`). This is
+    // the per-request translation mechanism — it does not mutate any global
+    // state, so concurrent requests cannot leak locale to each other.
+    let translations =
+        match backend::services::translation_service::Translations::load_from_dir("locales") {
+            Ok(t) => {
+                let locales = t.available_locales().await;
+                tracing::info!(
+                    event = "i18n.translations_loaded",
+                    locales = ?locales,
+                    "per-request translation catalogues loaded"
+                );
+                t
+            },
+            Err(error) => {
+                tracing::error!(
+                    event = "i18n.translations_load_failed",
+                    error = %error,
+                    "failed to load translation catalogues; falling back to key-only responses"
+                );
+                backend::services::translation_service::Translations::default()
+            },
+        };
+
     let state = web::Data::new(AppState {
         db: db_pool,
         redis: redis_pool,
@@ -227,6 +260,8 @@ async fn main() -> std::io::Result<()> {
         // Cache Arc<Vec<JwtSecretKey>> for cheap O(1) clones in JWT middleware.
         // Avoids cloning the full Vec on every authenticated request.
         jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        // Per-request translation catalogues loaded above.
+        translations: translations.clone(),
     });
 
     // Record cold-start duration (time from boot_start to AppState ready)
@@ -307,7 +342,17 @@ async fn main() -> std::io::Result<()> {
                 web::JsonConfig::default()
                     .limit(config_json_limit)
                     .error_handler(|_error, _request| {
-                        AppError::BadRequest(t!("errors.bad_request_payload").into_owned()).into()
+                        // Use the per-request locale (populated by the locale
+                        // middleware before any extractor runs) so the parser
+                        // error message matches the user's UI language. Falls
+                        // back to the global rust_i18n value if the thread-local
+                        // is unset (should never happen in normal operation).
+                        let message = backend::middleware::locale::current_request_locale()
+                            .map(|rl| rl.t_blocking("errors.bad_request_payload", None))
+                            .unwrap_or_else(|| {
+                                t!("errors.bad_request_payload").into_owned()
+                            });
+                        AppError::BadRequest(message).into()
                     }),
             )
             .app_data(web::PayloadConfig::new(config_form_limit))
@@ -319,6 +364,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(backend::middleware::security_headers::SecurityHeaders)
             .wrap(backend::middleware::metrics_middleware::MetricsMiddleware)
             .wrap(backend::middleware::request_log_middleware::RequestLogMiddleware)
+            // Per-request locale resolution. Must run BEFORE request_log so
+            // the resolved locale appears in the structured log fields.
+            .wrap(backend::middleware::locale::LocaleMiddleware::new(
+                translations.clone(),
+            ))
             .route(
                 "/health",
                 web::get().to(backend::controllers::health_controller::health_check),

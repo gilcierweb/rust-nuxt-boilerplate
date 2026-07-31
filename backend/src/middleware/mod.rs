@@ -4,6 +4,7 @@ pub mod api_version;
 pub mod auth;
 pub mod auth_middleware;
 pub mod csrf_protection;
+pub mod locale;
 pub mod metrics_middleware;
 pub mod rate_limit_middleware;
 pub mod request_log_middleware;

@@ -47,7 +47,11 @@ export default defineNuxtPlugin((nuxtApp) => {
 
     if (import.meta.server) {
       const event = useRequestEvent();
-      const requestHeaders = useRequestHeaders(["cookie", "user-agent"]);
+      const requestHeaders = useRequestHeaders([
+        "cookie",
+        "user-agent",
+        "accept-language",
+      ]);
 
       if (requestHeaders.cookie && !headers.has("cookie")) {
         headers.set("cookie", requestHeaders.cookie);
@@ -55,6 +59,56 @@ export default defineNuxtPlugin((nuxtApp) => {
 
       if (requestHeaders["user-agent"] && !headers.has("user-agent")) {
         headers.set("user-agent", requestHeaders["user-agent"]);
+      }
+
+      // Forward the browser's Accept-Language so the backend can pick the
+      // right locale for error messages. The browser sends this on every
+      // navigation request, so it reflects the user's current preference.
+      if (
+        requestHeaders["accept-language"] &&
+        !headers.has("accept-language")
+      ) {
+        headers.set("accept-language", requestHeaders["accept-language"]);
+      }
+    }
+
+    // On the client, set Accept-Language from the active @nuxtjs/i18n locale
+    // so the backend translates error messages in the language the user is
+    // currently browsing. This always runs (even when the browser already
+    // sent an Accept-Language header) so the backend always receives the
+    // user's UI locale regardless of browser language preferences.
+    //
+    // `useI18n()` is a Vue composable that throws "Must be called at the top
+    // of a setup function" when invoked from non-setup contexts (e.g., a
+    // plugin's `onRequest` hook). We read the locale via `nuxtApp.$i18n`
+    // instead — the underlying Vue I18n instance is available on every
+    // Nuxt app and works outside of setup contexts.
+    if (import.meta.client) {
+      try {
+        const $i18n = nuxtApp.$i18n as
+          | {
+              locale: { value: unknown };
+              locales: { value: Array<{ code: string }> | unknown };
+            }
+          | undefined;
+        const current = ($i18n?.locale.value as string | undefined) ?? "";
+        const allLocales: Array<{ code: string }> = Array.isArray(
+          $i18n?.locales.value,
+        )
+          ? ($i18n!.locales.value as Array<{ code: string }>)
+          : [];
+        const others = allLocales
+          .map((l) => l.code)
+          .filter((code) => code !== current);
+        if (current) {
+          const tail = others.map((code) => `${code};q=0.5`).join(", ");
+          const finalHeader = tail
+            ? `${current};q=1.0, ${tail}`
+            : `${current};q=1.0`;
+          headers.set("accept-language", finalHeader);
+        }
+      } catch {
+        // $i18n unavailable — leave Accept-Language to whatever was set.
       }
     }
 

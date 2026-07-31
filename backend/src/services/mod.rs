@@ -9,3 +9,4 @@ pub mod http_client;
 pub mod metrics_service;
 pub mod token;
 pub mod token_service;
+pub mod translation_service;
