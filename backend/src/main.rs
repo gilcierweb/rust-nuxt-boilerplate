@@ -6,7 +6,11 @@ use std::io::BufReader;
 use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, web, middleware::{NormalizePath, TrailingSlash}};
+use actix_web::{
+    App, HttpResponse, HttpServer,
+    middleware::{NormalizePath, TrailingSlash},
+    web,
+};
 use backend::AppState;
 use backend::config::AppConfig;
 use backend::db::database::Database;

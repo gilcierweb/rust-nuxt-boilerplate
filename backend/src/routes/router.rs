@@ -97,9 +97,7 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
         cfg.service(
             SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
         )
-        .service(
-            Scalar::with_url("/scalar", openapi.clone()),
-        );
+        .service(Scalar::with_url("/scalar", openapi.clone()));
     }
 
     cfg.service(
@@ -205,22 +203,22 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
     if require_api_key_for_docs {
         cfg.service(
             web::scope("")
-                .wrap(crate::middleware::api_key_middleware::RequireApiKey::new(vec![
-                    // Everything else under this scope requires the API key,
-                    // so we only exempt the health route that the API exposes
-                    // for liveness probes (already protected elsewhere).
-                    "/health",
-                    "/health/",
-                    "/api/v1/health",
-                    "/api/v1/health/",
-                ]))
+                .wrap(crate::middleware::api_key_middleware::RequireApiKey::new(
+                    vec![
+                        // Everything else under this scope requires the API key,
+                        // so we only exempt the health route that the API exposes
+                        // for liveness probes (already protected elsewhere).
+                        "/health",
+                        "/health/",
+                        "/api/v1/health",
+                        "/api/v1/health/",
+                    ],
+                ))
                 .service(
                     SwaggerUi::new("/swagger-ui/{_:.*}")
                         .url("/api-docs/openapi.json", openapi.clone()),
                 )
-                .service(
-                    Scalar::with_url("/scalar", openapi.clone()),
-                ),
+                .service(Scalar::with_url("/scalar", openapi.clone())),
         );
     }
 }

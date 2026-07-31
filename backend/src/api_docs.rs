@@ -107,11 +107,9 @@ impl Modify for SecurityAddon {
             );
             components.add_security_scheme(
                 "api_key",
-                SecurityScheme::ApiKey(
-                    utoipa::openapi::security::ApiKey::Header(
-                        utoipa::openapi::security::ApiKeyValue::new("X-API-Key"),
-                    ),
-                ),
+                SecurityScheme::ApiKey(utoipa::openapi::security::ApiKey::Header(
+                    utoipa::openapi::security::ApiKeyValue::new("X-API-Key"),
+                )),
             );
         }
     }
