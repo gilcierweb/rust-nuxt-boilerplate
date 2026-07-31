@@ -97,7 +97,19 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
         cfg.service(
             SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
         )
-        .service(Scalar::with_url("/scalar", openapi.clone()));
+        .service(Scalar::with_url("/scalar", openapi.clone()))
+        // Redirect /swagger-ui (no trailing slash) -> /swagger-ui/ so the
+        // relative asset paths in the Swagger UI HTML resolve correctly.
+        // NormalizePath::MergeOnly does not add missing trailing slashes,
+        // so we handle it explicitly to avoid 404 on the index page.
+        .route(
+            "/swagger-ui",
+            web::get().to(|| async {
+                actix_web::HttpResponse::MovedPermanently()
+                    .append_header(("Location", "/swagger-ui/"))
+                    .finish()
+            }),
+        );
     }
 
     cfg.service(
