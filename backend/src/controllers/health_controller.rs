@@ -3,17 +3,18 @@ use actix_web::{HttpResponse, web};
 use chrono::Utc;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::AppState;
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct HealthDependencyStatus {
     pub status: &'static str,
     pub error: Option<String>,
     pub latency_ms: Option<f64>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct HealthResponse {
     pub status: &'static str,
     pub timestamp: String,
@@ -22,6 +23,24 @@ pub struct HealthResponse {
     pub redis: HealthDependencyStatus,
 }
 
+/// Health check endpoint.
+///
+/// Performs a live probe of the database and Redis connections and returns
+/// the operational status, dependency latencies, and the service version.
+///
+/// This endpoint is publicly reachable (no authentication required) and is
+/// intended for load balancers, Kubernetes liveness/readiness probes, and
+/// uptime monitors. When any dependency is unreachable, the response status
+/// code becomes `503 Service Unavailable` so probes can react accordingly.
+#[utoipa::path(
+    get,
+    path = "/api/v1/health",
+    tag = "health",
+    responses(
+        (status = 200, description = "All dependencies healthy", body = HealthResponse),
+        (status = 503, description = "One or more dependencies are unreachable", body = HealthResponse)
+    )
+)]
 pub async fn health_check(state: web::Data<AppState>) -> HttpResponse {
     // --- DB probe with timing ---
     let db_probe_start = std::time::Instant::now();

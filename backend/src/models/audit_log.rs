@@ -3,12 +3,13 @@ use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::db::schema::audit_logs;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Selectable)]
+#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Selectable, ToSchema)]
 #[diesel(table_name = audit_logs)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct AuditLog {
@@ -19,17 +20,20 @@ pub struct AuditLog {
     pub action: String,
     pub resource_type: String,
     pub resource_id: Option<Uuid>,
+    #[schema(value_type = Option<String>)]
     pub ip_address: Option<IpNet>,
     pub user_agent: Option<String>,
     pub request_id: Option<Uuid>,
+    #[schema(value_type = Object)]
     pub changes: Value,
+    #[schema(value_type = Object)]
     pub metadata: Value,
     pub created_at: DateTime<Utc>,
     pub prev_hash: Option<String>,
     pub hash: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset, Validate)]
+#[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset, Validate, ToSchema)]
 #[diesel(table_name = audit_logs)]
 pub struct NewAuditLog {
     pub actor_user_id: Option<Uuid>,
@@ -40,11 +44,14 @@ pub struct NewAuditLog {
     #[validate(length(min = 1, max = 255))]
     pub resource_type: String,
     pub resource_id: Option<Uuid>,
+    #[schema(value_type = Option<String>)]
     pub ip_address: Option<IpNet>,
     #[validate(length(max = 500))]
     pub user_agent: Option<String>,
     pub request_id: Option<Uuid>,
+    #[schema(value_type = Object)]
     pub changes: Value,
+    #[schema(value_type = Object)]
     pub metadata: Value,
     pub prev_hash: Option<String>,
     pub hash: String,

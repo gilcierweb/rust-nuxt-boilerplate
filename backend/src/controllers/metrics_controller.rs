@@ -30,6 +30,22 @@ use crate::AppState;
 /// topology, infer traffic patterns, and time attacks. Restricting access to
 /// authenticated internal services (Prometheus scraper, monitoring dashboards)
 /// prevents this information from leaking to unauthenticated callers.
+#[utoipa::path(
+    get,
+    path = "/api/v1/metrics",
+    tag = "metrics",
+    responses(
+        (
+            status = 200,
+            description = "Prometheus metrics payload (text/plain; version=0.0.4)",
+            content_type = "text/plain; version=0.0.4; charset=utf-8"
+        ),
+        (status = 401, description = "Missing or invalid API key")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 pub async fn metrics(state: web::Data<AppState>) -> HttpResponse {
     state.metrics.refresh_system_measures();
     let body = state.metrics.render_prometheus();

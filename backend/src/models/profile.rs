@@ -2,6 +2,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use diesel::{Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::db::schema::profiles;
@@ -10,7 +11,7 @@ fn default_encryption_key_version() -> i32 {
     1
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Selectable)]
+#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Selectable, ToSchema)]
 #[diesel(table_name = profiles)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Profile {
@@ -44,7 +45,7 @@ pub struct Profile {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Insertable)]
+#[derive(Serialize, Deserialize, Debug, Clone, Insertable, ToSchema)]
 #[diesel(table_name = profiles)]
 pub struct NewProfile {
     pub user_id: Uuid,

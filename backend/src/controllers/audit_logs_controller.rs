@@ -5,11 +5,31 @@ use validator::Validate;
 
 use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
 use crate::errors::{AppError, AppResult};
-use crate::models::audit_log::NewAuditLog;
+use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::container::AppContainer;
-use crate::utils::pagination::PaginationParams;
+use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 use crate::utils::validation::first_validation_error_message;
 
+/// List audit logs with pagination and optional sorting.
+///
+/// Requires the `audit_logs:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/audit-logs",
+    tag = "audit_logs",
+    params(
+        ("page" = Option<i64>, Query, description = "Page number (1-based)"),
+        ("per_page" = Option<i64>, Query, description = "Items per page (max 100)"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
+        ("sort_dir" = Option<String>, Query, description = "Sort direction: `asc` or `desc`")
+    ),
+    responses(
+        (status = 200, description = "Paginated list of audit logs", body = PaginatedResponse<AuditLog>),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `audit_logs:read` authority")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[get("/audit-logs")]
 pub async fn list_audit_logs(
     details: AuthDetails,
@@ -27,6 +47,24 @@ pub async fn list_audit_logs(
     Ok(HttpResponse::Ok().json(response))
 }
 
+/// Fetch a single audit log entry by its UUID.
+///
+/// Requires the `audit_logs:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/audit-logs/{id}",
+    tag = "audit_logs",
+    params(
+        ("id" = Uuid, Path, description = "Audit log identifier")
+    ),
+    responses(
+        (status = 200, description = "Audit log found", body = AuditLog),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `audit_logs:read` authority"),
+        (status = 404, description = "Audit log not found")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[get("/audit-logs/{id}")]
 pub async fn get_audit_log(
     details: AuthDetails,
@@ -42,6 +80,22 @@ pub async fn get_audit_log(
     Ok(HttpResponse::Ok().json(item))
 }
 
+/// Create a new audit log entry.
+///
+/// Requires the `audit_logs:create` authority.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/audit-logs",
+    tag = "audit_logs",
+    request_body = NewAuditLog,
+    responses(
+        (status = 201, description = "Audit log created", body = AuditLog),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `audit_logs:create` authority")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/audit-logs")]
 pub async fn create_audit_log(
     details: AuthDetails,

@@ -59,6 +59,9 @@ where
     fn call(&self, req: ServiceRequest) -> Self::Future {
         let service = self.service.clone();
 
+        // Get path before moving req into service.call
+        let path = req.path().to_string();
+
         Box::pin(async move {
             let mut response = service.call(req).await?;
 
@@ -93,11 +96,18 @@ where
 
             // Content Security Policy for API
             // More restrictive than frontend — API only serves JSON
+            // Skip restrictive CSP for Swagger UI which needs to load CSS/JS/assets
+            let is_swagger_ui = path.starts_with("/swagger-ui") || path.starts_with("/api-docs");
+
+            let csp_value = if is_swagger_ui {
+                "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; form-action 'none'"
+            } else {
+                "default-src 'none'; frame-ancestors 'none'; form-action 'none'"
+            };
+
             headers.insert(
                 header::CONTENT_SECURITY_POLICY,
-                HeaderValue::from_static(
-                    "default-src 'none'; frame-ancestors 'none'; form-action 'none'",
-                ),
+                HeaderValue::from_static(csp_value),
             );
 
             Ok(response)

@@ -1,21 +1,22 @@
 use actix_web::{HttpResponse, delete, get, patch, post, web};
 use actix_web_grants::authorities::AuthDetails;
 use serde::Deserialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
 use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
 use crate::controllers::auth_controller::invalidate_role_cache;
 use crate::errors::{AppError, AppResult};
-use crate::models::role::NewRole;
+use crate::models::role::{NewRole, Role};
 use crate::repositories::container::AppContainer;
-use crate::utils::pagination::PaginationParams;
+use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 use crate::utils::sanitize::{sanitize_input, strip_html};
 use crate::utils::validation::first_validation_error_message;
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 #[validate(schema(function = "validate_role_scope", skip_on_field_errors = false))]
-struct RoleWriteRequest {
+pub struct RoleWriteRequest {
     #[validate(length(min = 1, max = 50, message = "admin.roles.validation.name_invalid"))]
     name: String,
     #[validate(length(max = 255, message = "admin.roles.validation.resource_type_invalid"))]
@@ -41,6 +42,26 @@ fn normalize_role_payload(payload: &mut RoleWriteRequest) {
         .filter(|value| !value.trim().is_empty());
 }
 
+/// List roles with pagination and optional sorting.
+///
+/// Requires the `roles:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/roles",
+    tag = "roles",
+    params(
+        ("page" = Option<i64>, Query, description = "Page number (1-based)"),
+        ("per_page" = Option<i64>, Query, description = "Items per page (max 100)"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
+        ("sort_dir" = Option<String>, Query, description = "Sort direction: `asc` or `desc`")
+    ),
+    responses(
+        (status = 200, description = "Paginated list of roles", body = PaginatedResponse<Role>),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:read` authority")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[get("/roles")]
 pub async fn list_roles(
     details: AuthDetails,
@@ -58,6 +79,24 @@ pub async fn list_roles(
     Ok(HttpResponse::Ok().json(response))
 }
 
+/// Fetch a single role by its UUID.
+///
+/// Requires the `roles:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/roles/{id}",
+    tag = "roles",
+    params(
+        ("id" = Uuid, Path, description = "Role identifier")
+    ),
+    responses(
+        (status = 200, description = "Role found", body = Role),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:read` authority"),
+        (status = 404, description = "Role not found")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[get("/roles/{id}")]
 pub async fn get_role(
     details: AuthDetails,
@@ -73,6 +112,22 @@ pub async fn get_role(
     Ok(HttpResponse::Ok().json(item))
 }
 
+/// Create a new role.
+///
+/// Requires the `roles:create` authority.
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/roles",
+    tag = "roles",
+    request_body = RoleWriteRequest,
+    responses(
+        (status = 201, description = "Role created", body = Role),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:create` authority")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/roles")]
 pub async fn create_role(
     details: AuthDetails,
@@ -100,6 +155,27 @@ pub async fn create_role(
     Ok(HttpResponse::Created().json(created))
 }
 
+/// Update an existing role.
+///
+/// Requires the `roles:update` authority. Invalidates cached roles for any
+/// users assigned to the updated role.
+#[utoipa::path(
+    patch,
+    path = "/api/v1/admin/roles/{id}",
+    tag = "roles",
+    params(
+        ("id" = Uuid, Path, description = "Role identifier")
+    ),
+    request_body = RoleWriteRequest,
+    responses(
+        (status = 200, description = "Role updated", body = Role),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:update` authority"),
+        (status = 404, description = "Role not found")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[patch("/roles/{id}")]
 pub async fn update_role(
     details: AuthDetails,
@@ -133,6 +209,25 @@ pub async fn update_role(
     Ok(HttpResponse::Ok().json(updated))
 }
 
+/// Delete a role by its UUID.
+///
+/// Requires the `roles:delete` authority. Invalidates cached roles for any
+/// users that were assigned to the deleted role.
+#[utoipa::path(
+    delete,
+    path = "/api/v1/admin/roles/{id}",
+    tag = "roles",
+    params(
+        ("id" = Uuid, Path, description = "Role identifier")
+    ),
+    responses(
+        (status = 200, description = "Role deleted"),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:delete` authority"),
+        (status = 404, description = "Role not found")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[delete("/roles/{id}")]
 pub async fn delete_role(
     details: AuthDetails,

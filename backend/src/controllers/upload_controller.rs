@@ -5,6 +5,7 @@ use actix_web::{HttpResponse, post, web};
 use futures_util::StreamExt;
 use serde::Serialize;
 use tempfile::NamedTempFile;
+use utoipa::ToSchema;
 
 use crate::config::AppConfig;
 use crate::errors::{AppError, AppResult};
@@ -17,7 +18,7 @@ use crate::utils::file_validation::{
 const MAGIC_BYTES_PREFIX: usize = 8192;
 
 /// Response returned after a successful upload validation.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, ToSchema)]
 pub struct UploadResponse {
     pub filename: String,
     pub content_type: String,
@@ -74,6 +75,21 @@ fn file_validation_error_to_app(err: FileValidationError) -> AppError {
 ///   extensions (`.php`, `.exe`, etc.) are rejected
 /// - File size is enforced per category
 /// - Original filenames are never used for storage
+#[utoipa::path(
+    post,
+    path = "/api/v1/admin/upload",
+    tag = "upload",
+    request_body(
+        content_type = "multipart/form-data",
+        description = "Multipart payload with a single `file` field"
+    ),
+    responses(
+        (status = 200, description = "File validated", body = UploadResponse),
+        (status = 400, description = "File rejected (size, MIME type, or filename)"),
+        (status = 401, description = "Authentication required")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/upload")]
 pub async fn upload_file(
     _user: AuthUser,

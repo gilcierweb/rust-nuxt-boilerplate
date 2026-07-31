@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// Default page size for list endpoints
 pub const DEFAULT_PAGE_SIZE: i64 = 20;
@@ -17,7 +18,15 @@ pub type ListParams = PaginationParams;
 
 /// Pagination and sorting parameters for list endpoints
 #[allow(dead_code)]
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, ToSchema)]
+#[schema(
+    example = json!({
+        "page": 1,
+        "per_page": 20,
+        "sort_by": "created_at",
+        "sort_dir": "desc"
+    })
+)]
 pub struct PaginationParams {
     /// Page number (1-based)
     #[serde(default = "default_page")]
@@ -105,7 +114,7 @@ fn default_per_page() -> i64 {
 
 /// Paginated response wrapper
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PaginatedResponse<T> {
     pub data: Vec<T>,
     pub pagination: PaginationMeta,
@@ -158,7 +167,7 @@ impl<T> PaginatedResponse<T> {
 
 /// Pagination metadata
 #[allow(dead_code)]
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
 pub struct PaginationMeta {
     pub page: i64,
     pub per_page: i64,

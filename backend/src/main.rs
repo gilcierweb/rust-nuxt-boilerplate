@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::sync::Arc;
 
 use actix_cors::Cors;
-use actix_web::{App, HttpResponse, HttpServer, web};
+use actix_web::{App, HttpResponse, HttpServer, web, middleware::{NormalizePath, TrailingSlash}};
 use backend::AppState;
 use backend::config::AppConfig;
 use backend::db::database::Database;
@@ -311,7 +311,7 @@ async fn main() -> std::io::Result<()> {
             // middleware
             // .wrap(actix_web::middleware::Logger::default())
             .wrap(actix_web::middleware::Compress::default())
-            .wrap(actix_web::middleware::NormalizePath::trim())
+            .wrap(NormalizePath::new(TrailingSlash::MergeOnly))
             .wrap(backend::middleware::security_headers::SecurityHeaders)
             .wrap(backend::middleware::metrics_middleware::MetricsMiddleware)
             .wrap(backend::middleware::request_log_middleware::RequestLogMiddleware)

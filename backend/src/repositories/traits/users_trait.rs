@@ -9,6 +9,7 @@ use diesel_async::AsyncPgConnection;
 use futures::future::BoxFuture;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::models::user::{NewUser, User};
@@ -100,7 +101,7 @@ pub trait IUserRepositoryTransaction: Send + Sync {
 }
 
 /// DTO for paginated user list (includes profile data)
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct AdminUserLookupItem {
     pub id: Uuid,
     pub email: String,
@@ -111,7 +112,7 @@ pub struct AdminUserLookupItem {
 }
 
 /// DTO for single user detail (includes profile data)
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, ToSchema)]
 pub struct AdminUserItem {
     pub id: Uuid,
     pub email: String,

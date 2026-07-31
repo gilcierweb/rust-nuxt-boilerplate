@@ -3,11 +3,12 @@
 use chrono::{DateTime, Utc};
 use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 use uuid::Uuid;
 
 use crate::db::schema::roles;
 
-#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Selectable)]
+#[derive(Serialize, Deserialize, Debug, Clone, Queryable, Selectable, ToSchema)]
 #[diesel(table_name = roles)]
 #[diesel(check_for_backend(diesel::pg::Pg))]
 pub struct Role {
@@ -20,7 +21,7 @@ pub struct Role {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset)]
+#[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset, ToSchema)]
 #[diesel(table_name = roles)]
 pub struct NewRole {
     pub name: String,

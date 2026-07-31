@@ -6,9 +6,9 @@ use actix_web_grants::authorities::AuthDetails;
 use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
 use crate::errors::{AppError, AppResult};
 use crate::repositories::container::AppContainer;
-pub use crate::repositories::traits::users_trait::AdminUserLookupItem;
+pub use crate::repositories::traits::users_trait::{AdminUserItem, AdminUserLookupItem};
 use crate::security::SecurityService;
-use crate::utils::pagination::PaginationParams;
+use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 
 fn map_repo_error(error: diesel::result::Error, entity: &str) -> AppError {
     match error {
@@ -17,6 +17,26 @@ fn map_repo_error(error: diesel::result::Error, entity: &str) -> AppError {
     }
 }
 
+/// List users (admin view) with pagination and optional sorting.
+///
+/// Requires the `users:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/users",
+    tag = "users",
+    params(
+        ("page" = Option<i64>, Query, description = "Page number (1-based)"),
+        ("per_page" = Option<i64>, Query, description = "Items per page (max 100)"),
+        ("sort_by" = Option<String>, Query, description = "Field to sort by"),
+        ("sort_dir" = Option<String>, Query, description = "Sort direction: `asc` or `desc`")
+    ),
+    responses(
+        (status = 200, description = "Paginated list of users", body = PaginatedResponse<AdminUserLookupItem>),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `users:read` authority")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[get("/users")]
 pub async fn list_users(
     details: AuthDetails,
@@ -40,6 +60,24 @@ pub async fn list_users(
     Ok(HttpResponse::Ok().json(response))
 }
 
+/// Fetch a single user by UUID (admin view).
+///
+/// Requires the `users:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/users/{id}",
+    tag = "users",
+    params(
+        ("id" = uuid::Uuid, Path, description = "User identifier")
+    ),
+    responses(
+        (status = 200, description = "User found", body = AdminUserItem),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `users:read` authority"),
+        (status = 404, description = "User not found")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[get("/users/{id}")]
 pub async fn get_user(
     details: AuthDetails,

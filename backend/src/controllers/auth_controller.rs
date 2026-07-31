@@ -69,7 +69,7 @@ pub struct LoginRequest {
     pub otp_code: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct RecoverRequest {
     #[validate(
         email(message = "auth.validation.invalid_email"),
@@ -78,7 +78,7 @@ pub struct RecoverRequest {
     pub email: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct ResetPasswordRequest {
     // Reset tokens are random hex strings; cap to avoid unbounded allocations.
     #[validate(length(min = 1, max = 512, message = "auth.validation.token_invalid"))]
@@ -94,14 +94,14 @@ pub struct ResetPasswordRequest {
     pub password_confirmation: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct Enable2FARequest {
     /// TOTP codes are exactly 6 decimal digits.
     #[validate(length(min = 6, max = 6, message = "auth.validation.otp_invalid"))]
     pub otp_code: String,
 }
 
-#[derive(Debug, Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct ChangePasswordRequest {
     // Current password: cap at 128 to prevent large payloads reaching Argon2id.
     // No min check — wrong passwords should still reach the verify step so
@@ -145,13 +145,21 @@ pub struct UserInfo {
 }
 
 // POST /api/v1/auth/register
+/// Register a new user account.
+///
+/// Creates the user, the linked profile, and dispatches a confirmation email.
+/// The endpoint is intentionally uniform: it always returns `201` for valid
+/// input even if the email already exists (the duplicate path returns `409`).
 #[utoipa::path(
     post,
     path = "/api/v1/auth/register",
+    tag = "auth",
     request_body = RegisterRequest,
     responses(
         (status = 201, description = "User registered successfully"),
-        (status = 409, description = "Email already exists")
+        (status = 400, description = "Validation error"),
+        (status = 409, description = "Email already exists"),
+        (status = 429, description = "Too many requests")
     )
 )]
 #[post("/register")]
@@ -238,6 +246,21 @@ pub async fn register(
 }
 
 // GET /api/v1/auth/confirm?token=xxx
+/// Confirm a user email using the token sent during registration.
+///
+/// The token is opaque to the client; it is stored hashed server-side.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/confirm",
+    tag = "auth",
+    params(
+        ("token" = String, Query, description = "Confirmation token delivered by email")
+    ),
+    responses(
+        (status = 200, description = "Email confirmed"),
+        (status = 400, description = "Invalid or missing token")
+    )
+)]
 #[get("/confirm")]
 pub async fn confirm(
     container: web::Data<AppContainer>,
@@ -322,15 +345,23 @@ pub async fn invalidate_role_cache(container: &AppContainer, role_id: &Uuid) {
 }
 
 // POST /api/v1/auth/login
+/// Authenticate an existing user and issue an access token.
+///
+/// When 2FA is enabled, the caller must also supply `otp_code`; otherwise the
+/// request is rejected with `403 Forbidden`. Repeated failures may trigger a
+/// temporary account lockout (`423 Locked`).
 #[utoipa::path(
     post,
     path = "/api/v1/auth/login",
+    tag = "auth",
     request_body = LoginRequest,
     responses(
         (status = 200, description = "Login successful", body = AuthResponse),
+        (status = 400, description = "Validation error"),
         (status = 401, description = "Unauthorized - Invalid credentials"),
         (status = 403, description = "Forbidden - OTP required"),
-        (status = 423, description = "Locked - Temporary lockout due to failed attempts")
+        (status = 423, description = "Locked - Temporary lockout due to failed attempts"),
+        (status = 429, description = "Too many requests")
     )
 )]
 #[post("/login")]
@@ -604,6 +635,28 @@ pub async fn login(
 }
 
 // POST /api/v1/auth/refresh
+/// Rotate the refresh token cookie and return a fresh access token.
+///
+/// The endpoint reads the `refresh_token` cookie, validates the digest,
+/// revokes the presented token, issues a new one (cookie rotation), and
+/// returns a brand-new access token. Returns `401` if no valid refresh
+/// token is present.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/refresh",
+    tag = "auth",
+    responses(
+        (
+            status = 200,
+            description = "New access token issued; refresh cookie rotated",
+            body = AuthResponse,
+            headers(
+                ("Set-Cookie" = String, description = "Rotated `refresh_token` cookie")
+            )
+        ),
+        (status = 401, description = "Missing or invalid refresh token")
+    )
+)]
 #[post("/refresh")]
 pub async fn refresh(
     container: web::Data<AppContainer>,
@@ -767,6 +820,17 @@ async fn session_impl(
 }
 
 // GET /api/v1/auth/session
+/// Return the current session: validates the refresh token cookie and returns
+/// a fresh access token alongside the authenticated user profile.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/session",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Active session", body = SessionResponse),
+        (status = 401, description = "Missing or invalid refresh token")
+    )
+)]
 #[get("/session")]
 pub async fn session(
     container: web::Data<AppContainer>,
@@ -776,6 +840,16 @@ pub async fn session(
 }
 
 // GET /api/v1/auth/session/
+/// Trailing-slash alias for `/api/v1/auth/session`.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/session/",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Active session", body = SessionResponse),
+        (status = 401, description = "Missing or invalid refresh token")
+    )
+)]
 #[get("/session/")]
 pub async fn session_trailing(
     container: web::Data<AppContainer>,
@@ -785,6 +859,18 @@ pub async fn session_trailing(
 }
 
 // POST /api/v1/auth/logout
+/// Log the user out by blacklisting the bearer access token (if present)
+/// and revoking every refresh token cookie the request carried.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/logout",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Logged out; refresh cookie cleared"),
+        (status = 401, description = "Authentication required")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/logout")]
 pub async fn logout(
     req: HttpRequest,
@@ -843,6 +929,22 @@ pub async fn logout(
 }
 
 // POST /api/v1/auth/recover
+/// Initiate the password recovery flow.
+///
+/// Always returns `200 OK` with a generic success message to prevent email
+/// enumeration; the reset email is sent only when the address matches a real
+/// account.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/recover",
+    tag = "auth",
+    request_body = RecoverRequest,
+    responses(
+        (status = 200, description = "Recovery email accepted for processing"),
+        (status = 400, description = "Validation error"),
+        (status = 429, description = "Too many requests")
+    )
+)]
 #[post("/recover")]
 pub async fn recover_password(
     container: web::Data<AppContainer>,
@@ -852,6 +954,18 @@ pub async fn recover_password(
 }
 
 // POST /api/v1/auth/forgot-password (semantic alias for /auth/recover)
+/// Semantic alias for `/api/v1/auth/recover`.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/forgot-password",
+    tag = "auth",
+    request_body = RecoverRequest,
+    responses(
+        (status = 200, description = "Recovery email accepted for processing"),
+        (status = 400, description = "Validation error"),
+        (status = 429, description = "Too many requests")
+    )
+)]
 #[post("/forgot-password")]
 pub async fn forgot_password(
     container: web::Data<AppContainer>,
@@ -909,6 +1023,19 @@ async fn recover_password_handler(
 }
 
 // POST /api/v1/auth/reset
+/// Complete the password recovery flow: exchange the reset token (sent via
+/// email) for a new password. All existing refresh tokens are revoked on
+/// success and a password-changed notification is dispatched.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/reset",
+    tag = "auth",
+    request_body = ResetPasswordRequest,
+    responses(
+        (status = 200, description = "Password updated"),
+        (status = 400, description = "Invalid token, expired token, or validation error")
+    )
+)]
 #[post("/reset")]
 pub async fn reset_password(
     container: web::Data<AppContainer>,
@@ -1020,6 +1147,21 @@ pub async fn reset_password(
 }
 
 // POST /api/v1/auth/2fa/setup
+/// Initialise TOTP two-factor authentication for the current user.
+///
+/// Generates a fresh secret and a corresponding `otpauth://` URL suitable for
+/// any standard authenticator app. The secret is stored but 2FA is **not**
+/// enabled until `POST /2fa/enable` succeeds with a valid TOTP code.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/2fa/setup",
+    tag = "auth",
+    responses(
+        (status = 200, description = "TOTP secret and provisioning URL issued"),
+        (status = 401, description = "Authentication required")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/2fa/setup")]
 pub async fn setup_2fa(
     user: AuthUser,
@@ -1071,6 +1213,22 @@ pub async fn setup_2fa(
 }
 
 // POST /api/v1/auth/2fa/enable
+/// Confirm a TOTP code and enable 2FA for the current user.
+///
+/// Returns a set of one-time backup codes. All refresh tokens for the user
+/// are revoked on success.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/2fa/enable",
+    tag = "auth",
+    request_body = Enable2FARequest,
+    responses(
+        (status = 200, description = "2FA enabled; backup codes returned"),
+        (status = 400, description = "Setup not initiated or invalid code"),
+        (status = 401, description = "Authentication required or invalid TOTP code")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/2fa/enable")]
 pub async fn enable_2fa(
     user: AuthUser,
@@ -1143,6 +1301,19 @@ pub async fn enable_2fa(
 }
 
 // POST /api/v1/auth/2fa/disable
+/// Disable 2FA for the current user after validating a fresh TOTP code.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/2fa/disable",
+    tag = "auth",
+    request_body = Enable2FARequest,
+    responses(
+        (status = 200, description = "2FA disabled"),
+        (status = 400, description = "2FA was not enabled or invalid code"),
+        (status = 401, description = "Authentication required or invalid TOTP code")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/2fa/disable")]
 pub async fn disable_2fa(
     user: AuthUser,
@@ -1192,6 +1363,23 @@ pub async fn disable_2fa(
 }
 
 // POST /api/v1/auth/change-password
+/// Change the current user's password.
+///
+/// Requires the current password (re-verified under Argon2id) and the new
+/// password (subject to strength policy). All refresh tokens are revoked
+/// and a password-changed notification is dispatched.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/change-password",
+    tag = "auth",
+    request_body = ChangePasswordRequest,
+    responses(
+        (status = 200, description = "Password changed"),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Authentication required or invalid current password")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[post("/change-password")]
 pub async fn change_password(
     user: AuthUser,
@@ -1265,6 +1453,17 @@ pub async fn change_password(
 }
 
 // GET /api/v1/auth/me
+/// Return the id and decrypted email of the currently authenticated user.
+#[utoipa::path(
+    get,
+    path = "/api/v1/auth/me",
+    tag = "auth",
+    responses(
+        (status = 200, description = "Authenticated user info"),
+        (status = 401, description = "Authentication required")
+    ),
+    security(("bearer_auth" = []))
+)]
 #[get("/me")]
 pub async fn me(user: AuthUser, container: web::Data<AppContainer>) -> AppResult<HttpResponse> {
     let user_data = container
@@ -1526,6 +1725,20 @@ impl UserExt for User {
 /// # Business Logic
 /// Currently logs all events for audit purposes. Extend the match statement
 /// to implement actual business logic (e.g., update user subscription status).
+#[utoipa::path(
+    post,
+    path = "/api/v1/webhooks/stripe",
+    tag = "webhooks",
+    request_body(
+        content = String,
+        content_type = "application/json",
+        description = "Raw Stripe event payload (signature verified by middleware)"
+    ),
+    responses(
+        (status = 200, description = "Webhook accepted"),
+        (status = 400, description = "Invalid payload (UTF-8 or JSON parse failure)")
+    )
+)]
 pub async fn stripe_webhook(
     req: HttpRequest,
     payload: web::Bytes,
@@ -1683,6 +1896,20 @@ pub async fn stripe_webhook(
 /// # Business Logic
 /// Currently logs all events for audit purposes. Extend the implementation
 /// to process actual payment confirmations.
+#[utoipa::path(
+    post,
+    path = "/api/v1/webhooks/pix",
+    tag = "webhooks",
+    request_body(
+        content = String,
+        content_type = "application/json",
+        description = "Raw Pix event payload"
+    ),
+    responses(
+        (status = 200, description = "Webhook accepted"),
+        (status = 400, description = "Invalid payload (UTF-8 or JSON parse failure)")
+    )
+)]
 pub async fn pix_webhook(
     req: HttpRequest,
     payload: web::Bytes,

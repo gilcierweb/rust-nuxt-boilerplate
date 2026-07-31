@@ -55,13 +55,50 @@ use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 /// - **Webhook routes public but verified**: Webhooks are in the public routes
 ///   list (skip API key) but have their own signature verification middleware
 ///   (`StripeWebhookVerifier`).
+///
+/// # Swagger UI access policy
+///
+/// The Swagger UI (`/swagger-ui/`) and the OpenAPI JSON (`/api-docs/openapi.json`)
+/// are always mounted at the application root, outside the authenticated
+/// `/api/v1` scope, so they are reachable without the JWT/API-key middleware
+/// stack that guards business endpoints.
+///
+/// - **Development & Test**: The UI and JSON are public. Developers can open
+///   `http://localhost:8080/swagger-ui/` directly in a browser.
+/// - **Staging & Production**: The UI and JSON are protected by the
+///   `RequireApiKey` middleware. Browsers must send a valid `X-API-Key` header
+///   (use a browser extension such as ModHeader, or open the JSON via an
+///   authenticated `curl` and import it into Swagger Editor/Insomnia/Postman).
+///   This prevents leaking internal route documentation, request/response
+///   schemas, and auth scheme details to unauthenticated callers in
+///   internet-facing environments.
 pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
+    // Resolve environment-aware auth policy for the Swagger UI / OpenAPI docs.
+    //
+    // `actix_web::web::ServiceConfig` exposes no public accessor for the
+    // already-registered `AppContainer`, so we re-read the `ENVIRONMENT`
+    // variable here — the same source `AppConfig::from_env` uses — to decide
+    // whether the docs mount requires an API key. This keeps the public
+    // `config` signature unchanged.
+    let require_api_key_for_docs = matches!(
+        std::env::var("ENVIRONMENT")
+            .unwrap_or_else(|_| "development".to_string())
+            .to_ascii_lowercase()
+            .as_str(),
+        "staging" | "production"
+    );
+
     let openapi = ApiDoc::openapi();
 
+    // Public docs mount (development & test):
+    // Serves the Swagger UI assets and the OpenAPI JSON without any auth.
+    if !require_api_key_for_docs {
+        cfg.service(
+            SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
+        );
+    }
+
     cfg.service(
-        SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
-    )
-    .service(
         web::scope("/api/v1")
             // 0. API version guard (first) — version negotiation + deprecation headers
             .wrap(crate::middleware::api_version::ApiVersionGuard::new(
@@ -101,9 +138,6 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 "/api/v1/health",
                 "/api/v1/health/",
             ]))
-            .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
-            )
             // Auth routes - no RBAC needed
             .service(
                 web::scope("/auth")
@@ -158,4 +192,28 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // WebSocket route (inside /api/v1 scope)
             .service(web::resource("/ws").route(web::get().to(crate::ws::redis_handler::ws_handler))),
     );
+
+    // Authenticated docs mount (staging & production):
+    // The same Swagger UI + OpenAPI JSON, but inside a scope guarded by the
+    // `RequireApiKey` middleware. Browsers/clients must send a valid
+    // `X-API-Key` header to load the UI or the spec. In dev/test the public
+    // mount above is registered instead and this one is skipped.
+    if require_api_key_for_docs {
+        cfg.service(
+            web::scope("")
+                .wrap(crate::middleware::api_key_middleware::RequireApiKey::new(vec![
+                    // Everything else under this scope requires the API key,
+                    // so we only exempt the health route that the API exposes
+                    // for liveness probes (already protected elsewhere).
+                    "/health",
+                    "/health/",
+                    "/api/v1/health",
+                    "/api/v1/health/",
+                ]))
+                .service(
+                    SwaggerUi::new("/swagger-ui/{_:.*}")
+                        .url("/api-docs/openapi.json", openapi.clone()),
+                ),
+        );
+    }
 }
