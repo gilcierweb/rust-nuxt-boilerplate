@@ -16,6 +16,7 @@
     },
     "dashboard": {
       "title": "Dashboard",
+      "description": "Acompanhe seus documentos, solicitações e tickets em um só lugar.",
       "openDebts": "Débitos em aberto",
       "pendingPayments": "Pagamentos pendentes",
       "availableDocuments": "Documentos disponíveis",
@@ -25,7 +26,11 @@
       "noUpcomingDebts": "Nenhum débito com vencimento próximo.",
       "recentActivity": "Atividade recente",
       "viewPayments": "Ver pagamentos",
-      "noRecentActivity": "Sem movimentações recentes."
+      "noRecentActivity": "Sem movimentações recentes.",
+      "quickAccess": "Acesso Rápido",
+      "cards": {
+        "documents": "Documentos"
+      }
     },
     "debts": {
       "title": "Débitos",
