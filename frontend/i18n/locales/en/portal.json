@@ -33,16 +33,31 @@
   },
   "dashboard": {
     "title": "Client Dashboard",
-    "description": "Track your documents, requests and support in one place.",
+    "description": "Track your financial position, documents and invoice requests.",
     "cards": {
       "documents": "Documents"
     },
-    "quickAccess": "Quick Access"
+    "quickAccess": "Quick Access",
+    "openDebts": "Open debts",
+    "pendingPayments": "Pending payments",
+    "availableDocuments": "Available documents",
+    "openInvoiceRequests": "Open invoice requests",
+    "upcomingDueDates": "Upcoming due dates",
+    "viewDebts": "View debts",
+    "noUpcomingDebts": "No upcoming debts.",
+    "recentActivity": "Recent activity",
+    "viewPayments": "View payments",
+    "noRecentActivity": "No recent activity."
   },
   "support": {
     "title": "Support",
     "messageLabel": "Message",
     "messagePlaceholder": "Describe your question or issue",
     "submit": "Submit"
+  },
+  "navbar": {
+    "openMenu": "Open menu",
+    "subtitle": "Client Portal",
+    "logout": "Logout"
   }
 }

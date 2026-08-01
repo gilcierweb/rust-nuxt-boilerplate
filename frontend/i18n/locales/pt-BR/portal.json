@@ -33,16 +33,31 @@
   },
   "dashboard": {
     "title": "Painel do Cliente",
-    "description": "Acompanhe seus documentos, solicitações e suporte em um só lugar.",
+    "description": "Acompanhe sua posição financeira, documentos e solicitações fiscais.",
     "cards": {
       "documents": "Documentos"
     },
-    "quickAccess": "Acesso Rápido"
+    "quickAccess": "Acesso Rápido",
+    "openDebts": "Débitos em aberto",
+    "pendingPayments": "Pagamentos pendentes",
+    "availableDocuments": "Documentos disponíveis",
+    "openInvoiceRequests": "Solicitações de nota em aberto",
+    "upcomingDueDates": "Próximos vencimentos",
+    "viewDebts": "Ver débitos",
+    "noUpcomingDebts": "Nenhum débito próximo do vencimento.",
+    "recentActivity": "Atividade recente",
+    "viewPayments": "Ver pagamentos",
+    "noRecentActivity": "Sem movimentações recentes."
   },
   "support": {
     "title": "Suporte",
     "messageLabel": "Mensagem",
     "messagePlaceholder": "Descreva sua dúvida ou problema",
     "submit": "Enviar"
+  },
+  "navbar": {
+    "openMenu": "Abrir menu",
+    "subtitle": "Portal do Cliente",
+    "logout": "Sair"
   }
 }

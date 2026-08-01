@@ -5,25 +5,27 @@
         <button
           type="button"
           class="btn btn-square btn-ghost lg:hidden"
-          aria-label="Abrir menu"
+          :aria-label="$t('portal.navbar.openMenu')"
           @click="sidebarOpen = true"
         >
           <span class="icon-[tabler--menu-2] size-5"></span>
         </button>
         <div>
           <p class="text-sm font-semibold text-base-content">{{ appName }}</p>
-          <p class="text-xs text-base-content/60">Portal do Cliente</p>
+          <p class="text-xs text-base-content/60">{{ $t('portal.navbar.subtitle') }}</p>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
+        <ThemeToggle />
+        <LanguageSwitcher />
         <div class="hidden text-right sm:block">
           <p class="text-sm font-medium text-base-content">{{ userEmail }}</p>
           <p class="text-xs text-base-content/60">{{ userRoleLabel }}</p>
         </div>
         <button type="button" class="btn btn-soft btn-sm" @click="logout">
           <span class="icon-[tabler--logout-2] size-4"></span>
-          Sair
+          {{ $t('portal.navbar.logout') }}
         </button>
       </div>
     </div>

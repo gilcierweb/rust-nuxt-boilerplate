@@ -165,6 +165,7 @@ security: {
           "es/admin-modules.json",
           "es/admin-roles.json",
           "es/admin-resources.json",
+          "es/portal.json",
         ],
       },
       {

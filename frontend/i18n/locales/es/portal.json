@@ -1,0 +1,63 @@
+{
+  "common": {
+    "actions": {
+      "refresh": "@:common.actions.refresh",
+      "show": "@:common.actions.show",
+      "edit": "@:common.actions.edit",
+      "new": "@:common.actions.new",
+      "save": "@:common.save",
+      "submit": "@:common.actions.submit",
+      "cancel": "@:common.actions.cancel",
+      "back": "@:common.actions.back",
+      "send": "@:common.actions.send"
+    },
+    "status": {
+      "planning": "Planificación",
+      "inProgress": "En curso",
+      "paused": "Pausado",
+      "completed": "Completado",
+      "open": "Abierto",
+      "waiting": "Esperando",
+      "resolved": "Resuelto",
+      "closed": "Cerrado"
+    },
+    "priority": {
+      "low": "Baja",
+      "medium": "Media",
+      "high": "Alta",
+      "urgent": "Urgente"
+    },
+    "loading": "Cargando...",
+    "empty": "No se encontraron registros.",
+    "error": "Error al cargar datos."
+  },
+  "dashboard": {
+    "title": "Panel del Cliente",
+    "description": "Siga sus documentos, solicitudes y soporte en un solo lugar.",
+    "cards": {
+      "documents": "Documentos"
+    },
+    "quickAccess": "Acceso Rápido",
+    "openDebts": "Débitos abiertos",
+    "pendingPayments": "Pagos pendientes",
+    "availableDocuments": "Documentos disponibles",
+    "openInvoiceRequests": "Solicitudes de nota abiertas",
+    "upcomingDueDates": "Próximos vencimientos",
+    "viewDebts": "Ver débitos",
+    "noUpcomingDebts": "No hay débitos próximos a vencer.",
+    "recentActivity": "Actividad reciente",
+    "viewPayments": "Ver pagos",
+    "noRecentActivity": "Sin actividad reciente."
+  },
+  "support": {
+    "title": "Soporte",
+    "messageLabel": "Mensaje",
+    "messagePlaceholder": "Describa su duda o problema",
+    "submit": "Enviar"
+  },
+  "navbar": {
+    "openMenu": "Abrir menú",
+    "subtitle": "Portal del Cliente",
+    "logout": "Salir"
+  }
+}
