@@ -11,13 +11,15 @@
     "build": "nuxt build",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
-    "preview": "nuxt preview",
+    "preview": "pnpm run build && wrangler dev",
     "postinstall": "nuxt prepare",
     "test": "vitest",
     "test:e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --ext .vue,.js,.ts",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "deploy": "pnpm run build && wrangler deploy",
+    "cf-typegen": "wrangler types"
   },
   "dependencies": {
     "@nuxtjs/i18n": "10.2.4",
@@ -54,8 +56,10 @@
     "eslint": "^8.0.0",
     "eslint-plugin-vue": "^9.0.0",
     "jsdom": "^29.1.1",
+    "nitro-cloudflare-dev": "^0.2.2",
     "sass-embedded": "^1.99.0",
     "typescript": "^5.0.0",
-    "vitest": "^1.0.0"
+    "vitest": "^1.0.0",
+    "wrangler": "^4.118.0"
   }
 }
