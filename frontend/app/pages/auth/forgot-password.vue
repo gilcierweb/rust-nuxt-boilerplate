@@ -32,7 +32,7 @@
 
       <div>
         <label class="label-text mb-1.5 block" for="email">{{ $t('auth.forgotPassword.email') }}</label>
-        <div class="input input-lg" :class="{ 'input-error': errors.email }">
+        <div class="input input-lg">
           <Icon name="heroicons:envelope" class="h-4 w-4 opacity-50" />
           <input
             id="email"
@@ -41,6 +41,7 @@
             autocomplete="email"
             :placeholder="$t('auth.forgotPassword.emailPlaceholder')"
             :disabled="loading"
+            :class="{ 'input-error': errors.email }"
           />
         </div>
         <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>

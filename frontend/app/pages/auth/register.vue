@@ -67,7 +67,7 @@
 
       <div>
         <label class="label-text" for="password">{{ $t('auth.register.password') }}*</label>
-        <div class="input" :class="{ 'input-error': errors.password }">
+        <div class="input">
           <input
             id="password"
             v-model="password"
@@ -75,6 +75,7 @@
             autocomplete="new-password"
             :placeholder="$t('auth.register.passwordPlaceholder')"
             :disabled="isLoading"
+            :class="{ 'input-error': errors.password }"
           />
           <button type="button" class="block cursor-pointer" aria-label="toggle password visibility" @click="showPassword = !showPassword">
             <span :class="[showPassword ? 'hidden' : 'block', 'icon-[tabler--eye] size-5 shrink-0']" />

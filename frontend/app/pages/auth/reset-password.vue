@@ -26,7 +26,7 @@
 
       <div>
         <label class="label-text mb-1.5 block" for="password">{{ $t('auth.resetPassword.newPassword') }}</label>
-        <div class="input input-lg" :class="{ 'input-error': errors.password }">
+        <div class="input input-lg">
           <Icon name="heroicons:lock-closed" class="h-4 w-4 opacity-50" />
           <input
             id="password"
@@ -34,6 +34,7 @@
             :type="showPw ? 'text' : 'password'"
             autocomplete="new-password"
             :placeholder="$t('auth.resetPassword.newPasswordPlaceholder')"
+            :class="{ 'input-error': errors.password }"
           />
           <button
             type="button"
@@ -48,7 +49,7 @@
 
       <div>
         <label class="label-text mb-1.5 block" for="confirm">{{ $t('auth.resetPassword.confirmPassword') }}</label>
-        <div class="input input-lg" :class="{ 'input-error': errors.password_confirmation }">
+        <div class="input input-lg">
           <Icon name="heroicons:lock-closed" class="h-4 w-4 opacity-50" />
           <input
             id="confirm"
@@ -56,6 +57,7 @@
             :type="showPw ? 'text' : 'password'"
             autocomplete="new-password"
             :placeholder="$t('auth.resetPassword.confirmPasswordPlaceholder')"
+            :class="{ 'input-error': errors.password_confirmation }"
           />
         </div>
         <span v-if="errors.password_confirmation" class="text-error text-xs mt-1 block">{{ errors.password_confirmation }}</span>
