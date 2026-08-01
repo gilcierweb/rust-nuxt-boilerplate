@@ -32,7 +32,7 @@
       <div class="space-y-1">
         <h3 class="text-xl font-semibold text-base-content">{{ $t('auth.register.success.title') }}</h3>
         <p class="text-sm text-base-content/70">
-          {{ $t('auth.register.success.message', { email: form.email }) }}
+          {{ $t('auth.register.success.message', { email: email }) }}
         </p>
       </div>
       <NuxtLink
@@ -43,7 +43,7 @@
       </NuxtLink>
     </div>
 
-    <form v-else class="space-y-4" @submit.prevent="handleRegister">
+    <form v-else novalidate class="space-y-4" @submit.prevent="onSubmit">
       <Transition enter-active-class="duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2">
         <div v-if="errorMsg" class="alert alert-error alert-soft text-sm">
           <Icon name="heroicons:exclamation-circle" class="h-5 w-5" />
@@ -55,24 +55,23 @@
         <label class="label-text" for="email">{{ $t('auth.register.email') }}*</label>
         <input
           id="email"
-          v-model="form.email"
+          v-model="email"
           type="email"
-          required
           autocomplete="email"
           :placeholder="$t('auth.register.emailPlaceholder')"
           :disabled="isLoading"
-          class="input"
+          :class="['input', { 'input-error': errors.email }]"
         />
+        <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>
       </div>
 
       <div>
         <label class="label-text" for="password">{{ $t('auth.register.password') }}*</label>
-        <div class="input">
+        <div class="input" :class="{ 'input-error': errors.password }">
           <input
             id="password"
-            v-model="form.password"
+            v-model="password"
             :type="showPassword ? 'text' : 'password'"
-            required
             autocomplete="new-password"
             :placeholder="$t('auth.register.passwordPlaceholder')"
             :disabled="isLoading"
@@ -82,6 +81,7 @@
             <span :class="[showPassword ? 'block' : 'hidden', 'icon-[tabler--eye-off] size-5 shrink-0']" />
           </button>
         </div>
+        <span v-if="errors.password" class="text-error text-xs mt-1 block">{{ errors.password }}</span>
         <div class="space-y-2 pt-2">
           <div class="flex gap-2">
             <div v-for="i in 4" :key="i" :class="['h-1.5 flex-1 rounded-full transition-all', passwordStrength >= i ? strengthColor : 'bg-base-300']" />
@@ -96,22 +96,19 @@
         <label class="label-text" for="password_confirmation">{{ $t('auth.register.confirmPassword') }}*</label>
         <input
           id="password_confirmation"
-          v-model="form.password_confirmation"
+          v-model="password_confirmation"
           :type="showPassword ? 'text' : 'password'"
-          required
           autocomplete="new-password"
           :placeholder="$t('auth.register.confirmPasswordPlaceholder')"
           :disabled="isLoading"
-          :class="['input', passwordMismatch ? 'input-error' : '']"
+          :class="['input', { 'input-error': errors.password_confirmation }]"
         />
-        <p v-if="passwordMismatch" class="mt-1 text-xs text-error">
-          {{ $t('auth.register.errors.passwordMismatch') }}
-        </p>
+        <span v-if="errors.password_confirmation" class="text-error text-xs mt-1 block">{{ errors.password_confirmation }}</span>
       </div>
 
       <div class="rounded-lg border border-base-300 bg-base-100 p-4">
         <label class="flex items-start gap-3">
-          <input v-model="form.age_confirmed" type="checkbox" required class="checkbox checkbox-primary checkbox-sm mt-0.5" />
+          <input v-model="age_confirmed" type="checkbox" class="checkbox checkbox-primary checkbox-sm mt-0.5" />
           <p class="text-sm text-base-content/80 leading-relaxed">
             {{ $t('auth.register.terms.consent') }}
             <NuxtLink :to="localePath('/terms')" class="link link-primary font-normal">{{ $t('auth.register.terms.termsOfUse') }}</NuxtLink>
@@ -119,11 +116,12 @@
             <NuxtLink :to="localePath('/privacy')" class="link link-primary font-normal">{{ $t('auth.register.terms.privacyPolicy') }}</NuxtLink>.
           </p>
         </label>
+        <span v-if="errors.age_confirmed" class="text-error text-xs mt-1 block">{{ errors.age_confirmed }}</span>
       </div>
 
       <button
         type="submit"
-        :disabled="isLoading || !form.age_confirmed || passwordMismatch"
+        :disabled="isLoading"
         class="btn btn-lg btn-primary btn-gradient btn-block disabled:opacity-60"
       >
         <Icon v-if="isLoading" name="svg-spinners:ring-resize" class="h-5 w-5" />
@@ -134,35 +132,37 @@
 </template>
 
 <script setup lang="ts">
+import { toTypedSchema } from '@vee-validate/valibot'
+import { useForm } from 'vee-validate'
 import { mapAuthError } from '~/utils/auth-errors'
+import { registerSchema, type RegisterValues } from '~/forms/auth-schemas'
 
 definePageMeta({
   layout: 'auth',
-
 })
 
 const { t } = useI18n()
 const authStore = useAuthStore()
 const localePath = useLocalePath()
 
-const form = reactive({
-  email: '',
-  password: '',
-  password_confirmation: '',
-  age_confirmed: false,
-})
-
 const isLoading = ref(false)
 const showPassword = ref(false)
 const errorMsg = ref('')
 const success = ref(false)
 
-const passwordMismatch = computed(
-  () => form.password_confirmation.length > 0 && form.password !== form.password_confirmation,
-)
+const schema = computed(() => toTypedSchema(registerSchema(t)))
+const { handleSubmit, errors, defineField } = useForm<RegisterValues>({
+  validationSchema: schema,
+  initialValues: { email: '', password: '', password_confirmation: '', age_confirmed: false },
+})
+
+const [email] = defineField('email')
+const [password] = defineField('password')
+const [password_confirmation] = defineField('password_confirmation')
+const [age_confirmed] = defineField('age_confirmed')
 
 const passwordStrength = computed(() => {
-  const p = form.password
+  const p = password.value
   if (!p) return 0
   let score = 0
   if (p.length >= 8) score++
@@ -187,16 +187,14 @@ const strengthLabel = computed(() => {
   return passwordStrength.value ? t('auth.register.strength.label', { strength: labels[passwordStrength.value] }) : ''
 })
 
-async function handleRegister() {
-  if (passwordMismatch.value) return
+const onSubmit = handleSubmit(async (values) => {
   errorMsg.value = ''
   isLoading.value = true
-
   try {
     await authStore.register({
-      email: form.email,
-      password: form.password,
-      password_confirmation: form.password_confirmation,
+      email: values.email,
+      password: values.password,
+      password_confirmation: values.password_confirmation,
     })
     success.value = true
   } catch (err: any) {
@@ -204,5 +202,5 @@ async function handleRegister() {
   } finally {
     isLoading.value = false
   }
-}
+})
 </script>

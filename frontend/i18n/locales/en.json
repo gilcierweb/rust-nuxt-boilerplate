@@ -141,6 +141,21 @@
         "message": "The confirmation link is invalid or has expired.",
         "backToLogin": "Back to Login"
       }
+    },
+    "validation": {
+      "emailRequired": "Please enter your email",
+      "invalidEmail": "Invalid email address",
+      "emailTooLong": "Email is too long",
+      "passwordRequired": "Please enter your password",
+      "passwordTooShort": "Password must be at least 12 characters",
+      "passwordTooLong": "Password is too long",
+      "passwordNeedsUpper": "Add at least one uppercase letter",
+      "passwordNeedsDigit": "Add at least one number",
+      "passwordNeedsSymbol": "Add at least one symbol",
+      "passwordConfirmRequired": "Please confirm your password",
+      "passwordMismatch": "Passwords do not match",
+      "otpInvalid": "Code must be 6 digits",
+      "termsRequired": "You must accept the terms"
     }
   },
   "admin": {

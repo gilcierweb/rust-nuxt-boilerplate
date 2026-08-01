@@ -35,19 +35,21 @@
         <label class="label-text" for="otpCode">{{ $t('auth.login.otp.title') }}</label>
         <input
           id="otpCode"
-          v-model="form.otp_code"
+          v-model="otp"
           type="text"
           inputmode="numeric"
           maxlength="6"
           :placeholder="$t('auth.login.otp.placeholder')"
           class="input text-center tracking-[0.5em]"
+          :class="{ 'input-error': errors.otp_code }"
           autocomplete="one-time-code"
-          @input="form.otp_code = ($event.target as HTMLInputElement)?.value?.replace(/\D/g, '') ?? ''"
+          @input="otp = ($event.target as HTMLInputElement)?.value?.replace(/\D/g, '') ?? ''"
         />
+        <span v-if="errors.otp_code" class="text-error text-xs mt-1 block">{{ errors.otp_code }}</span>
       </div>
       <button
         type="button"
-        :disabled="isLoading || form.otp_code.length !== 6"
+        :disabled="isLoading || otp.length !== 6"
         class="btn btn-lg btn-primary btn-gradient btn-block"
         @click="handleOtpVerify"
       >
@@ -56,7 +58,7 @@
       </button>
     </div>
 
-    <form v-else class="space-y-4" @submit.prevent="handleLogin">
+    <form v-else novalidate class="space-y-4" @submit.prevent="onSubmit">
       <div class="flex items-center gap-3">
         <span class="text-base-content/80 text-sm">{{ $t('auth.login.loginWith') }}</span>
         <button type="button" class="link link-animated link-primary font-normal">
@@ -73,14 +75,14 @@
         <label class="label-text" for="email">{{ $t('auth.login.email') }}*</label>
         <input
           id="email"
-          v-model="form.email"
+          v-model="email"
           type="email"
-          required
           autocomplete="email"
           :placeholder="$t('auth.login.emailPlaceholder')"
           :disabled="isLoading"
-          class="input"
+          :class="['input', { 'input-error': errors.email }]"
         />
+        <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>
       </div>
 
       <div>
@@ -90,12 +92,11 @@
             {{ $t('auth.login.forgotPassword') }}
           </NuxtLink>
         </div>
-        <div class="input">
+        <div class="input" :class="{ 'input-error': errors.password }">
           <input
             id="password"
-            v-model="form.password"
+            v-model="password"
             :type="showPassword ? 'text' : 'password'"
-            required
             autocomplete="current-password"
             :placeholder="$t('auth.login.passwordPlaceholder')"
             :disabled="isLoading"
@@ -105,6 +106,7 @@
             <span :class="[showPassword ? 'block' : 'hidden', 'icon-[tabler--eye-off] size-5 shrink-0']" />
           </button>
         </div>
+        <span v-if="errors.password" class="text-error text-xs mt-1 block">{{ errors.password }}</span>
       </div>
 
       <div class="flex items-center justify-between gap-y-2">
@@ -136,7 +138,10 @@
 </template>
 
 <script setup lang="ts">
+import { toTypedSchema } from '@vee-validate/valibot'
+import { useForm } from 'vee-validate'
 import { mapAuthError } from '~/utils/auth-errors'
+import { loginSchema, type LoginValues } from '~/forms/auth-schemas'
 
 definePageMeta({
   layout: 'auth',
@@ -147,33 +152,33 @@ const authStore = useAuthStore()
 const toast = useToast()
 const localePath = useLocalePath()
 
-const form = reactive({
-  email: '',
-  password: '',
-  otp_code: '',
-})
-
 const isLoading = ref(false)
 const showPassword = ref(false)
 const errorMsg = ref('')
 const requiresOtp = ref(false)
 
-async function handleLogin() {
+const schema = computed(() => toTypedSchema(loginSchema(t)))
+const { handleSubmit, errors, defineField, resetForm } = useForm<LoginValues>({
+  validationSchema: schema,
+  initialValues: { email: '', password: '', otp_code: '' },
+})
+
+const [email] = defineField('email')
+const [password] = defineField('password')
+const [otp] = defineField('otp_code')
+
+const onSubmit = handleSubmit(async (values) => {
   errorMsg.value = ''
   isLoading.value = true
-
   try {
     const result = await authStore.login({
-      email: form.email,
-      password: form.password,
+      email: values.email,
+      password: values.password,
     })
-
-    // Backend signals 2FA required
     if ((result as any)?.requires_otp) {
       requiresOtp.value = true
       return
     }
-
     toast.success(t('common.success'))
     const returnUrl = authStore.returnUrl || localePath('/admin/dashboard')
     authStore.returnUrl = null
@@ -183,25 +188,25 @@ async function handleLogin() {
   } finally {
     isLoading.value = false
   }
-}
+})
 
 async function handleOtpVerify() {
-  if (form.otp_code.length !== 6) {
-    errorMsg.value = t('auth.login.otp.invalidCode')
+  if (otp.value.length !== 6) {
+    errorMsg.value = t('auth.validation.otpInvalid')
     return
   }
   isLoading.value = true
   errorMsg.value = ''
-
   try {
     await authStore.login({
-      email: form.email,
-      password: form.password,
-      otp_code: form.otp_code,
+      email: email.value,
+      password: password.value,
+      otp_code: otp.value,
     })
     toast.success(t('common.success'))
     await navigateTo(authStore.returnUrl || localePath('/admin/dashboard'))
     authStore.returnUrl = null
+    resetForm()
   } catch (err: any) {
     errorMsg.value = mapAuthError(err, t, 'auth.login.otp.invalidCode')
   } finally {

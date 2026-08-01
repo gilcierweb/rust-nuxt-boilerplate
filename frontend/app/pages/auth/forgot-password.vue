@@ -25,25 +25,25 @@
       </div>
     </div>
 
-    <form v-else class="space-y-4" @submit.prevent="handleSubmit">
+    <form v-else novalidate class="space-y-4" @submit.prevent="onSubmit">
       <p class="text-base-content/70 text-sm leading-relaxed">
         {{ $t('auth.forgotPassword.description') }}
       </p>
 
       <div>
         <label class="label-text mb-1.5 block" for="email">{{ $t('auth.forgotPassword.email') }}</label>
-        <div class="input input-lg">
+        <div class="input input-lg" :class="{ 'input-error': errors.email }">
           <Icon name="heroicons:envelope" class="h-4 w-4 opacity-50" />
           <input
             id="email"
             v-model="email"
             type="email"
-            required
             autocomplete="email"
             :placeholder="$t('auth.forgotPassword.emailPlaceholder')"
             :disabled="loading"
           />
         </div>
+        <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>
       </div>
 
       <button type="submit" :disabled="loading" class="btn btn-primary btn-lg btn-gradient btn-block">
@@ -58,19 +58,33 @@
 </template>
 
 <script setup lang="ts">
+import { toTypedSchema } from '@vee-validate/valibot'
+import { useForm } from 'vee-validate'
+import { forgotPasswordSchema, type ForgotPasswordValues } from '~/forms/auth-schemas'
+
 definePageMeta({ layout: 'auth' })
+
+const { t } = useI18n()
 const { $api } = useNuxtApp()
 const localePath = useLocalePath()
-const email = ref('')
+
 const loading = ref(false)
 const sent = ref(false)
 
-async function handleSubmit() {
+const schema = computed(() => toTypedSchema(forgotPasswordSchema(t)))
+const { handleSubmit, errors, defineField } = useForm<ForgotPasswordValues>({
+  validationSchema: schema,
+  initialValues: { email: '' },
+})
+
+const [email] = defineField('email')
+
+const onSubmit = handleSubmit(async (values) => {
   loading.value = true
   try {
-    await $api('/auth/forgot-password', { method: 'POST', body: { email: email.value } })
+    await $api('/auth/forgot-password', { method: 'POST', body: { email: values.email } })
   } catch {}
   sent.value = true
   loading.value = false
-}
+})
 </script>
