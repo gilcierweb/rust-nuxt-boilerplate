@@ -60,14 +60,15 @@
           autocomplete="email"
           :placeholder="$t('auth.register.emailPlaceholder')"
           :disabled="isLoading"
-          :class="['input', { 'input-error': errors.email }]"
+          class="input w-full"
+          :class="{ 'is-invalid': errors.email }"
         />
         <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>
       </div>
 
       <div>
         <label class="label-text" for="password">{{ $t('auth.register.password') }}*</label>
-        <div class="input">
+        <div class="relative">
           <input
             id="password"
             v-model="password"
@@ -75,9 +76,10 @@
             autocomplete="new-password"
             :placeholder="$t('auth.register.passwordPlaceholder')"
             :disabled="isLoading"
-            :class="{ 'input-error': errors.password }"
+            class="input w-full pr-12"
+            :class="{ 'is-invalid': errors.password }"
           />
-          <button type="button" class="block cursor-pointer" aria-label="toggle password visibility" @click="showPassword = !showPassword">
+          <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content transition-colors" aria-label="toggle password visibility" @click="showPassword = !showPassword">
             <span :class="[showPassword ? 'hidden' : 'block', 'icon-[tabler--eye] size-5 shrink-0']" />
             <span :class="[showPassword ? 'block' : 'hidden', 'icon-[tabler--eye-off] size-5 shrink-0']" />
           </button>
@@ -102,14 +104,15 @@
           autocomplete="new-password"
           :placeholder="$t('auth.register.confirmPasswordPlaceholder')"
           :disabled="isLoading"
-          :class="['input', { 'input-error': errors.password_confirmation }]"
+          class="input w-full"
+          :class="{ 'is-invalid': errors.password_confirmation }"
         />
         <span v-if="errors.password_confirmation" class="text-error text-xs mt-1 block">{{ errors.password_confirmation }}</span>
       </div>
 
       <div class="rounded-lg border border-base-300 bg-base-100 p-4">
         <label class="flex items-start gap-3">
-          <input v-model="age_confirmed" type="checkbox" class="checkbox checkbox-primary checkbox-sm mt-0.5" />
+          <input v-model="age_confirmed" type="checkbox" class="checkbox checkbox-primary checkbox-sm mt-0.5" :class="{ 'is-invalid': errors.age_confirmed }" />
           <p class="text-sm text-base-content/80 leading-relaxed">
             {{ $t('auth.register.terms.consent') }}
             <NuxtLink :to="localePath('/terms')" class="link link-primary font-normal">{{ $t('auth.register.terms.termsOfUse') }}</NuxtLink>

@@ -40,9 +40,9 @@
           inputmode="numeric"
           maxlength="6"
           :placeholder="$t('auth.login.otp.placeholder')"
-          class="input text-center tracking-[0.5em]"
-          :class="{ 'input-error': errors.otp_code }"
+          class="input w-full text-center tracking-[0.5em]"
           autocomplete="one-time-code"
+          :class="{ 'is-invalid': errors.otp_code }"
           @input="otp = ($event.target as HTMLInputElement)?.value?.replace(/\D/g, '') ?? ''"
         />
         <span v-if="errors.otp_code" class="text-error text-xs mt-1 block">{{ errors.otp_code }}</span>
@@ -80,7 +80,8 @@
           autocomplete="email"
           :placeholder="$t('auth.login.emailPlaceholder')"
           :disabled="isLoading"
-          :class="['input', { 'input-error': errors.email }]"
+          class="input w-full"
+          :class="{ 'is-invalid': errors.email }"
         />
         <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>
       </div>
@@ -92,7 +93,7 @@
             {{ $t('auth.login.forgotPassword') }}
           </NuxtLink>
         </div>
-        <div class="input">
+        <div class="relative">
           <input
             id="password"
             v-model="password"
@@ -100,9 +101,10 @@
             autocomplete="current-password"
             :placeholder="$t('auth.login.passwordPlaceholder')"
             :disabled="isLoading"
-            :class="{ 'input-error': errors.password }"
+            class="input w-full pr-12"
+            :class="{ 'is-invalid': errors.password }"
           />
-          <button type="button" class="block cursor-pointer" aria-label="toggle password visibility" @click="showPassword = !showPassword">
+          <button type="button" class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content transition-colors" aria-label="toggle password visibility" @click="showPassword = !showPassword">
             <span :class="[showPassword ? 'hidden' : 'block', 'icon-[tabler--eye] size-5 shrink-0']" />
             <span :class="[showPassword ? 'block' : 'hidden', 'icon-[tabler--eye-off] size-5 shrink-0']" />
           </button>
