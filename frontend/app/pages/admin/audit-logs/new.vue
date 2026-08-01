@@ -53,6 +53,8 @@ async function handleSubmit(values: typeof initialValues) {
         ...(values.request_id ? { request_id: values.request_id } : {}),
         changes: JSON.parse(values.changes || '{}'),
         metadata: JSON.parse(values.metadata || '{}'),
+        prev_hash: null,
+        hash: '',
       },
     })
     toast.success(t('admin.auditLogs.messages.createSuccess'))

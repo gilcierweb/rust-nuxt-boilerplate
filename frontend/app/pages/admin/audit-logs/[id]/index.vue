@@ -17,10 +17,6 @@
             <span class="icon-[tabler--arrow-left] size-4.5"></span>
             {{ $t('admin.common.back') }}
           </NuxtLink>
-          <NuxtLink v-if="itemId" :to="localePath(`/admin/audit-logs/${itemId}/edit`)" class="btn btn-primary" :prefetch="false">
-            <span class="icon-[tabler--edit] size-4.5"></span>
-            {{ $t('admin.common.edit') }}
-          </NuxtLink>
         </div>
       </div>
     </div>

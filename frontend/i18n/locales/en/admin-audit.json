@@ -107,6 +107,20 @@
         },
         "actions": {
           "saving": "@:common.actions.saving"
+        },
+        "validation": {
+          "actor_user_id_uuid": "Must be a valid UUID.",
+          "actor_role_snapshot_max": "Maximum 255 characters.",
+          "action_required": "Action is required.",
+          "action_max": "Action must be at most 255 characters.",
+          "resource_type_required": "Resource type is required.",
+          "resource_type_max": "Resource type must be at most 255 characters.",
+          "resource_id_uuid": "Must be a valid UUID.",
+          "ip_address_invalid": "Must be a valid IP address or CIDR.",
+          "user_agent_max": "User agent must be at most 500 characters.",
+          "request_id_uuid": "Must be a valid UUID.",
+          "changes_json": "Changes must be valid JSON.",
+          "metadata_json": "Metadata must be valid JSON."
         }
       }
     }

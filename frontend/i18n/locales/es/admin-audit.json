@@ -107,6 +107,20 @@
         },
         "actions": {
           "saving": "@:common.actions.saving"
+        },
+        "validation": {
+          "actor_user_id_uuid": "Debe ser un UUID válido.",
+          "actor_role_snapshot_max": "Máximo 255 caracteres.",
+          "action_required": "La acción es obligatoria.",
+          "action_max": "La acción debe tener como máximo 255 caracteres.",
+          "resource_type_required": "El tipo de recurso es obligatorio.",
+          "resource_type_max": "El tipo de recurso debe tener como máximo 255 caracteres.",
+          "resource_id_uuid": "Debe ser un UUID válido.",
+          "ip_address_invalid": "Debe ser una dirección IP o CIDR válida.",
+          "user_agent_max": "El user agent debe tener como máximo 500 caracteres.",
+          "request_id_uuid": "Debe ser un UUID válido.",
+          "changes_json": "Los cambios deben ser JSON válido.",
+          "metadata_json": "Los metadatos deben ser JSON válido."
         }
       }
     }

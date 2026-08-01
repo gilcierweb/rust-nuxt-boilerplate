@@ -164,17 +164,6 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
           { default: () => h('span', { class: 'icon-[tabler--eye] size-5' }) },
         ),
         h(
-          NuxtLink,
-          {
-            to: localePath(`/admin/audit-logs/${rowId}/edit`),
-            class: 'btn btn-circle btn-text btn-sm',
-            'aria-label': t('admin.common.edit'),
-            title: t('admin.common.edit'),
-            prefetch: false,
-          },
-          { default: () => h('span', { class: 'icon-[tabler--pencil] size-5' }) },
-        ),
-        h(
           'button',
           {
             type: 'button',
