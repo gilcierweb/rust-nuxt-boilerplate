@@ -130,7 +130,6 @@ security: {
   },
 
   i18n: {
-    langDir: "locales",
     locales: [
       {
         code: "en",

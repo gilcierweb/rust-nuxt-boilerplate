@@ -30,14 +30,14 @@
       <div class="rounded-box border border-base-content/10 bg-base-100 p-5">
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-base-content">{{ $t('portal.dashboard.upcomingDueDates') }}</h2>
-          <NuxtLink to="/portal/debts" class="btn btn-soft btn-sm">{{ $t('portal.dashboard.viewDebts') }}</NuxtLink>
+          <button type="button" class="btn btn-soft btn-sm" disabled>{{ $t('portal.dashboard.viewDebts') }}</button>
         </div>
         <ul v-if="upcomingDebts.length" class="space-y-3">
           <li v-for="debt in upcomingDebts" :key="debt.id" class="rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3">
             <div class="flex items-start justify-between gap-4">
               <div>
                 <p class="font-medium text-base-content">{{ debt.title || debt.external_reference || debt.id }}</p>
-                <p class="text-sm text-base-content/60">Vencimento: {{ formatDate(debt.due_date) }}</p>
+                <p class="text-sm text-base-content/60">{{ $t('portal.dashboard.dueDateLabel') }}: {{ formatDate(debt.due_date) }}</p>
               </div>
               <p class="font-semibold text-base-content">{{ formatCurrency(debt.amount) }}</p>
             </div>
@@ -49,7 +49,7 @@
       <div class="rounded-box border border-base-content/10 bg-base-100 p-5">
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-base-content">{{ $t('portal.dashboard.recentActivity') }}</h2>
-          <NuxtLink to="/portal/payments" class="btn btn-soft btn-sm">{{ $t('portal.dashboard.viewPayments') }}</NuxtLink>
+          <button type="button" class="btn btn-soft btn-sm" disabled>{{ $t('portal.dashboard.viewPayments') }}</button>
         </div>
         <ul v-if="recentActivity.length" class="space-y-3">
           <li v-for="entry in recentActivity" :key="entry.key" class="rounded-box border border-base-content/10 bg-base-200/40 px-4 py-3">
@@ -118,17 +118,18 @@ const upcomingDebts = computed(() =>
 )
 
 const recentActivity = computed(() => {
+  const { t: translate } = useI18n()
   const paymentEntries = payments.value.map((item) => ({
     key: `payment-${item.id}`,
     date: item.updated_at || item.created_at,
-    title: 'Pagamento',
-    description: `Status ${item.status}${item.provider_reference ? ` · ${item.provider_reference}` : ''}`,
+    title: translate('portal.dashboard.paymentTitle'),
+    description: `${translate('portal.dashboard.statusLabel')} ${item.status}${item.provider_reference ? ` · ${item.provider_reference}` : ''}`,
   }))
 
   const invoiceEntries = invoiceRequests.value.map((item) => ({
     key: `invoice-${item.id}`,
     date: item.updated_at || item.created_at,
-    title: 'Solicitação de nota',
+    title: translate('portal.dashboard.invoiceTitle'),
     description: item.service_description || item.id,
   }))
 

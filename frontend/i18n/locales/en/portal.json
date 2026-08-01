@@ -1,63 +1,107 @@
 {
-  "common": {
-    "actions": {
-      "refresh": "@:common.actions.refresh",
-      "show": "@:common.actions.show",
-      "edit": "@:common.actions.edit",
-      "new": "@:common.actions.new",
-      "save": "@:common.save",
-      "submit": "@:common.actions.submit",
-      "cancel": "@:common.actions.cancel",
-      "back": "@:common.actions.back",
-      "send": "@:common.actions.send"
+  "portal": {
+    "navbar": {
+      "openMenu": "Open menu",
+      "subtitle": "Client Portal",
+      "logout": "Logout"
     },
-    "status": {
-      "planning": "Planning",
-      "inProgress": "In Progress",
-      "paused": "Paused",
-      "completed": "Completed",
-      "open": "Open",
-      "waiting": "Waiting",
-      "resolved": "Resolved",
-      "closed": "Closed"
+    "common": {
+      "back": "Back",
+      "refresh": "Refresh",
+      "filter": "Filter",
+      "loading": "Loading...",
+      "noData": "No data to display.",
+      "tryAgain": "Try again",
+      "errorLoading": "Failed to load data."
     },
-    "priority": {
-      "low": "Low",
-      "medium": "Medium",
-      "high": "High",
-      "urgent": "Urgent"
+    "dashboard": {
+      "title": "Dashboard",
+      "openDebts": "Open debts",
+      "pendingPayments": "Pending payments",
+      "availableDocuments": "Available documents",
+      "openInvoiceRequests": "Open invoice requests",
+      "upcomingDueDates": "Upcoming due dates",
+      "viewDebts": "View debts",
+      "noUpcomingDebts": "No debts due soon.",
+      "recentActivity": "Recent activity",
+      "viewPayments": "View payments",
+      "noRecentActivity": "No recent activity."
     },
-    "loading": "Loading...",
-    "empty": "No records found.",
-    "error": "Failed to load data."
-  },
-  "dashboard": {
-    "title": "Client Dashboard",
-    "description": "Track your financial position, documents and invoice requests.",
-    "cards": {
-      "documents": "Documents"
+    "debts": {
+      "title": "Debts",
+      "description": "View your pending debts and history.",
+      "empty": "No debts found.",
+      "searchPlaceholder": "Filter by title, reference or amount",
+      "table": {
+        "title": "Title",
+        "dueDate": "Due date",
+        "amount": "Amount",
+        "status": "Status"
+      }
     },
-    "quickAccess": "Quick Access",
-    "openDebts": "Open debts",
-    "pendingPayments": "Pending payments",
-    "availableDocuments": "Available documents",
-    "openInvoiceRequests": "Open invoice requests",
-    "upcomingDueDates": "Upcoming due dates",
-    "viewDebts": "View debts",
-    "noUpcomingDebts": "No upcoming debts.",
-    "recentActivity": "Recent activity",
-    "viewPayments": "View payments",
-    "noRecentActivity": "No recent activity."
-  },
-  "support": {
-    "title": "Support",
-    "messageLabel": "Message",
-    "messagePlaceholder": "Describe your question or issue",
-    "submit": "Submit"
-  },
-  "navbar": {
-    "openMenu": "Open menu",
-    "subtitle": "Client Portal",
-    "logout": "Logout"
+    "documents": {
+      "title": "Documents",
+      "description": "Files and records available for your client.",
+      "empty": "No documents available.",
+      "table": {
+        "title": "Title",
+        "reference": "Reference",
+        "status": "Status",
+        "updatedAt": "Updated at",
+        "actions": "Actions"
+      }
+    },
+    "history": {
+      "title": "History",
+      "empty": "No events to display.",
+      "table": {
+        "date": "Date",
+        "type": "Type",
+        "description": "Description",
+        "reference": "Reference"
+      }
+    },
+    "invoiceRequests": {
+      "title": "Invoice Requests",
+      "description": "Track and create new invoice emission requests.",
+      "empty": "No requests found.",
+      "newTitle": "New Invoice Request",
+      "newDescription": "Enter service details to request fiscal emission.",
+      "table": {
+        "service": "Service",
+        "amount": "Amount",
+        "status": "Status",
+        "createdAt": "Created at"
+      },
+      "form": {
+        "serviceDescription": "Service description",
+        "serviceAmount": "Service amount",
+        "serviceDate": "Service date",
+        "cancel": "Cancel"
+      },
+      "messages": {
+        "createSuccess": "Request sent successfully",
+        "createError": "Failed to send request"
+      }
+    },
+    "payments": {
+      "title": "Payments",
+      "description": "Track status and history of your payments.",
+      "empty": "No payments found.",
+      "searchPlaceholder": "Filter by reference",
+      "table": {
+        "reference": "Reference",
+        "method": "Method",
+        "grossAmount": "Gross amount",
+        "netAmount": "Net amount",
+        "status": "Status",
+        "paidAt": "Paid at"
+      }
+    },
+    "support": {
+      "title": "Support",
+      "messageLabel": "Message",
+      "messagePlaceholder": "Describe your question or issue"
+    }
   }
 }
