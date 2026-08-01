@@ -134,9 +134,11 @@
 </template>
 
 <script setup lang="ts">
+import { mapAuthError } from '~/utils/auth-errors'
+
 definePageMeta({
   layout: 'auth',
-  
+
 })
 
 const { t } = useI18n()
@@ -198,7 +200,7 @@ async function handleRegister() {
     })
     success.value = true
   } catch (err: any) {
-    errorMsg.value = err.statusMessage || err.message || t('auth.register.error.generic')
+    errorMsg.value = mapAuthError(err, t, 'auth.register.error.generic')
   } finally {
     isLoading.value = false
   }

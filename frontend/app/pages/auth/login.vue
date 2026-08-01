@@ -136,6 +136,8 @@
 </template>
 
 <script setup lang="ts">
+import { mapAuthError } from '~/utils/auth-errors'
+
 definePageMeta({
   layout: 'auth',
 })
@@ -155,18 +157,6 @@ const isLoading = ref(false)
 const showPassword = ref(false)
 const errorMsg = ref('')
 const requiresOtp = ref(false)
-
-/** Sanitize user input to prevent XSS - escapes HTML entities */
-function sanitizeInput(input: string): string {
-  if (!input) return ''
-  return input
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;')
-    .replace(/\//g, '&#x2F;')
-}
 
 async function handleLogin() {
   errorMsg.value = ''
@@ -189,8 +179,7 @@ async function handleLogin() {
     authStore.returnUrl = null
     await navigateTo(returnUrl)
   } catch (err: any) {
-    const rawMessage = err.statusMessage || err.message || t('auth.login.error.invalidCredentials')
-    errorMsg.value = sanitizeInput(rawMessage)
+    errorMsg.value = mapAuthError(err, t, 'auth.login.error.invalidCredentials')
   } finally {
     isLoading.value = false
   }
@@ -214,8 +203,7 @@ async function handleOtpVerify() {
     await navigateTo(authStore.returnUrl || localePath('/admin/dashboard'))
     authStore.returnUrl = null
   } catch (err: any) {
-    const rawMessage = err.statusMessage || t('auth.login.otp.invalidCode')
-    errorMsg.value = sanitizeInput(rawMessage)
+    errorMsg.value = mapAuthError(err, t, 'auth.login.otp.invalidCode')
   } finally {
     isLoading.value = false
   }

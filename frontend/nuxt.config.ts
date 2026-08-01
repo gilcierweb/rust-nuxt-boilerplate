@@ -92,8 +92,8 @@ security: {
 // -- Runtime Config
   runtimeConfig: {
     // Server-only (private)
-    backendApiBase: process.env.BACKEND_API_BASE || "http://localhost:8080/api/v1",
-    backendApiKey: process.env.BACKEND_API_KEY || "",
+    backendApiBase: process.env.NUXT_BACKEND_API_BASE || process.env.BACKEND_API_BASE || "http://localhost:8080/api/v1",
+    backendApiKey: process.env.NUXT_BACKEND_API_KEY || process.env.BACKEND_API_KEY || "",
     // Public (exposed to client) - NEVER put secrets here
     public: {
       // @ts-ignore
@@ -217,6 +217,11 @@ security: {
   },
 
   nitro: {
+    preset: "cloudflare_module",
+    cloudflare: {
+      deployConfig: true,
+      nodeCompat: true
+    },
     compressPublicAssets: true,
     routeRules: {
       // Backend API proxies — never cache

@@ -55,7 +55,9 @@
         "invalidCode": "C\u00f3digo de verifica\u00e7\u00e3o inv\u00e1lido"
       },
       "error": {
-        "invalidCredentials": "Credenciais inv\u00e1lidas"
+        "invalidCredentials": "Credenciais inválidas",
+        "emailNotConfirmed": "Confirme seu e-mail antes de entrar",
+        "accountLocked": "Conta bloqueada. Contate o suporte."
       },
       "success": "Login realizado com sucesso"
     },
@@ -87,6 +89,8 @@
       "errors": {
         "setStrongPassword": "Defina uma senha forte para continuar.",
         "passwordMismatch": "As senhas n\u00e3o coincidem",
+        "emailExists": "Este e-mail j\u00e1 est\u00e1 cadastrado",
+        "weakPassword": "Senha muito fraca. Use 8+ caracteres com letras e n\u00fameros.",
         "generic": "Falha no registro"
       },
       "success": {

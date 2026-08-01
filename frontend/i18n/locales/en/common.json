@@ -2,6 +2,11 @@
   "common": {
     "success": "Success",
     "error": "Error",
+    "errorExtended": {
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "network": "Could not connect to the server. Check your connection and try again.",
+      "rateLimited": "Too many attempts. Please wait a moment and try again."
+    },
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",

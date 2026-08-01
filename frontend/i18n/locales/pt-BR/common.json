@@ -3,6 +3,11 @@
     "appName": "Boilerplate Rust Nuxt",
     "success": "Sucesso",
     "error": "Erro",
+    "errorExtended": {
+      "unexpected": "Ocorreu um erro inesperado. Tente novamente.",
+      "network": "Falha de conexão com o servidor. Verifique sua internet e tente novamente.",
+      "rateLimited": "Muitas tentativas. Aguarde alguns instantes e tente novamente."
+    },
     "loading": "Carregando...",
     "save": "Salvar",
     "cancel": "Cancelar",
