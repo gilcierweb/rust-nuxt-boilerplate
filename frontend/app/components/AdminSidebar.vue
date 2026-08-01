@@ -35,10 +35,9 @@
 
         <div class="h-full overflow-y-auto">
           <ul class="accordion menu menu-sm gap-1 p-3">
-            <li id="dashboard" class="active accordion-item">
+            <li id="dashboard" class="accordion-item" :class="{ 'active': isDashboardActive }">
               <button
-                class="accordion-toggle accordion-item-active:bg-neutral/10 inline-flex w-full items-center p-2 text-start text-sm font-normal"
-                :class="{ 'accordion-item-active:bg-neutral/10': isDashboardActive }"
+                class="accordion-toggle inline-flex w-full items-center p-2 text-start text-sm font-normal"
                 aria-controls="dashboard-collapse"
                 :aria-expanded="dashboardOpen"
                 @click="toggleAccordion('dashboard')"
@@ -74,10 +73,9 @@
             <li class="text-base-content/50 before:bg-base-content/20 mt-2 p-2 text-xs uppercase before:absolute before:-start-3 before:top-1/2 before:h-0.5 before:w-2.5">
               {{ $t('admin.sidebar.management') }}
             </li>
-            <li id="management" class="accordion-item">
+            <li id="management" class="accordion-item" :class="{ 'active': managementOpen }">
               <button
-                class="accordion-toggle accordion-item-active:bg-neutral/10 inline-flex w-full items-center p-2 text-start text-sm font-normal"
-                :class="{ 'accordion-item-active:bg-neutral/10': managementOpen }"
+                class="accordion-toggle inline-flex w-full items-center p-2 text-start text-sm font-normal"
                 aria-controls="management-collapse"
                 :aria-expanded="managementOpen"
                 @click="toggleAccordion('management')"
@@ -165,7 +163,6 @@ const managementItems = computed(() => {
 
 const dashboardOpen = ref(isDashboardActive.value)
 const managementOpen = ref(managementItems.value.some((item) => item.slug === currentSlug.value))
-
 function toggleAccordion(id: string) {
   switch (id) {
     case 'dashboard':
@@ -194,6 +191,5 @@ watch(
     dashboardOpen.value = isDashboardActive.value
     managementOpen.value = managementItems.value.some((item) => item.slug === currentSlug.value)
   },
-  { immediate: true },
 )
 </script>

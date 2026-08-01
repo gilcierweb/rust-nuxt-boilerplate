@@ -594,6 +594,11 @@ monitoring: docker compose --profile monitoring up
 
 **Usage with Foreman:**
 ```bash
+# Install ruby on Ubuntu/macOS/Windows
+# https://gorails.com/setup/ubuntu/24.04
+# https://gorails.com/setup/macos/26-tahoe
+# https://gorails.com/setup/windows/11
+
 gem install foreman
 foreman start
 foreman start -f Procfile
