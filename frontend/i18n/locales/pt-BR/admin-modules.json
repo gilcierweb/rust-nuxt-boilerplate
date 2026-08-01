@@ -25,6 +25,9 @@
       "yes": "Sim",
       "no": "Não"
     },
+    "theme": {
+      "toggle": "Alternar modo escuro"
+    },
     "documents": {
       "title": "Documentos",
       "description": "Arquivos e registros documentais publicados para os clientes.",

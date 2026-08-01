@@ -46,6 +46,9 @@
       "quickLinks": "Quick links",
       "apiDocs": "API Docs"
     },
+    "theme": {
+      "toggle": "Toggle dark mode"
+    },
     "auditLogs": {
       "title": "Audit",
       "description": "Administrative trail of critical actions and changes.",
