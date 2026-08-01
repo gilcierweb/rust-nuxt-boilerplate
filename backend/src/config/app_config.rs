@@ -148,6 +148,7 @@ pub struct AppConfig {
     pub host: String,
     pub port: u16,
     pub https_port: u16,
+    pub tls_enabled: bool,
     pub tls_cert_path: String,
     pub tls_key_path: String,
     pub frontend_url: String,
@@ -306,6 +307,9 @@ impl AppConfig {
                 .unwrap_or_else(|_| "8443".to_string())
                 .parse()
                 .unwrap_or(8443),
+            tls_enabled: env::var("TLS_ENABLED")
+                .map(|v| matches!(v.trim().to_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+                .unwrap_or(false),
             tls_cert_path: env::var("TLS_CERT_PATH").unwrap_or_else(|_| "cert.pem".to_string()),
             tls_key_path: env::var("TLS_KEY_PATH").unwrap_or_else(|_| "key.pem".to_string()),
             frontend_url: env::var("FRONTEND_URL")

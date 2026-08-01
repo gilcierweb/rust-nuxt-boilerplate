@@ -31,6 +31,7 @@ pub fn test_config() -> AppConfig {
         host: "127.0.0.1".to_string(),
         port: 8080,
         https_port: 8443,
+        tls_enabled: false,
         tls_cert_path: "cert.pem".to_string(),
         tls_key_path: "key.pem".to_string(),
         frontend_url: "http://localhost:3000".to_string(),

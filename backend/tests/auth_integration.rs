@@ -103,6 +103,7 @@ fn test_config() -> backend::config::AppConfig {
         host: "127.0.0.1".to_string(),
         port: 8080,
         https_port: 8443,
+        tls_enabled: false,
         tls_cert_path: String::new(),
         tls_key_path: String::new(),
         frontend_url: "http://localhost:3000".to_string(),

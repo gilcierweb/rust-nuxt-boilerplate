@@ -379,11 +379,9 @@ async fn main() -> std::io::Result<()> {
 
     let server = HttpServer::new(app);
 
-    let result = match config.environment {
-        backend::config::app_config::Environment::Staging
-        | backend::config::app_config::Environment::Production => {
-            // Initialize TLS crypto provider - falls back to default if already initialized
-            let _ = rustls::crypto::CryptoProvider::get_default();
+    let result = if config.tls_enabled {
+        // Initialize TLS crypto provider - falls back to default if already initialized
+        let _ = rustls::crypto::CryptoProvider::get_default();
 
             let cert_path = config.tls_cert_path.clone();
             let key_path = config.tls_key_path.clone();
@@ -436,12 +434,9 @@ async fn main() -> std::io::Result<()> {
                 .bind_rustls_0_23((host.clone(), https_port), tls_config)?
                 .run()
                 .await
-        },
-        backend::config::app_config::Environment::Development
-        | backend::config::app_config::Environment::Test => {
-            println!("Running in HTTP on http://localhost:{}", port);
-            server.bind((host, port))?.run().await
-        },
+    } else {
+        println!("Running in HTTP on {}:{}", host, port);
+        server.bind((host, port))?.run().await
     };
 
     // Shutdown OpenTelemetry provider to flush pending traces
