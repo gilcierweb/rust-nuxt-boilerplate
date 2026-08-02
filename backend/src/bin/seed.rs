@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use argon2::Argon2;
 use argon2::password_hash::{PasswordHasher, SaltString};
-use base64::Engine;
+use backend::security::SecurityService;
 use chrono::Utc;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
@@ -10,7 +10,6 @@ use diesel::r2d2::{self, ConnectionManager};
 use diesel::sql_types::{Text, Uuid as SqlUuid};
 use faker_rust::name;
 use ipnet::IpNet;
-use rand::RngCore;
 use uuid::Uuid;
 
 #[path = "../db/schema.rs"]
@@ -90,55 +89,13 @@ fn pool() -> SeedResult<PgPool> {
     Ok(r2d2::Pool::builder().max_size(4).build(manager)?)
 }
 
-fn protect_email(email: &str) -> SeedResult<(Vec<u8>, Vec<u8>, i32)> {
-    use aes_gcm::aead::{Aead, KeyInit};
-    use hmac::Mac;
-    use sha2::Digest;
-    let normalized = email
-        .trim()
-        .to_lowercase()
-        .chars()
-        .filter(|c| !c.is_control())
-        .collect::<String>();
-
-    let blind_index_key_b64 = std::env::var("BLIND_INDEX_KEY")?;
-    let blind_index_key = base64::engine::general_purpose::STANDARD.decode(blind_index_key_b64)?;
-    let blind = {
-        use hmac::{Hmac, Mac};
-        use sha2::Sha256;
-        let mut mac = <Hmac<Sha256> as Mac>::new_from_slice(&blind_index_key)
-            .map_err(|e| format!("invalid blind index key: {e}"))?;
-        mac.update(normalized.as_bytes());
-        mac.finalize().into_bytes().to_vec()
-    };
-
-    let version = std::env::var("CURRENT_ENCRYPTION_KEY_VERSION")
-        .ok()
-        .and_then(|v| v.parse::<u32>().ok())
-        .unwrap_or(1);
-
-    let master_key_b64 = std::env::var("MASTER_KEY")?;
-    let master_key = base64::engine::general_purpose::STANDARD.decode(master_key_b64)?;
-    let key = sha2::Sha256::digest(&master_key);
-    let mut mac = <hmac::Hmac<sha2::Sha256> as hmac::Mac>::new_from_slice(&key)
-        .map_err(|e| format!("invalid encryption key material: {e}"))?;
-    mac.update(format!("encryption:v{}", version).as_bytes());
-    mac.update(&version.to_le_bytes());
-    let result = mac.finalize();
-    let mut encryption_key = [0u8; 32];
-    encryption_key.copy_from_slice(&result.into_bytes()[..32]);
-
-    let cipher = aes_gcm::Aes256Gcm::new_from_slice(&encryption_key)
-        .map_err(|_| "invalid encryption key length".to_string())?;
-    let mut nonce_bytes = [0u8; 12];
-    rand::thread_rng().fill_bytes(&mut nonce_bytes);
-    let nonce = aes_gcm::Nonce::from(nonce_bytes);
-    let ciphertext = cipher
-        .encrypt(&nonce, normalized.as_bytes())
-        .map_err(|_| "failed to encrypt seed data".to_string())?;
-    let encrypted = [nonce_bytes.to_vec(), ciphertext].concat();
-
-    Ok((blind, encrypted, version as i32))
+/// Thin wrapper that re-exports the SecurityService so seed callers can use
+/// the exact same email-protect pipeline as the runtime (normalize -> HMAC
+/// blind index + AES-GCM encrypt). This eliminates drift between seed and
+/// runtime hash outputs and prevents login failures caused by divergent
+/// normalization rules.
+fn build_security_service() -> SeedResult<SecurityService> {
+    SecurityService::from_env().map_err(|e| format!("failed to build security service: {e}").into())
 }
 
 fn password_hash(password: &str) -> SeedResult<String> {
@@ -265,12 +222,21 @@ fn ensure_role_permission(
     Ok(())
 }
 
-fn ensure_user(conn: &mut PgConnection, user_index: usize) -> SeedResult<Uuid> {
+fn ensure_user(
+    conn: &mut PgConnection,
+    security: &SecurityService,
+    user_index: usize,
+) -> SeedResult<Uuid> {
     use schema::users::dsl::*;
 
     let user_email = test_user_email(user_index);
     let user_password = "password123";
-    let (email_bidx, email_enc, key_version) = protect_email(&user_email)?;
+    let protected = security
+        .protect_email(&user_email)
+        .map_err(|e| format!("failed to protect seed email: {e}"))?;
+    let email_bidx = protected.blind_index;
+    let email_enc = protected.encrypted;
+    let key_version = protected.key_version;
     let pwd_hash = password_hash(user_password)?;
 
     if let Some(existing_id) = users
@@ -435,6 +401,7 @@ fn main() -> SeedResult<()> {
     dotenvy::dotenv().ok();
     let pool = pool()?;
     let mut conn = pool.get()?;
+    let security = build_security_service()?;
 
     conn.transaction(|conn| {
         let role_names = ["admin", "manager", "editor", "viewer", "support", "finance"];
@@ -505,7 +472,7 @@ fn main() -> SeedResult<()> {
 
         for index in 1..=100 {
             let user_data = generate_user_data(index);
-            let user_id = ensure_user(conn, index)?;
+            let user_id = ensure_user(conn, &security, index)?;
             let _profile_id = ensure_profile(conn, user_id, index, &user_data)?;
             let role_id = if index == 1 {
                 admin_role_id

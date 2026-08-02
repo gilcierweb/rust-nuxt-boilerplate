@@ -127,6 +127,19 @@ impl IUserRepository for UsersRepository {
             .await
     }
 
+    async fn count(&self) -> diesel::QueryResult<i64> {
+        self.base
+            .run(|conn| {
+                Box::pin(async move {
+                    users_table::table
+                        .count()
+                        .first::<i64>(conn)
+                        .await
+                })
+            })
+            .await
+    }
+
     async fn find_by_username_or_email(
         &self,
         _username_or_email: &str,

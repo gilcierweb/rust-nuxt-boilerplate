@@ -24,6 +24,7 @@ pub trait IUserRepository: Send + Sync {
     async fn create(&self, item: &NewUser) -> QueryResult<User>;
     async fn update(&self, id: &Uuid, item: &NewUser) -> QueryResult<User>;
     async fn destroy(&self, id: &Uuid) -> QueryResult<usize>;
+    async fn count(&self) -> QueryResult<i64>;
 
     async fn find_by_username_or_email(
         &self,

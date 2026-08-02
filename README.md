@@ -77,6 +77,41 @@
 
 ---
 
+## Demo App
+
+https://rust-nuxt-boilerplate.gilcierweb.workers.dev/
+
+## Admin App
+https://rust-nuxt-boilerplate.gilcierweb.workers.dev/admin/
+
+## Portal App
+https://rust-nuxt-boilerplate.gilcierweb.workers.dev/portal/
+
+admin: admin@example.com
+
+Test users:
+- admin@example.com | password123 | role=admin
+- user02@example.com | password123 | role=user
+- user03@example.com | password123 | role=user
+- user04@example.com | password123 | role=user
+- user05@example.com | password123 | role=user
+- user06@example.com | password123 | role=user
+- user07@example.com | password123 | role=user
+- user08@example.com | password123 | role=user
+- user09@example.com | password123 | role=user
+- user10@example.com | password123 | role=user
+
+Everyone's password: password123
+
+## Deploy on Render
+
+[![Deploy to Render](https://img.shields.io/badge/Deploy%20to%20Render-000000?style=for-the-badge&logo=render)](https://render.com/deploy?repo=https://github.com/gilcierweb/rust-nuxt-boilerplate)
+
+## Deploy on Cloudflare
+
+[![Deploy to Cloudflare Pages](https://deploy.workers.cloudflare.com/button)](https://cloudflare.com)
+
+
 ## 🚀 Local Setup (Recommended)
 
 ### Prerequisites
