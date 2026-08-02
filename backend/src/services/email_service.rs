@@ -747,7 +747,7 @@ impl EmailService {
 
     /// Alias for backward compatibility
     pub async fn send_password_reset(&self, to: &str, token: &str) -> EmailResult {
-        let reset_url = format!("/auth/reset?token={}", token);
+        let reset_url = format!("/auth/reset-password?token={}", token);
         self.send_password_reset_email(to, &reset_url).await
     }
 
@@ -756,7 +756,7 @@ impl EmailService {
     /// The link is short-lived (15 min) and single-use, so it renders its own
     /// dedicated template instead of reusing the password reset one.
     pub async fn send_magic_link(&self, to: &str, token: &str) -> EmailResult {
-        let magic_url = format!("/auth/magic-link/verify?token={}", token);
+        let magic_url = format!("/auth/magic-link-verify?token={}", token);
         self.send_magic_link_email(to, &magic_url).await
     }
 
