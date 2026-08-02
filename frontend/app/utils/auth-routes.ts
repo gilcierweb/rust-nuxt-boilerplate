@@ -7,6 +7,8 @@ const PUBLIC_ROUTES = [
   '/auth/forgot-password',
   '/auth/reset-password',
   '/auth/confirm',
+  '/auth/magic-link',
+  '/auth/magic-link-verify',
   '/terms',
   '/privacy',
 ]
@@ -17,6 +19,8 @@ const AUTH_ONLY_PAGES = [
   '/auth/forgot-password',
   '/auth/reset-password',
   '/auth/confirm',
+  '/auth/magic-link',
+  '/auth/magic-link-verify',
 ]
 
 function stripLocalePrefix(path: string): string {
