@@ -65,9 +65,9 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/valibot'
 import { useForm } from 'vee-validate'
+import * as v from 'valibot'
 import { useAuthStore } from '~/stores/auth'
 import { mapAuthError } from '~/utils/auth-errors'
-import { z } from 'zod'
 
 definePageMeta({
   layout: 'auth',
@@ -82,8 +82,14 @@ const errorMsg = ref('')
 const successMsg = ref('')
 
 const schema = computed(() => toTypedSchema(
-  z.object({
-    email: z.string().email(t('auth.validation.invalidEmail')).max(254, t('auth.validation.emailTooLong')),
+  v.object({
+    email: v.pipe(
+      v.string(),
+      v.trim(),
+      v.nonEmpty(t('auth.validation.emailRequired')),
+      v.email(t('auth.validation.invalidEmail')),
+      v.maxLength(254, t('auth.validation.emailTooLong')),
+    ),
   })
 ))
 
