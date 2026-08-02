@@ -2,17 +2,17 @@
 
 <p>{{ t(key="email.two_factor_setup.heading") }}</p>
 
-<h2 style="font-size: 18px; margin-top: 24px;">{{ t(key="email.two_factor_setup.secret_heading") }}</h2>
+<h2>{{ t(key="email.two_factor_setup.secret_heading") }}</h2>
 <div class="code-block"><strong>{{ t(key="email.two_factor_setup.secret_label") }}</strong> {{ secret }}</div>
 
-<h2 style="font-size: 18px; margin-top: 24px;">{{ t(key="email.two_factor_setup.qr_heading") }}</h2>
+<h2>{{ t(key="email.two_factor_setup.qr_heading") }}</h2>
 <p>{{ t(key="email.two_factor_setup.qr_instruction") }}</p>
 <p><a href="{{ qr_code_url | safe }}">{{ qr_code_url | safe }}</a></p>
 
-<h2 style="font-size: 18px; margin-top: 24px;">{{ t(key="email.two_factor_setup.backup_heading") }}</h2>
+<h2>{{ t(key="email.two_factor_setup.backup_heading") }}</h2>
 <div class="alert">
-    <p style="font-family: monospace; word-break: break-all; margin: 0;">{{ backup_codes_text }}</p>
+  <p style="font-family: monospace; word-break: break-all; margin: 0;">{{ backup_codes_text }}</p>
 </div>
-<div class="alert">
-    <strong>{{ t(key="email.two_factor_setup.backup_warning") }}</strong>
+<div class="alert alert-danger">
+  <strong>{{ t(key="email.two_factor_setup.backup_warning") }}</strong>
 </div>

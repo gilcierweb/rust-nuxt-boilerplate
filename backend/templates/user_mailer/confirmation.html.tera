@@ -2,13 +2,25 @@
 
 <p>{{ t(key="email.confirmation.instruction") }}</p>
 
-<p style="text-align: center; margin: 32px 0;">
-    <a href="{{ confirm_url | safe }}" class="button">{{ t(key="email.confirmation.button") }}</a>
-</p>
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" class="btn btn-primary">
+  <tbody>
+    <tr>
+      <td align="left">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+          <tbody>
+            <tr>
+              <td><a href="{{ confirm_url | safe }}" target="_blank">{{ t(key="email.confirmation.button") }}</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 <p>{{ t(key="email.link.fallback") }}</p>
 <p class="code-block">{{ confirm_url | safe }}</p>
 
 <div class="alert">
-    {{ t(key="email.confirmation.expiry_notice") }}
+  {{ t(key="email.confirmation.expiry_notice") }}
 </div>

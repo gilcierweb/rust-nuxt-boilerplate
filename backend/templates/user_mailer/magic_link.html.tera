@@ -2,13 +2,25 @@
 
 <p>{{ t(key="email.magic_link.instruction") }}</p>
 
-<p style="text-align: center; margin: 32px 0;">
-    <a href="{{ magic_url | safe }}" class="button">{{ t(key="email.magic_link.button") }}</a>
-</p>
+<table role="presentation" border="0" cellpadding="0" cellspacing="0" class="btn btn-primary">
+  <tbody>
+    <tr>
+      <td align="left">
+        <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+          <tbody>
+            <tr>
+              <td><a href="{{ magic_url | safe }}" target="_blank">{{ t(key="email.magic_link.button") }}</a></td>
+            </tr>
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 <p>{{ t(key="email.link.fallback") }}</p>
 <p class="code-block">{{ magic_url | safe }}</p>
 
 <div class="alert">
-    {{ t(key="email.magic_link.expiry_notice") }}
+  {{ t(key="email.magic_link.expiry_notice") }}
 </div>
