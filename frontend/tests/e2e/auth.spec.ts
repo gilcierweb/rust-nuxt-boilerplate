@@ -170,10 +170,7 @@ test('should toggle password visibility', async ({ page }) => {
     await page.goto('/auth/reset-password?token=valid-token-123')
     const pw = page.getByLabel(a.resetPassword.newPassword)
     await expect(pw).toHaveAttribute('type', 'password')
-    // Icon button outside viewport in CI; click via keyboard to avoid viewport issues
-    await pw.focus()
-    await page.keyboard.press('Tab')
-    await page.keyboard.press('Space')
+    await page.getByLabel('toggle password visibility').click()
     await expect(pw).toHaveAttribute('type', 'text')
   })
 

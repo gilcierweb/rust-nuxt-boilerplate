@@ -40,6 +40,7 @@
           <button
             type="button"
             class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content transition-colors"
+            aria-label="toggle password visibility"
             @click="showPw = !showPw"
           >
             <Icon :name="showPw ? 'heroicons:eye-slash' : 'heroicons:eye'" class="h-4 w-4" />
