@@ -93,6 +93,35 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
+    async verifyMagicLink(token: string) {
+      const { $api } = useNuxtApp()
+      this.isLoading = true
+      try {
+        const data = await $api<AuthResponse>('/auth/magic-link/verify', {
+          method: 'POST',
+          body: { token },
+        })
+        this._setTokens(data)
+        this.isInitialized = true
+        return data
+      } finally {
+        this.isLoading = false
+      }
+    },
+
+    async requestMagicLink(email: string) {
+      const { $api } = useNuxtApp()
+      this.isLoading = true
+      try {
+        await $api('/auth/magic-link', {
+          method: 'POST',
+          body: { email },
+        })
+      } finally {
+        this.isLoading = false
+      }
+    },
+
     async register(payload: RegisterPayload) {
       const { $api } = useNuxtApp()
       this.isLoading = true

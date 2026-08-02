@@ -65,6 +65,7 @@
 <script setup lang="ts">
 import { toTypedSchema } from '@vee-validate/valibot'
 import { useForm } from 'vee-validate'
+import { useAuthStore } from '~/stores/auth'
 import { mapAuthError } from '~/utils/auth-errors'
 import { z } from 'zod'
 
@@ -73,7 +74,7 @@ definePageMeta({
 })
 
 const { t } = useI18n()
-const toast = useToast()
+const authStore = useAuthStore()
 const localePath = useLocalePath()
 
 const isLoading = ref(false)
@@ -98,8 +99,7 @@ const onSubmit = handleSubmit(async (values) => {
   successMsg.value = ''
   isLoading.value = true
   try {
-    const { $api } = useNuxtApp()
-    await $api.post('/auth/magic-link', { email: values.email })
+    await authStore.requestMagicLink(values.email)
     successMsg.value = t('auth.magicLink.sent')
     resetForm()
   } catch (err: any) {

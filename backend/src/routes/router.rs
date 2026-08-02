@@ -161,7 +161,12 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // Auth routes - no RBAC needed
             .service(
                 web::scope("/auth")
-                    .wrap(CsrfProtection::new(vec![]))
+                    .wrap(CsrfProtection::new(vec![
+                        "/api/v1/auth/magic-link".to_string(),
+                        "/api/v1/auth/magic-link/".to_string(),
+                        "/api/v1/auth/magic-link/verify".to_string(),
+                        "/api/v1/auth/magic-link/verify/".to_string(),
+                    ]))
                     .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,

@@ -57,6 +57,7 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '~/stores/auth'
 import { mapAuthError } from '~/utils/auth-errors'
 
 definePageMeta({
@@ -67,6 +68,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const localePath = useLocalePath()
+const authStore = useAuthStore()
 
 const isLoading = ref(true)
 const errorMsg = ref('')
@@ -80,8 +82,7 @@ onMounted(async () => {
   }
 
   try {
-    const { $api } = useNuxtApp()
-    await $api.post('/auth/magic-link/verify', { token })
+    await authStore.verifyMagicLink(token)
     await router.push(localePath('/admin/dashboard'))
   } catch (err: any) {
     errorMsg.value = mapAuthError(err, t, 'auth.magicLink.invalid')

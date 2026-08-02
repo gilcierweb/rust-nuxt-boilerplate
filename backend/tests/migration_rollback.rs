@@ -85,8 +85,8 @@ fn all_migrations_have_down_sql() {
     }
 
     assert_eq!(
-        migration_count, 10,
-        "Expected 10 migrations (found {})",
+        migration_count, 11,
+        "Expected 11 migrations (found {})",
         migration_count
     );
     println!("All {} migrations have valid down.sql", migration_count);
@@ -205,7 +205,7 @@ fn migration_count_matches_expected() {
         .filter(|e| e.file_name().to_string_lossy() != ".keep")
         .count();
 
-    assert_eq!(count, 10, "Expected exactly 10 migrations, found {}", count);
+    assert_eq!(count, 11, "Expected exactly 11 migrations, found {}", count);
 }
 
 #[test]
