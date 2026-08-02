@@ -119,7 +119,7 @@
         </label>
       </div>
 
-      <button type="submit" :disabled="isLoading" class="btn btn-lg btn-primary btn-gradient btn-block">
+      <button type="submit" :disabled="isLoading || !meta.valid" class="btn btn-lg btn-primary btn-gradient btn-block">
         <span v-if="isLoading" class="icon-[tabler--loader-2] size-5 animate-spin"></span>
         <template v-else>{{ $t('auth.login.submit') }}</template>
       </button>
@@ -161,7 +161,7 @@ const errorMsg = ref('')
 const requiresOtp = ref(false)
 
 const schema = computed(() => toTypedSchema(loginSchema(t)))
-const { handleSubmit, errors, defineField, resetForm } = useForm<LoginValues>({
+const { handleSubmit, errors, meta, defineField, resetForm } = useForm<LoginValues>({
   validationSchema: schema,
   initialValues: { email: '', password: '', otp_code: '' },
 })

@@ -125,7 +125,7 @@
 
       <button
         type="submit"
-        :disabled="isLoading"
+        :disabled="isLoading || !meta.valid"
         class="btn btn-lg btn-primary btn-gradient btn-block disabled:opacity-60"
       >
         <Icon v-if="isLoading" name="svg-spinners:ring-resize" class="h-5 w-5" />
@@ -155,7 +155,7 @@ const errorMsg = ref('')
 const success = ref(false)
 
 const schema = computed(() => toTypedSchema(registerSchema(t)))
-const { handleSubmit, errors, defineField } = useForm<RegisterValues>({
+const { handleSubmit, errors, meta, defineField } = useForm<RegisterValues>({
   validationSchema: schema,
   initialValues: { email: '', password: '', password_confirmation: '', age_confirmed: false },
 })

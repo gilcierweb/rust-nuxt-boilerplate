@@ -48,7 +48,7 @@
         <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>
       </div>
 
-      <button type="submit" :disabled="loading" class="btn btn-primary btn-lg btn-gradient btn-block">
+      <button type="submit" :disabled="loading || !meta.valid" class="btn btn-primary btn-lg btn-gradient btn-block">
         <Icon v-if="loading" name="svg-spinners:3-dots-fade" class="h-5 w-5" />
         <template v-else>
           <Icon name="heroicons:paper-airplane" class="h-4 w-4" />
@@ -74,7 +74,7 @@ const loading = ref(false)
 const sent = ref(false)
 
 const schema = computed(() => toTypedSchema(forgotPasswordSchema(t)))
-const { handleSubmit, errors, defineField } = useForm<ForgotPasswordValues>({
+const { handleSubmit, errors, meta, defineField } = useForm<ForgotPasswordValues>({
   validationSchema: schema,
   initialValues: { email: '' },
 })

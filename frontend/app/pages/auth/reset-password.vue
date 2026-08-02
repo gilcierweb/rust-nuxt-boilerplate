@@ -65,7 +65,7 @@
         <span v-if="errors.password_confirmation" class="text-error text-xs mt-1 block">{{ errors.password_confirmation }}</span>
       </div>
 
-      <button type="submit" :disabled="loading" class="btn btn-primary btn-lg btn-gradient btn-block">
+      <button type="submit" :disabled="loading || !meta.valid" class="btn btn-primary btn-lg btn-gradient btn-block">
         <Icon v-if="loading" name="svg-spinners:3-dots-fade" class="h-5 w-5" />
         <template v-else>{{ $t('auth.resetPassword.submit') }}</template>
       </button>
@@ -93,7 +93,7 @@ const success = ref(false)
 const errorMsg = ref('')
 
 const schema = computed(() => toTypedSchema(resetPasswordSchema(t)))
-const { handleSubmit, errors, defineField } = useForm<ResetPasswordValues>({
+const { handleSubmit, errors, meta, defineField } = useForm<ResetPasswordValues>({
   validationSchema: schema,
   initialValues: { password: '', password_confirmation: '' },
 })
