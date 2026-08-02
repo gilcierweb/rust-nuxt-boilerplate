@@ -49,6 +49,7 @@ impl ResponseError for AppError {
         if self.should_log_internal_details() {
             tracing::error!(
                 error_code = self.error_code(),
+                error = %self,
                 "Request failed with internal server error"
             );
         }

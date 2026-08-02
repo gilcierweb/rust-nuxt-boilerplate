@@ -81,8 +81,7 @@ export function mapAuthError(
   const status: number | undefined =
     e.statusCode ??
     e.response?.status ??
-    e.status ??
-    e.response?._data?.error ? undefined : undefined
+    e.status
 
   // Native browser fetch failures (NetworkError, CSP block, CORS, DNS) arrive
   // without a status code — the user must never see the raw message here.
@@ -125,7 +124,6 @@ export function mapAuthError(
   }
 
   // 5xx / network-level — never leak server internals or URLs.
-  if (status === 401) return t('auth.login.error.invalidCredentials')
   if (isNetworkLevel || (status !== undefined && status >= 500)) {
     return t('common.errorExtended.network')
   }
