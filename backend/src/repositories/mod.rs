@@ -3,6 +3,7 @@ pub mod audit_logs_repository;
 pub mod base;
 pub mod container;
 pub mod macros;
+pub mod magic_link_token_repository;
 pub mod profiles_repository;
 pub mod refresh_tokens_repository;
 pub mod roles_repository;

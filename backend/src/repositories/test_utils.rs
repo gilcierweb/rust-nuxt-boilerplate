@@ -5,6 +5,7 @@ pub mod mocks {
     use crate::config::app_config::{AppConfig, Environment};
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::container::AppContainer;
+    use crate::repositories::magic_link_token_repository::MockIMagicLinkTokenRepository;
     use crate::repositories::profiles_repository::MockIProfileRepository;
     use crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository;
     use crate::repositories::roles_repository::MockIRoleRepository;
@@ -149,6 +150,7 @@ pub mod mocks {
             user_roles: Arc::new(MockIUserRoleRepository::new()),
             roles: Arc::new(MockIRoleRepository::new()),
             domain_audit_logs: Arc::new(MockIAuditLogRepository::new()),
+            magic_link_tokens: Arc::new(MockIMagicLinkTokenRepository::new()),
             access_token_blacklist: Arc::new(
                 crate::repositories::access_token_blacklist::AccessTokenBlacklist::new(pool),
             ),

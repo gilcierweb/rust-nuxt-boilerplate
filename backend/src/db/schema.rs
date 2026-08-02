@@ -26,6 +26,20 @@ diesel::table! {
 }
 
 diesel::table! {
+    magic_link_tokens (id) {
+        id -> Uuid,
+        user_id -> Uuid,
+        #[max_length = 255]
+        token_digest -> Varchar,
+        request_ip -> Nullable<Inet>,
+        user_agent -> Nullable<Text>,
+        expires_at -> Timestamptz,
+        consumed_at -> Nullable<Timestamptz>,
+        created_at -> Timestamptz,
+    }
+}
+
+diesel::table! {
     permissions (id) {
         id -> Uuid,
         #[max_length = 255]
@@ -149,6 +163,7 @@ diesel::table! {
 }
 
 diesel::joinable!(audit_logs -> users (actor_user_id));
+diesel::joinable!(magic_link_tokens -> users (user_id));
 diesel::joinable!(profiles -> users (user_id));
 diesel::joinable!(refresh_tokens -> users (user_id));
 diesel::joinable!(roles_permissions -> permissions (permission_id));
@@ -158,6 +173,7 @@ diesel::joinable!(users_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     audit_logs,
+    magic_link_tokens,
     permissions,
     profiles,
     refresh_tokens,

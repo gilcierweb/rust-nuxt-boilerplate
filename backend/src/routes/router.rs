@@ -130,7 +130,7 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // (X-API-Key or Authorization: ApiKey <key>) to prevent exposing
             // internal counters, latencies, route names, and system resource
             // information to unauthenticated callers.
-            .wrap(crate::middleware::api_key_middleware::RequireApiKey::new(vec![
+.wrap(crate::middleware::api_key_middleware::RequireApiKey::new(vec![
                 "/api/v1/webhooks/*",
                 "/api/v1/ws",
                 "/api/v1/auth/login",
@@ -145,10 +145,16 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 "/api/v1/auth/logout/",
                 "/api/v1/auth/recover",
                 "/api/v1/auth/recover/",
+                "/api/v1/auth/forgot-password",
+                "/api/v1/auth/forgot-password/",
                 "/api/v1/auth/reset",
                 "/api/v1/auth/reset/",
                 "/api/v1/auth/confirm",
                 "/api/v1/auth/confirm/",
+                "/api/v1/auth/magic-link",
+                "/api/v1/auth/magic-link/",
+                "/api/v1/auth/magic-link/verify",
+                "/api/v1/auth/magic-link/verify/",
                 "/api/v1/health",
                 "/api/v1/health/",
             ]))
@@ -160,21 +166,23 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,
                     ))
-                    .service(auth_controller::login)
-                    .service(auth_controller::register)
-                    .service(auth_controller::recover_password)
-                    .service(auth_controller::forgot_password)
-                    .service(auth_controller::reset_password)
-                    .service(auth_controller::confirm)
-                    .service(auth_controller::me)
-                    .service(auth_controller::session)
-                    .service(auth_controller::session_trailing)
-                    .service(auth_controller::refresh)
-                    .service(auth_controller::logout)
-                    .service(auth_controller::setup_2fa)
-                    .service(auth_controller::enable_2fa)
-                    .service(auth_controller::disable_2fa)
-                    .service(auth_controller::change_password),
+.service(auth_controller::login)
+            .service(auth_controller::register)
+            .service(auth_controller::recover_password)
+            .service(auth_controller::forgot_password)
+            .service(auth_controller::reset_password)
+            .service(auth_controller::confirm)
+            .service(auth_controller::request_magic_link)
+            .service(auth_controller::verify_magic_link)
+            .service(auth_controller::me)
+            .service(auth_controller::session)
+            .service(auth_controller::session_trailing)
+            .service(auth_controller::refresh)
+            .service(auth_controller::logout)
+            .service(auth_controller::setup_2fa)
+            .service(auth_controller::enable_2fa)
+            .service(auth_controller::disable_2fa)
+            .service(auth_controller::change_password),
             )
             // Webhook routes
             .service(

@@ -61,7 +61,7 @@
     <form v-else novalidate class="space-y-4" @submit.prevent="onSubmit">
       <div class="flex items-center gap-3">
         <span class="text-base-content/80 text-sm">{{ $t('auth.login.loginWith') }}</span>
-        <button type="button" class="link link-animated link-primary font-normal">
+        <button type="button" class="link link-animated link-primary font-normal" @click="navigateToMagicLink">
           {{ $t('auth.login.magicLink') }}
         </button>
       </div>
@@ -192,6 +192,10 @@ const onSubmit = handleSubmit(async (values) => {
     isLoading.value = false
   }
 })
+
+async function navigateToMagicLink() {
+  await navigateTo(localePath('/auth/magic-link'))
+}
 
 async function handleOtpVerify() {
   if (otp.value.length !== 6) {

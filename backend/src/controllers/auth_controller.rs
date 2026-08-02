@@ -14,6 +14,7 @@ use crate::config::AppConfig;
 use crate::db::schema::users as users_table;
 use crate::errors::{AppError, AppResult};
 use crate::middleware::auth::{AuthUser, create_token_with_kid};
+use crate::models::magic_link_token::NewMagicLinkToken;
 use crate::models::profile::NewProfile;
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
 use crate::models::role::{ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER};
@@ -2031,6 +2032,299 @@ pub async fn pix_webhook(
     HttpResponse::Ok().json(serde_json::json!({
         "received": true,
         "transaction_id": transaction_id
+    }))
+}
+
+// =========================================================================
+// MAGIC LINK (passwordless authentication)
+// =========================================================================
+
+// Request DTO for sending a magic link.
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct MagicLinkRequest {
+    #[validate(
+        email(message = "auth.validation.invalid_email"),
+        length(max = 254, message = "auth.validation.email_too_long")
+    )]
+    pub email: String,
+}
+
+// Request DTO for verifying a magic link token.
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct MagicLinkVerifyRequest {
+    #[validate(length(min = 1, max = 512, message = "auth.validation.token_invalid"))]
+    pub token: String,
+}
+
+const MAGIC_LINK_EXPIRY_MINUTES: i64 = 15;
+
+/// POST /api/v1/auth/magic-link
+///
+/// Request a passwordless magic link to be sent to the given email.
+/// Always returns 200 to prevent email enumeration.
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/magic-link",
+    tag = "auth",
+    request_body = MagicLinkRequest,
+    responses(
+        (status = 200, description = "Magic link sent (if email exists)"),
+        (status = 400, description = "Validation error"),
+        (status = 429, description = "Too many requests")
+    )
+)]
+#[post("/magic-link")]
+pub async fn request_magic_link(
+    req: HttpRequest,
+    container: web::Data<AppContainer>,
+    body: web::Json<MagicLinkRequest>,
+) -> AppResult<HttpResponse> {
+    body.validate()
+        .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
+
+    let security = SecurityService::from_config(container.config.as_ref())?;
+    let normalized_email = security.normalize_email(&body.email);
+    let email_lookup = security.protect_email(&normalized_email)?;
+    let request_ip = extract_client_ip(&req, &container.config.trusted_proxies);
+    let user_agent = request_user_agent(&req);
+
+    // Generate a random token and its digest for storage.
+    let token = generate_random_token(48);
+    let token_digest = hash_token(&token, &container.config.refresh_token_hash_salt);
+    let now = Utc::now();
+    let expires_at = now + chrono::Duration::minutes(MAGIC_LINK_EXPIRY_MINUTES);
+
+    // Attempt to find user and create magic link token
+    if let Ok(Some(user)) = container
+        .users
+        .find_by_email(&email_lookup.blind_index)
+        .await
+    {
+        let ip_net: Option<ipnet::IpNet> = request_ip
+            .map(|addr| addr.to_string())
+            .and_then(|s| s.parse::<ipnet::IpNet>().ok());
+        let new_token = NewMagicLinkToken::new(
+            user.id,
+            token_digest,
+            ip_net,
+            user_agent.clone(),
+            expires_at,
+        );
+        let _ = container.magic_link_tokens.create(&new_token).await;
+    }
+
+    // Always attempt to send email (will fail silently for non-existent users)
+    // This ensures the same timing regardless of user existence.
+    let email_service = container.email_service.clone();
+    if let Err(error) = email_service.send_magic_link(&body.email, &token).await {
+        tracing::debug!("magic link email delivery skipped or failed: {}", error);
+    }
+
+    tracing::info!(
+        event = "auth.magic_link.requested",
+        email_fingerprint = %fingerprint_value(&email_lookup.blind_index),
+        "magic link requested"
+    );
+
+    Ok(HttpResponse::Ok().json(serde_json::json!({
+        "message": t!("auth.magic_link.sent")
+    })))
+}
+
+/// POST /api/v1/auth/magic-link/verify
+///
+/// Verify a magic link token and issue a session (access + refresh tokens).
+#[utoipa::path(
+    post,
+    path = "/api/v1/auth/magic-link/verify",
+    tag = "auth",
+    request_body = MagicLinkVerifyRequest,
+    responses(
+        (status = 200, description = "Session issued", body = AuthResponse),
+        (status = 400, description = "Invalid or expired token"),
+        (status = 401, description = "Token invalid or already used"),
+        (status = 429, description = "Too many requests")
+    )
+)]
+#[post("/magic-link/verify")]
+pub async fn verify_magic_link(
+    req: HttpRequest,
+    container: web::Data<AppContainer>,
+    body: web::Json<MagicLinkVerifyRequest>,
+) -> AppResult<HttpResponse> {
+    body.validate()
+        .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
+
+    let token_digest = hash_token(&body.token, &container.config.refresh_token_hash_salt);
+    let request_ip = extract_client_ip(&req, &container.config.trusted_proxies);
+    let user_agent = request_user_agent(&req);
+
+    // Find the magic link token by digest
+    let magic_token = match container
+        .magic_link_tokens
+        .find_by_digest(&token_digest)
+        .await
+    {
+        Ok(Some(t)) => t,
+        Ok(None) => {
+            tracing::warn!(
+                event = "auth.magic_link.verify.invalid",
+                "magic link verification failed: token not found"
+            );
+            return Err(AppError::Unauthorized(
+                t!("auth.magic_link.invalid").into_owned(),
+            ));
+        },
+        Err(e) => return Err(AppError::Database(e)),
+    };
+
+    // Check expiry
+    if magic_token.expires_at <= chrono::Utc::now() {
+        tracing::warn!(
+            event = "auth.magic_link.verify.expired",
+            user_id = %magic_token.user_id,
+            "magic link verification failed: token expired"
+        );
+        return Err(AppError::Unauthorized(
+            t!("auth.magic_link.expired").into_owned(),
+        ));
+    }
+
+    // Check if already consumed
+    if magic_token.consumed_at.is_some() {
+        tracing::warn!(
+            event = "auth.magic_link.verify.consumed",
+            user_id = %magic_token.user_id,
+            "magic link verification failed: token already used"
+        );
+        return Err(AppError::Unauthorized(
+            t!("auth.magic_link.already_used").into_owned(),
+        ));
+    }
+
+    // Mark token as consumed
+    container
+        .magic_link_tokens
+        .mark_consumed(&magic_token.id)
+        .await
+        .map_err(AppError::Database)?;
+
+    // Fetch user
+    let user = container
+        .users
+        .find(&magic_token.user_id)
+        .await
+        .map_err(AppError::Database)?;
+
+    // Check if account is locked
+    if user.is_locked() {
+        return Err(AppError::BadRequest(t!("auth.login.locked").into_owned()));
+    }
+
+    // Check email confirmation
+    if !user.is_confirmed() {
+        return Err(AppError::BadRequest(
+            t!("auth.login.email_not_confirmed").into_owned(),
+        ));
+    }
+
+    // Fetch profile
+    let profile = container
+        .profiles
+        .find_by_user_id(&user.id)
+        .await
+        .map_err(AppError::Database)?
+        .ok_or(AppError::Internal(
+            t!("users.profile_not_found").into_owned(),
+        ))?;
+
+    // Fetch roles
+    let roles = get_cached_user_roles(&container, &user.id).await?;
+    let role_claim = primary_role_claim(&roles);
+
+    // Generate tokens (same as login)
+    #[allow(clippy::get_first)]
+    let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
+    let access_token = create_token_with_kid(
+        user.id,
+        profile.id,
+        role_claim,
+        &container.config.jwt_secret,
+        container.config.jwt_access_expiry_secs,
+        "access",
+        active_kid,
+    )?;
+
+    let refresh_token_plain = generate_random_token(48);
+    let refresh_token_hash = hash_token(
+        &refresh_token_plain,
+        &container.config.refresh_token_hash_salt,
+    );
+
+    // Store refresh token
+    let ip_string = req.peer_addr().map(|addr| addr.ip().to_string());
+    let ip: Option<ipnet::IpNet> = ip_string.as_ref().and_then(|s| {
+        s.parse::<ipnet::IpNet>()
+            .inspect_err(|e| {
+                tracing::warn!(
+                    event = "auth.ip_parse_error",
+                    ip = %s,
+                    error = %e,
+                    "Failed to parse trusted peer IP as IpNet"
+                );
+            })
+            .ok()
+    });
+
+    let new_refresh = NewRefreshToken {
+        id: Uuid::new_v4(),
+        user_id: user.id,
+        token_hash: refresh_token_hash,
+        device_info: req
+            .headers()
+            .get("User-Agent")
+            .and_then(|h| h.to_str().ok())
+            .map(|s| s.to_string()),
+        ip_address: ip_string.clone(),
+        expires_at: Utc::now()
+            + chrono::Duration::seconds(container.config.jwt_refresh_expiry_secs),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    };
+
+    container
+        .refresh_tokens
+        .create(&new_refresh)
+        .await
+        .map_err(AppError::Database)?;
+
+    // Record successful login
+    container
+        .users
+        .record_successful_login(&user.id, ip)
+        .await
+        .map_err(AppError::Database)?;
+
+    tracing::info!(
+        event = "auth.magic_link.verify.success",
+        user_id = %user.id,
+        ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
+        user_agent = user_agent.as_deref().unwrap_or("unknown"),
+        "magic link verification success"
+    );
+
+    let mut response = HttpResponse::Ok();
+    response.cookie(build_refresh_cookie(
+        container.config.as_ref(),
+        &refresh_token_plain,
+    ));
+    response.cookie(clear_legacy_refresh_cookie(container.config.as_ref()));
+
+    Ok(response.json(AuthResponse {
+        access_token,
+        token_type: "Bearer",
+        expires_in: container.config.jwt_access_expiry_secs,
+        user: build_user_info(container.config.as_ref(), &user, profile.id, roles)?,
     }))
 }
 

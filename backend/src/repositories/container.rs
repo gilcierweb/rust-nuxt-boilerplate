@@ -6,6 +6,9 @@ use crate::config::app_config::AppConfig;
 use crate::db::database::DBPool;
 use crate::repositories::access_token_blacklist::AccessTokenBlacklist;
 use crate::repositories::audit_logs_repository::{AuditLogsRepository, IAuditLogRepository};
+use crate::repositories::magic_link_token_repository::{
+    IMagicLinkTokenRepository, MagicLinkTokenRepository,
+};
 use crate::repositories::profiles_repository::{IProfileRepository, ProfilesRepository};
 use crate::repositories::refresh_tokens_repository::{
     IRefreshTokenRepository, RefreshTokensRepository,
@@ -25,6 +28,7 @@ pub struct AppContainer {
     pub user_roles: Arc<dyn IUserRoleRepository>,
     pub roles: Arc<dyn IRoleRepository>,
     pub domain_audit_logs: Arc<dyn IAuditLogRepository>,
+    pub magic_link_tokens: Arc<dyn IMagicLinkTokenRepository>,
     pub access_token_blacklist: Arc<AccessTokenBlacklist>,
     /// Shared email service (Rails-style mailer sender). Cheap to clone via
     /// `Arc`; reuses the underlying reqwest client and template engine across
@@ -52,6 +56,7 @@ impl AppContainer {
             user_roles: Arc::new(UserRolesRepository::new(pool.clone())),
             roles: Arc::new(RolesRepository::new(pool.clone())),
             domain_audit_logs: Arc::new(AuditLogsRepository::new(pool.clone())),
+            magic_link_tokens: Arc::new(MagicLinkTokenRepository::new(pool.clone())),
             access_token_blacklist: Arc::new(AccessTokenBlacklist::new(redis_pool)),
             email_service,
         }

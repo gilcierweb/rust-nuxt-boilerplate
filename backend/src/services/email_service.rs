@@ -529,6 +529,17 @@ impl EmailService {
         self.send_password_reset_email(to, &reset_url).await
     }
 
+    /// Send a magic link email.
+    //
+    // Mirrors `send_password_reset` but points to the magic-link verify page.
+    // The link is short-lived (15 min) and single-use, so reuse of the
+    // password reset link layout is intentional — both flows share the same
+    // "click this link to continue" design.
+    pub async fn send_magic_link(&self, to: &str, token: &str) -> EmailResult {
+        let magic_url = format!("/auth/magic-link/verify?token={}", token);
+        self.send_password_reset_email(to, &magic_url).await
+    }
+
     /// Alias for backward compatibility
     pub async fn send_confirmation(&self, to: &str, token: &str) -> EmailResult {
         let confirm_url = format!("/auth/confirm?token={}", token);
