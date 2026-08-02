@@ -105,13 +105,14 @@ fn build_security_service() -> SeedResult<SecurityService> {
 /// Requires EMAIL_TRANSPORT=smtp and SMTP_URL set (e.g., for MailCatcher).
 async fn send_test_emails() -> SeedResult<()> {
     // Load config from environment (respects EMAIL_TRANSPORT, SMTP_URL, FRONTEND_URL, etc.)
-    let config = AppConfig::from_env()
-        .map_err(|e| format!("failed to load AppConfig: {e}"))?;
+    let config = AppConfig::from_env().map_err(|e| format!("failed to load AppConfig: {e}"))?;
 
     // Check if email service is configured
     use backend::config::app_config::EmailTransportKind;
     if config.email_transport != EmailTransportKind::Smtp && config.resend_api_key.is_empty() {
-        println!("⚠️  Email service not configured. Set EMAIL_TRANSPORT=smtp and SMTP_URL for MailCatcher,");
+        println!(
+            "⚠️  Email service not configured. Set EMAIL_TRANSPORT=smtp and SMTP_URL for MailCatcher,"
+        );
         println!("   or RESEND_API_KEY for Resend API.");
         return Ok(());
     }
@@ -137,28 +138,39 @@ async fn send_test_emails() -> SeedResult<()> {
 
     // 1. Magic Link
     println!("\n1/5 Sending magic link email...");
-    let magic_url = format!("{}/auth/magic-link-verify?token={}", frontend_url, magic_token);
-    email_service.send_magic_link_email(&test_email, &magic_url).await
+    let magic_url = format!(
+        "{}/auth/magic-link-verify?token={}",
+        frontend_url, magic_token
+    );
+    email_service
+        .send_magic_link_email(&test_email, &magic_url)
+        .await
         .map_err(|e| format!("magic link failed: {e}"))?;
     println!("   ✓ Magic link sent");
 
     // 2. Password Reset
     println!("\n2/5 Sending password reset email...");
     let reset_url = format!("{}/auth/reset-password?token={}", frontend_url, reset_token);
-    email_service.send_password_reset_email(&test_email, &reset_url).await
+    email_service
+        .send_password_reset_email(&test_email, &reset_url)
+        .await
         .map_err(|e| format!("password reset failed: {e}"))?;
     println!("   ✓ Password reset sent");
 
     // 3. Email Confirmation (Welcome)
     println!("\n3/5 Sending email confirmation (welcome) email...");
     let confirm_url = format!("{}/auth/confirm?token={}", frontend_url, confirm_token);
-    email_service.send_confirmation_email(&test_email, &confirm_url).await
+    email_service
+        .send_confirmation_email(&test_email, &confirm_url)
+        .await
         .map_err(|e| format!("confirmation failed: {e}"))?;
     println!("   ✓ Confirmation sent");
 
     // 4. Password Changed Notification
     println!("\n4/5 Sending password changed notification...");
-    email_service.send_password_changed_notification(&test_email).await
+    email_service
+        .send_password_changed_notification(&test_email)
+        .await
         .map_err(|e| format!("password changed failed: {e}"))?;
     println!("   ✓ Password changed notification sent");
 
@@ -173,12 +185,16 @@ async fn send_test_emails() -> SeedResult<()> {
         "44332211".to_string(),
         "55667788".to_string(),
     ];
-    email_service.send_2fa_setup_email(&test_email, secret, &qr_code_url, &backup_codes).await
+    email_service
+        .send_2fa_setup_email(&test_email, secret, &qr_code_url, &backup_codes)
+        .await
         .map_err(|e| format!("2fa setup failed: {e}"))?;
     println!("   ✓ 2FA setup sent");
 
     println!("\n✅ All test emails sent!");
-    println!("\n📬 Check MailCatcher at http://localhost:1080 (UI) or http://localhost:1025 (SMTP)");
+    println!(
+        "\n📬 Check MailCatcher at http://localhost:1080 (UI) or http://localhost:1025 (SMTP)"
+    );
     println!("   Or check your email inbox if using Resend.");
 
     Ok(())
