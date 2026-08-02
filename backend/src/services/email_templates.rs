@@ -31,10 +31,10 @@ fn tera_t_function(args: &HashMap<String, Value>) -> TeraResult<Value> {
     // Extract additional named arguments for interpolation
     let mut interp_args = HashMap::new();
     for (k, v) in args {
-        if k != "key" {
-            if let Some(s) = v.as_str() {
-                interp_args.insert(k.clone(), s.to_string());
-            }
+        if k != "key"
+            && let Some(s) = v.as_str()
+        {
+            interp_args.insert(k.clone(), s.to_string());
         }
     }
 
