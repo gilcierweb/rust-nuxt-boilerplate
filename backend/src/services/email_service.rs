@@ -443,7 +443,7 @@ impl EmailService {
             let safe_subject = sanitize_for_email(subject);
             let safe_body = sanitize_for_html_email(body);
             let html = html_body
-                .map(sanitize_for_html_email)
+                .map(|h| h.to_string())
                 .unwrap_or_else(|| self.wrap_html(&safe_subject, &safe_body));
             capture.capture(CapturedEmail {
                 to: safe_to.clone(),
@@ -477,7 +477,7 @@ impl EmailService {
         let log_subject = safe_subject.clone();
 
         let html = html_body
-            .map(sanitize_for_html_email)
+            .map(|h| h.to_string())
             .unwrap_or_else(|| self.wrap_html(&safe_subject, &safe_body));
 
         match &self.transport {

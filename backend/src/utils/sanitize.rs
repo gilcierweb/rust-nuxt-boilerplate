@@ -56,7 +56,15 @@ pub fn sanitize_for_email(input: &str) -> String {
 }
 
 pub fn sanitize_for_html_email(input: &str) -> String {
-    let allowed: HashSet<&str> = ["b", "i", "strong", "em", "br"].into_iter().collect();
+    let allowed: HashSet<&str> = [
+        "a", "abbr", "acronym", "b", "big", "blockquote", "br", "caption", "cite",
+        "code", "col", "colgroup", "dd", "del", "div", "dl", "dt", "em", "h1", "h2",
+        "h3", "h4", "h5", "h6", "hr", "i", "img", "ins", "li", "ol", "p", "pre",
+        "q", "s", "samp", "small", "span", "strike", "strong", "sub", "sup", "table",
+        "tbody", "td", "tfoot", "th", "thead", "tr", "tt", "u", "ul", "var",
+    ]
+    .into_iter()
+    .collect();
     ammonia::Builder::new()
         .tags(allowed)
         .clean(input)
