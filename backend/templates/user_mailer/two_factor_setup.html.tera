@@ -1,18 +1,18 @@
-<p>Olá {{ user_name | default(value="there") }},</p>
+<p>{{ t(key="email.greeting") }} {{ user_name | default(value="there") }},</p>
 
-<p>Sua autenticação de dois fatores (2FA) foi configurada com sucesso. Aqui estão os detalhes:</p>
+<p>{{ t(key="email.two_factor_setup.heading") }}</p>
 
-<h2 style="font-size: 18px; margin-top: 24px;">Segredo (Secret)</h2>
-<div class="code-block"><strong>Secret:</strong> {{ secret }}</div>
+<h2 style="font-size: 18px; margin-top: 24px;">{{ t(key="email.two_factor_setup.secret_heading") }}</h2>
+<div class="code-block"><strong>{{ t(key="email.two_factor_setup.secret_label") }}</strong> {{ secret }}</div>
 
-<h2 style="font-size: 18px; margin-top: 24px;">QR Code</h2>
-<p>Escaneie este QR code usando seu aplicativo autenticador:</p>
+<h2 style="font-size: 18px; margin-top: 24px;">{{ t(key="email.two_factor_setup.qr_heading") }}</h2>
+<p>{{ t(key="email.two_factor_setup.qr_instruction") }}</p>
 <p><a href="{{ qr_code_url | safe }}">{{ qr_code_url | safe }}</a></p>
 
-<h2 style="font-size: 18px; margin-top: 24px;">Códigos de Backup (salve em local seguro!)</h2>
+<h2 style="font-size: 18px; margin-top: 24px;">{{ t(key="email.two_factor_setup.backup_heading") }}</h2>
 <div class="alert">
     <p style="font-family: monospace; word-break: break-all; margin: 0;">{{ backup_codes_text }}</p>
 </div>
 <div class="alert">
-    <strong>Atenção: estes códigos são exibidos apenas uma vez. Guarde-os em um gerenciador de senhas.</strong>
+    <strong>{{ t(key="email.two_factor_setup.backup_warning") }}</strong>
 </div>

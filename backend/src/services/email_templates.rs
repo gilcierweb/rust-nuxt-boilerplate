@@ -15,17 +15,57 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use rust_i18n::replace_patterns;
 use rust_i18n::t;
 use tera::{Context, Result as TeraResult, Tera, Value};
 
-/// Custom Tera function `t` that resolves an i18n key via `rust_i18n`,
-/// using the current global locale. Usage in templates: `{{ t("key") }}`.
+/// Custom Tera function `t` that resolves an i18n key via the per-request locale
+/// when available, falling back to the global `rust_i18n` locale.
+/// Usage in templates: `{{ t(key="key", arg1="value1", arg2="value2") }}`.
 fn tera_t_function(args: &HashMap<String, Value>) -> TeraResult<Value> {
     let key = args
         .get("key")
         .and_then(|v| v.as_str())
         .ok_or_else(|| tera::Error::msg("t() requires a `key` argument"))?;
-    let message = t!(key).into_owned();
+
+    // Extract additional named arguments for interpolation
+    let mut interp_args = HashMap::new();
+    for (k, v) in args {
+        if k != "key" {
+            if let Some(s) = v.as_str() {
+                interp_args.insert(k.clone(), s.to_string());
+            }
+        }
+    }
+
+    // Prefer per-request locale if available (thread-local set by locale middleware)
+    let message = crate::middleware::locale::current_request_locale()
+        .map(|rl| {
+            rl.t_blocking(
+                key,
+                if interp_args.is_empty() {
+                    None
+                } else {
+                    Some(&interp_args)
+                },
+            )
+        })
+        .unwrap_or_else(|| {
+            // Fallback: global rust_i18n locale (may be en by default in tests).
+            // Use `t!(key)` with explicit locale to get pt-BR at minimum,
+            // then interpolate named args via replace_patterns if needed.
+            let raw = t!(key, locale = "pt-BR").into_owned();
+            if interp_args.is_empty() {
+                raw
+            } else {
+                let mut patterns: Vec<&str> = interp_args.keys().map(String::as_str).collect();
+                patterns.sort();
+                let values: Vec<String> =
+                    patterns.iter().map(|p| interp_args[*p].clone()).collect();
+                replace_patterns(&raw, &patterns, &values)
+            }
+        });
+
     Ok(Value::String(message))
 }
 
@@ -62,6 +102,9 @@ const PASSWORD_CHANGED_HTML: &str =
 const PASSWORD_CHANGED_TEXT: &str =
     include_str!("../../templates/user_mailer/password_changed.text.tera");
 
+const MAGIC_LINK_HTML: &str = include_str!("../../templates/user_mailer/magic_link.html.tera");
+const MAGIC_LINK_TEXT: &str = include_str!("../../templates/user_mailer/magic_link.text.tera");
+
 const TWO_FACTOR_SETUP_HTML: &str =
     include_str!("../../templates/user_mailer/two_factor_setup.html.tera");
 const TWO_FACTOR_SETUP_TEXT: &str =
@@ -82,6 +125,9 @@ pub mod names {
 
     pub const USER_PASSWORD_CHANGED_HTML: &str = "user_mailer/password_changed.html.tera";
     pub const USER_PASSWORD_CHANGED_TEXT: &str = "user_mailer/password_changed.text.tera";
+
+    pub const USER_MAGIC_LINK_HTML: &str = "user_mailer/magic_link.html.tera";
+    pub const USER_MAGIC_LINK_TEXT: &str = "user_mailer/magic_link.text.tera";
 
     pub const USER_TWO_FACTOR_SETUP_HTML: &str = "user_mailer/two_factor_setup.html.tera";
     pub const USER_TWO_FACTOR_SETUP_TEXT: &str = "user_mailer/two_factor_setup.text.tera";
@@ -111,6 +157,8 @@ impl EmailTemplates {
         tera.add_raw_template(names::USER_PASSWORD_RESET_TEXT, PASSWORD_RESET_TEXT)?;
         tera.add_raw_template(names::USER_PASSWORD_CHANGED_HTML, PASSWORD_CHANGED_HTML)?;
         tera.add_raw_template(names::USER_PASSWORD_CHANGED_TEXT, PASSWORD_CHANGED_TEXT)?;
+        tera.add_raw_template(names::USER_MAGIC_LINK_HTML, MAGIC_LINK_HTML)?;
+        tera.add_raw_template(names::USER_MAGIC_LINK_TEXT, MAGIC_LINK_TEXT)?;
         tera.add_raw_template(names::USER_TWO_FACTOR_SETUP_HTML, TWO_FACTOR_SETUP_HTML)?;
         tera.add_raw_template(names::USER_TWO_FACTOR_SETUP_TEXT, TWO_FACTOR_SETUP_TEXT)?;
 

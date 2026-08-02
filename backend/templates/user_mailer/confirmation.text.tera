@@ -1,9 +1,9 @@
-Olá {{ user_name | default(value="there") }},
+{{ t(key="email.greeting") }} {{ user_name | default(value="there") }},
 
-Para começar, por favor confirme seu endereço de email acessando:
+{{ t(key="email.confirmation.instruction_text") }}
 {{ confirm_url }}
 
-Este link expira em 24 horas. Se você não criou esta conta, pode ignorar este email.
+{{ t(key="email.confirmation.expiry_notice") }}
 
 ---
 {{ app_name }}

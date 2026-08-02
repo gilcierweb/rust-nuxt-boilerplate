@@ -1,0 +1,14 @@
+<p>{{ t(key="email.greeting") }} {{ user_name | default(value="there") }},</p>
+
+<p>{{ t(key="email.magic_link.instruction") }}</p>
+
+<p style="text-align: center; margin: 32px 0;">
+    <a href="{{ magic_url | safe }}" class="button">{{ t(key="email.magic_link.button") }}</a>
+</p>
+
+<p>{{ t(key="email.link.fallback") }}</p>
+<p class="code-block">{{ magic_url | safe }}</p>
+
+<div class="alert">
+    {{ t(key="email.magic_link.expiry_notice") }}
+</div>

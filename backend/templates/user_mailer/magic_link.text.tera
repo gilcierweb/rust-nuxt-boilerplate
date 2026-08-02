@@ -1,0 +1,9 @@
+{{ t(key="email.greeting") }} {{ user_name | default(value="there") }},
+
+{{ t(key="email.magic_link.instruction_text") }}
+{{ magic_url }}
+
+{{ t(key="email.magic_link.expiry_notice") }}
+
+---
+{{ app_name }}

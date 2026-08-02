@@ -1,16 +1,16 @@
-<p>Olá <strong>{{ user_name | default(value="there") }}</strong>,</p>
+<p>{{ t(key="email.greeting") }} <strong>{{ user_name | default(value="there") }}</strong>,</p>
 
-<p>Bem-vindo ao {{ app_name }}! Estamos felizes em ter você por aqui.</p>
+<p>{{ t(key="email.welcome.heading", app_name=app_name) }}</p>
 
-<p>Para começar, por favor confirme seu endereço de email clicando no botão abaixo:</p>
+<p>{{ t(key="email.welcome.instruction") }}</p>
 
 <p style="text-align: center; margin: 32px 0;">
-    <a href="{{ confirm_url | safe }}" class="button">Confirmar Email</a>
+    <a href="{{ confirm_url | safe }}" class="button">{{ t(key="email.confirmation.button") }}</a>
 </p>
 
-<p>Ou copie e cole este link no seu navegador:</p>
+<p>{{ t(key="email.link.fallback") }}</p>
 <p class="code-block">{{ confirm_url | safe }}</p>
 
 <div class="alert">
-    Este link expira em 24 horas. Se você não criou esta conta, pode ignorar este email.
+    {{ t(key="email.welcome.expiry_notice") }}
 </div>

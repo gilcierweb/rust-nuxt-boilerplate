@@ -156,7 +156,7 @@ impl EmailService {
         let api_key = config.resend_api_key.clone();
         let from_email = config.email_from.clone();
         let from_name = if config.email_from_name.is_empty() {
-            t!("app.name").into_owned()
+            Self::translate_for_request("app.name", None)
         } else {
             config.email_from_name.clone()
         };
@@ -194,6 +194,36 @@ impl EmailService {
             templates,
             capture: None,
         }
+    }
+
+    /// Translate a key using the per-request locale when available,
+    /// falling back to the global rust_i18n locale.
+    fn translate_for_request(
+        key: &str,
+        args: Option<&std::collections::HashMap<String, String>>,
+    ) -> String {
+        if let Some(rl) = crate::middleware::locale::current_request_locale() {
+            return rl.t_blocking(key, args);
+        }
+        // Fallback: global rust_i18n with explicit pt-BR default locale.
+        let raw = t!(key, locale = "pt-BR").into_owned();
+        match args {
+            Some(a) if !a.is_empty() => {
+                let mut patterns: Vec<&str> = a.keys().map(String::as_str).collect();
+                patterns.sort();
+                let values: Vec<String> = patterns.iter().map(|p| a[*p].clone()).collect();
+                rust_i18n::replace_patterns(&raw, &patterns, &values)
+            },
+            _ => raw,
+        }
+    }
+
+    /// Resolve the per-request locale identifier, falling back to the
+    /// translation-service default (pt-BR) when none is available.
+    fn locale_for_request() -> String {
+        crate::middleware::locale::current_request_locale()
+            .map(|rl| rl.resolution.locale.clone())
+            .unwrap_or_else(|| crate::services::translation_service::DEFAULT_LOCALE.to_string())
     }
 
     pub fn from_config(config: &AppConfig) -> Self {
@@ -305,9 +335,10 @@ impl EmailService {
                 "Email service not configured (missing RESEND_API_KEY), skipping email to {}",
                 to
             );
-            return Err(EmailError::NotConfigured(
-                t!("email.service_not_configured").into_owned(),
-            ));
+            return Err(EmailError::NotConfigured(Self::translate_for_request(
+                "email.service_not_configured",
+                None,
+            )));
         }
 
         let safe_to = sanitize_for_email(to);
@@ -366,6 +397,11 @@ impl EmailService {
     }
 
     fn wrap_html(&self, subject: &str, body: &str) -> String {
+        let footer = {
+            let mut args = std::collections::HashMap::new();
+            args.insert("app".to_string(), self.from_name.clone());
+            Self::translate_for_request("email.footer", Some(&args))
+        };
         format!(
             r#"<!DOCTYPE html>
 <html>
@@ -384,38 +420,44 @@ impl EmailService {
     </p>
 </body>
 </html>"#,
-            subject,
-            subject,
-            body,
-            t!("email.footer", app = self.from_name).into_owned()
+            subject, subject, body, footer
         )
     }
 
     /// Send account confirmation email
     pub async fn send_confirmation_email(&self, to: &str, confirm_url: &str) -> EmailResult {
-        let subject = t!("email.confirmation.subject").into_owned();
+        let subject = Self::translate_for_request("email.confirmation.subject", None);
         let resolved_url = self.resolve_url(confirm_url);
 
         let ctx = serde_json::json!({
             "user_name": "",
             "confirm_url": resolved_url,
             "to_email": to,
+            "locale": Self::locale_for_request(),
         });
 
-        let (html, text) = self
-            .render_pair(tpl::USER_CONFIRMATION_HTML, tpl::USER_CONFIRMATION_TEXT, &ctx)
-            .unwrap_or_else(|err| {
-                tracing::warn!(error = %err, "confirmation template render failed; using inline fallback");
-                let body = t!("email.confirmation.body_text", url = resolved_url).into_owned();
-                let html = self.confirmation_html_fallback(&resolved_url);
-                (html, body)
-            });
+        let (html, text) = match self.render_pair(
+            tpl::USER_CONFIRMATION_HTML,
+            tpl::USER_CONFIRMATION_TEXT,
+            &ctx,
+        ) {
+            Ok((html, text)) => (Some(html), text),
+            Err(err) => {
+                tracing::warn!(error = %err, "confirmation template render failed; sending text-only");
+                let mut args = std::collections::HashMap::new();
+                args.insert("url".to_string(), resolved_url);
+                (
+                    None,
+                    Self::translate_for_request("email.confirmation.body_text", Some(&args)),
+                )
+            },
+        };
 
         self.dispatch(
             to,
             &subject,
             &text,
-            Some(&html),
+            html.as_deref(),
             tpl::USER_CONFIRMATION_HTML,
         )
         .await
@@ -423,29 +465,38 @@ impl EmailService {
 
     /// Send password reset email
     pub async fn send_password_reset_email(&self, to: &str, reset_url: &str) -> EmailResult {
-        let subject = t!("email.password_reset.subject").into_owned();
+        let subject = Self::translate_for_request("email.password_reset.subject", None);
         let resolved_url = self.resolve_url(reset_url);
 
         let ctx = serde_json::json!({
             "user_name": "",
             "reset_url": resolved_url,
             "to_email": to,
+            "locale": Self::locale_for_request(),
         });
 
-        let (html, text) = self
-            .render_pair(tpl::USER_PASSWORD_RESET_HTML, tpl::USER_PASSWORD_RESET_TEXT, &ctx)
-            .unwrap_or_else(|err| {
-                tracing::warn!(error = %err, "password reset template render failed; using inline fallback");
-                let body = t!("email.password_reset.body_text", url = resolved_url).into_owned();
-                let html = self.password_reset_html_fallback(&resolved_url);
-                (html, body)
-            });
+        let (html, text) = match self.render_pair(
+            tpl::USER_PASSWORD_RESET_HTML,
+            tpl::USER_PASSWORD_RESET_TEXT,
+            &ctx,
+        ) {
+            Ok((html, text)) => (Some(html), text),
+            Err(err) => {
+                tracing::warn!(error = %err, "password reset template render failed; sending text-only");
+                let mut args = std::collections::HashMap::new();
+                args.insert("url".to_string(), resolved_url);
+                (
+                    None,
+                    Self::translate_for_request("email.password_reset.body_text", Some(&args)),
+                )
+            },
+        };
 
         self.dispatch(
             to,
             &subject,
             &text,
-            Some(&html),
+            html.as_deref(),
             tpl::USER_PASSWORD_RESET_HTML,
         )
         .await
@@ -459,7 +510,7 @@ impl EmailService {
         qr_code_url: &str,
         backup_codes: &[String],
     ) -> EmailResult {
-        let subject = t!("email.two_factor_setup.subject").into_owned();
+        let subject = Self::translate_for_request("email.two_factor_setup.subject", None);
         let backup_codes_text = backup_codes.join(", ");
 
         let ctx = serde_json::json!({
@@ -468,28 +519,32 @@ impl EmailService {
             "qr_code_url": qr_code_url,
             "backup_codes_text": backup_codes_text,
             "to_email": to,
+            "locale": Self::locale_for_request(),
         });
 
-        let (html, text) = self
-            .render_pair(tpl::USER_TWO_FACTOR_SETUP_HTML, tpl::USER_TWO_FACTOR_SETUP_TEXT, &ctx)
-            .unwrap_or_else(|err| {
-                tracing::warn!(error = %err, "2fa setup template render failed; using inline fallback");
-                let body = t!(
-                    "email.two_factor_setup.body_text",
-                    secret = secret,
-                    qr = qr_code_url,
-                    codes = backup_codes_text
-                )
-                .into_owned();
-                let html = self.two_factor_setup_html_fallback(secret, qr_code_url, &backup_codes_text);
-                (html, body)
-            });
+        let (html, text) = match self.render_pair(
+            tpl::USER_TWO_FACTOR_SETUP_HTML,
+            tpl::USER_TWO_FACTOR_SETUP_TEXT,
+            &ctx,
+        ) {
+            Ok((html, text)) => (Some(html), text),
+            Err(err) => {
+                tracing::warn!(error = %err, "2fa setup template render failed; sending text-only");
+                let mut args = std::collections::HashMap::new();
+                args.insert("secret".to_string(), secret.to_string());
+                args.insert("qr".to_string(), qr_code_url.to_string());
+                args.insert("codes".to_string(), backup_codes_text);
+                let body =
+                    Self::translate_for_request("email.two_factor_setup.body_text", Some(&args));
+                (None, body)
+            },
+        };
 
         self.dispatch(
             to,
             &subject,
             &text,
-            Some(&html),
+            html.as_deref(),
             tpl::USER_TWO_FACTOR_SETUP_HTML,
         )
         .await
@@ -497,27 +552,34 @@ impl EmailService {
 
     /// Send password changed notification
     pub async fn send_password_changed_notification(&self, to: &str) -> EmailResult {
-        let subject = t!("email.password_changed.subject").into_owned();
+        let subject = Self::translate_for_request("email.password_changed.subject", None);
 
         let ctx = serde_json::json!({
             "user_name": "",
             "to_email": to,
+            "locale": Self::locale_for_request(),
         });
 
-        let (html, text) = self
-            .render_pair(tpl::USER_PASSWORD_CHANGED_HTML, tpl::USER_PASSWORD_CHANGED_TEXT, &ctx)
-            .unwrap_or_else(|err| {
-                tracing::warn!(error = %err, "password changed template render failed; using inline fallback");
-                let body = t!("email.password_changed.body_text").into_owned();
-                let html = self.password_changed_html_fallback();
-                (html, body)
-            });
+        let (html, text) = match self.render_pair(
+            tpl::USER_PASSWORD_CHANGED_HTML,
+            tpl::USER_PASSWORD_CHANGED_TEXT,
+            &ctx,
+        ) {
+            Ok((html, text)) => (Some(html), text),
+            Err(err) => {
+                tracing::warn!(error = %err, "password changed template render failed; sending text-only");
+                (
+                    None,
+                    Self::translate_for_request("email.password_changed.body_text", None),
+                )
+            },
+        };
 
         self.dispatch(
             to,
             &subject,
             &text,
-            Some(&html),
+            html.as_deref(),
             tpl::USER_PASSWORD_CHANGED_HTML,
         )
         .await
@@ -530,14 +592,51 @@ impl EmailService {
     }
 
     /// Send a magic link email.
-    //
-    // Mirrors `send_password_reset` but points to the magic-link verify page.
-    // The link is short-lived (15 min) and single-use, so reuse of the
-    // password reset link layout is intentional — both flows share the same
-    // "click this link to continue" design.
+    ///
+    /// The link is short-lived (15 min) and single-use, so it renders its own
+    /// dedicated template instead of reusing the password reset one.
     pub async fn send_magic_link(&self, to: &str, token: &str) -> EmailResult {
         let magic_url = format!("/auth/magic-link/verify?token={}", token);
-        self.send_password_reset_email(to, &magic_url).await
+        self.send_magic_link_email(to, &magic_url).await
+    }
+
+    /// Send a magic link email with a pre-built URL.
+    pub async fn send_magic_link_email(&self, to: &str, magic_url: &str) -> EmailResult {
+        let subject = Self::translate_for_request("email.magic_link.subject", None);
+        let resolved_url = self.resolve_url(magic_url);
+
+        let ctx = serde_json::json!({
+            "user_name": "",
+            "magic_url": resolved_url,
+            "to_email": to,
+            "locale": Self::locale_for_request(),
+        });
+
+        let (html, text) = match self.render_pair(
+            tpl::USER_MAGIC_LINK_HTML,
+            tpl::USER_MAGIC_LINK_TEXT,
+            &ctx,
+        ) {
+            Ok((html, text)) => (Some(html), text),
+            Err(err) => {
+                tracing::warn!(error = %err, "magic link template render failed; sending text-only");
+                let mut args = std::collections::HashMap::new();
+                args.insert("url".to_string(), resolved_url);
+                (
+                    None,
+                    Self::translate_for_request("email.magic_link.body_text", Some(&args)),
+                )
+            },
+        };
+
+        self.dispatch(
+            to,
+            &subject,
+            &text,
+            html.as_deref(),
+            tpl::USER_MAGIC_LINK_HTML,
+        )
+        .await
     }
 
     /// Alias for backward compatibility
@@ -562,162 +661,6 @@ impl EmailService {
         let html = templates.render_html_with_layout(html_template, ctx)?;
         let text = templates.render(text_template, ctx)?;
         Ok((html, text))
-    }
-
-    // ---- Inline HTML fallbacks (used when templates are unavailable) ----
-
-    fn confirmation_html_fallback(&self, confirm_url: &str) -> String {
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #1a1a2e; margin-top: 0;">{}</h1>
-        <p>{}</p>
-        <p style="text-align: center; margin: 32px 0;">
-            <a href="{}" style="background: #1a1a2e; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
-                {}
-            </a>
-        </p>
-        <p style="color: #6c757d; font-size: 14px;">{} <a href="{}">{}</a></p>
-        <p style="color: #6c757d; font-size: 14px;">{}</p>
-    </div>
-    <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        {}
-    </p>
-</body>
-</html>"#,
-            t!("email.confirmation.html_title").into_owned(),
-            t!("email.confirmation.html_heading").into_owned(),
-            t!("email.confirmation.html_body").into_owned(),
-            confirm_url,
-            t!("email.confirmation.html_button").into_owned(),
-            t!("email.confirmation.fallback_instruction").into_owned(),
-            confirm_url,
-            confirm_url,
-            t!("email.confirmation.expiry_notice").into_owned(),
-            t!("email.footer", app = self.from_name).into_owned()
-        )
-    }
-
-    fn password_reset_html_fallback(&self, reset_url: &str) -> String {
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #1a1a2e; margin-top: 0;">{}</h1>
-        <p>{}</p>
-        <p style="text-align: center; margin: 32px 0;">
-            <a href="{}" style="background: #dc2626; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; display: inline-block;">
-                {}
-            </a>
-        </p>
-        <p style="color: #6c757d; font-size: 14px;">{} <a href="{}">{}</a></p>
-        <p style="color: #6c757d; font-size: 14px;">{}</p>
-        <p style="color: #6c757d; font-size: 14px;">{}</p>
-    </div>
-    <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        {}
-    </p>
-</body>
-</html>"#,
-            t!("email.password_reset.html_title").into_owned(),
-            t!("email.password_reset.html_heading").into_owned(),
-            t!("email.password_reset.html_body").into_owned(),
-            reset_url,
-            t!("email.password_reset.html_button").into_owned(),
-            t!("email.password_reset.fallback_instruction").into_owned(),
-            reset_url,
-            reset_url,
-            t!("email.password_reset.expiry_notice").into_owned(),
-            t!("email.password_reset.html_warning").into_owned(),
-            t!("email.footer", app = self.from_name).into_owned()
-        )
-    }
-
-    fn two_factor_setup_html_fallback(
-        &self,
-        secret: &str,
-        qr_code_url: &str,
-        backup_codes_text: &str,
-    ) -> String {
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #1a1a2e; margin-top: 0;">{}</h1>
-        <p>{}</p>
-        <div style="background: white; border: 1px solid #dee2e6; border-radius: 6px; padding: 16px; margin: 16px 0; font-family: monospace; word-break: break-all;">
-            <strong>{}</strong> {}
-        </div>
-        <p><strong>{}</strong> <a href="{}">{}</a></p>
-        <h2>{}</h2>
-        <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 16px;">
-            <p style="font-family: monospace; word-break: break-all;">{}</p>
-        </div>
-    </div>
-    <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        {}
-    </p>
-</body>
-</html>"#,
-            t!("email.two_factor_setup.html_title").into_owned(),
-            t!("email.two_factor_setup.html_heading").into_owned(),
-            t!("email.two_factor_setup.html_body").into_owned(),
-            t!("email.two_factor_setup.secret_label").into_owned(),
-            secret,
-            t!("email.two_factor_setup.qr_heading").into_owned(),
-            qr_code_url,
-            qr_code_url,
-            t!("email.two_factor_setup.backup_heading").into_owned(),
-            backup_codes_text,
-            t!("email.footer", app = self.from_name).into_owned()
-        )
-    }
-
-    fn password_changed_html_fallback(&self) -> String {
-        format!(
-            r#"<!DOCTYPE html>
-<html>
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{}</title>
-</head>
-<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-    <div style="background: #f8f9fa; border-radius: 8px; padding: 32px;">
-        <h1 style="color: #dc2626; margin-top: 0;">{}</h1>
-        <p>{}</p>
-        <p style="color: #dc2626;"><strong>{}</strong></p>
-    </div>
-    <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 24px;">
-        {}
-    </p>
-</body>
-</html>"#,
-            t!("email.password_changed.html_title").into_owned(),
-            t!("email.password_changed.html_heading").into_owned(),
-            t!("email.password_changed.html_body").into_owned(),
-            t!("email.password_changed.html_warning").into_owned(),
-            t!("email.footer", app = self.from_name).into_owned()
-        )
     }
 }
 

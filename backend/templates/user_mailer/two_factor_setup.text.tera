@@ -1,17 +1,17 @@
-Olá {{ user_name | default(value="there") }},
+{{ t(key="email.greeting") }} {{ user_name | default(value="there") }},
 
-Sua autenticação de dois fatores (2FA) foi configurada com sucesso.
+{{ t(key="email.two_factor_setup.heading") }}
 
-Segredo (Secret):
+{{ t(key="email.two_factor_setup.secret_heading") }}:
 {{ secret }}
 
-QR Code:
+{{ t(key="email.two_factor_setup.qr_heading") }}:
 {{ qr_code_url }}
 
-Códigos de Backup (salve em local seguro!):
+{{ t(key="email.two_factor_setup.backup_heading") }}:
 {{ backup_codes_text }}
 
-Atenção: estes códigos são exibidos apenas uma vez. Guarde-os em um gerenciador de senhas.
+{{ t(key="email.two_factor_setup.backup_warning") }}
 
 ---
 {{ app_name }}
