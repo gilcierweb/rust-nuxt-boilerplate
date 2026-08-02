@@ -389,12 +389,7 @@ pub async fn login(
         Ok(None) => {
             let users_total = container.users.count().await.unwrap_or(-1).to_string();
             let key_version = container.config.current_encryption_key_version;
-            let key_fingerprint = fingerprint_value(
-                container
-                    .config
-                    .blind_index_key
-                    .as_bytes(),
-            );
+            let key_fingerprint = fingerprint_value(container.config.blind_index_key.as_bytes());
             tracing::warn!(
                 event = "auth.login.user_not_found",
                 email_fingerprint = %fingerprint_value(&email_lookup.blind_index),
@@ -2125,10 +2120,7 @@ mod tests {
             .times(1)
             .returning(|_| Ok(None));
 
-        mock_users
-            .expect_count()
-            .times(1)
-            .returning(|| Ok(0));
+        mock_users.expect_count().times(1).returning(|| Ok(0));
 
         let mut container = mock_container();
         container.users = Arc::new(mock_users);

@@ -130,12 +130,7 @@ impl IUserRepository for UsersRepository {
     async fn count(&self) -> diesel::QueryResult<i64> {
         self.base
             .run(|conn| {
-                Box::pin(async move {
-                    users_table::table
-                        .count()
-                        .first::<i64>(conn)
-                        .await
-                })
+                Box::pin(async move { users_table::table.count().first::<i64>(conn).await })
             })
             .await
     }

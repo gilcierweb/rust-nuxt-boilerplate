@@ -308,7 +308,12 @@ impl AppConfig {
                 .parse()
                 .unwrap_or(8443),
             tls_enabled: env::var("TLS_ENABLED")
-                .map(|v| matches!(v.trim().to_lowercase().as_str(), "1" | "true" | "yes" | "on"))
+                .map(|v| {
+                    matches!(
+                        v.trim().to_lowercase().as_str(),
+                        "1" | "true" | "yes" | "on"
+                    )
+                })
                 .unwrap_or(false),
             tls_cert_path: env::var("TLS_CERT_PATH").unwrap_or_else(|_| "cert.pem".to_string()),
             tls_key_path: env::var("TLS_KEY_PATH").unwrap_or_else(|_| "key.pem".to_string()),

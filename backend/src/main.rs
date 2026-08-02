@@ -383,57 +383,56 @@ async fn main() -> std::io::Result<()> {
         // Initialize TLS crypto provider - falls back to default if already initialized
         let _ = rustls::crypto::CryptoProvider::get_default();
 
-            let cert_path = config.tls_cert_path.clone();
-            let key_path = config.tls_key_path.clone();
+        let cert_path = config.tls_cert_path.clone();
+        let key_path = config.tls_key_path.clone();
 
-            let mut certs_file =
-                BufReader::new(std::fs::File::open(&cert_path).map_err(|error| {
-                    std::io::Error::other(format!(
-                        "failed to open TLS certificate file '{}': {}",
-                        cert_path, error
-                    ))
-                })?);
-            let mut key_file = BufReader::new(std::fs::File::open(&key_path).map_err(|error| {
+        let mut certs_file = BufReader::new(std::fs::File::open(&cert_path).map_err(|error| {
+            std::io::Error::other(format!(
+                "failed to open TLS certificate file '{}': {}",
+                cert_path, error
+            ))
+        })?);
+        let mut key_file = BufReader::new(std::fs::File::open(&key_path).map_err(|error| {
+            std::io::Error::other(format!(
+                "failed to open TLS private key file '{}': {}",
+                key_path, error
+            ))
+        })?);
+
+        let tls_certs = rustls_pemfile::certs(&mut certs_file)
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| {
                 std::io::Error::other(format!(
-                    "failed to open TLS private key file '{}': {}",
+                    "failed to parse TLS certificates from '{}': {}",
+                    cert_path, error
+                ))
+            })?;
+
+        let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
+            .next()
+            .transpose()
+            .map_err(|error| {
+                std::io::Error::other(format!(
+                    "failed to parse TLS private key from '{}': {}",
                     key_path, error
                 ))
-            })?);
+            })?
+            .ok_or_else(|| {
+                std::io::Error::other(format!("no PKCS#8 private key found in '{}'", key_path))
+            })?;
 
-            let tls_certs = rustls_pemfile::certs(&mut certs_file)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| {
-                    std::io::Error::other(format!(
-                        "failed to parse TLS certificates from '{}': {}",
-                        cert_path, error
-                    ))
-                })?;
+        let tls_config = rustls::ServerConfig::builder()
+            .with_no_client_auth()
+            .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
+            .map_err(std::io::Error::other)?;
 
-            let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
-                .next()
-                .transpose()
-                .map_err(|error| {
-                    std::io::Error::other(format!(
-                        "failed to parse TLS private key from '{}': {}",
-                        key_path, error
-                    ))
-                })?
-                .ok_or_else(|| {
-                    std::io::Error::other(format!("no PKCS#8 private key found in '{}'", key_path))
-                })?;
+        let https_port = config.https_port;
+        println!("Running in HTTPS on port {}", https_port);
 
-            let tls_config = rustls::ServerConfig::builder()
-                .with_no_client_auth()
-                .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
-                .map_err(std::io::Error::other)?;
-
-            let https_port = config.https_port;
-            println!("Running in HTTPS on port {}", https_port);
-
-            server
-                .bind_rustls_0_23((host.clone(), https_port), tls_config)?
-                .run()
-                .await
+        server
+            .bind_rustls_0_23((host.clone(), https_port), tls_config)?
+            .run()
+            .await
     } else {
         println!("Running in HTTP on {}:{}", host, port);
         server.bind((host, port))?.run().await
