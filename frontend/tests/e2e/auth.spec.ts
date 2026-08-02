@@ -35,10 +35,8 @@ test.describe('Login Page', () => {
     await expect(pw).toHaveAttribute('type', 'password')
   })
 
-  test('should show validation errors when submitting empty form', async ({ page }) => {
-    await page.locator(SUBMIT).click()
-    await expect(page.getByLabel(a.login.email)).toHaveAttribute('required', '')
-    await expect(page.getByLabel(a.login.password)).toHaveAttribute('required', '')
+  test('should disable submit button when form is empty', async ({ page }) => {
+    await expect(page.locator(SUBMIT)).toBeDisabled()
   })
 
   test('should show error for invalid login credentials', async ({ page }) => {
