@@ -65,33 +65,59 @@ export type RegisterValues = {
  * on top of these rules.
  */
 export const registerSchema = (t: (key: string) => string) =>
-  v.object({
-    email: v.pipe(
-      v.string(),
-      v.trim(),
-      v.nonEmpty(t('auth.validation.emailRequired')),
-      v.email(t('auth.validation.invalidEmail')),
-      v.maxLength(254, t('auth.validation.emailTooLong')),
-    ),
-    password: v.pipe(
-      v.string(),
-      v.nonEmpty(t('auth.validation.passwordRequired')),
-      v.minLength(12, t('auth.validation.passwordTooShort')),
-      v.maxLength(128, t('auth.validation.passwordTooLong')),
-      v.regex(/[A-Z]/, t('auth.validation.passwordNeedsUpper')),
-      v.regex(/[0-9]/, t('auth.validation.passwordNeedsDigit')),
-      v.regex(/[^A-Za-z0-9]/, t('auth.validation.passwordNeedsSymbol')),
-    ),
-    password_confirmation: v.pipe(
-      v.string(),
-      v.nonEmpty(t('auth.validation.passwordConfirmRequired')),
-      v.maxLength(128, t('auth.validation.passwordTooLong')),
-    ),
-    age_confirmed: v.pipe(
-      v.boolean(),
-      v.literal(true, t('auth.validation.termsRequired')),
-    ),
-  })
+  v.pipe(
+    v.object({
+      email: v.pipe(
+        v.string(),
+        v.trim(),
+        v.nonEmpty(t('auth.validation.emailRequired')),
+        v.email(t('auth.validation.invalidEmail')),
+        v.maxLength(254, t('auth.validation.emailTooLong')),
+      ),
+      password: v.pipe(
+        v.string(),
+        v.nonEmpty(t('auth.validation.passwordRequired')),
+        v.minLength(12, t('auth.validation.passwordTooShort')),
+        v.maxLength(128, t('auth.validation.passwordTooLong')),
+        v.regex(/[A-Z]/, t('auth.validation.passwordNeedsUpper')),
+        v.regex(/[0-9]/, t('auth.validation.passwordNeedsDigit')),
+        v.regex(/[^A-Za-z0-9]/, t('auth.validation.passwordNeedsSymbol')),
+      ),
+      password_confirmation: v.pipe(
+        v.string(),
+        v.nonEmpty(t('auth.validation.passwordConfirmRequired')),
+        v.maxLength(128, t('auth.validation.passwordTooLong')),
+      ),
+      age_confirmed: v.pipe(
+        v.boolean(),
+        v.literal(true, t('auth.validation.termsRequired')),
+      ),
+    }),
+    v.rawCheck(({ dataset, addIssue }) => {
+      const obj = dataset.value
+      if (
+        typeof obj === 'object' && obj !== null &&
+        'password' in obj && 'password_confirmation' in obj
+      ) {
+        const pw = (obj as Record<string, unknown>).password
+        const confirm = (obj as Record<string, unknown>).password_confirmation
+        if (typeof confirm === 'string' && typeof pw === 'string' && confirm && pw !== confirm) {
+          addIssue({
+            validation: 'password_mismatch',
+            path: [{
+              input: obj,
+              origin: obj,
+              key: 'password_confirmation',
+              value: confirm,
+              type: 'object',
+              schema: v.string(),
+            }],
+            message: t('auth.validation.passwordMismatch'),
+          })
+        }
+      }
+    }),
+  )
 
 /** Auth payload contract used by `/auth/forgot-password`. */
 export type ForgotPasswordValues = {
@@ -121,19 +147,45 @@ export type ResetPasswordValues = {
  * is not part of the schema.
  */
 export const resetPasswordSchema = (t: (key: string) => string) =>
-  v.object({
-    password: v.pipe(
-      v.string(),
-      v.nonEmpty(t('auth.validation.passwordRequired')),
-      v.minLength(12, t('auth.validation.passwordTooShort')),
-      v.maxLength(128, t('auth.validation.passwordTooLong')),
-      v.regex(/[A-Z]/, t('auth.validation.passwordNeedsUpper')),
-      v.regex(/[0-9]/, t('auth.validation.passwordNeedsDigit')),
-      v.regex(/[^A-Za-z0-9]/, t('auth.validation.passwordNeedsSymbol')),
-    ),
-    password_confirmation: v.pipe(
-      v.string(),
-      v.nonEmpty(t('auth.validation.passwordConfirmRequired')),
-      v.maxLength(128, t('auth.validation.passwordTooLong')),
-    ),
-  })
+  v.pipe(
+    v.object({
+      password: v.pipe(
+        v.string(),
+        v.nonEmpty(t('auth.validation.passwordRequired')),
+        v.minLength(12, t('auth.validation.passwordTooShort')),
+        v.maxLength(128, t('auth.validation.passwordTooLong')),
+        v.regex(/[A-Z]/, t('auth.validation.passwordNeedsUpper')),
+        v.regex(/[0-9]/, t('auth.validation.passwordNeedsDigit')),
+        v.regex(/[^A-Za-z0-9]/, t('auth.validation.passwordNeedsSymbol')),
+      ),
+      password_confirmation: v.pipe(
+        v.string(),
+        v.nonEmpty(t('auth.validation.passwordConfirmRequired')),
+        v.maxLength(128, t('auth.validation.passwordTooLong')),
+      ),
+    }),
+    v.rawCheck(({ dataset, addIssue }) => {
+      const obj = dataset.value
+      if (
+        typeof obj === 'object' && obj !== null &&
+        'password' in obj && 'password_confirmation' in obj
+      ) {
+        const pw = (obj as Record<string, unknown>).password
+        const confirm = (obj as Record<string, unknown>).password_confirmation
+        if (typeof confirm === 'string' && typeof pw === 'string' && confirm && pw !== confirm) {
+          addIssue({
+            validation: 'password_mismatch',
+            path: [{
+              input: obj,
+              origin: obj,
+              key: 'password_confirmation',
+              value: confirm,
+              type: 'object',
+              schema: v.string(),
+            }],
+            message: t('auth.validation.passwordMismatch'),
+          })
+        }
+      }
+    }),
+  )

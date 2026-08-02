@@ -155,7 +155,7 @@ const errorMsg = ref('')
 const success = ref(false)
 
 const schema = computed(() => toTypedSchema(registerSchema(t)))
-const { handleSubmit, errors, meta, defineField, setFieldError, clearFieldError } = useForm<RegisterValues>({
+const { handleSubmit, errors, meta, defineField } = useForm<RegisterValues>({
   validationSchema: schema,
   initialValues: { email: '', password: '', password_confirmation: '', age_confirmed: false },
 })
@@ -164,14 +164,6 @@ const [email] = defineField('email')
 const [password] = defineField('password')
 const [password_confirmation] = defineField('password_confirmation')
 const [age_confirmed] = defineField('age_confirmed')
-
-watch([password, password_confirmation], ([pw, confirm]) => {
-  if (confirm && pw !== confirm) {
-    setFieldError('password_confirmation', t('auth.validation.passwordMismatch'))
-  } else if (confirm && pw === confirm) {
-    clearFieldError('password_confirmation')
-  }
-})
 
 const passwordStrength = computed(() => {
   const p = password.value
