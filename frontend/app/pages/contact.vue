@@ -6,7 +6,7 @@
         <div class="absolute inset-0 bg-gradient-to-br from-primary-container/10 to-transparent pointer-events-none"></div>
         <div class="max-w-[1440px] mx-auto px-6 text-center relative z-10">
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
-            <span class="material-symbols-outlined text-sm" data-icon="mail">mail</span>
+            <span class="icon-[tabler--mail] text-sm"></span>
             Get in Touch
           </div>
           <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight max-w-4xl mx-auto">
@@ -27,7 +27,7 @@
               <!-- Email -->
               <div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30">
                 <div class="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
-                  <span class="material-symbols-outlined text-2xl" data-icon="email">email</span>
+                  <span class="icon-[tabler--mail] text-2xl"></span>
                 </div>
                 <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Email</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
@@ -41,14 +41,14 @@
               <!-- GitHub -->
               <div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30">
                 <div class="w-12 h-12 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
-                  <span class="material-symbols-outlined text-2xl" data-icon="code">code</span>
+                  <span class="icon-[tabler--code] text-2xl"></span>
                 </div>
                 <h3 class="font-headline-md text-headline-md text-on-surface mb-2">GitHub</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
                   Issues, discussions, contributions
                 </p>
                 <a href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank" class="text-secondary font-medium hover:underline flex items-center gap-1">
-                  <span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span>
+                  <span class="icon-[tabler--external-link] text-sm"></span>
                   View Repository
                 </a>
               </div>
@@ -56,14 +56,14 @@
               <!-- Discord -->
               <div class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30">
                 <div class="w-12 h-12 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
-                  <span class="material-symbols-outlined text-2xl" data-icon="chat">chat</span>
+                  <span class="icon-[tabler--message] text-2xl"></span>
                 </div>
                 <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Discord Community</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
                   Real-time help and discussion
                 </p>
                 <a href="https://discord.gg/your-invite" target="_blank" class="text-tertiary font-medium hover:underline flex items-center gap-1">
-                  <span class="material-symbols-outlined text-sm" data-icon="open_in_new">open_in_new</span>
+                  <span class="icon-[tabler--external-link] text-sm"></span>
                   Join Server
                 </a>
               </div>
@@ -171,17 +171,17 @@
                       :disabled="submitting"
                     >
                       <span v-if="submitting" class="loading loading-spinner loading-sm mr-2"></span>
-                      <span v-else class="material-symbols-outlined mr-2" data-icon="send">send</span>
+                      <span v-else class="icon-[tabler--send] mr-2"></span>
                       {{ submitting ? 'Sending...' : 'Send Message' }}
                     </button>
                     
                     <span v-if="success" class="text-success flex items-center gap-2">
-                      <span class="material-symbols-outlined" data-icon="check_circle">check_circle</span>
+                      <span class="icon-[tabler--circle-check]"></span>
                       Message sent successfully! We'll get back to you soon.
                     </span>
                     
                     <span v-if="error" class="text-error flex items-center gap-2">
-                      <span class="material-symbols-outlined" data-icon="error">error</span>
+                      <span class="icon-[tabler--alert-circle]"></span>
                       Failed to send. Please try again or email us directly.
                     </span>
                   </div>
@@ -206,7 +206,7 @@
             <!-- FAQ 1 -->
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-primary"></span>
                 Is this production-ready?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -217,7 +217,7 @@
             <!-- FAQ 2 -->
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-secondary" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-secondary"></span>
                 Can I use this for commercial projects?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -228,7 +228,7 @@
             <!-- FAQ 3 -->
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-tertiary" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-tertiary"></span>
                 How do I get support?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -239,7 +239,7 @@
             <!-- FAQ 4 -->
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-success" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-success"></span>
                 Does it work with my existing database?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -250,7 +250,7 @@
             <!-- FAQ 5 -->
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-warning" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-warning"></span>
                 Can I remove features I don't need?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -261,7 +261,7 @@
             <!-- FAQ 6 -->
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-info" data-icon="help">help</span>
+                <span class="icon-[tabler--help] text-info"></span>
                 How do I deploy this?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -286,11 +286,11 @@
               </p>
               <div class="flex flex-wrap justify-center gap-4">
                 <NuxtLink to="/contact" class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
-                  <span class="material-symbols-outlined" data-icon="business_center">business_center</span>
+                  <span class="icon-[tabler--briefcase]"></span>
                   Contact Sales
                 </NuxtLink>
                 <NuxtLink to="https://github.com/your-org/rust-nuxt-boilerplate/discussions" target="_blank" class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
-                  <span class="material-symbols-outlined" data-icon="forum">forum</span>
+                  <span class="icon-[tabler--messages]"></span>
                   Community Forum
                 </NuxtLink>
               </div>
