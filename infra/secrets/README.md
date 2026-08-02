@@ -14,7 +14,8 @@
 #
 # External service API keys are also kept here for production:
 #
-#   resend_api_key.txt          # Resend transactional email
+#   resend_api_key.txt          # Resend transactional email (used when EMAIL_TRANSPORT=resend)
+#   smtp_password.txt           # SMTP relay password (used when EMAIL_TRANSPORT=smtp)
 #   stripe_secret_key.txt       # Stripe secret
 #   stripe_webhook_secret.txt   # Stripe webhook signing secret
 #   bunny_storage_key.txt       # Bunny.net storage

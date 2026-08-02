@@ -186,6 +186,11 @@ pub struct AppConfig {
     pub resend_api_key: String,
     pub email_from: String,
     pub email_from_name: String,
+    // Email transport selection. Either Resend (HTTP API) or SMTP (lettre).
+    // `smtp_url` is required when `email_transport == Smtp`; ignored otherwise.
+    pub email_transport: EmailTransportKind,
+    pub smtp_url: String,
+    pub smtp_timeout_secs: u64,
 
     // Bunny.net CDN / Storage
     pub bunny_storage_zone: String,
@@ -253,6 +258,43 @@ pub enum Environment {
     Staging,
     Production,
     Test,
+}
+
+/// Email transport backend.
+///
+/// Selects which wire protocol the [`crate::services::EmailService`] uses to
+/// deliver outgoing mail. Both backends are production-grade; the choice is
+/// purely operational.
+///
+/// - [`Resend`](Self::Resend) — uses the Resend HTTP API
+///   (`https://api.resend.com/emails`). Requires `RESEND_API_KEY`.
+/// - [`Smtp`](Self::Smtp) — connects to any RFC 5321 SMTP relay via the `lettre`
+///   crate. Supports both `smtps://` (TLS on connect, recommended for prod)
+///   and `smtp://` (plain or STARTTLS, useful for local mailcatcher).
+///   Requires `SMTP_URL`.
+#[derive(Debug, Clone, PartialEq)]
+pub enum EmailTransportKind {
+    Resend,
+    Smtp,
+}
+
+impl EmailTransportKind {
+    /// Parse from env-style string. Case-insensitive; defaults to `Resend`
+    /// when unrecognised.
+    pub fn from_env_str(s: &str) -> Self {
+        match s.to_ascii_lowercase().as_str() {
+            "smtp" => Self::Smtp,
+            "resend" => Self::Resend,
+            _ => Self::Resend,
+        }
+    }
+}
+
+impl std::str::FromStr for EmailTransportKind {
+    type Err = ();
+    fn from_str(s: &str) -> Result<Self, ()> {
+        Ok(Self::from_env_str(s))
+    }
 }
 
 /// Minimum Redis pool sizes per environment.
@@ -406,6 +448,14 @@ impl AppConfig {
                 .unwrap_or_else(|_| "noreply@boilerplate-rust-nuxt.com".to_string()),
             email_from_name: env::var("EMAIL_FROM_NAME")
                 .unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
+            email_transport: EmailTransportKind::from_env_str(
+                &env::var("EMAIL_TRANSPORT").unwrap_or_else(|_| "resend".to_string()),
+            ),
+            smtp_url: env::var("SMTP_URL").unwrap_or_default(),
+            smtp_timeout_secs: env::var("SMTP_TIMEOUT_SECS")
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(30),
 
             bunny_storage_zone: env::var("BUNNY_STORAGE_ZONE").unwrap_or_default(),
             bunny_storage_key: env::var("BUNNY_STORAGE_KEY").unwrap_or_default(),

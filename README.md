@@ -53,7 +53,7 @@
 - **API Docs**: OpenAPI 3.1 (utoipa) → TypeScript client generation, Swagger UI + Scalar
 - **Security**: Field-level encryption, blind indexes for PII, key rotation, CSRF protection, rate limiting
 - **Observability**: Structured JSON logging (tracing), Prometheus metrics, Grafana dashboards, request tracing
-- **Email**: Resend integration, template system, queue-based sending
+- **Email**: Resend HTTP API + generic SMTP (lettre) transports, template system, queue-based sending
 - **Real-time**: WebSocket server with Redis pub/sub
 
 ### Frontend (Nuxt 4 / Vue 3)
@@ -903,6 +903,39 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD"              # Connect 
 - **Request Tracing**: Distributed tracing support
 - **Grafana Dashboards**: Pre-configured monitoring panels
 
+### Local email testing with MailCatcher
+
+The `EmailService` supports two transports, selected by `EMAIL_TRANSPORT`:
+
+| Value | Backend | Use case |
+|---|---|---|
+| `resend` (default) | Resend HTTP API | Production |
+| `smtp` | Generic SMTP via `lettre` | Production relays, local MailCatcher |
+
+To run MailCatcher locally:
+
+```bash
+# 1. Boot the dev stack with the dev-tools profile (adds MailCatcher)
+docker compose --profile dev-tools up
+
+# 2. In .env, switch to SMTP and point at the mailcatcher host
+EMAIL_TRANSPORT=smtp
+SMTP_URL=smtp://mailcatcher:1025/?tls=opportunistic
+EMAIL_FROM=no-reply@example.com
+EMAIL_FROM_NAME="Boilerplate"
+
+# 3. Restart the backend so it picks up the new config
+docker compose restart backend
+
+# 4. Trigger any auth flow (e.g. /api/v1/auth/magic-link) and visit
+#    http://localhost:1080 — every outgoing email is captured there.
+```
+
+The backend uses the Docker service name `mailcatcher` (not `localhost`) because
+traffic goes over the `rust_nuxt_boilerplate_net` Docker network. If you're
+running the backend outside Docker, use `SMTP_URL=smtp://localhost:1025/...`
+instead and start mailcatcher via `docker compose --profile dev-tools up mailcatcher`.
+
 ---
 
 ## 🚀 Deployment
@@ -914,7 +947,7 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD"              # Connect 
 - [ ] Configure TLS certificates
 - [ ] Set up managed PostgreSQL (RDS, Cloud SQL, etc.)
 - [ ] Set up managed Redis (ElastiCache, etc.)
-- [ ] Configure email provider (Resend API key)
+- [ ] Configure email transport (`EMAIL_TRANSPORT=resend` + `RESEND_API_KEY`, or `EMAIL_TRANSPORT=smtp` + `SMTP_URL`)
 - [ ] Set up S3-compatible storage (Bunny.net, Backblaze B2)
 - [ ] Configure Stripe keys (if using payments)
 - [ ] Set up monitoring alerts (Grafana/Prometheus)

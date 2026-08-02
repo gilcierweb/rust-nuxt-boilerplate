@@ -224,6 +224,31 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
+  # -- MailCatcher (Local SMTP sink for development)
+  # Catches every email the backend sends via SMTP and serves a web UI to
+  # inspect them. Profile-gated so it's never deployed in production.
+  #
+  # Usage:
+  #   1. `docker compose --profile dev-tools up` (alongside the rest)
+  #   2. Set `EMAIL_TRANSPORT=smtp` and `SMTP_URL=smtp://mailcatcher:1025/?tls=opportunistic`
+  #      in your .env (note the host name `mailcatcher`, not `localhost`, since
+  #      the backend reaches it over the Docker network)
+  #   3. Open http://localhost:1080 to inspect captured emails.
+  #
+  # Why this matters: production code now supports two email backends (Resend
+  # HTTP API and generic SMTP via `lettre`). MailCatcher makes the SMTP path
+  # observable end-to-end without a real internet relay.
+  mailcatcher:
+    profiles: ["dev-tools"]
+    image: sj26/mailcatcher:latest
+    container_name: rust_nuxt_boilerplate_mailcatcher
+    restart: unless-stopped
+    ports:
+      - "1080:1080"  # Web UI
+      - "1025:1025"  # SMTP
+    networks:
+      - rust_nuxt_boilerplate_net
+
   # -- Portainer (Container Management UI)
   # SECURITY_AUDIT.md I4: Portainer requires `/var/run/docker.sock` which
   # gives the container FULL root access to the host. This is acceptable

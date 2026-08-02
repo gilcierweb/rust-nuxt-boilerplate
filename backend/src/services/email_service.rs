@@ -1,10 +1,15 @@
 #![allow(dead_code)]
 
+use std::sync::Arc;
+
 use chrono::Utc;
+use lettre::AsyncTransport;
+use lettre::message::{Mailbox, Message, MultiPart, SinglePart};
+use lettre::transport::smtp::AsyncSmtpTransport;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::config::app_config::{AppConfig, Environment, JwtSecretKey};
+use crate::config::app_config::{AppConfig, EmailTransportKind, Environment, JwtSecretKey};
 use crate::services::email_templates::{EmailTemplateError, EmailTemplates, names as tpl};
 use crate::services::email_test_capture::{CapturedEmail, TestEmailCapture};
 use crate::services::http_client::{HttpClient, HttpClientConfig, HttpClientError};
@@ -73,6 +78,9 @@ pub fn test_config() -> AppConfig {
         resend_api_key: "".to_string(),
         email_from: "".to_string(),
         email_from_name: "".to_string(),
+        email_transport: crate::config::app_config::EmailTransportKind::Resend,
+        smtp_url: "".to_string(),
+        smtp_timeout_secs: 30,
         bunny_storage_zone: "".to_string(),
         bunny_storage_key: "".to_string(),
         bunny_cdn_url: "".to_string(),
@@ -117,11 +125,56 @@ pub enum EmailError {
     SendFailed(String),
     #[error("HTTP error: {0}")]
     HttpError(#[from] HttpClientError),
+    #[error("SMTP error: {0}")]
+    Smtp(String),
     #[error("Template error: {0}")]
     Template(#[from] EmailTemplateError),
 }
 
+impl From<lettre::transport::smtp::Error> for EmailError {
+    fn from(err: lettre::transport::smtp::Error) -> Self {
+        Self::Smtp(err.to_string())
+    }
+}
+
+impl From<lettre::error::Error> for EmailError {
+    fn from(err: lettre::error::Error) -> Self {
+        Self::Smtp(err.to_string())
+    }
+}
+
 pub type EmailResult = Result<(), EmailError>;
+
+/// Build a `multipart/alternative` SMTP message with text + HTML bodies.
+///
+/// Mirrors the JSON shape sent to Resend (`from`, `to[]`, `subject`,
+/// `html`, `text`) but emits RFC 5322 instead of an HTTP payload. The
+/// returned `Message` is ready to hand to `AsyncSmtpTransport::send`.
+fn build_smtp_message(
+    from_name: &str,
+    from_email: &str,
+    to: &str,
+    subject: &str,
+    text_body: &str,
+    html_body: &str,
+) -> Result<Message, EmailError> {
+    let from: Mailbox = format!("{} <{}>", from_name, from_email)
+        .parse()
+        .map_err(|e| EmailError::Smtp(format!("invalid From address: {e}")))?;
+    let to: Mailbox = to
+        .parse()
+        .map_err(|e| EmailError::Smtp(format!("invalid To address: {e}")))?;
+    Message::builder()
+        .from(from)
+        .to(to)
+        .subject(subject)
+        .multipart(
+            MultiPart::alternative()
+                .singlepart(SinglePart::plain(text_body.to_string()))
+                .singlepart(SinglePart::html(html_body.to_string())),
+        )
+        .map_err(|e| EmailError::Smtp(format!("message build error: {e}")))
+}
 
 #[derive(Serialize)]
 struct ResendEmailRequest {
@@ -138,44 +191,58 @@ struct ResendEmailResponse {
     id: String,
 }
 
+/// Backend wire-format that actually delivers an email.
+///
+/// `Resend` keeps a long-lived `HttpClient` so the circuit breaker, retry,
+/// and tracing instrumentation configured at construction time apply to every
+/// `POST /emails`. `Smtp` holds a pooled `AsyncSmtpTransport` which reuses
+/// connections across sends.
+#[derive(Clone)]
+pub enum EmailTransportImpl {
+    Resend {
+        client: Arc<HttpClient>,
+        api_key: String,
+        base_url: String,
+    },
+    Smtp(AsyncSmtpTransport<lettre::Tokio1Executor>),
+}
+
+impl std::fmt::Debug for EmailTransportImpl {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Resend { base_url, .. } => f
+                .debug_struct("Resend")
+                .field("base_url", base_url)
+                .finish(),
+            Self::Smtp(_) => f.debug_struct("Smtp").finish_non_exhaustive(),
+        }
+    }
+}
+
 pub struct EmailService {
-    client: HttpClient,
-    api_key: String,
+    transport: EmailTransportImpl,
     from_email: String,
     from_name: String,
-    base_url: String,
     frontend_url: String,
     templates: Option<EmailTemplates>,
     /// Optional in-memory capture used in test mode. When `Some`, outbound
     /// HTTP requests are skipped and the rendered email is recorded instead.
     capture: Option<TestEmailCapture>,
+    /// Which backend is configured. Mirrors `transport` for ergonomic access
+    /// (logs, instrumentation, `is_configured`).
+    kind: EmailTransportKind,
 }
 
 impl EmailService {
     pub fn new(config: &AppConfig) -> Self {
-        let api_key = config.resend_api_key.clone();
         let from_email = config.email_from.clone();
         let from_name = if config.email_from_name.is_empty() {
-            Self::translate_for_request("app.name", None)
+            Self::translate_for_request_static("app.name")
         } else {
             config.email_from_name.clone()
         };
-        let base_url = "https://api.resend.com".to_string();
         let frontend_url = config.frontend_url.clone();
 
-        let http_config = HttpClientConfig {
-            timeout: std::time::Duration::from_secs(10),
-            max_retries: 3,
-            retry_base_delay: std::time::Duration::from_millis(100),
-            circuit_breaker_threshold: 5,
-            circuit_breaker_timeout: std::time::Duration::from_secs(60),
-        };
-
-        let client = HttpClient::new(http_config).expect("Failed to create HTTP client");
-
-        // Template loading is best-effort: if templates fail to compile (which
-        // is statically impossible because they are bundled), we fall back to
-        // the legacy inline HTML implementations.
         let templates = match EmailTemplates::new() {
             Ok(t) => Some(t),
             Err(err) => {
@@ -184,15 +251,62 @@ impl EmailService {
             },
         };
 
+        let (transport, kind) = match config.email_transport {
+            EmailTransportKind::Resend => {
+                let http_config = HttpClientConfig {
+                    timeout: std::time::Duration::from_secs(10),
+                    max_retries: 3,
+                    retry_base_delay: std::time::Duration::from_millis(100),
+                    circuit_breaker_threshold: 5,
+                    circuit_breaker_timeout: std::time::Duration::from_secs(60),
+                };
+                let client =
+                    Arc::new(HttpClient::new(http_config).expect("Failed to create HTTP client"));
+                let api_key = config.resend_api_key.clone();
+                let base_url = "https://api.resend.com".to_string();
+                let impl_ = EmailTransportImpl::Resend {
+                    client,
+                    api_key,
+                    base_url,
+                };
+                (impl_, EmailTransportKind::Resend)
+            },
+            EmailTransportKind::Smtp => {
+                let url = config.smtp_url.clone();
+                if url.is_empty() {
+                    tracing::warn!(
+                        "EMAIL_TRANSPORT=smtp but SMTP_URL is empty; the service will be unconfigured"
+                    );
+                }
+                let timeout = std::time::Duration::from_secs(config.smtp_timeout_secs.max(1));
+                // Build the async transport; if the URL is malformed we fall back
+                // to a no-op transport that will surface as a Smtp error on send.
+                let smtp = match AsyncSmtpTransport::<lettre::Tokio1Executor>::from_url(&url) {
+                    Ok(builder) => builder.timeout(Some(timeout)).build(),
+                    Err(err) => {
+                        tracing::error!(error = %err, "invalid SMTP_URL; email delivery will fail until corrected");
+                        // Build with a localhost placeholder so the service still
+                        // constructs; the first send will surface the real error.
+                        AsyncSmtpTransport::<lettre::Tokio1Executor>::from_url(
+                            "smtp://127.0.0.1:25",
+                        )
+                        .expect("fallback SMTP transport must construct")
+                        .timeout(Some(timeout))
+                        .build()
+                    },
+                };
+                (EmailTransportImpl::Smtp(smtp), EmailTransportKind::Smtp)
+            },
+        };
+
         Self {
-            client,
-            api_key,
+            transport,
             from_email,
             from_name,
-            base_url,
             frontend_url,
             templates,
             capture: None,
+            kind,
         }
     }
 
@@ -216,6 +330,12 @@ impl EmailService {
             },
             _ => raw,
         }
+    }
+
+    /// Same as [`translate_for_request`] but with no interpolation args.
+    /// Used during struct construction (no request context available).
+    fn translate_for_request_static(key: &str) -> String {
+        Self::translate_for_request(key, None)
     }
 
     /// Resolve the per-request locale identifier, falling back to the
@@ -250,7 +370,15 @@ impl EmailService {
     }
 
     pub fn is_configured(&self) -> bool {
-        !self.api_key.is_empty()
+        match &self.transport {
+            EmailTransportImpl::Resend { api_key, .. } => !api_key.is_empty(),
+            EmailTransportImpl::Smtp(_) => true,
+        }
+    }
+
+    /// Which backend this service was configured to use.
+    pub fn transport_kind(&self) -> EmailTransportKind {
+        self.kind.clone()
     }
 
     /// Return the configured frontend base URL (used to build action URLs).
@@ -332,7 +460,8 @@ impl EmailService {
 
         if !self.is_configured() {
             tracing::warn!(
-                "Email service not configured (missing RESEND_API_KEY), skipping email to {}",
+                "Email service not configured (transport={:?}); skipping email to {}",
+                self.kind,
                 to
             );
             return Err(EmailError::NotConfigured(Self::translate_for_request(
@@ -344,8 +473,6 @@ impl EmailService {
         let safe_to = sanitize_for_email(to);
         let safe_subject = sanitize_for_email(subject);
         let safe_body = sanitize_for_html_email(body);
-
-        // Clone for logging since they'll be moved into request
         let log_to = safe_to.clone();
         let log_subject = safe_subject.clone();
 
@@ -353,46 +480,79 @@ impl EmailService {
             .map(sanitize_for_html_email)
             .unwrap_or_else(|| self.wrap_html(&safe_subject, &safe_body));
 
-        let request = ResendEmailRequest {
-            from: format!("{} <{}>", self.from_name, self.from_email),
-            to: vec![safe_to],
-            subject: safe_subject,
-            html,
-            text: Some(safe_body),
-        };
-
-        let url = format!("{}/emails", self.base_url);
-
-        let response = self
-            .client
-            .post(&url)
-            .await
-            .header("Authorization", &format!("Bearer {}", self.api_key))
-            .header("Content-Type", "application/json")
-            .json(&request)
-            .send()
-            .await
-            .map_err(EmailError::HttpError)?;
-
-        let status = response.status();
-        let response_text = response.text().await.map_err(HttpClientError::HttpError)?;
-
-        if status.is_success() {
-            let _resend_response: ResendEmailResponse = serde_json::from_str(&response_text)
-                .map_err(|e| EmailError::SendFailed(format!("Invalid response: {}", e)))?;
-            tracing::info!(to = %log_to, subject = %log_subject, "Email sent successfully");
-            Ok(())
-        } else {
-            tracing::error!(
-                to = %log_to,
-                status = %status,
-                response = %response_text,
-                "Failed to send email via Resend"
-            );
-            Err(EmailError::SendFailed(format!(
-                "Resend API error ({}): {}",
-                status, response_text
-            )))
+        match &self.transport {
+            EmailTransportImpl::Resend {
+                client,
+                api_key,
+                base_url,
+            } => {
+                let request = ResendEmailRequest {
+                    from: format!("{} <{}>", self.from_name, self.from_email),
+                    to: vec![safe_to],
+                    subject: safe_subject,
+                    html,
+                    text: Some(safe_body),
+                };
+                let url = format!("{}/emails", base_url);
+                let response = client
+                    .post(&url)
+                    .await
+                    .header("Authorization", &format!("Bearer {}", api_key))
+                    .header("Content-Type", "application/json")
+                    .json(&request)
+                    .send()
+                    .await
+                    .map_err(EmailError::HttpError)?;
+                let status = response.status();
+                let response_text = response.text().await.map_err(HttpClientError::HttpError)?;
+                if status.is_success() {
+                    let _resend_response: ResendEmailResponse =
+                        serde_json::from_str(&response_text).map_err(|e| {
+                            EmailError::SendFailed(format!("Invalid response: {}", e))
+                        })?;
+                    tracing::info!(to = %log_to, subject = %log_subject, "Email sent successfully");
+                    Ok(())
+                } else {
+                    tracing::error!(
+                        to = %log_to,
+                        status = %status,
+                        response = %response_text,
+                        "Failed to send email via Resend"
+                    );
+                    Err(EmailError::SendFailed(format!(
+                        "Resend API error ({}): {}",
+                        status, response_text
+                    )))
+                }
+            },
+            EmailTransportImpl::Smtp(transport) => {
+                let message = build_smtp_message(
+                    &self.from_name,
+                    &self.from_email,
+                    &safe_to,
+                    &safe_subject,
+                    &safe_body,
+                    &html,
+                )?;
+                let response = transport.send(message).await.map_err(EmailError::from)?;
+                let code: u16 = response.code().into();
+                if (200..300).contains(&code) {
+                    tracing::info!(to = %log_to, subject = %log_subject, code = %code, "Email sent successfully via SMTP");
+                    Ok(())
+                } else {
+                    let server_msg = response.message().collect::<Vec<_>>().join("; ");
+                    tracing::error!(
+                        to = %log_to,
+                        code = %code,
+                        response = %server_msg,
+                        "Failed to send email via SMTP"
+                    );
+                    Err(EmailError::SendFailed(format!(
+                        "SMTP error ({}): {}",
+                        code, server_msg
+                    )))
+                }
+            },
         }
     }
 
@@ -722,5 +882,40 @@ mod tests {
         let service = EmailService::new(&config);
         let url = service.resolve_url("https://example.com/x");
         assert_eq!(url, "https://example.com/x");
+    }
+
+    #[test]
+    fn smtp_backend_is_always_configured() {
+        // When transport is Smtp, `is_configured` returns true regardless of
+        // RESEND_API_KEY, because SMTP delivery doesn't need an API key
+        // (mailcatcher and unauthenticated relays are valid).
+        let mut config = test_config();
+        config.email_transport = EmailTransportKind::Smtp;
+        config.smtp_url = "smtp://localhost:1025/?tls=opportunistic".to_string();
+        config.resend_api_key = String::new();
+        let service = EmailService::new(&config);
+        assert!(service.is_configured());
+        assert_eq!(service.transport_kind(), EmailTransportKind::Smtp);
+    }
+
+    #[test]
+    fn smtp_backend_builds_even_with_invalid_url() {
+        // A malformed SMTP_URL should still construct the service (so the app
+        // can boot) but the first send will surface the underlying error.
+        let mut config = test_config();
+        config.email_transport = EmailTransportKind::Smtp;
+        config.smtp_url = "this-is-not-a-valid-smtp-url".to_string();
+        let service = EmailService::new(&config);
+        assert!(service.is_configured());
+    }
+
+    #[test]
+    fn resend_backend_unconfigured_without_api_key() {
+        let mut config = test_config();
+        config.email_transport = EmailTransportKind::Resend;
+        config.resend_api_key = String::new();
+        let service = EmailService::new(&config);
+        assert!(!service.is_configured());
+        assert_eq!(service.transport_kind(), EmailTransportKind::Resend);
     }
 }
