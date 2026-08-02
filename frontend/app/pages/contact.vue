@@ -80,30 +80,30 @@
                   <div class="grid md:grid-cols-2 gap-6">
                     <!-- Name -->
                     <div class="form-control">
-                      <label class="label">
-                        <span class="label-text font-medium text-on-surface">Full Name</span>
-                        <span class="text-error">*</span>
+                      <label class="label-text font-semibold" for="contactName">
+                        Full Name <span class="text-error">*</span>
                       </label>
                       <input
+                        id="contactName"
                         v-model="form.name"
                         type="text"
                         placeholder="Your name"
-                        class="input input-bordered w-full bg-surface"
+                        class="input w-full"
                         required
                       />
                     </div>
 
                     <!-- Email -->
                     <div class="form-control">
-                      <label class="label">
-                        <span class="label-text font-medium text-on-surface">Email</span>
-                        <span class="text-error">*</span>
+                      <label class="label-text font-semibold" for="contactEmail">
+                        Email <span class="text-error">*</span>
                       </label>
                       <input
+                        id="contactEmail"
                         v-model="form.email"
                         type="email"
                         placeholder="you@example.com"
-                        class="input input-bordered w-full bg-surface"
+                        class="input w-full"
                         required
                       />
                     </div>
@@ -112,24 +112,22 @@
                   <div class="grid md:grid-cols-2 gap-6">
                     <!-- Company/Org (optional) -->
                     <div class="form-control">
-                      <label class="label">
-                        <span class="label-text font-medium text-on-surface">Company / Organization</span>
-                      </label>
+                      <label class="label-text font-semibold" for="contactCompany">Company / Organization</label>
                       <input
+                        id="contactCompany"
                         v-model="form.company"
                         type="text"
                         placeholder="Your company (optional)"
-                        class="input input-bordered w-full bg-surface"
+                        class="input w-full"
                       />
                     </div>
 
                     <!-- Subject -->
                     <div class="form-control">
-                      <label class="label">
-                        <span class="label-text font-medium text-on-surface">Subject</span>
-                        <span class="text-error">*</span>
+                      <label class="label-text font-semibold" for="contactSubject">
+                        Subject <span class="text-error">*</span>
                       </label>
-                      <select v-model="form.subject" class="select select-bordered w-full bg-surface" required>
+                      <select id="contactSubject" v-model="form.subject" class="select w-full" required>
                         <option value="">Select a topic...</option>
                         <option value="general">General Inquiry</option>
                         <option value="support">Technical Support</option>
@@ -143,21 +141,21 @@
 
                   <!-- Message -->
                   <div class="form-control">
-                    <label class="label">
-                      <span class="label-text font-medium text-on-surface">Message</span>
-                      <span class="text-error">*</span>
+                    <label class="label-text font-semibold" for="contactMessage">
+                      Message <span class="text-error">*</span>
                     </label>
                     <textarea
+                      id="contactMessage"
                       v-model="form.message"
                       placeholder="How can we help you?"
-                      class="textarea textarea-bordered w-full bg-surface min-h-[150px]"
+                      class="textarea w-full min-h-[150px]"
                       required
                     ></textarea>
                   </div>
 
                   <!-- Privacy Checkbox -->
                   <div class="form-control">
-                    <label class="label cursor-pointer justify-start gap-3">
+                    <label class="flex items-start gap-3 cursor-pointer">
                       <input v-model="form.privacy" type="checkbox" class="checkbox checkbox-primary" required />
                       <span class="label-text text-on-surface-variant">
                         I agree to the <NuxtLink to="/privacy" class="text-primary hover:underline">Privacy Policy</NuxtLink> and understand my data will be used to respond to this inquiry.
