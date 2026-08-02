@@ -453,7 +453,7 @@ jobs:
 
       - name: Start frontend server
         run: |
-          NITRO_PORT=3000 pnpm run preview &
+          PORT=3000 node .output/server/index.mjs &
           echo "FRONTEND_PID=$!" >> $GITHUB_ENV
         working-directory: ./frontend
         env:
