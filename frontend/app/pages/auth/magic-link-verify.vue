@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '~/stores/auth'
 import { mapAuthError } from '~/utils/auth-errors'
@@ -75,6 +75,24 @@ const errorMsg = ref('')
 const successMsg = ref('')
 
 onMounted(async () => {
+  // Wait for auth initialization to avoid race conditions
+  if (!authStore.isInitialized) {
+    try {
+      await authStore.bootstrapSession()
+    } catch {
+      // Ignore bootstrap errors
+    }
+  }
+
+  // Ensure reactivity has propagated after bootstrap
+  await nextTick()
+
+  // If already authenticated, redirect immediately without showing error
+  if (authStore.isAuthenticated || authStore.hasActiveSession) {
+    await router.push(localePath('/admin/dashboard'))
+    return
+  }
+
   const token = route.query.token as string | undefined
   if (!token) {
     errorMsg.value = t('auth.magicLink.invalid')
@@ -84,10 +102,11 @@ onMounted(async () => {
 
   try {
     await authStore.verifyMagicLink(token)
+    // Redirect succeeded — keep isLoading=true so the "Algo deu errado"
+    // fallback block stays hidden during the navigation transition.
     await router.push(localePath('/admin/dashboard'))
   } catch (err: any) {
     errorMsg.value = mapAuthError(err, t, 'auth.magicLink.invalid')
-  } finally {
     isLoading.value = false
   }
 })
