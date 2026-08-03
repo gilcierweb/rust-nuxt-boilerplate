@@ -36,11 +36,11 @@
         <div class="h-full overflow-y-auto">
           <ul class="accordion menu menu-sm gap-1 p-3">
             <!-- Dashboard -->
-            <li id="dashboard" class="accordion-item">
+            <li id="dashboard" class="accordion-item active">
               <button
                 class="accordion-toggle accordion-item-active:bg-neutral/10 inline-flex w-full items-center p-2 text-start text-sm font-normal"
-                aria-controls="dashboard-collapse-dashboard"
                 aria-expanded="true"
+                aria-controls="dashboard-collapse-dashboard"
               >
                 <span class="icon-[tabler--dashboard] size-4.5"></span>
                 <span class="grow">{{ $t('admin.sidebar.dashboard') }}</span>
@@ -48,7 +48,7 @@
               </button>
               <div
                 id="dashboard-collapse-dashboard"
-                class="accordion-content mt-1 hidden w-full overflow-hidden transition-[height] duration-300"
+                class="accordion-content mt-1 block w-full overflow-hidden transition-[height] duration-300"
                 aria-labelledby="dashboard"
                 role="region"
               >
@@ -75,8 +75,8 @@
             <li id="management" class="accordion-item">
               <button
                 class="accordion-toggle accordion-item-active:bg-neutral/10 inline-flex w-full items-center p-2 text-start text-sm font-normal"
+                aria-expanded="false"
                 aria-controls="management-collapse-management"
-                aria-expanded="true"
               >
                 <span class="icon-[tabler--settings] size-4.5"></span>
                 <span class="grow">{{ $t('admin.sidebar.management') }}</span>
@@ -120,11 +120,13 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch, nextTick, computed } from 'vue'
+import { computed, watch, onMounted } from 'vue'
 import { useRoute, useRuntimeConfig, useLocalePath } from '#imports'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '~/stores/auth'
 import { ADMIN_RESOURCES, ADMIN_RESOURCE_SIDEBAR_LABELS } from '~/utils/admin-resources'
+
+type AccordionId = 'dashboard' | 'management'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -150,81 +152,47 @@ const managementItems = computed(() =>
     })),
 )
 
-const ACCORDION_IDS = ['dashboard', 'management'] as const
-
-function getOpenAccordionId(): string {
+// Initial open state is hardcoded in the template (dashboard open, management
+// closed) — identical on server and client, so SSR has no hydration mismatch.
+// On the client, after FlyonUI autoInit() attaches click listeners, we delegate
+// 100% of state management to the native HSAccordion.show()/hide() API:
+// - SPA route changes call syncAccordion() to move the active class on the
+//   correct accordion-item (with the animated transition).
+// - The HTML's "active"/"hidden"/"aria-expanded" attributes on F5/SSR are
+//   already correct, so the submenu is visible before any JS runs.
+function resolveOpenAccordion(): AccordionId {
   if (currentSlug.value === 'dashboard') return 'dashboard'
   if (managementItems.value.some(m => m.slug === currentSlug.value)) return 'management'
   return 'dashboard'
 }
 
-function applyAccordionState(targetId: string) {
-  const sidebar = document.querySelector('#layout-sidebar')
-  if (!sidebar) return
-
-  for (const id of ACCORDION_IDS) {
-    const item = sidebar.querySelector<HTMLElement>(`#${id}`)
-    if (!item) continue
-
-    const content = item.querySelector<HTMLElement>('.accordion-content')
-    const button = item.querySelector<HTMLElement>('.accordion-toggle')
-    if (!content || !button) continue
-
-    const shouldOpen = id === targetId
-
-    if (shouldOpen) {
-      item.classList.add('active')
-      content.classList.remove('hidden')
-      content.style.display = ''
-      button.setAttribute('aria-expanded', 'true')
-    } else {
-      item.classList.remove('active')
-      content.classList.add('hidden')
-      content.style.display = ''
-      button.setAttribute('aria-expanded', 'false')
-    }
+function syncAccordion() {
+  if (typeof window === 'undefined' || !window.HSAccordion) return
+  const target = resolveOpenAccordion()
+  for (const id of ['dashboard', 'management'] as const) {
+    if (id === target) window.HSAccordion.show(`#${id}`)
+    else window.HSAccordion.hide(`#${id}`)
   }
 }
-
-function syncAccordion() {
-  const sidebar = document.querySelector('#layout-sidebar')
-  if (!sidebar) return
-
-  const targetId = getOpenAccordionId()
-  const items = sidebar.querySelectorAll<HTMLElement>('.accordion-item')
-
-  items.forEach((item) => {
-    const instance = (item as Record<string, unknown>) as { _hsAccordion?: { show(): void; hide(): void } }
-    const shouldOpen = item.id === targetId
-
-    if (instance._hsAccordion) {
-      if (shouldOpen) instance._hsAccordion.show()
-      else instance._hsAccordion.hide()
-    } else {
-      applyAccordionState(targetId)
-    }
-  })
-}
-
-onMounted(() => {
-  nextTick(() => {
-    setTimeout(() => {
-      syncAccordion()
-    }, 50)
-  })
-})
 
 watch(
   () => route.path,
   () => {
-    nextTick(() => {
-      syncAccordion()
-    })
-
+    syncAccordion()
     if (typeof window !== 'undefined' && window.HSOverlay) {
       const el = document.querySelector('#layout-sidebar')
       if (el) window.HSOverlay.close(el)
     }
   },
 )
+
+onMounted(() => {
+  // Run autoInit on this sidebar so its toggle buttons have native FlyonUI
+  // listeners even before the global plugin's setTimeout fires. Then sync the
+  // accordion to the actual current route (in case SSR default doesn't match).
+  if (typeof window !== 'undefined' && window.HSStaticMethods) {
+    window.HSStaticMethods.autoInit()
+  }
+  syncAccordion()
+})
 </script>

@@ -213,7 +213,8 @@
         "displayName": "Nome de exibição",
         "email": "Email"
       },
-      "empty": "Nenhum usuário encontrado."
+      "empty": "Nenhum usuário encontrado.",
+      "notFound": "Usuário não encontrado."
     },
     "auditLogs": {
       "title": "Auditoria",

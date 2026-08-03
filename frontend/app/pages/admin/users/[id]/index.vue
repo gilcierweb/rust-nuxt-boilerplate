@@ -51,7 +51,7 @@
           <p class="mt-1 break-all text-base-content">{{ item.id }}</p>
         </div>
         <div>
-          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.account.fields.email') }}</p>
+          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.email') }}</p>
           <p class="mt-1 text-base-content">{{ item.email || '—' }}</p>
         </div>
         <div>

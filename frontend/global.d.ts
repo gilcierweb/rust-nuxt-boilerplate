@@ -24,6 +24,13 @@ declare global {
       close: (el: HTMLElement | string) => void;
       getInstance: (el: HTMLElement | string, isInstance?: boolean) => unknown;
     };
+    // FlyonUI Accordion static API (native, from flyonui/flyonui)
+    HSAccordion: {
+      show: (el: HTMLElement | string) => void;
+      hide: (el: HTMLElement | string) => void;
+      getInstance: (el: HTMLElement | string, isInstance?: boolean) => unknown;
+      autoInit: () => void;
+    };
   }
 }
 

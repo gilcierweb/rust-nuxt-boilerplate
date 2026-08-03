@@ -99,6 +99,14 @@
         "firstName": "Nome",
         "lastName": "Sobrenome"
       },
+      "fields": {
+        "displayName": "Nome de exibição",
+        "email": "Email",
+        "firstName": "Nome",
+        "lastName": "Sobrenome",
+        "fullName": "Nome completo",
+        "nickname": "Apelido"
+      },
       "empty": "Nenhum usuário encontrado."
     },
     "auditLogs": {
