@@ -170,8 +170,10 @@ test('should toggle password visibility', async ({ page }) => {
     await page.goto('/auth/reset-password?token=valid-token-123')
     const pw = page.getByLabel(a.resetPassword.newPassword)
     await expect(pw).toHaveAttribute('type', 'password')
-    // Button is absolutely positioned outside viewport in CI; use dispatchEvent to bypass viewport check
-    await page.getByLabel('toggle password visibility').dispatchEvent('click')
+    // Button is absolutely positioned outside viewport in CI; use evaluate for real DOM click
+    await page.evaluate(() => {
+      (document.querySelector('[aria-label="toggle password visibility"]') as HTMLElement)?.click()
+    })
     await expect(pw).toHaveAttribute('type', 'text')
   })
 
