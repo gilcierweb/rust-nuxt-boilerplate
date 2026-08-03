@@ -72,6 +72,7 @@ const authStore = useAuthStore()
 
 const isLoading = ref(true)
 const errorMsg = ref('')
+const successMsg = ref('')
 
 onMounted(async () => {
   const token = route.query.token as string | undefined
