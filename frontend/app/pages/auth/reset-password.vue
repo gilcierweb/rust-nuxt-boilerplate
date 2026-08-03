@@ -26,24 +26,26 @@
 
       <div>
         <label class="label-text mb-1.5 block" for="password">{{ $t('auth.resetPassword.newPassword') }}</label>
-        <div class="relative">
-          <Icon name="heroicons:lock-closed" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
-          <input
-            id="password"
-            v-model="password"
-            :type="showPw ? 'text' : 'password'"
-            autocomplete="new-password"
-            :placeholder="$t('auth.resetPassword.newPasswordPlaceholder')"
-            class="input input-lg pl-10 w-full"
-            :class="{ 'is-invalid': errors.password }"
-          />
+        <div class="flex items-center">
+          <div class="relative flex-1">
+            <Icon name="heroicons:lock-closed" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+            <input
+              id="password"
+              v-model="password"
+              :type="showPw ? 'text' : 'password'"
+              autocomplete="new-password"
+              :placeholder="$t('auth.resetPassword.newPasswordPlaceholder')"
+              class="input input-lg pl-10 w-full"
+              :class="{ 'is-invalid': errors.password }"
+            />
+          </div>
           <button
             type="button"
-            class="absolute right-3 top-1/2 -translate-y-1/2 text-base-content/50 hover:text-base-content transition-colors"
+            class="btn btn-text btn-sm shrink-0"
             aria-label="toggle password visibility"
             @click="showPw = !showPw"
           >
-            <Icon :name="showPw ? 'heroicons:eye-slash' : 'heroicons:eye'" class="h-4 w-4" />
+            <Icon :name="showPw ? 'heroicons:eye-slash' : 'heroicons:eye'" class="h-5 w-5" />
           </button>
         </div>
         <span v-if="errors.password" class="text-error text-xs mt-1 block">{{ errors.password }}</span>
