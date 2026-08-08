@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::utils::sanitize::{sanitize_input, strip_html};
+
 /// Maximum raw WebSocket message size in bytes (64 KiB).
 pub const MAX_WS_MESSAGE_BYTES: usize = 64 * 1024;
 
@@ -145,6 +147,15 @@ fn validate_join_room(data: serde_json::Value) -> Result<WsClientAction, WsValid
         ));
     }
 
+    let room = sanitize_input(&strip_html(room));
+
+    if room.is_empty() {
+        return Err(WsValidationError::new(
+            "EMPTY_FIELD",
+            t!("ws.empty_field", field = "data.room").into_owned(),
+        ));
+    }
+
     if room.len() > MAX_ROOM_NAME_LENGTH {
         return Err(WsValidationError::new(
             "FIELD_TOO_LONG",
@@ -157,9 +168,7 @@ fn validate_join_room(data: serde_json::Value) -> Result<WsClientAction, WsValid
         ));
     }
 
-    Ok(WsClientAction::JoinRoom {
-        room: room.to_string(),
-    })
+    Ok(WsClientAction::JoinRoom { room })
 }
 
 fn validate_chat(data: serde_json::Value) -> Result<WsClientAction, WsValidationError> {
@@ -180,6 +189,15 @@ fn validate_chat(data: serde_json::Value) -> Result<WsClientAction, WsValidation
         ));
     }
 
+    let content = sanitize_input(&strip_html(content));
+
+    if content.is_empty() {
+        return Err(WsValidationError::new(
+            "EMPTY_FIELD",
+            t!("ws.empty_field", field = "data.content").into_owned(),
+        ));
+    }
+
     if content.len() > MAX_CHAT_CONTENT_LENGTH {
         return Err(WsValidationError::new(
             "FIELD_TOO_LONG",
@@ -192,9 +210,7 @@ fn validate_chat(data: serde_json::Value) -> Result<WsClientAction, WsValidation
         ));
     }
 
-    Ok(WsClientAction::Chat {
-        content: content.to_string(),
-    })
+    Ok(WsClientAction::Chat { content })
 }
 
 /// Validate that `data` is a JSON object (used for actions that accept optional fields).
@@ -416,5 +432,38 @@ mod tests {
         let err = validate_client_message(r#"{"action":"join_room","data":"not-an-object"}"#)
             .unwrap_err();
         assert_eq!(err.error.code, "MISSING_FIELD");
+    }
+
+    #[test]
+    fn chat_strips_html_from_content() {
+        let msg = r#"{"action":"chat","data":{"content":"<script>alert(1)</script>hello"}}"#;
+        let result = validate_client_message(msg).unwrap();
+        match result {
+            WsClientAction::Chat { content } => {
+                assert!(!content.contains("<script>"));
+                assert!(content.contains("hello"));
+            }
+            _ => panic!("expected Chat"),
+        }
+    }
+
+    #[test]
+    fn chat_rejects_html_only_content() {
+        let msg = r#"{"action":"chat","data":{"content":"<img src=x onerror=alert(1)>"}}"#;
+        let err = validate_client_message(msg).unwrap_err();
+        assert_eq!(err.error.code, "EMPTY_FIELD");
+    }
+
+    #[test]
+    fn join_room_strips_html_from_room_name() {
+        let msg = r#"{"action":"join_room","data":{"room":"<b>general</b>"}}"#;
+        let result = validate_client_message(msg).unwrap();
+        match result {
+            WsClientAction::JoinRoom { room } => {
+                assert!(!room.contains("<b>"));
+                assert!(room.contains("general"));
+            }
+            _ => panic!("expected JoinRoom"),
+        }
     }
 }

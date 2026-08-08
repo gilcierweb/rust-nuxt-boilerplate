@@ -40,7 +40,6 @@ pub fn sanitize_html(input: &str) -> String {
     ammonia::Builder::new().tags(tags).clean(input).to_string()
 }
 
-#[allow(dead_code)]
 pub fn strip_html(input: &str) -> String {
     ammonia::Builder::new()
         .tags(HashSet::new())

@@ -8,6 +8,7 @@ use crate::errors::{AppError, AppResult};
 use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::container::AppContainer;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
+use crate::utils::sanitize::{sanitize_input, strip_html};
 use crate::utils::validation::first_validation_error_message;
 
 /// List audit logs with pagination and optional sorting.
@@ -103,7 +104,19 @@ pub async fn create_audit_log(
     body: web::Json<NewAuditLog>,
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::AuditLogs, AbilityAction::Create)?;
-    let payload = body.into_inner();
+    let mut payload = body.into_inner();
+    payload.actor_role_snapshot = payload
+        .actor_role_snapshot
+        .as_ref()
+        .map(|value| sanitize_input(&strip_html(value)))
+        .filter(|value| !value.trim().is_empty());
+    payload.action = sanitize_input(&strip_html(&payload.action));
+    payload.resource_type = sanitize_input(&strip_html(&payload.resource_type));
+    payload.user_agent = payload
+        .user_agent
+        .as_ref()
+        .map(|value| sanitize_input(&strip_html(value)))
+        .filter(|value| !value.trim().is_empty());
     payload
         .validate()
         .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
@@ -246,5 +259,72 @@ mod tests {
         let body = to_bytes(resp.into_body()).await.unwrap();
         let json: Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(json["data"].as_array().map(|items| items.len()), Some(1));
+    }
+
+    #[actix_web::test]
+    async fn create_audit_log_strips_html_from_text_fields() {
+        use crate::models::audit_log::NewAuditLog;
+
+        let mut container = mock_container();
+        let mut repo = MockIAuditLogRepository::new();
+        repo.expect_create().times(1).returning(|payload: &NewAuditLog| {
+            assert!(!payload.action.contains("<script>"));
+            assert!(payload.action.contains("user.create"));
+            assert!(payload
+                .actor_role_snapshot
+                .as_ref()
+                .map(|s| !s.contains("<img"))
+                .unwrap_or(true));
+            assert!(payload
+                .user_agent
+                .as_ref()
+                .map(|s| !s.contains("<script>"))
+                .unwrap_or(true));
+            Ok(AuditLog {
+                id: Uuid::new_v4(),
+                actor_user_id: payload.actor_user_id,
+                actor_role_snapshot: payload.actor_role_snapshot.clone(),
+                action: payload.action.clone(),
+                resource_type: payload.resource_type.clone(),
+                resource_id: payload.resource_id,
+                ip_address: None,
+                user_agent: payload.user_agent.clone(),
+                request_id: None,
+                changes: json!({}),
+                metadata: json!({}),
+                created_at: Utc::now(),
+                prev_hash: None,
+                hash: "a".repeat(64),
+            })
+        });
+        container.domain_audit_logs = Arc::new(repo);
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(test_config),
+        )
+        .await;
+
+        let req = test::TestRequest::post()
+            .uri("/admin/audit-logs")
+            .insert_header((
+                actix_web::http::header::AUTHORIZATION,
+                format!("Bearer {}", test_token()),
+            ))
+            .insert_header(("x-test-authorities", "ROLE_ADMIN,audit_logs:create"))
+            .set_json(json!({
+                "actor_user_id": Uuid::new_v4(),
+                "actor_role_snapshot": "<img src=x onerror=alert(1)>admin",
+                "action": "user.<script>alert(1)</script>create",
+                "resource_type": "User",
+                "user_agent": "<script>x</script>Mozilla/5.0",
+                "changes": {},
+                "metadata": {},
+                "hash": "a".repeat(64),
+            }))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::CREATED);
     }
 }

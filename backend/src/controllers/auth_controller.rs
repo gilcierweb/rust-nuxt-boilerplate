@@ -1243,7 +1243,7 @@ pub async fn enable_2fa(
     body: web::Json<Enable2FARequest>,
 ) -> AppResult<HttpResponse> {
     body.validate()
-        .map_err(|e| AppError::Validation(e.to_string()))?;
+        .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
     let user_id = user.claims().sub;
 
@@ -1328,7 +1328,7 @@ pub async fn disable_2fa(
     body: web::Json<Enable2FARequest>,
 ) -> AppResult<HttpResponse> {
     body.validate()
-        .map_err(|e| AppError::Validation(e.to_string()))?;
+        .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
     let user_id = user.claims().sub;
 
