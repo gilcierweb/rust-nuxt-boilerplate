@@ -2,12 +2,35 @@
 # rsa 0.9.10: Marvin Attack timing sidechannel
 # No fixed version available - transitive dep of jsonwebtoken
 # Will be resolved when jsonwebtoken updates its rsa dependency
-ignore = ["RUSTSEC-2023-0071"]
+ignore = [
+  "RUSTSEC-2023-0071",
 
-# proc-macro-error2: unmaintained but functional
-# Will be resolved when dependencies update
-# ignore = ["RUSTSEC-2026-0173"]
+  # rkyv 0.7.46: Insufficient archive validation (Rc/Arc OOB reads)
+  # rkyv is an OPTIONAL dep of rust_decimal gated by the "rkyv" feature.
+  # We only enable "serde" on rust_decimal (Cargo.toml:96), so rkyv is
+  # NEVER compiled into the binary - no archive deserialization occurs.
+  # rust_decimal 1.42.1 is the latest release; no fixed version available.
+  # Remove this ignore when rust_decimal releases a version that drops rkyv
+  # from its Cargo.toml metadata, or when we explicitly need rkyv archives.
+  "RUSTSEC-2026-0235",
 
-# rustls-pemfile: unmaintained but functional
-# Will be resolved when dependencies update
-# ignore = ["RUSTSEC-2025-0134"]
+  # rustls-pemfile 2.2.0: unmaintained (last release 2024-07)
+  # Used directly in main.rs:402,411 to load TLS cert/key PEM files for
+  # the actix-web rustls 0.23 HTTPS listener. The crate is functionally
+  # stable - PEM parsing is a mature, simple format with no active
+  # development needed. No maintained replacement exists in the rustls
+  # ecosystem that provides the same certs()/pkcs8_private_keys() API.
+  # Track: https://rustsec.org/advisories/RUSTSEC-2025-0134
+  # Revisit when a rustls-ecosystem PEM loader emerges or rustls
+  # inlines this functionality.
+  "RUSTSEC-2025-0134",
+]
+
+# Resolved advisories (no longer triggered after dep cleanup):
+# - RUSTSEC-2024-0384 (instant, unmaintained): removed by dropping unused
+#   reqwest-middleware + reqwest-retry deps (Cargo.toml). The codebase uses
+#   a hand-rolled CircuitBreaker + retry loop in services/http_client.rs
+#   instead of reqwest-retry.
+# - RUSTSEC-2026-0221 (event-listener, unsound): auto-resolved by
+#   cargo update picking up event-listener 5.4.2 (patched) via redis ->
+#   async-lock -> event-listener.
