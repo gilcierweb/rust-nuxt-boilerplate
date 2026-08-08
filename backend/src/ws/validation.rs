@@ -442,7 +442,7 @@ mod tests {
             WsClientAction::Chat { content } => {
                 assert!(!content.contains("<script>"));
                 assert!(content.contains("hello"));
-            }
+            },
             _ => panic!("expected Chat"),
         }
     }
@@ -462,7 +462,7 @@ mod tests {
             WsClientAction::JoinRoom { room } => {
                 assert!(!room.contains("<b>"));
                 assert!(room.contains("general"));
-            }
+            },
             _ => panic!("expected JoinRoom"),
         }
     }

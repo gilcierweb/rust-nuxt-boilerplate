@@ -267,36 +267,42 @@ mod tests {
 
         let mut container = mock_container();
         let mut repo = MockIAuditLogRepository::new();
-        repo.expect_create().times(1).returning(|payload: &NewAuditLog| {
-            assert!(!payload.action.contains("<script>"));
-            assert!(payload.action.contains("user.create"));
-            assert!(payload
-                .actor_role_snapshot
-                .as_ref()
-                .map(|s| !s.contains("<img"))
-                .unwrap_or(true));
-            assert!(payload
-                .user_agent
-                .as_ref()
-                .map(|s| !s.contains("<script>"))
-                .unwrap_or(true));
-            Ok(AuditLog {
-                id: Uuid::new_v4(),
-                actor_user_id: payload.actor_user_id,
-                actor_role_snapshot: payload.actor_role_snapshot.clone(),
-                action: payload.action.clone(),
-                resource_type: payload.resource_type.clone(),
-                resource_id: payload.resource_id,
-                ip_address: None,
-                user_agent: payload.user_agent.clone(),
-                request_id: None,
-                changes: json!({}),
-                metadata: json!({}),
-                created_at: Utc::now(),
-                prev_hash: None,
-                hash: "a".repeat(64),
-            })
-        });
+        repo.expect_create()
+            .times(1)
+            .returning(|payload: &NewAuditLog| {
+                assert!(!payload.action.contains("<script>"));
+                assert!(payload.action.contains("user.create"));
+                assert!(
+                    payload
+                        .actor_role_snapshot
+                        .as_ref()
+                        .map(|s| !s.contains("<img"))
+                        .unwrap_or(true)
+                );
+                assert!(
+                    payload
+                        .user_agent
+                        .as_ref()
+                        .map(|s| !s.contains("<script>"))
+                        .unwrap_or(true)
+                );
+                Ok(AuditLog {
+                    id: Uuid::new_v4(),
+                    actor_user_id: payload.actor_user_id,
+                    actor_role_snapshot: payload.actor_role_snapshot.clone(),
+                    action: payload.action.clone(),
+                    resource_type: payload.resource_type.clone(),
+                    resource_id: payload.resource_id,
+                    ip_address: None,
+                    user_agent: payload.user_agent.clone(),
+                    request_id: None,
+                    changes: json!({}),
+                    metadata: json!({}),
+                    created_at: Utc::now(),
+                    prev_hash: None,
+                    hash: "a".repeat(64),
+                })
+            });
         container.domain_audit_logs = Arc::new(repo);
 
         let app = test::init_service(
