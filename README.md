@@ -561,6 +561,25 @@ See [`.env.example`](.env.example) for complete list.
 
 ## 🔧 Technical Notes
 
+### ⚠️ Rust Build Disk Space Warning
+
+During Rust development, the `target/` directory accumulates build artifacts rapidly. Each build can add hundreds of megabytes, and over time this grows to **10GB, 20GB, 30GB or more** on your disk.
+
+**Run `cargo clean` regularly to reclaim space:**
+
+```bash
+# From the backend directory
+cd backend
+cargo clean
+
+# Or clean all Cargo projects at once (from repo root)
+cargo clean --workspace
+```
+
+Consider adding a cron job or git hook to automate this, or use `cargo sweep` (`cargo install cargo-sweep`) for smarter cleaning that preserves recent builds.
+
+---
+
 ### TanStack Table Optimization (Admin Panel)
 
 Admin list pages (`/admin/users`, `/admin/roles`, `/admin/audit-logs`) use **TanStack Table v8** with server-side pagination/sorting. To eliminate flash/re-mount on pagination, sort, or navigation:
