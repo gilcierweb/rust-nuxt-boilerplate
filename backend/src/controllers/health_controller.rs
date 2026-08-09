@@ -1,5 +1,5 @@
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, web};
+use actix_web::{HttpResponse, get, web};
 use chrono::Utc;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
@@ -41,6 +41,7 @@ pub struct HealthResponse {
         (status = 503, description = "One or more dependencies are unreachable", body = HealthResponse)
     )
 )]
+#[get("/health")]
 pub async fn health_check(state: web::Data<AppState>) -> HttpResponse {
     // --- DB probe with timing ---
     let db_probe_start = std::time::Instant::now();
@@ -122,4 +123,9 @@ pub async fn health_check(state: web::Data<AppState>) -> HttpResponse {
     };
 
     HttpResponse::build(status_code).json(response)
+}
+
+/// Register health-check route (relative path — mounted under `/api/v1` scope by `router.rs`).
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(health_check);
 }

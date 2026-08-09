@@ -5,3 +5,4 @@ pub mod metrics_controller;
 pub mod roles_controller;
 pub mod upload_controller;
 pub mod users_controller;
+pub mod webhooks_controller;

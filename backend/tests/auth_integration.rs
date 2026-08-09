@@ -254,10 +254,7 @@ async fn test_full_auth_cycle() {
                             .service(backend::controllers::auth_controller::enable_2fa)
                             .service(backend::controllers::auth_controller::disable_2fa),
                     )
-                    .route(
-                        "/health",
-                        web::get().to(backend::controllers::health_controller::health_check),
-                    ),
+                    .service(backend::controllers::health_controller::health_check),
             ),
     )
     .await;
@@ -470,14 +467,9 @@ async fn test_health_endpoint() {
         translations: backend::services::translation_service::Translations::default(),
     });
 
-    let app = test::init_service(
-        App::new()
-            .app_data(state)
-            .service(web::scope("/api/v1").route(
-                "/health",
-                web::get().to(backend::controllers::health_controller::health_check),
-            )),
-    )
+    let app = test::init_service(App::new().app_data(state).service(
+        web::scope("/api/v1").service(backend::controllers::health_controller::health_check),
+    ))
     .await;
 
     let resp = test::call_service(

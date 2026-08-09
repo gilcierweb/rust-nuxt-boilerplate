@@ -21,8 +21,8 @@ use utoipa::{Modify, OpenApi};
         crate::controllers::auth_controller::me,
         crate::controllers::auth_controller::confirm,
         // -- webhooks
-        crate::controllers::auth_controller::stripe_webhook,
-        crate::controllers::auth_controller::pix_webhook,
+        crate::controllers::webhooks_controller::stripe_webhook,
+        crate::controllers::webhooks_controller::pix_webhook,
         // -- health / metrics
         crate::controllers::health_controller::health_check,
         crate::controllers::metrics_controller::metrics,

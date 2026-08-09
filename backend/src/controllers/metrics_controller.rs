@@ -1,4 +1,4 @@
-use actix_web::{HttpResponse, web};
+use actix_web::{HttpResponse, get, web};
 
 use crate::AppState;
 
@@ -46,10 +46,16 @@ use crate::AppState;
         ("api_key" = [])
     )
 )]
+#[get("/metrics")]
 pub async fn metrics(state: web::Data<AppState>) -> HttpResponse {
     state.metrics.refresh_system_measures();
     let body = state.metrics.render_prometheus();
     HttpResponse::Ok()
         .content_type("text/plain; version=0.0.4; charset=utf-8")
         .body(body)
+}
+
+/// Register metrics route (relative path — mounted under `/api/v1` scope by `router.rs`).
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(metrics);
 }

@@ -168,11 +168,22 @@ pub async fn upload_file(
     ))
 }
 
+/// Register all upload routes (relative paths — mounted under `/admin` scope by `router.rs`).
+pub fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(upload_file);
+}
+
+#[cfg(test)]
+pub fn test_config(cfg: &mut web::ServiceConfig) {
+    use crate::middleware::test_authorities::TestAuthorities;
+    cfg.service(web::scope("/admin").wrap(TestAuthorities).configure(config));
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    fn test_config() -> AppConfig {
+    fn test_app_config() -> AppConfig {
         use crate::config::app_config::Environment;
 
         AppConfig {
@@ -251,7 +262,7 @@ mod tests {
 
     #[test]
     fn limits_from_config_uses_config_values() {
-        let mut config = test_config();
+        let mut config = test_app_config();
         config.max_photo_size_bytes = 1024;
         config.max_video_size_bytes = 2048;
         config.max_audio_size_bytes = 4096;

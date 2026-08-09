@@ -6,7 +6,7 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::api_docs::ApiDoc;
 pub use crate::controllers::{
     audit_logs_controller, auth_controller, health_controller, metrics_controller,
-    roles_controller, upload_controller, users_controller,
+    roles_controller, upload_controller, users_controller, webhooks_controller,
 };
 use crate::middleware::csrf_protection::CsrfProtection;
 use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
@@ -171,30 +171,13 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,
                     ))
-.service(auth_controller::login)
-            .service(auth_controller::register)
-            .service(auth_controller::recover_password)
-            .service(auth_controller::forgot_password)
-            .service(auth_controller::reset_password)
-            .service(auth_controller::confirm)
-            .service(auth_controller::request_magic_link)
-            .service(auth_controller::verify_magic_link)
-            .service(auth_controller::me)
-            .service(auth_controller::session)
-            .service(auth_controller::session_trailing)
-            .service(auth_controller::refresh)
-            .service(auth_controller::logout)
-            .service(auth_controller::setup_2fa)
-            .service(auth_controller::enable_2fa)
-            .service(auth_controller::disable_2fa)
-            .service(auth_controller::change_password),
+                    .configure(auth_controller::config),
             )
             // Webhook routes
             .service(
                 web::scope("/webhooks")
                     .wrap(StripeWebhookVerifier::new())
-                    .route("/stripe", web::post().to(auth_controller::stripe_webhook))
-                    .route("/pix", web::post().to(auth_controller::pix_webhook)),
+                    .configure(webhooks_controller::config),
             )
             // Admin domain routes
             // Middleware order (outermost first on request):
@@ -210,12 +193,10 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .configure(roles_controller::config)
                     .configure(users_controller::config)
                     .configure(audit_logs_controller::config)
-                    .service(upload_controller::upload_file),
+                    .configure(upload_controller::config),
             )
-            .route("/health", web::get().to(health_controller::health_check))
-            // NOTE: /metrics requires API key — protected by RequireApiKey middleware on this scope.
-            // Access via: X-API-Key: <key> or Authorization: ApiKey <key>
-            .route("/metrics", web::get().to(metrics_controller::metrics))
+            .configure(health_controller::config)
+            .configure(metrics_controller::config)
             // WebSocket route (inside /api/v1 scope)
             .service(web::resource("/ws").route(web::get().to(crate::ws::redis_handler::ws_handler))),
     );
