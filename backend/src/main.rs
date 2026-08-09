@@ -41,15 +41,6 @@ async fn not_found(req: actix_web::HttpRequest) -> Result<HttpResponse, actix_we
     Ok(HttpResponse::NotFound().json(response))
 }
 
-/// Root-level liveness probe mounted at `/health` (outside `/api/v1`).
-///
-/// Returns a static 200 without touching DB/Redis — used by load balancers
-/// and orchestrators that only need to know the process is up. The deep
-/// dependency probe lives at `/api/v1/health` (see `health_controller`).
-async fn root_health_check() -> HttpResponse {
-    HttpResponse::Ok().json(serde_json::json!({ "status": "ok" }))
-}
-
 /// Initialize OpenTelemetry tracer provider with configurable sampling.
 ///
 /// Uses `TelemetryConfig` to read `OTEL_SAMPLER`, `OTEL_SAMPLER_RATIO`,
@@ -378,10 +369,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(backend::middleware::locale::LocaleMiddleware::new(
                 translations.clone(),
             ))
-            .route(
-                "/health",
-                web::get().to(root_health_check),
-            )
+            .service(backend::controllers::health_controller::liveness)
             .configure(|cfg| backend::routes::router::config(cfg, pool_for_router.clone()))
             .default_service(web::route().to(not_found))
     };

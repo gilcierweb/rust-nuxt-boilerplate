@@ -23,15 +23,66 @@ pub struct HealthResponse {
     pub redis: HealthDependencyStatus,
 }
 
-/// Health check endpoint.
+/// Liveness probe — process is up and responding.
+///
+/// Returns a static `200` without touching any external dependency
+/// (DB, Redis). Used by orchestrators that only need to know the
+/// process is alive; not suitable for determining whether the service
+/// is ready to handle traffic (use `/api/v1/health` for that).
+///
+/// # When to use this endpoint
+///
+/// - **Kubernetes `livenessProbe`**:LB: checks the process can answer HTTP —
+///   if this fails, k8s restarts the pod.
+/// - **AWS NLB/ALB health checks** (target group): balancing decision.
+/// - **Docker `HEALTHCHECK`** + **Wrangler dev** probe.
+///
+/// Intentionally does NOT probe DB/Redis so a transient dependency
+/// blip does not trigger a cascading pod restart (a slow DB is not
+/// proof the process is dead).
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "health",
+    responses(
+        (status = 200, description = "Process is alive", body = HealthResponse)
+    )
+)]
+#[get("/health")]
+pub async fn liveness() -> HttpResponse {
+    HttpResponse::Ok().json(HealthResponse {
+        status: "ok",
+        timestamp: Utc::now().to_rfc3339(),
+        version: env!("CARGO_PKG_VERSION"),
+        db: HealthDependencyStatus {
+            status: "skipped",
+            error: None,
+            latency_ms: None,
+        },
+        redis: HealthDependencyStatus {
+            status: "skipped",
+            error: None,
+            latency_ms: None,
+        },
+    })
+}
+
+/// Readiness probe — process can serve traffic (DB + Redis reachable).
 ///
 /// Performs a live probe of the database and Redis connections and returns
 /// the operational status, dependency latencies, and the service version.
 ///
-/// This endpoint is publicly reachable (no authentication required) and is
-/// intended for load balancers, Kubernetes liveness/readiness probes, and
-/// uptime monitors. When any dependency is unreachable, the response status
-/// code becomes `503 Service Unavailable` so probes can react accordingly.
+/// # When to use this endpoint
+///
+/// - **Kubernetes `readinessProbe`**: LB only routes traffic to this pod
+///   when this returns `200`; a `503` removes the pod from the endpoint
+///   list without restarting it.
+/// - **Uptime monitors** (Pingdom, BetterUptime, etc.).
+/// - **Prometheus alerton** `health_status != "ok"`.
+///
+/// Returns `503 Service Unavailable` when any dependency is unreachable
+/// so probes can react accordingly — but the pod stays alive (liveness
+/// still passes), giving the dependency time to recover.
 #[utoipa::path(
     get,
     path = "/api/v1/health",
@@ -125,7 +176,15 @@ pub async fn health_check(state: web::Data<AppState>) -> HttpResponse {
     HttpResponse::build(status_code).json(response)
 }
 
-/// Register health-check route (relative path — mounted under `/api/v1` scope by `router.rs`).
+/// Register health-check routes.
+///
+/// - `liveness` is mounted at the root `/health` (no `/api/v1` prefix,
+///   no middleware) by `main.rs` — see `main.rs` for the registration
+///   line; it bypasses the `router::config()` chain intentionally so
+///   an API-version / API-key / rate-limit failure does not make the
+///   pod look dead to orchestrators.
+/// - `health_check` (readiness) is mounted at `/api/v1/health` by
+///   `router.rs` via `.configure(health_controller::config)`.
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(health_check);
 }
