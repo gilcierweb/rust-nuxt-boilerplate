@@ -18,9 +18,6 @@ pub mod traced_http;
 pub mod utils;
 pub mod ws;
 
-#[cfg(test)]
-pub mod test_utils;
-
 use std::sync::Arc;
 
 pub use db::database::DBPool;
