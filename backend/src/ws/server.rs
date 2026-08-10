@@ -15,7 +15,7 @@ use uuid::Uuid;
 use crate::AppState;
 use crate::errors::{AppError, AppResult};
 
-const WS_PROTOCOL: &str = "justfans-ws";
+const WS_PROTOCOL: &str = "boilerplate-ws";
 const WS_AUTH_PROTOCOL_PREFIX: &str = "auth.";
 
 /// WebSocket connection limits configuration.

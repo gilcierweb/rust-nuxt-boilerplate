@@ -11,7 +11,7 @@ use crate::errors::{AppError, AppResult};
 use crate::ws::redis_state::WsRedisState;
 use crate::ws::server::{ConnectionInfo, WsMessage};
 
-const WS_PROTOCOL: &str = "justfans-ws";
+const WS_PROTOCOL: &str = "boilerplate-ws";
 const WS_AUTH_PROTOCOL_PREFIX: &str = "auth.";
 
 /// WebSocket actor for handling connections with Redis-backed state
