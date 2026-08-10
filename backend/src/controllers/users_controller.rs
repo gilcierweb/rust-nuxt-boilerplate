@@ -121,7 +121,7 @@ mod tests {
     use serde_json::Value;
 
     use super::test_config;
-    use crate::repositories::test_utils::mocks::mock_container;
+    use crate::repositories::mocks::mock_container;
     use crate::repositories::users_repository::MockIUserRepository;
 
     #[actix_web::test]

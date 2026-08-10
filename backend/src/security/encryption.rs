@@ -44,7 +44,7 @@ pub fn decrypt(data: &[u8], key: &[u8]) -> AppResult<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::{decrypt, encrypt};
-    use crate::security::test_utils::test_key_manager;
+    use crate::security::test_key_manager::test_key_manager;
 
     #[test]
     fn encrypt_decrypt_round_trip_works() {

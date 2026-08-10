@@ -8,9 +8,9 @@ pub mod profiles_repository;
 pub mod refresh_tokens_repository;
 pub mod roles_repository;
 #[cfg(test)]
-pub mod test_repositories;
+pub(crate) mod fixtures;
 #[cfg(test)]
-pub mod test_utils;
+pub(crate) mod mocks;
 pub mod traits;
 pub mod user_roles_repository;
 pub mod users_repository;

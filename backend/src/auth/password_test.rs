@@ -1,7 +1,7 @@
 // Unit tests for auth utilities
 #[cfg(test)]
 mod tests {
-    use crate::repositories::test_utils::mocks::mock_app_config;
+    use crate::repositories::mocks::mock_app_config;
     use crate::services::auth_service::{hash_password, verify_password};
 
     #[actix_rt::test]

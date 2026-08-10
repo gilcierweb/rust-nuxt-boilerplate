@@ -141,7 +141,7 @@ impl SecurityService {
 #[cfg(test)]
 mod tests {
     use super::SecurityService;
-    use crate::config::test_utils::test_config;
+    use crate::config::test_config::test_config;
 
     #[test]
     fn email_blind_index_is_deterministic() {

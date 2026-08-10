@@ -179,7 +179,7 @@ mod tests {
     use actix_web::{App, HttpResponse, test, web};
 
     use super::RequireApiKey;
-    use crate::repositories::test_utils::mocks::mock_container;
+    use crate::repositories::mocks::mock_container;
 
     fn container_with_api_key() -> crate::repositories::container::AppContainer {
         let mut container = mock_container();

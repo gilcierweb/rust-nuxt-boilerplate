@@ -2042,7 +2042,7 @@ mod tests {
     use crate::models::user::User;
     use crate::repositories::profiles_repository::MockIProfileRepository;
     use crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository;
-    use crate::repositories::test_utils::mocks::{mock_app_config, mock_container};
+    use crate::repositories::mocks::{mock_app_config, mock_container};
     use crate::repositories::users_repository::MockIUserRepository;
     use crate::security::SecurityService;
 

@@ -1,5 +1,5 @@
 use super::key_manager::KeyManager;
-use crate::config::test_utils::test_config;
+use crate::config::test_config::test_config;
 
 pub fn test_key_manager() -> KeyManager {
     let config = test_config();

@@ -268,7 +268,7 @@ mod tests {
     use diesel::r2d2::{ConnectionManager, Pool};
 
     use super::*;
-    use crate::repositories::test_utils::mocks::mock_app_config;
+    use crate::repositories::mocks::mock_app_config;
 
     fn setup_test_db() -> Arc<Pool<ConnectionManager<PgConnection>>> {
         let database_url = std::env::var("DATABASE_URL_TEST")

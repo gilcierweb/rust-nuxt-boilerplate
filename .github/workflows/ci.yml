@@ -453,7 +453,7 @@ jobs:
 
       - name: Start frontend server
         run: |
-          PORT=3000 node .output/server/index.mjs &
+          HOST=0.0.0.0 PORT=3000 node .output/server/index.mjs &
           echo "FRONTEND_PID=$!" >> $GITHUB_ENV
         working-directory: ./frontend
         env:

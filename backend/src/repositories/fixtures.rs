@@ -6,7 +6,7 @@
 //
 // Usage in tests:
 // ```rust
-// use crate::repositories::test_utils::mocks::mock_container;
+// use crate::repositories::mocks::mock_container;
 // use crate::repositories::users_repository::MockIUserRepository;
 // use crate::models::user::{NewUser, User};
 //

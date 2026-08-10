@@ -176,7 +176,7 @@ mod tests {
 
     use super::{ApiAccessGate, PublicRoute};
     use crate::middleware::auth::create_token;
-    use crate::repositories::test_utils::mocks::{mock_app_config, mock_container};
+    use crate::repositories::mocks::{mock_app_config, mock_container};
 
     #[actix_web::test]
     async fn rejects_missing_bearer_token_on_protected_route() {
