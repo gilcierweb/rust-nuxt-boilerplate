@@ -2,6 +2,7 @@
 extern crate rust_i18n;
 
 pub mod api_docs;
+pub mod app;
 pub mod auth;
 pub mod authz;
 pub mod config;
