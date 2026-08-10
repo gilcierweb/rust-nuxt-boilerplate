@@ -57,6 +57,7 @@ pub fn user_fixture() -> User {
 }
 
 /// Create a test user with specific ID.
+#[allow(dead_code)]
 pub fn user_fixture_with_id(id: Uuid) -> User {
     let mut user = user_fixture();
     user.id = id;
@@ -76,6 +77,7 @@ pub fn role_fixture() -> Role {
 }
 
 /// Create a test role with specific name.
+#[allow(dead_code)]
 pub fn role_fixture_with_name(name: &str) -> Role {
     let mut role = role_fixture();
     role.name = name.to_string();
@@ -109,6 +111,7 @@ pub fn profile_fixture() -> Profile {
 }
 
 /// Create a test profile with specific user ID.
+#[allow(dead_code)]
 pub fn profile_fixture_for_user(user_id: Uuid) -> Profile {
     let mut profile = profile_fixture();
     profile.user_id = user_id;
@@ -156,6 +159,7 @@ pub fn user_role_fixture(user_id: Uuid, role_id: Uuid) -> UserRole {
 }
 
 /// Helper to setup common mock expectations for a user repository.
+#[allow(dead_code)]
 pub fn setup_user_repo_find(
     mock_repo: &mut crate::repositories::users_repository::MockIUserRepository,
     user: User,
@@ -170,6 +174,7 @@ pub fn setup_user_repo_find(
 }
 
 /// Helper to setup common mock expectations for finding user by email blind index.
+#[allow(dead_code)]
 pub fn setup_user_repo_find_by_email(
     mock_repo: &mut crate::repositories::users_repository::MockIUserRepository,
     user: User,
@@ -184,6 +189,7 @@ pub fn setup_user_repo_find_by_email(
 }
 
 /// Helper to setup common mock expectations for a role repository.
+#[allow(dead_code)]
 pub fn setup_role_repo_find(
     mock_repo: &mut crate::repositories::roles_repository::MockIRoleRepository,
     role: Role,
@@ -198,6 +204,7 @@ pub fn setup_role_repo_find(
 }
 
 /// Helper to setup common mock expectations for a profile repository.
+#[allow(dead_code)]
 pub fn setup_profile_repo_find_by_user_id(
     mock_repo: &mut crate::repositories::profiles_repository::MockIProfileRepository,
     profile: Profile,
@@ -212,6 +219,7 @@ pub fn setup_profile_repo_find_by_user_id(
 }
 
 /// Helper to setup common mock expectations for a refresh token repository.
+#[allow(dead_code)]
 pub fn setup_refresh_token_repo_find_by_hash(
     mock_repo: &mut crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository,
     token: RefreshToken,
@@ -226,6 +234,7 @@ pub fn setup_refresh_token_repo_find_by_hash(
 }
 
 /// Test data module with commonly used test values.
+#[allow(dead_code)]
 pub mod test_data {
     use std::sync::LazyLock;
 

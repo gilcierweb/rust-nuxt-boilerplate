@@ -279,8 +279,8 @@ mod tests {
 
     use super::test_config;
     use crate::models::role::Role;
-    use crate::repositories::roles_repository::MockIRoleRepository;
     use crate::repositories::mocks::mock_container;
+    use crate::repositories::roles_repository::MockIRoleRepository;
 
     #[actix_web::test]
     async fn list_roles_returns_forbidden_without_authority() {

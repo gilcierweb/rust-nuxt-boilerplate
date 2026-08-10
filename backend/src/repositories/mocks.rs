@@ -67,6 +67,7 @@ pub fn mock_container() -> AppContainer {
 }
 
 /// Create a mock container with pre-configured user repository expectations.
+#[allow(dead_code)]
 pub fn mock_container_with_user(user: crate::models::user::User) -> AppContainer {
     let mut container = mock_container();
 
