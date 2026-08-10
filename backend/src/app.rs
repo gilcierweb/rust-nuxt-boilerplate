@@ -1,6 +1,5 @@
 //! API bootstrap: observability, dependency wiring, Actix app assembly and TLS.
 
-use std::borrow::Cow;
 use std::io::BufReader;
 use std::sync::Arc;
 
@@ -11,7 +10,6 @@ use actix_web::{
     web,
 };
 use deadpool_redis::{Config as RedisConfig, Runtime};
-use serde::Serialize;
 use tracing_subscriber::layer::SubscriberExt;
 use tracing_subscriber::util::SubscriberInitExt;
 
@@ -20,23 +18,11 @@ use crate::config::AppConfig;
 use crate::db::database::Database;
 use crate::errors::AppError;
 
-#[derive(Serialize)]
-struct Response<'a> {
-    message: Cow<'a, str>,
-}
-
-async fn not_found(req: actix_web::HttpRequest) -> Result<HttpResponse, actix_web::Error> {
-    // Fall back to the global rust_i18n (set_locale at startup) when the
-    // request extensions don't carry a RequestLocale (e.g., very early
-    // middleware failures). In normal operation the locale middleware has
-    // already populated this.
-    let message = crate::middleware::locale::locale_from_request(&req)
-        .map(|rl| rl.t_blocking("errors.not_found", None))
-        .unwrap_or_else(|| String::from("Resource not found"));
-    let response = Response {
-        message: Cow::from(message),
-    };
-    Ok(HttpResponse::NotFound().json(response))
+/// Default 404 handler. Delegates to `AppError::NotFound` so the response
+/// shape and i18n (per-request locale via thread-local) stay consistent with
+/// every other error response.
+async fn not_found() -> Result<HttpResponse, AppError> {
+    Err(AppError::NotFound(String::new()))
 }
 
 /// Initialize OpenTelemetry tracer provider with configurable sampling.
