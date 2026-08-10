@@ -448,12 +448,12 @@ jobs:
         working-directory: ./frontend
 
       - name: Build frontend
-        run: pnpm run build
+        run: pnpm run build -- --preset node-server
         working-directory: ./frontend
 
       - name: Start frontend server
         run: |
-          npx wrangler dev --port 3000 &
+          PORT=3000 node .output/server/index.mjs &
           echo "FRONTEND_PID=$!" >> $GITHUB_ENV
         working-directory: ./frontend
         env:
