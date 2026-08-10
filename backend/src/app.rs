@@ -108,16 +108,11 @@ fn init_opentelemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
     Some(provider)
 }
 
-/// Bootstrap and run the HTTP API server until shutdown.
-pub async fn run() -> std::io::Result<()> {
-    let boot_start = std::time::Instant::now();
-
-    rust_i18n::set_locale("pt-BR");
-
-    // Initialize OpenTelemetry (optional)
+/// Initialize the tracing subscriber, optionally with an OpenTelemetry layer.
+/// Returns the tracer provider (if any) so it can be shut down before exit.
+fn init_telemetry() -> Option<opentelemetry_sdk::trace::SdkTracerProvider> {
     let otel_provider = init_opentelemetry();
 
-    // Build tracing subscriber with optional OpenTelemetry layer
     let registry = tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
@@ -132,7 +127,6 @@ pub async fn run() -> std::io::Result<()> {
                 .pretty(),
         );
 
-    // Add OpenTelemetry layer if provider is available
     if let Some(ref provider) = otel_provider {
         use opentelemetry::trace::TracerProvider;
         let tracer = provider.tracer("backend-api");
@@ -142,14 +136,20 @@ pub async fn run() -> std::io::Result<()> {
         registry.init();
     }
 
-    // Load .env from project root (parent of backend directory)
+    otel_provider
+}
+
+/// Load .env from project root, parse and validate the application config.
+fn load_config() -> Arc<AppConfig> {
     let env_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("CARGO_MANIFEST_DIR parent")
         .join(".env");
     dotenvy::from_path(env_path).ok();
+
     let config = AppConfig::from_env().expect("Failed to load configuration");
     config.validate_or_panic();
+
     let config = Arc::new(config);
     tracing::info!(
         "Starting Backend API v{} on {}:{}",
@@ -157,8 +157,20 @@ pub async fn run() -> std::io::Result<()> {
         config.host,
         config.port
     );
+    config
+}
 
-    let api_db = Database::from_config(&config);
+/// Runtime handles shared with the HTTP application and background tasks.
+struct AppRuntime {
+    state: web::Data<AppState>,
+    container: web::Data<crate::repositories::AppContainer>,
+    ws_state: web::Data<crate::ws::WsRedisState>,
+    translations: crate::services::translation_service::Translations,
+}
+
+/// Build the DB/Redis pools, WebSocket state, translations and the AppState.
+async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant) -> AppRuntime {
+    let api_db = Database::from_config(config);
     let db_pool = api_db.pool.clone();
     let db_pool_for_container = db_pool.clone();
 
@@ -264,6 +276,25 @@ pub async fn run() -> std::io::Result<()> {
     // Record cold-start duration (time from boot_start to AppState ready)
     state.metrics.record_cold_start(boot_start.elapsed());
 
+    let container = web::Data::new(crate::repositories::AppContainer::new(
+        db_pool_for_container,
+        redis_pool_for_container,
+        (**config).clone(),
+    ));
+
+    AppRuntime {
+        state,
+        container,
+        ws_state,
+        translations,
+    }
+}
+
+/// Spawn the WebSocket Pub/Sub listener and the audit log chain verifier.
+fn start_background_tasks(
+    state: &web::Data<AppState>,
+    container: &web::Data<crate::repositories::AppContainer>,
+) {
     // Start WebSocket Pub/Sub listener for distributed message delivery
     let pubsub_state = std::sync::Arc::new(state.ws.clone());
     actix::spawn(async move {
@@ -272,19 +303,15 @@ pub async fn run() -> std::io::Result<()> {
         }
     });
 
-    let container = web::Data::new(crate::repositories::AppContainer::new(
-        db_pool_for_container,
-        redis_pool_for_container,
-        (*config).clone(),
-    ));
-
     // Start background audit log chain verifier (hourly by default)
     let audit_repo_for_verifier = container.domain_audit_logs.clone();
     actix::spawn(async move {
         crate::services::audit_log_verifier::run_audit_log_verifier(audit_repo_for_verifier).await;
     });
+}
 
-    // Parse CORS origins from config (validation done in AppConfig::validate())
+/// Parse CORS origins from config (validation done in AppConfig::validate()).
+fn parse_cors_origins(config: &AppConfig) -> Vec<String> {
     let cors_origins: Vec<String> = config
         .frontend_url
         .split(',')
@@ -305,38 +332,113 @@ pub async fn run() -> std::io::Result<()> {
         );
     }
 
-    let host = config.host.clone();
-    let port = config.port;
+    cors_origins
+}
 
-    let config_json_limit = config.json_payload_limit;
-    let config_form_limit = config.form_payload_limit;
+fn build_cors(cors_origins: &[String]) -> Cors {
+    let mut cors = Cors::default()
+        .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+        .allowed_headers(vec![
+            actix_web::http::header::AUTHORIZATION,
+            actix_web::http::header::CONTENT_TYPE,
+            actix_web::http::header::ACCEPT,
+            actix_web::http::header::ACCESS_CONTROL_REQUEST_HEADERS,
+        ])
+        .allowed_header("x-api-key")
+        .supports_credentials()
+        .max_age(3600);
 
+    for origin in cors_origins {
+        cors = cors.allowed_origin(origin);
+    }
+
+    cors
+}
+
+/// Load and parse the TLS certificate/key pair from config.
+fn load_tls_config(config: &AppConfig) -> std::io::Result<rustls::ServerConfig> {
+    // Initialize TLS crypto provider - falls back to default if already initialized
+    let _ = rustls::crypto::CryptoProvider::get_default();
+
+    let cert_path = config.tls_cert_path.clone();
+    let key_path = config.tls_key_path.clone();
+
+    let mut certs_file = BufReader::new(std::fs::File::open(&cert_path).map_err(|error| {
+        std::io::Error::other(format!(
+            "failed to open TLS certificate file '{}': {}",
+            cert_path, error
+        ))
+    })?);
+    let mut key_file = BufReader::new(std::fs::File::open(&key_path).map_err(|error| {
+        std::io::Error::other(format!(
+            "failed to open TLS private key file '{}': {}",
+            key_path, error
+        ))
+    })?);
+
+    let tls_certs = rustls_pemfile::certs(&mut certs_file)
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| {
+            std::io::Error::other(format!(
+                "failed to parse TLS certificates from '{}': {}",
+                cert_path, error
+            ))
+        })?;
+
+    let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
+        .next()
+        .transpose()
+        .map_err(|error| {
+            std::io::Error::other(format!(
+                "failed to parse TLS private key from '{}': {}",
+                key_path, error
+            ))
+        })?
+        .ok_or_else(|| {
+            std::io::Error::other(format!("no PKCS#8 private key found in '{}'", key_path))
+        })?;
+
+    rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
+        .map_err(std::io::Error::other)
+}
+
+/// Shutdown the OpenTelemetry provider to flush pending traces.
+fn shutdown_otel(provider: Option<opentelemetry_sdk::trace::SdkTracerProvider>) {
+    if let Some(provider) = provider
+        && let Err(e) = provider.shutdown()
+    {
+        tracing::warn!(error = %e, "Failed to shutdown OpenTelemetry provider");
+    }
+}
+
+/// Bootstrap and run the HTTP API server until shutdown.
+pub async fn run() -> std::io::Result<()> {
+    let boot_start = std::time::Instant::now();
+
+    rust_i18n::set_locale("pt-BR");
+
+    let otel_provider = init_telemetry();
+    let config = load_config();
+    let runtime = build_runtime(&config, boot_start).await;
+    start_background_tasks(&runtime.state, &runtime.container);
+
+    let cors_origins = parse_cors_origins(&config);
+    let json_limit = config.json_payload_limit;
+    let form_limit = config.form_payload_limit;
+
+    // Actix application factory shared by every worker.
     let app = move || {
-        let pool_for_router = state.redis.clone();
-
-        let mut cors = Cors::default()
-            .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
-            .allowed_headers(vec![
-                actix_web::http::header::AUTHORIZATION,
-                actix_web::http::header::CONTENT_TYPE,
-                actix_web::http::header::ACCEPT,
-                actix_web::http::header::ACCESS_CONTROL_REQUEST_HEADERS,
-            ])
-            .allowed_header("x-api-key")
-            .supports_credentials()
-            .max_age(3600);
-
-        for origin in &cors_origins {
-            cors = cors.allowed_origin(origin);
-        }
+        let pool_for_router = runtime.state.redis.clone();
 
         App::new()
-            .app_data(state.clone())
-            .app_data(container.clone())
-            .app_data(ws_state.clone())
+            .app_data(runtime.state.clone())
+            .app_data(runtime.container.clone())
+            .app_data(runtime.ws_state.clone())
             .app_data(
                 web::JsonConfig::default()
-                    .limit(config_json_limit)
+                    .limit(json_limit)
                     .error_handler(|_error, _request| {
                         // Use the per-request locale (populated by the locale
                         // middleware before any extractor runs) so the parser
@@ -351,8 +453,8 @@ pub async fn run() -> std::io::Result<()> {
                         AppError::BadRequest(message).into()
                     }),
             )
-            .app_data(web::PayloadConfig::new(config_form_limit))
-            .wrap(cors)
+            .app_data(web::PayloadConfig::new(form_limit))
+            .wrap(build_cors(&cors_origins))
             // middleware
             // .wrap(actix_web::middleware::Logger::default())
             .wrap(actix_web::middleware::Compress::default())
@@ -363,7 +465,7 @@ pub async fn run() -> std::io::Result<()> {
             // Per-request locale resolution. Must run BEFORE request_log so
             // the resolved locale appears in the structured log fields.
             .wrap(crate::middleware::locale::LocaleMiddleware::new(
-                translations.clone(),
+                runtime.translations.clone(),
             ))
             .service(crate::controllers::health_controller::liveness)
             .configure(|cfg| crate::routes::router::config(cfg, pool_for_router.clone()))
@@ -372,71 +474,22 @@ pub async fn run() -> std::io::Result<()> {
 
     let server = HttpServer::new(app);
 
+    let host = config.host.clone();
     let result = if config.tls_enabled {
-        // Initialize TLS crypto provider - falls back to default if already initialized
-        let _ = rustls::crypto::CryptoProvider::get_default();
-
-        let cert_path = config.tls_cert_path.clone();
-        let key_path = config.tls_key_path.clone();
-
-        let mut certs_file = BufReader::new(std::fs::File::open(&cert_path).map_err(|error| {
-            std::io::Error::other(format!(
-                "failed to open TLS certificate file '{}': {}",
-                cert_path, error
-            ))
-        })?);
-        let mut key_file = BufReader::new(std::fs::File::open(&key_path).map_err(|error| {
-            std::io::Error::other(format!(
-                "failed to open TLS private key file '{}': {}",
-                key_path, error
-            ))
-        })?);
-
-        let tls_certs = rustls_pemfile::certs(&mut certs_file)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|error| {
-                std::io::Error::other(format!(
-                    "failed to parse TLS certificates from '{}': {}",
-                    cert_path, error
-                ))
-            })?;
-
-        let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
-            .next()
-            .transpose()
-            .map_err(|error| {
-                std::io::Error::other(format!(
-                    "failed to parse TLS private key from '{}': {}",
-                    key_path, error
-                ))
-            })?
-            .ok_or_else(|| {
-                std::io::Error::other(format!("no PKCS#8 private key found in '{}'", key_path))
-            })?;
-
-        let tls_config = rustls::ServerConfig::builder()
-            .with_no_client_auth()
-            .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
-            .map_err(std::io::Error::other)?;
-
+        let tls_config = load_tls_config(&config)?;
         let https_port = config.https_port;
         println!("Running in HTTPS on port {}", https_port);
-
         server
             .bind_rustls_0_23((host.clone(), https_port), tls_config)?
             .run()
             .await
     } else {
+        let port = config.port;
         println!("Running in HTTP on {}:{}", host, port);
         server.bind((host, port))?.run().await
     };
 
-    // Shutdown OpenTelemetry provider to flush pending traces
-    if let Some(provider) = otel_provider
-        && let Err(e) = provider.shutdown()
-    {
-        tracing::warn!(error = %e, "Failed to shutdown OpenTelemetry provider");
-    }
+    shutdown_otel(otel_provider);
 
     result
 }
