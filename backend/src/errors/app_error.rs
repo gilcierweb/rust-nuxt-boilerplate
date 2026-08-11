@@ -48,6 +48,13 @@ impl Error for AppError {
 }
 
 impl AppError {
+    /// 404 with no specific resource, used by the catch-all handler.
+    /// The empty resource makes the i18n layer fall back to the generic
+    /// "resource not found" message (see `public_message`).
+    pub fn not_found() -> Self {
+        AppError::NotFound(String::new())
+    }
+
     pub fn error_code(&self) -> &'static str {
         match self {
             AppError::NotFound(_) => "NOT_FOUND",
