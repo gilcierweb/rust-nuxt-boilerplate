@@ -448,8 +448,10 @@ jobs:
         working-directory: ./frontend
 
       - name: Build frontend
-        run: pnpm run build -- --preset node-server
+        run: pnpm run build
         working-directory: ./frontend
+        env:
+          NITRO_PRESET: node-server
 
       - name: Start frontend server
         run: |
