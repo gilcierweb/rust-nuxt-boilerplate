@@ -213,6 +213,7 @@ async fn test_full_auth_cycle() {
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
         ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
         jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        otel_provider: None,
     });
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
@@ -403,6 +404,7 @@ async fn test_login_invalid_credentials() {
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
         ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
         jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        otel_provider: None,
     });
 
     let container = web::Data::new(backend::repositories::AppContainer::new(
@@ -464,6 +466,7 @@ async fn test_health_endpoint() {
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
         ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
         jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        otel_provider: None,
     });
 
     let app = test::init_service(App::new().app_data(state).service(

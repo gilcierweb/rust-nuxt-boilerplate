@@ -32,6 +32,8 @@ pub struct AppState {
     /// Avoids cloning the full `Vec<JwtSecretKey>` from `config.jwt_secrets`
     /// on every authenticated request.
     pub jwt_secrets: Arc<Vec<crate::config::app_config::JwtSecretKey>>,
+    /// OpenTelemetry tracer provider (kept alive for span export)
+    pub otel_provider: Option<opentelemetry_sdk::trace::SdkTracerProvider>,
 }
 
 i18n!("locales");

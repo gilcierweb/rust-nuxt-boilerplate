@@ -203,7 +203,7 @@ fn build_redis_pool(config: &AppConfig) -> deadpool_redis::Pool {
 }
 
 /// Build the DB/Redis pools, WebSocket state, and the AppState.
-async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant) -> AppRuntime {
+async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant, otel_provider: Option<opentelemetry_sdk::trace::SdkTracerProvider>) -> AppRuntime {
     let api_db = Database::from_config(config);
     let db_pool = api_db.pool.clone();
     let db_pool_for_container = db_pool.clone();
@@ -226,6 +226,8 @@ async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant) 
         // Cache Arc<Vec<JwtSecretKey>> for cheap O(1) clones in JWT middleware.
         // Avoids cloning the full Vec on every authenticated request.
         jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        // OpenTelemetry tracer provider (kept alive for span export)
+        otel_provider,
     });
 
     // Record cold-start duration (time from boot_start to AppState ready)
@@ -358,15 +360,6 @@ fn load_tls_config(config: &AppConfig) -> std::io::Result<rustls::ServerConfig> 
         .map_err(std::io::Error::other)
 }
 
-/// Shutdown the OpenTelemetry provider to flush pending traces.
-fn shutdown_otel(provider: Option<opentelemetry_sdk::trace::SdkTracerProvider>) {
-    if let Some(provider) = provider
-        && let Err(e) = provider.shutdown()
-    {
-        tracing::warn!(error = %e, "Failed to shutdown OpenTelemetry provider");
-    }
-}
-
 /// Bootstrap and run the HTTP API server until shutdown.
 pub async fn run() -> std::io::Result<()> {
     let boot_start = std::time::Instant::now();
@@ -384,7 +377,7 @@ pub async fn run() -> std::io::Result<()> {
         "Starting Backend API"
     );
 
-    let runtime = build_runtime(&config, boot_start).await;
+    let runtime = build_runtime(&config, boot_start, otel_provider).await;
     start_background_tasks(&runtime.state, &runtime.container);
 
     let cors_origins = parse_cors_origins(&config);
@@ -452,7 +445,6 @@ pub async fn run() -> std::io::Result<()> {
         server.bind((host, port))?.run().await
     };
 
-    shutdown_otel(otel_provider);
-
+    // OpenTelemetry provider shutdown is handled automatically on process exit
     result
 }
