@@ -152,17 +152,17 @@ mod tests {
     use std::collections::HashSet;
     use std::sync::Arc;
 
+    use actix_web::HttpMessage;
     use actix_web::body::to_bytes;
     use actix_web::dev::ServiceRequest;
     use actix_web::http::StatusCode;
     use actix_web::{App, test, web};
-    use actix_web::HttpMessage;
     use chrono::Utc;
     use serde_json::{Value, json};
     use uuid::Uuid;
 
     use super::test_config;
-    use crate::middleware::auth::{create_token, Claims};
+    use crate::middleware::auth::{Claims, create_token};
     use crate::models::audit_log::AuditLog;
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::mocks::mock_container;

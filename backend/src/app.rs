@@ -203,7 +203,11 @@ fn build_redis_pool(config: &AppConfig) -> deadpool_redis::Pool {
 }
 
 /// Build the DB/Redis pools, WebSocket state, and the AppState.
-async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant, otel_provider: Option<opentelemetry_sdk::trace::SdkTracerProvider>) -> AppRuntime {
+async fn build_runtime(
+    config: &Arc<AppConfig>,
+    boot_start: std::time::Instant,
+    otel_provider: Option<opentelemetry_sdk::trace::SdkTracerProvider>,
+) -> AppRuntime {
     let api_db = Database::from_config(config);
     let db_pool = api_db.pool.clone();
     let db_pool_for_container = db_pool.clone();
