@@ -4,7 +4,9 @@ use actix_web::{HttpResponse, get, web};
 use actix_web_grants::authorities::AuthDetails;
 
 use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
+use crate::authz::scope::{customer_scope_ids, ensure_customer_in_scope};
 use crate::errors::{AppError, AppResult};
+use crate::middleware::auth::AuthUser;
 use crate::repositories::container::AppContainer;
 pub use crate::repositories::traits::users_trait::{AdminUserItem, AdminUserLookupItem};
 use crate::security::SecurityService;
@@ -63,6 +65,7 @@ pub async fn list_users(
 /// Fetch a single user by UUID (admin view).
 ///
 /// Requires the `users:read` authority.
+/// Non-admin users can only access their own record.
 #[utoipa::path(
     get,
     path = "/api/v1/admin/users/{id}",
@@ -73,7 +76,7 @@ pub async fn list_users(
     responses(
         (status = 200, description = "User found", body = AdminUserItem),
         (status = 401, description = "Authentication required"),
-        (status = 403, description = "Missing `users:read` authority"),
+        (status = 403, description = "Missing `users:read` authority or access denied"),
         (status = 404, description = "User not found")
     ),
     security(("bearer_auth" = []))
@@ -82,9 +85,15 @@ pub async fn list_users(
 pub async fn get_user(
     details: AuthDetails,
     container: web::Data<AppContainer>,
+    user: AuthUser,
     user_id: web::Path<uuid::Uuid>,
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
+
+    // Ownership/IDOR check: non-admin users can only access their own record
+    let target_user_id = user_id.into_inner();
+    let scope = customer_scope_ids(&details, &user).await?;
+    ensure_customer_in_scope(scope.as_ref(), target_user_id)?;
 
     let security = Arc::new(
         SecurityService::from_config(&container.config)
@@ -93,7 +102,7 @@ pub async fn get_user(
 
     let item = container
         .users
-        .find_by_id_with_profile(&user_id.into_inner(), security)
+        .find_by_id_with_profile(&target_user_id, security)
         .await
         .map_err(|error| map_repo_error(error, "User"))?;
 

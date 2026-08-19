@@ -245,6 +245,8 @@ mod tests {
             form_payload_limit: 20 * 1024 * 1024,
             csrf_secret_key: "test-csrf-key-32-chars-long!!!!!".to_string(),
             refresh_token_hash_salt: "test-salt-for-refresh-tokens-16b!".to_string(),
+            account_lockout_duration_secs: 15 * 60,
+            pix_webhook_secret: String::new(),
             rate_limit_enabled: false,
             cookie_secure_override: false,
             argon2_m_cost: 65536,

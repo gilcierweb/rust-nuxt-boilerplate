@@ -181,6 +181,8 @@ pub struct AppConfig {
     pub internal_api_keys: Vec<String>,
     pub csrf_secret_key: String,
     pub refresh_token_hash_salt: String,
+    // Account lockout
+    pub account_lockout_duration_secs: i64, // 15 minutes default
 
     // Email (Resend)
     pub resend_api_key: String,
@@ -214,6 +216,9 @@ pub struct AppConfig {
     pub stripe_secret_key: String,
     pub stripe_webhook_secret: String,
     pub stripe_publishable_key: String,
+
+    // Pix (Brazilian instant payment)
+    pub pix_webhook_secret: String,
 
     // Platform settings
     pub platform_commission_percent: f64,  // e.g. 20.0
@@ -443,6 +448,12 @@ impl AppConfig {
             csrf_secret_key: required_secret("CSRF_SECRET_KEY")?,
             refresh_token_hash_salt: required_secret("REFRESH_TOKEN_HASH_SALT")?,
 
+            // Account lockout - default 15 minutes
+            account_lockout_duration_secs: env::var("ACCOUNT_LOCKOUT_DURATION_SECS")
+                .ok()
+                .and_then(|s| s.parse::<i64>().ok())
+                .unwrap_or(15 * 60),
+
             resend_api_key: secret_from_env_or_file("RESEND_API_KEY", ""),
             email_from: env::var("EMAIL_FROM")
                 .unwrap_or_else(|_| "noreply@boilerplate-rust-nuxt.com".to_string()),
@@ -478,6 +489,8 @@ impl AppConfig {
             stripe_secret_key: secret_from_env_or_file("STRIPE_SECRET_KEY", ""),
             stripe_webhook_secret: secret_from_env_or_file("STRIPE_WEBHOOK_SECRET", ""),
             stripe_publishable_key: secret_from_env_or_file("STRIPE_PUBLISHABLE_KEY", ""),
+
+            pix_webhook_secret: secret_from_env_or_file("PIX_WEBHOOK_SECRET", ""),
 
             platform_commission_percent: env::var("PLATFORM_COMMISSION_PERCENT")
                 .unwrap_or_else(|_| "20.0".to_string())

@@ -158,6 +158,8 @@ fn test_config() -> backend::config::AppConfig {
         form_payload_limit: 2 * 1024 * 1024,
         csrf_secret_key: csrf_key,
         refresh_token_hash_salt: "test-salt-for-refresh-tokens-16b!".to_string(),
+        account_lockout_duration_secs: 15 * 60,
+        pix_webhook_secret: String::new(),
         rate_limit_enabled: false,
         argon2_m_cost: 65536,
         argon2_t_cost: 3,

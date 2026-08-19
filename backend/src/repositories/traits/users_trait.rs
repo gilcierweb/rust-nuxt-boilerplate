@@ -58,7 +58,12 @@ pub trait IUserRepository: Send + Sync {
     ) -> QueryResult<usize>;
 
     async fn confirm_email(&self, token_digest: &str) -> QueryResult<usize>;
-    async fn record_failed_login(&self, user_id: &Uuid, max_attempts: i32) -> QueryResult<usize>;
+    async fn record_failed_login(
+        &self,
+        user_id: &Uuid,
+        max_attempts: i32,
+        refresh_token_hash_salt: &str,
+    ) -> QueryResult<usize>;
     async fn record_successful_login(
         &self,
         user_id: &Uuid,

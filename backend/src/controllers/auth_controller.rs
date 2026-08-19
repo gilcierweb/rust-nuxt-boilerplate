@@ -103,6 +103,14 @@ pub struct Enable2FARequest {
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct Setup2FARequest {
+    /// Optional TOTP code for step-up verification when 2FA is already enabled.
+    /// Required if 2FA is currently enabled to prevent unauthorized secret rotation.
+    #[validate(length(min = 6, max = 6, message = "auth.validation.otp_invalid"))]
+    pub otp_code: Option<String>,
+}
+
+#[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct ChangePasswordRequest {
     // Current password: cap at 128 to prevent large payloads reaching Argon2id.
     // No min check — wrong passwords should still reach the verify step so
@@ -407,7 +415,7 @@ pub async fn login(
     };
 
     // Check if account is locked
-    if user.is_locked() {
+    if user.is_locked(container.config.account_lockout_duration_secs) {
         tracing::warn!(
             event = "auth.login.blocked_locked",
             user_id = %user.id,
@@ -436,7 +444,7 @@ pub async fn login(
     if !password_valid {
         container
             .users
-            .record_failed_login(&user.id, 10)
+            .record_failed_login(&user.id, 10, &container.config.refresh_token_hash_salt)
             .await
             .map_err(AppError::Database)?;
         tracing::warn!(
@@ -1163,8 +1171,10 @@ pub async fn reset_password(
     post,
     path = "/api/v1/auth/2fa/setup",
     tag = "auth",
+    request_body = Setup2FARequest,
     responses(
         (status = 200, description = "TOTP secret and provisioning URL issued"),
+        (status = 400, description = "2FA already enabled; step-up verification required"),
         (status = 401, description = "Authentication required")
     ),
     security(("bearer_auth" = []))
@@ -1173,16 +1183,33 @@ pub async fn reset_password(
 pub async fn setup_2fa(
     user: AuthUser,
     container: web::Data<AppContainer>,
+    body: web::Json<Setup2FARequest>,
 ) -> AppResult<HttpResponse> {
     use totp_rs::{Algorithm as TotpAlgorithm, Secret, TOTP};
 
-    let secret = Secret::generate_secret();
-    let secret_base32 = secret.to_encoded().to_string();
     let user_data = container
         .users
         .find(&user.claims().sub)
         .await
         .map_err(AppError::Database)?;
+
+    // If 2FA is already enabled, require step-up verification (current TOTP code)
+    if user_data.is_otp_enabled() {
+        let otp_code = body
+            .otp_code
+            .as_ref()
+            .ok_or_else(|| AppError::BadRequest(t!("auth.2fa.step_up_required").into_owned()))?;
+
+        let secret = user_data
+            .otp_secret
+            .as_ref()
+            .ok_or_else(|| AppError::Internal(t!("auth.2fa.invalid_secret").into_owned()))?;
+
+        verify_totp(secret, otp_code)?;
+    }
+
+    let secret = Secret::generate_secret();
+    let secret_base32 = secret.to_encoded().to_string();
     let security = SecurityService::from_config(container.config.as_ref())?;
     let current_email = security.decrypt_user_email(&user_data)?;
 
@@ -1199,7 +1226,7 @@ pub async fn setup_2fa(
 
     let qr_code_url = totp.get_url();
 
-    // Store secret temporarily (not enabled until verified)
+    // Store secret temporarily (not enabled until verified via /2fa/enable)
     container
         .users
         .set_otp_secret(&user.claims().sub, &secret_base32)
@@ -1696,14 +1723,20 @@ fn auth_cookie_same_site(config: &AppConfig) -> SameSite {
 
 // Helper trait extensions for User
 pub trait UserExt {
-    fn is_locked(&self) -> bool;
+    fn is_locked(&self, lockout_duration_secs: i64) -> bool;
     fn is_confirmed(&self) -> bool;
     fn is_otp_enabled(&self) -> bool;
 }
 
 impl UserExt for User {
-    fn is_locked(&self) -> bool {
-        self.locked_at.is_some()
+    fn is_locked(&self, lockout_duration_secs: i64) -> bool {
+        if let Some(locked_at) = self.locked_at {
+            let now = chrono::Utc::now();
+            let duration = now.signed_duration_since(locked_at);
+            duration.num_seconds() < lockout_duration_secs
+        } else {
+            false
+        }
     }
 
     fn is_confirmed(&self) -> bool {
@@ -1897,7 +1930,7 @@ pub async fn verify_magic_link(
         .map_err(AppError::Database)?;
 
     // Check if account is locked
-    if user.is_locked() {
+    if user.is_locked(container.config.account_lockout_duration_secs) {
         return Err(AppError::BadRequest(t!("auth.login.locked").into_owned()));
     }
 
@@ -2154,7 +2187,7 @@ mod tests {
         mock_users
             .expect_record_failed_login()
             .times(1)
-            .returning(|_, _| Ok(1));
+            .returning(|_, _, _| Ok(1));
 
         let mut container = mock_container();
         container.users = Arc::new(mock_users);

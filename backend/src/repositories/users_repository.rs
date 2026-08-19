@@ -242,6 +242,11 @@ impl IUserRepository for UsersRepository {
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             encrypted_password.eq(pwd),
+                            reset_password_token_digest.eq::<Option<String>>(None),
+                            reset_password_sent_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            failed_attempts.eq(0),
+                            locked_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            unlock_token_digest.eq::<Option<String>>(None),
                             updated_at.eq(chrono::Utc::now().naive_utc()),
                         ))
                         .execute(conn)
@@ -340,12 +345,21 @@ impl IUserRepository for UsersRepository {
         &self,
         user_id: &Uuid,
         max_attempts: i32,
+        refresh_token_hash_salt: &str,
     ) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
+        let salt = refresh_token_hash_salt.to_string();
         use crate::db::schema::users::dsl::*;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
+                    // Generate unlock token digest when account gets locked
+                    let unlock_token = Uuid::new_v4().to_string();
+                    let new_unlock_token_digest = crate::services::token_service::hash_token(
+                        &unlock_token,
+                        &salt,
+                    );
+
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             failed_attempts.eq(diesel::dsl::sql::<diesel::sql_types::Integer>(
@@ -355,6 +369,12 @@ impl IUserRepository for UsersRepository {
                                 diesel::sql_types::Timestamptz,
                             >>(&format!(
                                 "CASE WHEN failed_attempts + 1 >= {max_attempts} THEN NOW() ELSE locked_at END"
+                            ))),
+                            unlock_token_digest.eq(diesel::dsl::sql::<diesel::sql_types::Nullable<
+                                diesel::sql_types::Varchar,
+                            >>(&format!(
+                                "CASE WHEN failed_attempts + 1 >= {max_attempts} THEN '{}' ELSE unlock_token_digest END",
+                                new_unlock_token_digest
                             ))),
                             updated_at.eq(chrono::Utc::now().naive_utc()),
                         ))
@@ -379,6 +399,7 @@ impl IUserRepository for UsersRepository {
                         .set((
                             failed_attempts.eq(0),
                             locked_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            unlock_token_digest.eq::<Option<String>>(None),
                             current_sign_in_at.eq(Some(chrono::Utc::now().naive_utc())),
                             last_sign_in_at.eq(diesel::dsl::sql::<
                                 diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,

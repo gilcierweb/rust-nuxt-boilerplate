@@ -5,28 +5,38 @@ use uuid::Uuid;
 
 use crate::errors::{AppError, AppResult};
 use crate::middleware::auth::AuthUser;
-use crate::repositories::container::AppContainer;
 
 fn customer_scope_denied() -> AppError {
     AppError::Forbidden(t!("authorization.customer_scope_denied").into_owned())
 }
 
-#[allow(dead_code)]
 pub fn is_customer(details: &AuthDetails) -> bool {
     details.has_authority("ROLE_CUSTOMER")
 }
 
-#[allow(dead_code)]
-/// Returns None - no customer scoping in this boilerplate
+/// Returns the set of customer IDs the user has access to.
+/// For admin users, returns None (unrestricted).
+/// For customer users, returns their own customer ID.
 pub async fn customer_scope_ids(
-    _details: &AuthDetails,
-    _user: &AuthUser,
-    _container: &AppContainer,
+    details: &AuthDetails,
+    user: &AuthUser,
 ) -> AppResult<Option<HashSet<Uuid>>> {
+    // Admin users have unrestricted access
+    if details.has_authority("ROLE_ADMIN") {
+        return Ok(None);
+    }
+
+    // Customer users can only access their own resources
+    if is_customer(details) {
+        let mut scope = HashSet::new();
+        scope.insert(user.claims().sub);
+        return Ok(Some(scope));
+    }
+
+    // Other roles: no customer scoping by default
     Ok(None)
 }
 
-#[allow(dead_code)]
 pub fn ensure_customer_in_scope(scope: Option<&HashSet<Uuid>>, customer_id: Uuid) -> AppResult<()> {
     match scope {
         Some(ids) if !ids.contains(&customer_id) => Err(customer_scope_denied()),
@@ -34,7 +44,6 @@ pub fn ensure_customer_in_scope(scope: Option<&HashSet<Uuid>>, customer_id: Uuid
     }
 }
 
-#[allow(dead_code)]
 pub fn ensure_optional_customer_in_scope(
     scope: Option<&HashSet<Uuid>>,
     customer_id: Option<Uuid>,

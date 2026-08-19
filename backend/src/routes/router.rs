@@ -9,6 +9,8 @@ pub use crate::controllers::{
     roles_controller, upload_controller, users_controller, webhooks_controller,
 };
 use crate::middleware::csrf_protection::CsrfProtection;
+use crate::middleware::pix_webhook_verifier::PixWebhookVerifier;
+use crate::middleware::require_admin_middleware::RequireAdmin;
 use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 
 /// Configure API routes with middleware chain.
@@ -175,21 +177,28 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             )
             // Webhook routes
             .service(
-                web::scope("/webhooks")
+                web::scope("/webhooks/stripe")
                     .wrap(StripeWebhookVerifier::new())
-                    .configure(webhooks_controller::config),
+                    .configure(webhooks_controller::stripe_config),
+            )
+            .service(
+                web::scope("/webhooks/pix")
+                    .wrap(PixWebhookVerifier::new())
+                    .configure(webhooks_controller::pix_config),
             )
             // Admin domain routes
             // Middleware order (outermost first on request):
             // 1. CsrfProtection (outermost) - checks CSRF for browser forms
             // 2. JwtAuth - validates JWT, inserts Claims and AuthDetails in extensions
-            // 3. Admin handlers use AuthDetails from extensions for RBAC
+            // 3. RequireAdmin - enforces ROLE_ADMIN as second barrier
+            // 4. Admin handlers use AuthDetails from extensions for RBAC
             .service(
                 web::scope("/admin")
                     .wrap(CsrfProtection::new(vec![]))
                     .wrap(crate::middleware::auth::JwtAuth::new(
                         crate::middleware::auth::JwtAuthConfig::new(vec![]),
                     ))
+                    .wrap(RequireAdmin::new())
                     .configure(roles_controller::config)
                     .configure(users_controller::config)
                     .configure(audit_logs_controller::config)

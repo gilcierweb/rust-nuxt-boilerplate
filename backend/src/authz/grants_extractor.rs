@@ -9,6 +9,27 @@ use crate::middleware::auth::{Claims, verify_token};
 use crate::repositories::access_token_blacklist::hash_token_for_blacklist;
 use crate::repositories::container::AppContainer;
 
+/// Whitelist of permissions that can be granted via the dynamic permission system.
+/// Admin/sensitive permissions are excluded and only available via role-based abilities.
+/// This prevents privilege escalation where a user with `permissions:create` could
+/// create roles with admin permissions.
+fn permission_whitelist() -> &'static [&'static str] {
+    &[
+        // User permissions (non-admin)
+        "users:read",
+        "profiles:read",
+        "profiles:update",
+        // Add other non-admin permissions here as needed
+    ]
+}
+
+/// Check if a permission code is in the whitelist
+fn is_permission_whitelisted(permission: &str) -> bool {
+    permission_whitelist()
+        .iter()
+        .any(|&p| p.eq_ignore_ascii_case(permission))
+}
+
 pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>, Error> {
     let Some(raw_token) = req
         .headers()
@@ -77,7 +98,17 @@ pub async fn build_authorities_for_claims(
             for role in &roles {
                 authorities.insert(format!("ROLE_{}", role.to_uppercase()));
             }
-            authorities.extend(permission_codes);
+            // Filter permissions against whitelist to prevent privilege escalation
+            for perm in permission_codes {
+                if is_permission_whitelisted(&perm) {
+                    authorities.insert(perm);
+                } else {
+                    tracing::warn!(
+                        "grants extractor: permission '{}' not in whitelist, ignoring",
+                        perm
+                    );
+                }
+            }
             authorities
         },
         Ok(_) => {

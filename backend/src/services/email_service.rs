@@ -108,6 +108,8 @@ pub fn test_config() -> AppConfig {
         form_payload_limit: 2 * 1024 * 1024,
         csrf_secret_key: generate_deterministic_string(32, 0xABCDEF),
         refresh_token_hash_salt: generate_deterministic_string(16, 0x1234),
+        account_lockout_duration_secs: 15 * 60,
+        pix_webhook_secret: "".to_string(),
         rate_limit_enabled: true,
         cookie_secure_override: false,
         argon2_m_cost: 65536,

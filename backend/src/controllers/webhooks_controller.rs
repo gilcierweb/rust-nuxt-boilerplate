@@ -322,6 +322,14 @@ pub async fn pix_webhook(
     }))
 }
 
+pub fn stripe_config(cfg: &mut web::ServiceConfig) {
+    cfg.service(stripe_webhook);
+}
+
+pub fn pix_config(cfg: &mut web::ServiceConfig) {
+    cfg.service(pix_webhook);
+}
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(stripe_webhook).service(pix_webhook);
 }

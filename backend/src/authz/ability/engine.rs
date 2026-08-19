@@ -57,7 +57,6 @@ impl Ability {
         result
     }
 
-    #[allow(dead_code)]
     pub fn can_instance(&mut self, action: AbilityAction, resource: AbilityResource) {
         self.rules.push(AbilityRule {
             allowed: true,
@@ -67,7 +66,6 @@ impl Ability {
         });
     }
 
-    #[allow(dead_code)]
     pub fn cannot_instance(&mut self, action: AbilityAction, resource: AbilityResource) {
         self.rules.push(AbilityRule {
             allowed: false,
@@ -77,7 +75,6 @@ impl Ability {
         });
     }
 
-    #[allow(dead_code)]
     pub fn allows_instance(&self, action: AbilityAction, resource: AbilityResource) -> bool {
         let mut result = false;
 
@@ -125,7 +122,6 @@ pub fn authority_for(resource: AbilityResource, action: AbilityAction) -> String
     format!("{}:{}", resource.as_code(), action.as_code())
 }
 
-#[allow(dead_code)]
 fn matches_rule(rule: &AbilityRule, action: AbilityAction, resource: AbilityResource) -> bool {
     let action_matches = rule.action == action || rule.action == AbilityAction::Manage;
     let resource_matches = rule.resource == resource || rule.resource == AbilityResource::All;

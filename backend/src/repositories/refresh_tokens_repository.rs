@@ -199,10 +199,12 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                     let now = Utc::now();
 
                     // Find the old valid token by verifying against stored hashes
+                    // Use FOR UPDATE to prevent race conditions during rotation
                     let candidates: Vec<RefreshToken> = refresh_tokens_table::table
                         .filter(revoked_at.is_null())
                         .filter(expires_at.gt(now))
                         .select(RefreshToken::as_select())
+                        .for_update()
                         .load::<RefreshToken>(conn)
                         .await?;
 
@@ -214,6 +216,11 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                         Some(t) => t,
                         None => return Ok(None),
                     };
+
+                    // Verify token is still valid (not revoked by concurrent request)
+                    if existing_token.revoked_at.is_some() {
+                        return Ok(None);
+                    }
 
                     // Immediately revoke the old token
                     diesel::update(refresh_tokens_table::table.find(existing_token.id))
