@@ -239,7 +239,7 @@ impl EmailService {
     pub fn new(config: &AppConfig) -> Self {
         let from_email = config.email_from.clone();
         let from_name = if config.email_from_name.is_empty() {
-            Self::translate_for_request_static("app.name")
+            Self::translate_with_locale("pt-BR", "app.name", None)
         } else {
             config.email_from_name.clone()
         };
@@ -312,17 +312,13 @@ impl EmailService {
         }
     }
 
-    /// Translate a key using the per-request locale when available,
-    /// falling back to the global rust_i18n locale.
-    fn translate_for_request(
+    /// Translate a key using rust_i18n with the given locale.
+    fn translate_with_locale(
+        locale: &str,
         key: &str,
         args: Option<&std::collections::HashMap<String, String>>,
     ) -> String {
-        if let Some(rl) = crate::middleware::locale::current_request_locale() {
-            return rl.t_blocking(key, args);
-        }
-        // Fallback: global rust_i18n with explicit pt-BR default locale.
-        let raw = t!(key, locale = "pt-BR").into_owned();
+        let raw = t!(key, locale = locale).into_owned();
         match args {
             Some(a) if !a.is_empty() => {
                 let mut patterns: Vec<&str> = a.keys().map(String::as_str).collect();
@@ -334,18 +330,9 @@ impl EmailService {
         }
     }
 
-    /// Same as [`translate_for_request`] but with no interpolation args.
-    /// Used during struct construction (no request context available).
-    fn translate_for_request_static(key: &str) -> String {
-        Self::translate_for_request(key, None)
-    }
-
-    /// Resolve the per-request locale identifier, falling back to the
-    /// translation-service default (pt-BR) when none is available.
-    fn locale_for_request() -> String {
-        crate::middleware::locale::current_request_locale()
-            .map(|rl| rl.resolution.locale.clone())
-            .unwrap_or_else(|| crate::services::translation_service::DEFAULT_LOCALE.to_string())
+    /// Same as [`translate_with_locale`] but with no interpolation args.
+    fn translate_with_locale_static(locale: &str, key: &str) -> String {
+        Self::translate_with_locale(locale, key, None)
     }
 
     pub fn from_config(config: &AppConfig) -> Self {
@@ -466,7 +453,8 @@ impl EmailService {
                 self.kind,
                 to
             );
-            return Err(EmailError::NotConfigured(Self::translate_for_request(
+            return Err(EmailError::NotConfigured(Self::translate_with_locale(
+                "pt-BR",
                 "email.service_not_configured",
                 None,
             )));
@@ -562,7 +550,7 @@ impl EmailService {
         let footer = {
             let mut args = std::collections::HashMap::new();
             args.insert("app".to_string(), self.from_name.clone());
-            Self::translate_for_request("email.footer", Some(&args))
+            Self::translate_with_locale("pt-BR", "email.footer", Some(&args))
         };
         format!(
             r#"<!DOCTYPE html>
@@ -587,15 +575,20 @@ impl EmailService {
     }
 
     /// Send account confirmation email
-    pub async fn send_confirmation_email(&self, to: &str, confirm_url: &str) -> EmailResult {
-        let subject = Self::translate_for_request("email.confirmation.subject", None);
+    pub async fn send_confirmation_email(
+        &self,
+        to: &str,
+        confirm_url: &str,
+        locale: &str,
+    ) -> EmailResult {
+        let subject = Self::translate_with_locale(locale, "email.confirmation.subject", None);
         let resolved_url = self.resolve_url(confirm_url);
 
         let ctx = serde_json::json!({
             "user_name": "",
             "confirm_url": resolved_url,
             "to_email": to,
-            "locale": Self::locale_for_request(),
+            "locale": locale,
         });
 
         let (html, text) = match self.render_pair(
@@ -610,7 +603,11 @@ impl EmailService {
                 args.insert("url".to_string(), resolved_url);
                 (
                     None,
-                    Self::translate_for_request("email.confirmation.body_text", Some(&args)),
+                    Self::translate_with_locale(
+                        locale,
+                        "email.confirmation.body_text",
+                        Some(&args),
+                    ),
                 )
             },
         };
@@ -626,15 +623,20 @@ impl EmailService {
     }
 
     /// Send password reset email
-    pub async fn send_password_reset_email(&self, to: &str, reset_url: &str) -> EmailResult {
-        let subject = Self::translate_for_request("email.password_reset.subject", None);
+    pub async fn send_password_reset_email(
+        &self,
+        to: &str,
+        reset_url: &str,
+        locale: &str,
+    ) -> EmailResult {
+        let subject = Self::translate_with_locale(locale, "email.password_reset.subject", None);
         let resolved_url = self.resolve_url(reset_url);
 
         let ctx = serde_json::json!({
             "user_name": "",
             "reset_url": resolved_url,
             "to_email": to,
-            "locale": Self::locale_for_request(),
+            "locale": locale,
         });
 
         let (html, text) = match self.render_pair(
@@ -649,7 +651,11 @@ impl EmailService {
                 args.insert("url".to_string(), resolved_url);
                 (
                     None,
-                    Self::translate_for_request("email.password_reset.body_text", Some(&args)),
+                    Self::translate_with_locale(
+                        locale,
+                        "email.password_reset.body_text",
+                        Some(&args),
+                    ),
                 )
             },
         };
@@ -671,8 +677,9 @@ impl EmailService {
         secret: &str,
         qr_code_url: &str,
         backup_codes: &[String],
+        locale: &str,
     ) -> EmailResult {
-        let subject = Self::translate_for_request("email.two_factor_setup.subject", None);
+        let subject = Self::translate_with_locale(locale, "email.two_factor_setup.subject", None);
         let backup_codes_text = backup_codes.join(", ");
 
         let ctx = serde_json::json!({
@@ -681,7 +688,7 @@ impl EmailService {
             "qr_code_url": qr_code_url,
             "backup_codes_text": backup_codes_text,
             "to_email": to,
-            "locale": Self::locale_for_request(),
+            "locale": locale,
         });
 
         let (html, text) = match self.render_pair(
@@ -696,8 +703,11 @@ impl EmailService {
                 args.insert("secret".to_string(), secret.to_string());
                 args.insert("qr".to_string(), qr_code_url.to_string());
                 args.insert("codes".to_string(), backup_codes_text);
-                let body =
-                    Self::translate_for_request("email.two_factor_setup.body_text", Some(&args));
+                let body = Self::translate_with_locale(
+                    locale,
+                    "email.two_factor_setup.body_text",
+                    Some(&args),
+                );
                 (None, body)
             },
         };
@@ -713,13 +723,13 @@ impl EmailService {
     }
 
     /// Send password changed notification
-    pub async fn send_password_changed_notification(&self, to: &str) -> EmailResult {
-        let subject = Self::translate_for_request("email.password_changed.subject", None);
+    pub async fn send_password_changed_notification(&self, to: &str, locale: &str) -> EmailResult {
+        let subject = Self::translate_with_locale(locale, "email.password_changed.subject", None);
 
         let ctx = serde_json::json!({
             "user_name": "",
             "to_email": to,
-            "locale": Self::locale_for_request(),
+            "locale": locale,
         });
 
         let (html, text) = match self.render_pair(
@@ -732,7 +742,7 @@ impl EmailService {
                 tracing::warn!(error = %err, "password changed template render failed; sending text-only");
                 (
                     None,
-                    Self::translate_for_request("email.password_changed.body_text", None),
+                    Self::translate_with_locale(locale, "email.password_changed.body_text", None),
                 )
             },
         };
@@ -750,7 +760,9 @@ impl EmailService {
     /// Alias for backward compatibility
     pub async fn send_password_reset(&self, to: &str, token: &str) -> EmailResult {
         let reset_url = format!("/auth/reset-password?token={}", token);
-        self.send_password_reset_email(to, &reset_url).await
+        // Default locale for backward compat - caller should use send_password_reset_email with locale
+        self.send_password_reset_email(to, &reset_url, "pt-BR")
+            .await
     }
 
     /// Send a magic link email.
@@ -759,19 +771,25 @@ impl EmailService {
     /// dedicated template instead of reusing the password reset one.
     pub async fn send_magic_link(&self, to: &str, token: &str) -> EmailResult {
         let magic_url = format!("/auth/magic-link-verify?token={}", token);
-        self.send_magic_link_email(to, &magic_url).await
+        // Default locale for backward compat - caller should use send_magic_link_email with locale
+        self.send_magic_link_email(to, &magic_url, "pt-BR").await
     }
 
     /// Send a magic link email with a pre-built URL.
-    pub async fn send_magic_link_email(&self, to: &str, magic_url: &str) -> EmailResult {
-        let subject = Self::translate_for_request("email.magic_link.subject", None);
+    pub async fn send_magic_link_email(
+        &self,
+        to: &str,
+        magic_url: &str,
+        locale: &str,
+    ) -> EmailResult {
+        let subject = Self::translate_with_locale(locale, "email.magic_link.subject", None);
         let resolved_url = self.resolve_url(magic_url);
 
         let ctx = serde_json::json!({
             "user_name": "",
             "magic_url": resolved_url,
             "to_email": to,
-            "locale": Self::locale_for_request(),
+            "locale": locale,
         });
 
         let (html, text) = match self.render_pair(
@@ -786,7 +804,7 @@ impl EmailService {
                 args.insert("url".to_string(), resolved_url);
                 (
                     None,
-                    Self::translate_for_request("email.magic_link.body_text", Some(&args)),
+                    Self::translate_with_locale(locale, "email.magic_link.body_text", Some(&args)),
                 )
             },
         };
@@ -804,7 +822,9 @@ impl EmailService {
     /// Alias for backward compatibility
     pub async fn send_confirmation(&self, to: &str, token: &str) -> EmailResult {
         let confirm_url = format!("/auth/confirm?token={}", token);
-        self.send_confirmation_email(to, &confirm_url).await
+        // Default locale for backward compat - caller should use send_confirmation_email with locale
+        self.send_confirmation_email(to, &confirm_url, "pt-BR")
+            .await
     }
 
     /// Render an HTML+text pair from templates using the mailer layout.

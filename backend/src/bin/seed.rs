@@ -143,7 +143,7 @@ async fn send_test_emails() -> SeedResult<()> {
         frontend_url, magic_token
     );
     email_service
-        .send_magic_link_email(&test_email, &magic_url)
+        .send_magic_link_email(&test_email, &magic_url, "pt-BR")
         .await
         .map_err(|e| format!("magic link failed: {e}"))?;
     println!("   ✓ Magic link sent");
@@ -152,7 +152,7 @@ async fn send_test_emails() -> SeedResult<()> {
     println!("\n2/5 Sending password reset email...");
     let reset_url = format!("{}/auth/reset-password?token={}", frontend_url, reset_token);
     email_service
-        .send_password_reset_email(&test_email, &reset_url)
+        .send_password_reset_email(&test_email, &reset_url, "pt-BR")
         .await
         .map_err(|e| format!("password reset failed: {e}"))?;
     println!("   ✓ Password reset sent");
@@ -161,7 +161,7 @@ async fn send_test_emails() -> SeedResult<()> {
     println!("\n3/5 Sending email confirmation (welcome) email...");
     let confirm_url = format!("{}/auth/confirm?token={}", frontend_url, confirm_token);
     email_service
-        .send_confirmation_email(&test_email, &confirm_url)
+        .send_confirmation_email(&test_email, &confirm_url, "pt-BR")
         .await
         .map_err(|e| format!("confirmation failed: {e}"))?;
     println!("   ✓ Confirmation sent");
@@ -169,7 +169,7 @@ async fn send_test_emails() -> SeedResult<()> {
     // 4. Password Changed Notification
     println!("\n4/5 Sending password changed notification...");
     email_service
-        .send_password_changed_notification(&test_email)
+        .send_password_changed_notification(&test_email, "pt-BR")
         .await
         .map_err(|e| format!("password changed failed: {e}"))?;
     println!("   ✓ Password changed notification sent");
@@ -186,7 +186,7 @@ async fn send_test_emails() -> SeedResult<()> {
         "55667788".to_string(),
     ];
     email_service
-        .send_2fa_setup_email(&test_email, secret, &qr_code_url, &backup_codes)
+        .send_2fa_setup_email(&test_email, secret, &qr_code_url, &backup_codes, "pt-BR")
         .await
         .map_err(|e| format!("2fa setup failed: {e}"))?;
     println!("   ✓ 2FA setup sent");

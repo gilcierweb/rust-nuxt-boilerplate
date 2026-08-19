@@ -4,7 +4,6 @@ use jsonwebtoken::errors::Error as JwtError;
 use serde_json::json;
 
 use crate::errors::AppError;
-use crate::middleware::locale::current_request_locale;
 
 impl From<DieselError> for AppError {
     fn from(error: DieselError) -> Self {
@@ -14,17 +13,7 @@ impl From<DieselError> for AppError {
 
 impl From<JwtError> for AppError {
     fn from(error: JwtError) -> Self {
-        let msg = current_request_locale()
-            .map(|rl| {
-                let mut args = std::collections::HashMap::new();
-                args.insert("error".to_string(), error.to_string());
-                rl.t_blocking("errors.token_error", Some(&args))
-            })
-            .unwrap_or_else(|| {
-                // Fallback to global rust_i18n (set_locale at startup) if the
-                // thread-local wasn't populated (background tasks, tests).
-                t!("errors.token_error", error = error.to_string()).into_owned()
-            });
+        let msg = t!("errors.token_error", error = error.to_string()).into_owned();
         AppError::Unauthorized(msg)
     }
 }
@@ -54,32 +43,8 @@ impl ResponseError for AppError {
             );
         }
 
-        // Try to read the per-request locale via the thread-local the
-        // middleware populated. `ResponseError::error_response` does not get
-        // the `HttpRequest`, so we rely on the thread-local here. If the
-        // thread-local is unset (e.g., tests, startup), fall back to the
-        // global `rust_i18n::set_locale` value.
-        let message = current_request_locale()
-            .map(|rl| {
-                let key = self.public_message_key();
-                let mut args = std::collections::HashMap::new();
-                if matches!(self, AppError::NotFound(_)) {
-                    args.insert(
-                        "resource".to_string(),
-                        if let AppError::NotFound(resource) = self {
-                            if resource.trim().is_empty() {
-                                "Resource".to_string()
-                            } else {
-                                resource.clone()
-                            }
-                        } else {
-                            "Resource".to_string()
-                        },
-                    );
-                }
-                rl.t_blocking(&key, Some(&args))
-            })
-            .unwrap_or_else(|| self.public_message());
+        // Use rust_i18n directly (locale set at startup via rust_i18n::set_locale)
+        let message = self.public_message();
 
         HttpResponse::build(self.status_code()).json(json!({
             "error": {

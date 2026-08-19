@@ -176,19 +176,23 @@ pub struct UserInfo {
 )]
 #[post("/register")]
 pub async fn register(
+    req: HttpRequest,
     container: web::Data<AppContainer>,
     body: web::Json<RegisterRequest>,
 ) -> AppResult<HttpResponse> {
     body.validate()
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
+    // Get locale from request for localized emails/errors
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
+
     if body.password != body.password_confirmation {
         return Err(AppError::Validation(
-            t!("auth.password.mismatch").into_owned(),
+            t!("auth.password.mismatch", locale = locale).into_owned(),
         ));
     }
 
-    validate_password_strength(&body.password)?;
+    validate_password_strength(&body.password, &locale)?;
     let encrypted_password = hash_password(&body.password, container.config.as_ref())?;
     let now = Utc::now();
     let confirmation_token = Uuid::new_v4().to_string();
@@ -237,8 +241,10 @@ pub async fn register(
         .map_err(AppError::Database)?;
 
     let email_service = container.email_service.clone();
+    // Get locale from request for localized emails
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
     if let Err(error) = email_service
-        .send_confirmation(&body.email, &confirmation_token)
+        .send_confirmation_email(&body.email, &confirmation_token, &locale)
         .await
     {
         tracing::warn!("confirmation email delivery skipped or failed: {}", error);
@@ -1009,10 +1015,11 @@ pub async fn logout(
 )]
 #[post("/recover")]
 pub async fn recover_password(
+    req: HttpRequest,
     container: web::Data<AppContainer>,
     body: web::Json<RecoverRequest>,
 ) -> AppResult<HttpResponse> {
-    recover_password_handler(container, body).await
+    recover_password_handler(req, container, body).await
 }
 
 // POST /api/v1/auth/forgot-password (semantic alias for /auth/recover)
@@ -1030,16 +1037,21 @@ pub async fn recover_password(
 )]
 #[post("/forgot-password")]
 pub async fn forgot_password(
+    req: HttpRequest,
     container: web::Data<AppContainer>,
     body: web::Json<RecoverRequest>,
 ) -> AppResult<HttpResponse> {
-    recover_password_handler(container, body).await
+    recover_password_handler(req, container, body).await
 }
 
 async fn recover_password_handler(
+    req: HttpRequest,
     container: web::Data<AppContainer>,
     body: web::Json<RecoverRequest>,
 ) -> AppResult<HttpResponse> {
+    // Get locale from request for localized emails
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
+
     body.validate()
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
@@ -1069,7 +1081,10 @@ async fn recover_password_handler(
     // Always attempt to send email (will fail silently for non-existent users)
     // This ensures the same timing regardless of user existence
     let email_service = container.email_service.clone();
-    if let Err(error) = email_service.send_password_reset(&body.email, &token).await {
+    if let Err(error) = email_service
+        .send_password_reset_email(&body.email, &token, &locale)
+        .await
+    {
         tracing::debug!("password reset email delivery skipped or failed: {}", error);
     }
 
@@ -1100,15 +1115,19 @@ async fn recover_password_handler(
 )]
 #[post("/reset")]
 pub async fn reset_password(
+    req: HttpRequest,
     container: web::Data<AppContainer>,
     body: web::Json<ResetPasswordRequest>,
 ) -> AppResult<HttpResponse> {
+    // Get locale from request for localized errors
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
+
     body.validate()
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
     if body.password != body.password_confirmation {
         return Err(AppError::Validation(
-            t!("auth.password.mismatch").into_owned(),
+            t!("auth.password.mismatch", locale = locale).into_owned(),
         ));
     }
 
@@ -1155,7 +1174,7 @@ pub async fn reset_password(
     // At this point, we have a valid user_id
     let user_id = user_id.expect("valid reset should have user_id");
 
-    validate_password_strength(&body.password)?;
+    validate_password_strength(&body.password, &locale)?;
     let hashed_password = hash_password(&body.password, container.config.as_ref())?;
     let affected_rows = container
         .users
@@ -1188,9 +1207,11 @@ pub async fn reset_password(
         .await
         .map_err(AppError::Database)?;
     let email = security.decrypt_user_email(&user)?;
+    // Get locale from request for localized emails
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
     let email_service = container.email_service.clone();
     if let Err(error) = email_service
-        .send_password_changed_notification(&email)
+        .send_password_changed_notification(&email, &locale)
         .await
     {
         tracing::warn!("password reset confirmation email failed: {}", error);
@@ -1312,10 +1333,14 @@ pub async fn setup_2fa(
 )]
 #[post("/2fa/enable")]
 pub async fn enable_2fa(
+    req: HttpRequest,
     user: AuthUser,
     container: web::Data<AppContainer>,
     body: web::Json<Enable2FARequest>,
 ) -> AppResult<HttpResponse> {
+    // Get locale from request for localized emails
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
+
     body.validate()
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
@@ -1371,7 +1396,7 @@ pub async fn enable_2fa(
 
     let email_service = container.email_service.clone();
     if let Err(error) = email_service
-        .send_2fa_setup_email(&email, secret, &qr_code_url, &backup_codes_plain)
+        .send_2fa_setup_email(&email, secret, &qr_code_url, &backup_codes_plain, &locale)
         .await
     {
         tracing::warn!("2fa setup email delivery failed: {}", error);
@@ -1473,16 +1498,20 @@ pub async fn disable_2fa(
 )]
 #[post("/change-password")]
 pub async fn change_password(
+    req: HttpRequest,
     user: AuthUser,
     container: web::Data<AppContainer>,
     body: web::Json<ChangePasswordRequest>,
 ) -> AppResult<HttpResponse> {
+    // Get locale from request for localized errors/emails
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
+
     body.validate()
         .map_err(|e| AppError::Validation(first_validation_error_message(&e)))?;
 
     if body.new_password != body.password_confirmation {
         return Err(AppError::Validation(
-            t!("auth.password.mismatch").into_owned(),
+            t!("auth.password.mismatch", locale = locale).into_owned(),
         ));
     }
 
@@ -1505,7 +1534,7 @@ pub async fn change_password(
         ));
     }
 
-    validate_password_strength(&body.new_password)?;
+    validate_password_strength(&body.new_password, &locale)?;
     let hashed = hash_password(&body.new_password, container.config.as_ref())?;
 
     container
@@ -1525,7 +1554,7 @@ pub async fn change_password(
     let email = security.decrypt_user_email(&user_data)?;
     let email_service = container.email_service.clone();
     if let Err(error) = email_service
-        .send_password_changed_notification(&email)
+        .send_password_changed_notification(&email, &locale)
         .await
     {
         tracing::warn!("password changed notification email failed: {}", error);
@@ -1886,7 +1915,12 @@ pub async fn request_magic_link(
     // Always attempt to send email (will fail silently for non-existent users)
     // This ensures the same timing regardless of user existence.
     let email_service = container.email_service.clone();
-    if let Err(error) = email_service.send_magic_link(&body.email, &token).await {
+    // Get locale from request for localized emails
+    let locale = crate::middleware::locale::RequestLocale::from_request(&req);
+    if let Err(error) = email_service
+        .send_magic_link_email(&body.email, &token, &locale)
+        .await
+    {
         tracing::debug!("magic link email delivery skipped or failed: {}", error);
     }
 

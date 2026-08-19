@@ -48,10 +48,11 @@ pub enum SamplerType {
 
 impl TelemetryConfig {
     /// Build configuration from environment variables with sensible defaults.
+    /// OTEL is opt-in: disabled by default in all environments unless explicitly enabled.
     pub fn from_env() -> Self {
         let enabled = std::env::var(ENV_OTEL_ENABLED)
-            .map(|v| v != "false" && v != "0")
-            .unwrap_or(true);
+            .map(|v| v == "true" || v == "1")
+            .unwrap_or(false);
 
         let endpoint =
             std::env::var(ENV_OTEL_ENDPOINT).unwrap_or_else(|_| DEFAULT_OTEL_ENDPOINT.to_string());
@@ -137,9 +138,9 @@ impl TelemetryConfig {
 impl Default for TelemetryConfig {
     fn default() -> Self {
         Self {
-            enabled: true,
+            enabled: false,
             endpoint: DEFAULT_OTEL_ENDPOINT.to_string(),
-            sampler: SamplerType::ParentBased,
+            sampler: SamplerType::AlwaysOff,
         }
     }
 }
@@ -160,9 +161,9 @@ mod tests {
         }
 
         let config = TelemetryConfig::from_env();
-        assert!(config.enabled);
+        assert!(!config.enabled);
         assert_eq!(config.endpoint, DEFAULT_OTEL_ENDPOINT);
-        assert_eq!(config.sampler, SamplerType::ParentBased);
+        assert_eq!(config.sampler, SamplerType::AlwaysOff);
     }
 
     #[test]
@@ -317,9 +318,9 @@ mod tests {
     }
 
     #[test]
-    fn default_config_is_parent_based() {
+    fn default_config_is_disabled() {
         let config = TelemetryConfig::default();
-        assert!(config.enabled);
-        assert_eq!(config.sampler, SamplerType::ParentBased);
+        assert!(!config.enabled);
+        assert_eq!(config.sampler, SamplerType::AlwaysOff);
     }
 }

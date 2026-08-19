@@ -154,7 +154,6 @@ struct AppRuntime {
     state: web::Data<AppState>,
     container: web::Data<crate::repositories::AppContainer>,
     ws_state: web::Data<crate::ws::WsRedisState>,
-    translations: crate::services::translation_service::Translations,
 }
 
 /// Build the Redis connection pool from config, logging sizing guidance for
@@ -203,36 +202,7 @@ fn build_redis_pool(config: &AppConfig) -> deadpool_redis::Pool {
         .expect("Failed to create Redis connection pool")
 }
 
-/// Load the per-request translation catalogues from the backend `locales/`
-/// directory. On failure, falls back to key-only responses.
-///
-/// The resulting `Translations` handle is shared with every request via the
-/// locale middleware (see `middleware::locale::LocaleMiddleware`). This is
-/// the per-request translation mechanism — it does not mutate any global
-/// state, so concurrent requests cannot leak locale to each other.
-async fn load_translations() -> crate::services::translation_service::Translations {
-    match crate::services::translation_service::Translations::load_from_dir("locales") {
-        Ok(t) => {
-            let locales = t.available_locales().await;
-            tracing::info!(
-                event = "i18n.translations_loaded",
-                locales = ?locales,
-                "per-request translation catalogues loaded"
-            );
-            t
-        },
-        Err(error) => {
-            tracing::error!(
-                event = "i18n.translations_load_failed",
-                error = %error,
-                "failed to load translation catalogues; falling back to key-only responses"
-            );
-            crate::services::translation_service::Translations::default()
-        },
-    }
-}
-
-/// Build the DB/Redis pools, WebSocket state, translations and the AppState.
+/// Build the DB/Redis pools, WebSocket state, and the AppState.
 async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant) -> AppRuntime {
     let api_db = Database::from_config(config);
     let db_pool = api_db.pool.clone();
@@ -247,8 +217,6 @@ async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant) 
     // broadcasts are never delivered to local sockets.
     let ws_state = crate::ws::WsRedisState::new(redis_pool.clone(), crate::ws::WsLimits::default());
 
-    let translations = load_translations().await;
-
     let state = web::Data::new(AppState {
         db: db_pool,
         redis: redis_pool,
@@ -258,8 +226,6 @@ async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant) 
         // Cache Arc<Vec<JwtSecretKey>> for cheap O(1) clones in JWT middleware.
         // Avoids cloning the full Vec on every authenticated request.
         jwt_secrets: Arc::new(config.jwt_secrets.clone()),
-        // Per-request translation catalogues loaded above.
-        translations: translations.clone(),
     });
 
     // Record cold-start duration (time from boot_start to AppState ready)
@@ -275,7 +241,6 @@ async fn build_runtime(config: &Arc<AppConfig>, boot_start: std::time::Instant) 
         state,
         container,
         ws_state: web::Data::new(ws_state),
-        translations,
     }
 }
 
@@ -438,16 +403,8 @@ pub async fn run() -> std::io::Result<()> {
                 web::JsonConfig::default()
                     .limit(json_limit)
                     .error_handler(|_error, _request| {
-                        // Use the per-request locale (populated by the locale
-                        // middleware before any extractor runs) so the parser
-                        // error message matches the user's UI language. Falls
-                        // back to the global rust_i18n value if the thread-local
-                        // is unset (should never happen in normal operation).
-                        let message = crate::middleware::locale::current_request_locale()
-                            .map(|rl| rl.t_blocking("errors.bad_request_payload", None))
-                            .unwrap_or_else(|| {
-                                t!("errors.bad_request_payload").into_owned()
-                            });
+                        // Use rust_i18n directly for JSON parse errors
+                        let message = t!("errors.bad_request_payload").into_owned();
                         AppError::BadRequest(message).into()
                     }),
             )
@@ -460,9 +417,7 @@ pub async fn run() -> std::io::Result<()> {
             .wrap(crate::middleware::request_log_middleware::RequestLogMiddleware)
             // Per-request locale resolution. Must run BEFORE request_log so
             // the resolved locale appears in the structured log fields.
-            .wrap(crate::middleware::locale::LocaleMiddleware::new(
-                runtime.translations.clone(),
-            ))
+            .wrap(crate::middleware::locale::LocaleMiddleware::new())
             .service(crate::controllers::health_controller::liveness)
             .configure(|cfg| crate::routes::router::config(cfg, pool_for_router.clone()))
             .default_service(web::route().to(not_found))

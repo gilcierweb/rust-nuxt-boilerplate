@@ -32,10 +32,6 @@ pub struct AppState {
     /// Avoids cloning the full `Vec<JwtSecretKey>` from `config.jwt_secrets`
     /// on every authenticated request.
     pub jwt_secrets: Arc<Vec<crate::config::app_config::JwtSecretKey>>,
-    /// Per-request translation catalogues loaded once at startup from the
-    /// `locales/` directory. The locale middleware clones this handle into each
-    /// `RequestLocale` so handlers can translate keys without any global state.
-    pub translations: crate::services::translation_service::Translations,
 }
 
 i18n!("locales");

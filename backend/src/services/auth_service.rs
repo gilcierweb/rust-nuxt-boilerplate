@@ -80,32 +80,36 @@ pub fn rehash_password(password: &str, config: &AppConfig) -> Result<String, App
 }
 
 /// Validate password strength: min 12 chars, at least 1 digit, 1 uppercase, 1 special char.
-pub fn validate_password_strength(password: &str) -> Result<(), AppError> {
+pub fn validate_password_strength(password: &str, locale: &str) -> Result<(), AppError> {
     if password.len() < 12 {
         return Err(AppError::Validation(
-            t!("auth.password.must_be_12_chars").into_owned(),
+            t!("auth.password.must_be_12_chars", locale = locale).into_owned(),
         ));
     }
     if !password.chars().any(|c| c.is_ascii_digit()) {
         return Err(AppError::Validation(
-            t!("auth.password.must_have_number").into_owned(),
+            t!("auth.password.must_have_number", locale = locale).into_owned(),
         ));
     }
     if !password.chars().any(|c| c.is_uppercase()) {
         return Err(AppError::Validation(
-            t!("auth.password.must_have_uppercase").into_owned(),
+            t!("auth.password.must_have_uppercase", locale = locale).into_owned(),
         ));
     }
     if !password.chars().any(|c| c.is_ascii_punctuation()) {
         return Err(AppError::Validation(
-            t!("auth.password.must_have_special").into_owned(),
+            t!("auth.password.must_have_special", locale = locale).into_owned(),
         ));
     }
     Ok(())
 }
 
 /// Fetch user by email (case-insensitive).
-pub fn find_user_by_email(conn: &mut PgConnection, email_input: &str) -> Result<User, AppError> {
+pub fn find_user_by_email(
+    conn: &mut PgConnection,
+    email_input: &str,
+    locale: &str,
+) -> Result<User, AppError> {
     use crate::db::schema::users::dsl::*;
     let security = SecurityService::from_env()?;
     let protected_email = security.protect_email(email_input)?;
@@ -115,7 +119,7 @@ pub fn find_user_by_email(conn: &mut PgConnection, email_input: &str) -> Result<
         .first::<User>(conn)
         .map_err(|e| match e {
             diesel::result::Error::NotFound => {
-                AppError::Unauthorized(t!("auth.login.failed").into_owned())
+                AppError::Unauthorized(t!("auth.login.failed", locale = locale).into_owned())
             },
             _ => AppError::Database(e),
         })
@@ -143,8 +147,9 @@ pub fn register_user(
     password: &str,
     token_salt: &str,
     config: &AppConfig,
+    locale: &str,
 ) -> Result<(User, String), AppError> {
-    validate_password_strength(password)?;
+    validate_password_strength(password, locale)?;
     let security = SecurityService::from_env()?;
     let protected_email = security.protect_email(email_input)?;
 
@@ -158,7 +163,7 @@ pub fn register_user(
 
     if exists {
         return Err(AppError::Conflict(
-            t!("auth.register.email_exists").into_owned(),
+            t!("auth.register.email_exists", locale = locale).into_owned(),
         ));
     }
 
@@ -328,35 +333,35 @@ mod tests {
     #[test]
     fn test_validate_password_strength_valid() {
         let password = "ValidPass123!";
-        let result = validate_password_strength(password);
+        let result = validate_password_strength(password, "pt-BR");
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_validate_password_strength_too_short() {
         let password = "Short1!";
-        let result = validate_password_strength(password);
+        let result = validate_password_strength(password, "pt-BR");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_validate_password_strength_no_digit() {
         let password = "NoDigitPass!";
-        let result = validate_password_strength(password);
+        let result = validate_password_strength(password, "pt-BR");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_validate_password_strength_no_uppercase() {
         let password = "nouppercase1!";
-        let result = validate_password_strength(password);
+        let result = validate_password_strength(password, "pt-BR");
         assert!(result.is_err());
     }
 
     #[test]
     fn test_validate_password_strength_no_special() {
         let password = "NoSpecial123";
-        let result = validate_password_strength(password);
+        let result = validate_password_strength(password, "pt-BR");
         assert!(result.is_err());
     }
 

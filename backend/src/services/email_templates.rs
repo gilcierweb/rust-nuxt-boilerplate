@@ -19,8 +19,7 @@ use rust_i18n::replace_patterns;
 use rust_i18n::t;
 use tera::{Context, Result as TeraResult, Tera, Value};
 
-/// Custom Tera function `t` that resolves an i18n key via the per-request locale
-/// when available, falling back to the global `rust_i18n` locale.
+/// Custom Tera function `t` that resolves an i18n key via rust_i18n with pt-BR locale.
 /// Usage in templates: `{{ t(key="key", arg1="value1", arg2="value2") }}`.
 fn tera_t_function(args: &HashMap<String, Value>) -> TeraResult<Value> {
     let key = args
@@ -38,33 +37,16 @@ fn tera_t_function(args: &HashMap<String, Value>) -> TeraResult<Value> {
         }
     }
 
-    // Prefer per-request locale if available (thread-local set by locale middleware)
-    let message = crate::middleware::locale::current_request_locale()
-        .map(|rl| {
-            rl.t_blocking(
-                key,
-                if interp_args.is_empty() {
-                    None
-                } else {
-                    Some(&interp_args)
-                },
-            )
-        })
-        .unwrap_or_else(|| {
-            // Fallback: global rust_i18n locale (may be en by default in tests).
-            // Use `t!(key)` with explicit locale to get pt-BR at minimum,
-            // then interpolate named args via replace_patterns if needed.
-            let raw = t!(key, locale = "pt-BR").into_owned();
-            if interp_args.is_empty() {
-                raw
-            } else {
-                let mut patterns: Vec<&str> = interp_args.keys().map(String::as_str).collect();
-                patterns.sort();
-                let values: Vec<String> =
-                    patterns.iter().map(|p| interp_args[*p].clone()).collect();
-                replace_patterns(&raw, &patterns, &values)
-            }
-        });
+    // Use rust_i18n with pt-BR locale (set at startup via rust_i18n::set_locale)
+    let raw = t!(key, locale = "pt-BR").into_owned();
+    let message = if interp_args.is_empty() {
+        raw
+    } else {
+        let mut patterns: Vec<&str> = interp_args.keys().map(String::as_str).collect();
+        patterns.sort();
+        let values: Vec<String> = patterns.iter().map(|p| interp_args[*p].clone()).collect();
+        replace_patterns(&raw, &patterns, &values)
+    };
 
     Ok(Value::String(message))
 }
