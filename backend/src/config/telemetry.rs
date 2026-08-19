@@ -188,31 +188,45 @@ mod tests {
     #[test]
     #[serial]
     fn always_on_sampler() {
-        unsafe { std::env::set_var(ENV_OTEL_SAMPLER, "always_on") };
+        unsafe {
+            std::env::set_var(ENV_OTEL_ENABLED, "true");
+            std::env::set_var(ENV_OTEL_SAMPLER, "always_on");
+        }
         let config = TelemetryConfig::from_env();
         assert_eq!(config.sampler, SamplerType::AlwaysOn);
-        unsafe { std::env::remove_var(ENV_OTEL_SAMPLER) };
+        unsafe {
+            std::env::remove_var(ENV_OTEL_ENABLED);
+            std::env::remove_var(ENV_OTEL_SAMPLER);
+        }
     }
 
     #[test]
     #[serial]
     fn always_off_sampler() {
-        unsafe { std::env::set_var(ENV_OTEL_SAMPLER, "always_off") };
+        unsafe {
+            std::env::set_var(ENV_OTEL_ENABLED, "true");
+            std::env::set_var(ENV_OTEL_SAMPLER, "always_off");
+        }
         let config = TelemetryConfig::from_env();
         assert_eq!(config.sampler, SamplerType::AlwaysOff);
-        unsafe { std::env::remove_var(ENV_OTEL_SAMPLER) };
+        unsafe {
+            std::env::remove_var(ENV_OTEL_ENABLED);
+            std::env::remove_var(ENV_OTEL_SAMPLER);
+        }
     }
 
     #[test]
     #[serial]
     fn ratio_based_custom() {
         unsafe {
+            std::env::set_var(ENV_OTEL_ENABLED, "true");
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
             std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "0.25");
         }
         let config = TelemetryConfig::from_env();
         assert_eq!(config.sampler, SamplerType::RatioBased(0.25));
         unsafe {
+            std::env::remove_var(ENV_OTEL_ENABLED);
             std::env::remove_var(ENV_OTEL_SAMPLER);
             std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
         }
@@ -222,12 +236,14 @@ mod tests {
     #[serial]
     fn ratio_based_clamped_max() {
         unsafe {
+            std::env::set_var(ENV_OTEL_ENABLED, "true");
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
             std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "5.0");
         }
         let config = TelemetryConfig::from_env();
         assert_eq!(config.sampler, SamplerType::RatioBased(1.0));
         unsafe {
+            std::env::remove_var(ENV_OTEL_ENABLED);
             std::env::remove_var(ENV_OTEL_SAMPLER);
             std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
         }
@@ -237,12 +253,14 @@ mod tests {
     #[serial]
     fn ratio_based_clamped_min() {
         unsafe {
+            std::env::set_var(ENV_OTEL_ENABLED, "true");
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
             std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "-1.0");
         }
         let config = TelemetryConfig::from_env();
         assert_eq!(config.sampler, SamplerType::RatioBased(0.0));
         unsafe {
+            std::env::remove_var(ENV_OTEL_ENABLED);
             std::env::remove_var(ENV_OTEL_SAMPLER);
             std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
         }
@@ -252,6 +270,7 @@ mod tests {
     #[serial]
     fn ratio_based_invalid_falls_back() {
         unsafe {
+            std::env::set_var(ENV_OTEL_ENABLED, "true");
             std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
             std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "not_a_number");
         }
@@ -266,10 +285,16 @@ mod tests {
     #[test]
     #[serial]
     fn unknown_sampler_falls_back_to_parent_based() {
-        unsafe { std::env::set_var(ENV_OTEL_SAMPLER, "unknown_sampler") };
+        unsafe {
+            std::env::set_var(ENV_OTEL_ENABLED, "true");
+            std::env::set_var(ENV_OTEL_SAMPLER, "unknown_sampler");
+        }
         let config = TelemetryConfig::from_env();
         assert_eq!(config.sampler, SamplerType::ParentBased);
-        unsafe { std::env::remove_var(ENV_OTEL_SAMPLER) };
+        unsafe {
+            std::env::remove_var(ENV_OTEL_ENABLED);
+            std::env::remove_var(ENV_OTEL_SAMPLER);
+        }
     }
 
     #[test]

@@ -143,6 +143,10 @@ pub struct AuthUser {
 }
 
 impl AuthUser {
+    pub fn new(claims: Claims) -> Self {
+        Self { claims }
+    }
+
     pub fn claims(&self) -> &Claims {
         &self.claims
     }

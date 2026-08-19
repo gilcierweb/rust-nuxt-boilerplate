@@ -156,12 +156,13 @@ mod tests {
     use actix_web::dev::ServiceRequest;
     use actix_web::http::StatusCode;
     use actix_web::{App, test, web};
+    use actix_web::HttpMessage;
     use chrono::Utc;
     use serde_json::{Value, json};
     use uuid::Uuid;
 
     use super::test_config;
-    use crate::middleware::auth::create_token;
+    use crate::middleware::auth::{create_token, Claims};
     use crate::models::audit_log::AuditLog;
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::mocks::mock_container;
@@ -189,6 +190,19 @@ mod tests {
 
     fn test_token() -> String {
         create_token(Uuid::new_v4(), Uuid::new_v4(), 1, "", 3600).unwrap()
+    }
+
+    fn test_claims() -> Claims {
+        Claims {
+            sub: Uuid::new_v4(),
+            profile_id: Uuid::new_v4(),
+            role: crate::models::role::ROLE_ADMIN.as_i32(),
+            token_use: "access".to_string(),
+            exp: 0,
+            iat: 0,
+            nbf: 0,
+            jti: None,
+        }
     }
 
     #[actix_web::test]
@@ -336,6 +350,7 @@ mod tests {
                 "hash": "a".repeat(64),
             }))
             .to_request();
+        req.extensions_mut().insert(test_claims());
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
     }
