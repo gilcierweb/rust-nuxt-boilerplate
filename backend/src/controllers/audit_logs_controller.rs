@@ -107,7 +107,7 @@ pub async fn create_audit_log(
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::AuditLogs, AbilityAction::Create)?;
     let mut payload = body.into_inner();
-    
+
     // SECURITY: actor_user_id must come from authenticated user, not request body
     // This prevents forging audit log entries as other users
     payload.actor_user_id = Some(user.claims().sub);
