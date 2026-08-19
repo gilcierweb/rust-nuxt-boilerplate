@@ -236,6 +236,14 @@ pub async fn delete_role(
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::Roles, AbilityAction::Delete)?;
     let role_id = id.into_inner();
+
+    // Get all users who have this role BEFORE deleting (for token revocation)
+    let affected_users = container
+        .user_roles
+        .find_by_role(&role_id)
+        .await
+        .map_err(AppError::Database)?;
+
     let affected = container
         .roles
         .destroy(&role_id)
@@ -243,6 +251,14 @@ pub async fn delete_role(
         .map_err(AppError::Database)?;
     if affected == 0 {
         return Err(AppError::NotFound("Role".to_string()));
+    }
+
+    // Revoke all refresh tokens for affected users (force re-authentication)
+    for user_role in &affected_users {
+        let _ = container
+            .refresh_tokens
+            .revoke_all_for_user(&user_role.user_id)
+            .await;
     }
 
     // Invalidate cached roles for all users who had this role

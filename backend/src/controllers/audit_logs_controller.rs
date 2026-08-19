@@ -5,6 +5,7 @@ use validator::Validate;
 
 use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
 use crate::errors::{AppError, AppResult};
+use crate::middleware::auth::AuthUser;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::container::AppContainer;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
@@ -101,10 +102,15 @@ pub async fn get_audit_log(
 pub async fn create_audit_log(
     details: AuthDetails,
     container: web::Data<AppContainer>,
+    user: AuthUser,
     body: web::Json<NewAuditLog>,
 ) -> AppResult<HttpResponse> {
     authorize(&details, AbilityResource::AuditLogs, AbilityAction::Create)?;
     let mut payload = body.into_inner();
+    
+    // SECURITY: actor_user_id must come from authenticated user, not request body
+    // This prevents forging audit log entries as other users
+    payload.actor_user_id = Some(user.claims().sub);
     payload.actor_role_snapshot = payload
         .actor_role_snapshot
         .as_ref()

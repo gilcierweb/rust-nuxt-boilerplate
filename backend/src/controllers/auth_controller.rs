@@ -68,6 +68,9 @@ pub struct LoginRequest {
     /// Optional TOTP code if 2FA is enabled (exactly 6 decimal digits)
     #[validate(length(min = 6, max = 6, message = "auth.validation.otp_invalid"))]
     pub otp_code: Option<String>,
+    /// Optional backup code if 2FA is enabled (alphanumeric, 8 chars)
+    #[validate(length(min = 8, max = 8, message = "auth.validation.backup_code_invalid"))]
+    pub backup_code: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -457,34 +460,78 @@ pub async fn login(
         return Err(AppError::Unauthorized(t!("auth.login.failed").into_owned()));
     }
     if user.is_otp_enabled() {
-        match &body.otp_code {
-            None => {
-                tracing::info!(
-                    event = "auth.login.otp_required",
+        // Check for backup code first (one-time use)
+        if let Some(backup_code) = &body.backup_code {
+            let backup_codes = user.otp_backup_codes.as_ref().ok_or_else(|| {
+                AppError::Internal(t!("auth.2fa.invalid_backup_codes").into_owned())
+            })?;
+
+            // Find and verify backup code (constant-time comparison)
+            let mut backup_code_valid = false;
+            let mut used_index: Option<usize> = None;
+
+            for (index, stored_code_opt) in backup_codes.iter().enumerate() {
+                if let Some(stored_code) = stored_code_opt
+                    && verify_password(backup_code, stored_code)?
+                {
+                    backup_code_valid = true;
+                    used_index = Some(index);
+                    break;
+                }
+            }
+
+            if !backup_code_valid {
+                tracing::warn!(
+                    event = "auth.login.invalid_backup_code",
                     user_id = %user.id,
                     ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
-                    "login requires otp"
+                    user_agent = user_agent.as_deref().unwrap_or("unknown"),
+                    "login failed: invalid backup code"
                 );
-                return Ok(HttpResponse::Ok().json(serde_json::json!({
-                    "requires_otp": true,
-                    "message": t!("auth.2fa.setup_required")
-                })));
-            },
-            Some(code) => {
-                let secret = user.otp_secret.as_ref().ok_or(AppError::Internal(
-                    t!("auth.2fa.invalid_secret").into_owned(),
-                ))?;
-                if let Err(error) = verify_totp(secret, code) {
-                    tracing::warn!(
-                        event = "auth.login.invalid_otp",
+                return Err(AppError::Unauthorized(t!("auth.login.failed").into_owned()));
+            }
+
+            // Remove used backup code (one-time use)
+            if let Some(index) = used_index {
+                let mut updated_codes = backup_codes.clone();
+                updated_codes[index] = None;
+                container
+                    .users
+                    .update_backup_codes(&user.id, &updated_codes)
+                    .await
+                    .map_err(AppError::Database)?;
+            }
+        } else {
+            // Standard TOTP verification
+            match &body.otp_code {
+                None => {
+                    tracing::info!(
+                        event = "auth.login.otp_required",
                         user_id = %user.id,
                         ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
-                        user_agent = user_agent.as_deref().unwrap_or("unknown"),
-                        "login failed: invalid otp"
+                        "login requires otp"
                     );
-                    return Err(error);
-                }
-            },
+                    return Ok(HttpResponse::Ok().json(serde_json::json!({
+                        "requires_otp": true,
+                        "message": t!("auth.2fa.setup_required")
+                    })));
+                },
+                Some(code) => {
+                    let secret = user.otp_secret.as_ref().ok_or(AppError::Internal(
+                        t!("auth.2fa.invalid_secret").into_owned(),
+                    ))?;
+                    if let Err(error) = verify_totp(secret, code) {
+                        tracing::warn!(
+                            event = "auth.login.invalid_otp",
+                            user_id = %user.id,
+                            ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
+                            user_agent = user_agent.as_deref().unwrap_or("unknown"),
+                            "login failed: invalid otp"
+                        );
+                        return Err(error);
+                    }
+                },
+            }
         }
     }
 
@@ -1287,14 +1334,24 @@ pub async fn enable_2fa(
 
     verify_totp(secret, &body.otp_code)?;
 
-    // Generate backup codes
-    let backup_codes: Vec<String> = (0..8)
-        .map(|_| generate_random_token(4).to_uppercase())
+    // Generate backup codes with higher entropy (8 chars = ~48 bits)
+    let backup_codes_plain: Vec<String> = (0..8)
+        .map(|_| generate_random_token(8).to_uppercase())
         .collect();
+
+    // Hash backup codes before storing (using same Argon2id as passwords)
+    let backup_codes_hashed: Vec<String> = backup_codes_plain
+        .iter()
+        .map(|code| hash_password(code, container.config.as_ref()))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Store hashed backup codes (wrapped in Option for DB schema compatibility)
+    let backup_codes_for_storage: Vec<Option<String>> =
+        backup_codes_hashed.into_iter().map(Some).collect();
 
     container
         .users
-        .enable_2fa(&user_id, &backup_codes)
+        .enable_2fa(&user_id, &backup_codes_for_storage)
         .await
         .map_err(AppError::Database)?;
 
@@ -1314,7 +1371,7 @@ pub async fn enable_2fa(
 
     let email_service = container.email_service.clone();
     if let Err(error) = email_service
-        .send_2fa_setup_email(&email, secret, &qr_code_url, &backup_codes)
+        .send_2fa_setup_email(&email, secret, &qr_code_url, &backup_codes_plain)
         .await
     {
         tracing::warn!("2fa setup email delivery failed: {}", error);
@@ -1329,7 +1386,7 @@ pub async fn enable_2fa(
 
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "message": t!("auth.2fa.setup_success"),
-        "backup_codes": backup_codes,
+        "backup_codes": backup_codes_plain,
         "warning": t!("auth.2fa.backup_codes_warning")
     })))
 }

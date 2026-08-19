@@ -533,7 +533,7 @@ impl IUserRepository for UsersRepository {
     async fn enable_2fa(
         &self,
         user_id: &Uuid,
-        backup_codes: &[String],
+        backup_codes: &[Option<String>],
     ) -> diesel::QueryResult<usize> {
         let codes = backup_codes.to_vec();
         let user_id = *user_id;
@@ -565,6 +565,29 @@ impl IUserRepository for UsersRepository {
                             otp_secret.eq::<Option<String>>(None),
                             otp_enabled_at.eq::<Option<chrono::NaiveDateTime>>(None),
                             otp_backup_codes.eq::<Option<Vec<String>>>(None),
+                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                        ))
+                        .execute(conn)
+                        .await
+                })
+            })
+            .await
+    }
+
+    async fn update_backup_codes(
+        &self,
+        user_id: &Uuid,
+        backup_codes: &[Option<String>],
+    ) -> diesel::QueryResult<usize> {
+        let user_id = *user_id;
+        let codes = backup_codes.to_vec();
+        use crate::db::schema::users::dsl::*;
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    diesel::update(users_table::table.find(user_id))
+                        .set((
+                            otp_backup_codes.eq(Some(codes)),
                             updated_at.eq(chrono::Utc::now().naive_utc()),
                         ))
                         .execute(conn)

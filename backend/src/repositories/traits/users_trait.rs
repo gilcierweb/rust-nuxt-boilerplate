@@ -79,8 +79,17 @@ pub trait IUserRepository: Send + Sync {
     ) -> QueryResult<usize>;
     async fn reset_password(&self, token_digest: &str, new_password: &str) -> QueryResult<usize>;
     async fn set_otp_secret(&self, user_id: &Uuid, secret: &str) -> QueryResult<usize>;
-    async fn enable_2fa(&self, user_id: &Uuid, backup_codes: &[String]) -> QueryResult<usize>;
+    async fn enable_2fa(
+        &self,
+        user_id: &Uuid,
+        backup_codes: &[Option<String>],
+    ) -> QueryResult<usize>;
     async fn disable_2fa(&self, user_id: &Uuid) -> QueryResult<usize>;
+    async fn update_backup_codes(
+        &self,
+        user_id: &Uuid,
+        backup_codes: &[Option<String>],
+    ) -> QueryResult<usize>;
     async fn list_paginated(
         &self,
         params: &PaginationParams,
