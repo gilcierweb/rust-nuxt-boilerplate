@@ -5,24 +5,24 @@
       <h3 class="text-base-content text-2xl font-semibold mb-1">{{ $t('auth.resetPassword.title') }}</h3>
     </div>
 
-    <div v-if="success" class="alert alert-success alert-soft text-center">
-      <Icon name="heroicons:check-circle" class="h-10 w-10 mx-auto" />
+    <div v-if="success" class="alert alert-soft alert-success flex flex-col items-center gap-4 text-center" role="alert">
+      <span class="icon-[tabler--circle-check] size-10 shrink-0"></span>
       <div>
         <h3 class="font-semibold text-lg mb-1">{{ $t('auth.resetPassword.success.title') }}</h3>
         <NuxtLink :to="localePath('/auth/login')" class="btn btn-primary mt-4 inline-flex">{{ $t('auth.resetPassword.success.login') }}</NuxtLink>
       </div>
     </div>
 
-    <div v-else-if="!token" class="alert alert-error alert-soft">
-      <p class="text-sm">{{ $t('auth.resetPassword.error.invalidToken') }}</p>
-      <NuxtLink :to="localePath('/auth/forgot-password')" class="btn btn-outline btn-primary mt-4 inline-flex text-sm">{{ $t('auth.resetPassword.error.requestNew') }}</NuxtLink>
+    <div v-else-if="!token" class="alert alert-soft alert-error flex items-center gap-4" role="alert">
+      <span class="icon-[tabler--alert-circle] shrink-0 size-6"></span>
+      <div class="flex-1">
+        <p class="text-sm">{{ $t('auth.resetPassword.error.invalidToken') }}</p>
+        <NuxtLink :to="localePath('/auth/forgot-password')" class="btn btn-outline btn-primary mt-4 inline-flex text-sm">{{ $t('auth.resetPassword.error.requestNew') }}</NuxtLink>
+      </div>
     </div>
 
     <form v-else novalidate class="space-y-4" @submit.prevent="onSubmit">
-      <div v-if="errorMsg" class="alert alert-error alert-soft" role="alert">
-        <Icon name="heroicons:exclamation-circle" class="h-5 w-5" />
-        <p class="text-sm">{{ errorMsg }}</p>
-      </div>
+      <AppAlert v-if="errorMsg" tone="error" variant="soft" :message="errorMsg" :dismissible="false" />
 
       <div>
         <label class="label-text mb-1.5 block" for="password">{{ $t('auth.resetPassword.newPassword') }}</label>

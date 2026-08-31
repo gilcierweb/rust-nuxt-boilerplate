@@ -1,12 +1,14 @@
 <template>
-  <BaseAppAlert v-bind="$props" />
+  <BaseAppAlert v-bind="$props">
+    <slot />
+  </BaseAppAlert>
 </template>
 
 <script setup lang="ts">
 import BaseAppAlert from '~/components/ui/AppAlert.vue'
 
 withDefaults(defineProps<{
-  message: string
+  message?: string
   title?: string
   tone?: 'warning' | 'success' | 'error' | 'info'
   variant?: 'solid' | 'soft' | 'outline'
@@ -14,6 +16,7 @@ withDefaults(defineProps<{
   dismissible?: boolean
   id?: string
 }>(), {
+  message: '',
   dismissible: true
 })
 </script>

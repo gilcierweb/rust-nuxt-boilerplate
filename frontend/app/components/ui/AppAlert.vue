@@ -1,16 +1,16 @@
 <template>
   <Transition name="alert-transition">
     <div
-      v-if="visible && message"
+      v-if="visible && hasContent"
       :id="alertId"
       :class="alertClasses"
       role="alert"
     >
       <span :class="iconClasses"></span>
-      <div class="flex-1">
-        <span v-if="title" class="text-lg font-semibold">{{ title }}:</span>
-        <template v-if="title"> </template>{{ message }}
-      </div>
+      <p class="flex-1">
+        <span v-if="title" class="text-lg font-semibold">{{ title }}: </span>
+        <slot>{{ message }}</slot>
+      </p>
       <button
         v-if="dismissible"
         type="button"
@@ -31,7 +31,7 @@ type AlertTone = 'warning' | 'success' | 'error' | 'info'
 type AlertVariant = 'solid' | 'soft' | 'outline'
 
 const props = withDefaults(defineProps<{
-  message: string
+  message?: string
   title?: string
   tone?: AlertTone
   variant?: AlertVariant
@@ -39,6 +39,7 @@ const props = withDefaults(defineProps<{
   dismissible?: boolean
   id?: string
 }>(), {
+  message: '',
   title: '',
   tone: 'warning',
   variant: 'soft',
@@ -47,11 +48,26 @@ const props = withDefaults(defineProps<{
   id: '',
 })
 
+const slots = useSlots()
+
 const visible = ref(true)
 const generatedId = useId()
 const alertId = computed(() => {
   if (props.id) return props.id
   return `dismiss-alert-${generatedId.replace(/[^A-Za-z0-9_-]/g, '-')}`
+})
+
+const hasContent = computed(() => {
+  if (props.message) return true
+  const slotContent = slots.default?.()
+  if (!slotContent || slotContent.length === 0) return false
+  // Check if slot has non-empty content (filter comment nodes)
+  return slotContent.some((vnode: any) => {
+    if (typeof vnode.children === 'string') return vnode.children.trim().length > 0
+    // vnode is not a comment
+    if (vnode.type && typeof vnode.type === 'symbol') return false
+    return true
+  })
 })
 
 const closeAlert = () => {
@@ -87,12 +103,12 @@ const variantClassMap: Record<AlertVariant, string> = {
 
 const alertClasses = computed(() => [
   'alert',
+  variantClassMap[props.variant],
+  toneClassMap[props.tone],
   'flex',
   'items-center',
   'gap-4',
-  toneClassMap[props.tone],
-  variantClassMap[props.variant],
-])
+].filter(Boolean))
 
 const iconClasses = computed(() => [
   props.icon || toneIconMap[props.tone],

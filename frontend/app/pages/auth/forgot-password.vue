@@ -11,12 +11,13 @@
       </p>
     </div>
 
-    <!-- Success state -->
+    <!-- Success state — FlyonUI: alert-soft + flex + role -->
     <div
       v-if="sent"
-      class="alert alert-success alert-soft mb-6 text-center"
+      class="alert alert-soft alert-success flex flex-col items-center gap-4 mb-6 text-center"
+      role="alert"
     >
-      <Icon name="heroicons:envelope-open" class="h-10 w-10 mx-auto" />
+      <span class="icon-[tabler--mail-opened] size-10 shrink-0"></span>
       <div>
         <h3 class="font-semibold text-lg mb-1">{{ $t('auth.forgotPassword.success.title') }}</h3>
         <p class="text-sm opacity-80">

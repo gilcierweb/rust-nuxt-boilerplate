@@ -17,19 +17,23 @@
       <p class="text-base-content/80">{{ $t('auth.magicLink.verifyDescription') }}</p>
     </div>
 
-    <Transition enter-active-class="duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2">
-      <div v-if="errorMsg" class="alert alert-error alert-soft text-sm">
-        <span class="icon-[tabler--alert-circle] size-5"></span>
-        <span>{{ errorMsg }}</span>
-      </div>
-    </Transition>
+    <AppAlert
+      v-if="errorMsg"
+      tone="error"
+      variant="soft"
+      :message="errorMsg"
+      :dismissible="false"
+      class="text-sm"
+    />
 
-    <Transition enter-active-class="duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2">
-      <div v-if="successMsg" class="alert alert-success alert-soft text-sm">
-        <span class="icon-[tabler--check-circle] size-5"></span>
-        <span>{{ successMsg }}</span>
-      </div>
-    </Transition>
+    <AppAlert
+      v-if="successMsg"
+      tone="success"
+      variant="soft"
+      :message="successMsg"
+      :dismissible="false"
+      class="text-sm"
+    />
 
     <div v-if="isLoading" class="flex flex-col items-center gap-4">
       <span class="icon-[tabler--loader-2] size-10 animate-spin text-primary"></span>

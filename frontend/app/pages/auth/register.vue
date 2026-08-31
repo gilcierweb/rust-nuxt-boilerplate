@@ -44,12 +44,14 @@
     </div>
 
     <form v-else novalidate class="space-y-4" @submit.prevent="onSubmit">
-      <Transition enter-active-class="duration-300 ease-out" enter-from-class="opacity-0 -translate-y-2">
-        <div v-if="errorMsg" class="alert alert-error alert-soft text-sm">
-          <Icon name="heroicons:exclamation-circle" class="h-5 w-5" />
-          <span>{{ errorMsg }}</span>
-        </div>
-      </Transition>
+      <AppAlert
+        v-if="errorMsg"
+        tone="error"
+        variant="soft"
+        :message="errorMsg"
+        :dismissible="false"
+        class="text-sm"
+      />
 
       <div>
         <label class="label-text" for="email">{{ $t('auth.register.email') }}*</label>
