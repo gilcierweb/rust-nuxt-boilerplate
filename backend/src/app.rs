@@ -314,11 +314,10 @@ fn build_cors(cors_origins: &[String]) -> Cors {
     cors
 }
 
-/// TLS termination is handled at reverse proxy (nginx/traefik).
-/// actix-web http2 (h2 0.3.27, RUSTSEC-2026-0258) is disabled in Cargo.toml
-/// to eliminate vulnerable h2 0.3 from Cargo.lock. See Cargo.toml actix-web
-/// comment. Plain HTTP bind is used; configure TLS at proxy.
-
+// TLS termination is handled at reverse proxy (nginx/traefik).
+// actix-web http2 (h2 0.3.27, RUSTSEC-2026-0258) is disabled in Cargo.toml
+// to eliminate vulnerable h2 0.3 from Cargo.lock. See Cargo.toml actix-web
+// comment. Plain HTTP bind is used; configure TLS at proxy.
 /// Bootstrap and run the HTTP API server until shutdown.
 pub async fn run() -> std::io::Result<()> {
     let boot_start = std::time::Instant::now();
