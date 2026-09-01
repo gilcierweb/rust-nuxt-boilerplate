@@ -1,6 +1,5 @@
 //! API bootstrap: observability, dependency wiring, Actix app assembly and TLS.
 
-use std::io::BufReader;
 use std::sync::Arc;
 
 use actix_cors::Cors;
@@ -315,54 +314,10 @@ fn build_cors(cors_origins: &[String]) -> Cors {
     cors
 }
 
-/// Load and parse the TLS certificate/key pair from config.
-fn load_tls_config(config: &AppConfig) -> std::io::Result<rustls::ServerConfig> {
-    // Initialize TLS crypto provider - falls back to default if already initialized
-    let _ = rustls::crypto::CryptoProvider::get_default();
-
-    let cert_path = config.tls_cert_path.clone();
-    let key_path = config.tls_key_path.clone();
-
-    let mut certs_file = BufReader::new(std::fs::File::open(&cert_path).map_err(|error| {
-        std::io::Error::other(format!(
-            "failed to open TLS certificate file '{}': {}",
-            cert_path, error
-        ))
-    })?);
-    let mut key_file = BufReader::new(std::fs::File::open(&key_path).map_err(|error| {
-        std::io::Error::other(format!(
-            "failed to open TLS private key file '{}': {}",
-            key_path, error
-        ))
-    })?);
-
-    let tls_certs = rustls_pemfile::certs(&mut certs_file)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| {
-            std::io::Error::other(format!(
-                "failed to parse TLS certificates from '{}': {}",
-                cert_path, error
-            ))
-        })?;
-
-    let tls_key = rustls_pemfile::pkcs8_private_keys(&mut key_file)
-        .next()
-        .transpose()
-        .map_err(|error| {
-            std::io::Error::other(format!(
-                "failed to parse TLS private key from '{}': {}",
-                key_path, error
-            ))
-        })?
-        .ok_or_else(|| {
-            std::io::Error::other(format!("no PKCS#8 private key found in '{}'", key_path))
-        })?;
-
-    rustls::ServerConfig::builder()
-        .with_no_client_auth()
-        .with_single_cert(tls_certs, rustls::pki_types::PrivateKeyDer::Pkcs8(tls_key))
-        .map_err(std::io::Error::other)
-}
+/// TLS termination is handled at reverse proxy (nginx/traefik).
+/// actix-web http2 (h2 0.3.27, RUSTSEC-2026-0258) is disabled in Cargo.toml
+/// to eliminate vulnerable h2 0.3 from Cargo.lock. See Cargo.toml actix-web
+/// comment. Plain HTTP bind is used; configure TLS at proxy.
 
 /// Bootstrap and run the HTTP API server until shutdown.
 pub async fn run() -> std::io::Result<()> {
@@ -423,31 +378,23 @@ pub async fn run() -> std::io::Result<()> {
     let server = HttpServer::new(app);
 
     let host = config.host.clone();
-    let result = if config.tls_enabled {
-        let tls_config = load_tls_config(&config)?;
-        let https_port = config.https_port;
-        tracing::info!(
-            event = "server.bind",
-            host = %host,
-            port = https_port,
-            scheme = "https",
-            "HTTP server bound"
+    if config.tls_enabled {
+        tracing::warn!(
+            event = "server.tls_proxy_required",
+            "tls_enabled=true but actix TLS (rustls-0_23/http2) is disabled to fix RUSTSEC-2026-0258 (h2 0.3.27). \
+             Terminate TLS at reverse proxy (nginx/traefik) and set tls_enabled=false. \
+             Plain HTTP will be used."
         );
-        server
-            .bind_rustls_0_23((host.clone(), https_port), tls_config)?
-            .run()
-            .await
-    } else {
-        let port = config.port;
-        tracing::info!(
-            event = "server.bind",
-            host = %host,
-            port = port,
-            scheme = "http",
-            "HTTP server bound"
-        );
-        server.bind((host, port))?.run().await
-    };
+    }
+    let port = config.port;
+    tracing::info!(
+        event = "server.bind",
+        host = %host,
+        port = port,
+        scheme = "http",
+        "HTTP server bound"
+    );
+    let result = server.bind((host, port))?.run().await;
 
     // OpenTelemetry provider shutdown is handled automatically on process exit
     result

@@ -28,7 +28,11 @@ codegen-units = 1
 [dependencies]
 actix = "0.13"
 actix-cors = "0.7.1"
-actix-web = { version = "4.14.1", features = ["rustls-0_23"] }
+# NOTE: http2 disabled to eliminate h2 0.3.27 RUSTSEC-2026-0258.
+# h2 0.3 is EOL, patched only in >=0.4.16, but actix-http 3.13.3 still pins 0.3.
+# Disabling http2 removes h2 0.3 from Cargo.lock; TLS termination must be
+# handled at reverse proxy (nginx/traefik). See app.rs.
+actix-web = { version = "4.15.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
 actix-web-actors = "4.3"
 actix-web-grants = "4.1.2"
 actix-ws = "0.4.0"
