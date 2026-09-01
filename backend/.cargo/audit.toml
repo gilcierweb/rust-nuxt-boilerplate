@@ -24,6 +24,19 @@ ignore = [
   # Revisit when a rustls-ecosystem PEM loader emerges or rustls
   # inlines this functionality.
   "RUSTSEC-2025-0134",
+
+  # h2 0.3.27: unbounded empty DATA frames (DoS, RUSTSEC-2026-0258)
+  # Patched only in h2 >=0.4.16. actix-http 3.13.3 (pinned by
+  # actix-web 4.15.0, actix-governor, actix-cors, utoipa) still depends on
+  # h2 0.3.x. No 0.3 patch exists — fix requires upstream migration to h2
+  # 0.4, tracked at https://github.com/actix/actix-web/issues/3385 .
+  # Severity: low. Requires HTTP/2 attacker to flood empty DATA frames
+  # without stream drain, leading to unbounded memory/panic.
+  # Mitigation: frontend reverse proxy (nginx/traefik) enforces
+  # max_concurrent_streams / frame limits; actix runtime backpressure.
+  # h2 0.4.15 already fixed via `cargo update -p h2@0.4.15 --precise 0.4.19`
+  # (now 0.4.19). Remove this ignore when actix-http 3.13.4+ migrates to h2 0.4.
+  "RUSTSEC-2026-0258",
 ]
 
 # Resolved advisories (no longer triggered after dep cleanup):
