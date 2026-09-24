@@ -39,6 +39,16 @@ impl RateLimit {
             key_prefix,
         }
     }
+
+    /// Brute-force-sensitive endpoints (login, register, password recovery).
+    ///
+    /// These must never bypass rate limiting — not even when Redis is down.
+    /// An attacker who can take Redis offline must not gain unlimited login
+    /// attempts, so AuthStrict requests always fail CLOSED (503) instead of
+    /// following the circuit breaker's fail-open path.
+    pub fn is_strict(&self) -> bool {
+        self.key_prefix == RATE_AUTH_STRICT.key_prefix
+    }
 }
 
 // ============================================================================
@@ -112,6 +122,11 @@ pub const RATE_MESSAGES_AUTHENTICATED: RateLimit = RateLimit::new(120, 60, "rl:m
 /// This trades rate-limiting accuracy for availability during Redis blips.
 /// The impact is bounded: at most `reset_timeout` seconds of untracked requests
 /// per circuit-open event.
+///
+/// EXCEPTION: brute-force-sensitive endpoints (`RateLimit::is_strict()`,
+/// i.e. login/register/recovery) always fail CLOSED (503) while Redis is
+/// unavailable, even with the circuit open. Availability must not become a
+/// brute-force bypass.
 #[derive(Debug)]
 pub struct RedisCircuitBreaker {
     /// Number of consecutive Redis failures
@@ -366,9 +381,26 @@ where
                 return Ok(res.map_into_boxed_body());
             }
 
+            let effective_limit = RateLimiterMiddleware::<S>::pick_effective_limit(
+                &limit,
+                req.method(),
+                req.path(),
+                is_authenticated,
+            );
+
             // Circuit breaker check: if open, fail OPEN (allow request through)
-            // instead of repeatedly hitting a dead Redis.
+            // instead of repeatedly hitting a dead Redis — EXCEPT for
+            // AuthStrict endpoints (login/register/recovery), which always
+            // fail CLOSED so a Redis outage never becomes a brute-force bypass.
             if circuit_breaker.is_open() {
+                if effective_limit.is_strict() {
+                    tracing::warn!(
+                        event = "rate_limit.strict_fail_closed",
+                        key_prefix = effective_limit.key_prefix,
+                        "Circuit breaker open but AuthStrict endpoint — failing closed"
+                    );
+                    return Ok(service_unavailable_response(req));
+                }
                 tracing::debug!(
                     event = "rate_limit.circuit_breaker_bypass",
                     "Circuit breaker open — allowing request without rate limit check"
@@ -377,12 +409,6 @@ where
                 return Ok(res.map_into_boxed_body());
             }
 
-            let effective_limit = RateLimiterMiddleware::<S>::pick_effective_limit(
-                &limit,
-                req.method(),
-                req.path(),
-                is_authenticated,
-            );
             let key = format!("{}:{}", effective_limit.key_prefix, client_key);
 
             // Attempt rate limiting with Redis.
@@ -437,6 +463,15 @@ where
 
                     // After recording the failure, check if circuit is now open
                     if circuit_breaker.is_open() {
+                        // AuthStrict never fails open (see is_strict).
+                        if effective_limit.is_strict() {
+                            tracing::warn!(
+                                event = "rate_limit.strict_fail_closed",
+                                key = %key,
+                                "Redis failure on AuthStrict endpoint — failing closed despite open circuit"
+                            );
+                            return Ok(service_unavailable_response(req));
+                        }
                         // Circuit just opened — fail OPEN this request to avoid
                         // cascading failures, but log the degradation
                         tracing::warn!(
@@ -455,18 +490,7 @@ where
                         key = %key,
                         "Rate limiter Redis unavailable, failing closed"
                     );
-                    let response = HttpResponse::ServiceUnavailable()
-                        .insert_header(("Retry-After", "5"))
-                        .json(json!({
-                            "error": {
-                                "code": "SERVICE_UNAVAILABLE",
-                                "message": t!("errors.rate_limiter_unavailable").into_owned()
-                            }
-                        }))
-                        .map_into_boxed_body();
-
-                    let (http_req, _payload) = req.into_parts();
-                    return Ok(ServiceResponse::new(http_req, response));
+                    return Ok(service_unavailable_response(req));
                 },
             }
 
@@ -474,6 +498,24 @@ where
             Ok(res.map_into_boxed_body())
         })
     }
+}
+
+/// Build the 503 response used whenever the limiter must fail closed:
+/// Redis is unavailable and the circuit has not opened yet, or the request
+/// targets an AuthStrict endpoint (which never fails open).
+fn service_unavailable_response(req: ServiceRequest) -> ServiceResponse<BoxBody> {
+    let response = HttpResponse::ServiceUnavailable()
+        .insert_header(("Retry-After", "5"))
+        .json(json!({
+            "error": {
+                "code": "SERVICE_UNAVAILABLE",
+                "message": t!("errors.rate_limiter_unavailable").into_owned()
+            }
+        }))
+        .map_into_boxed_body();
+
+    let (http_req, _payload) = req.into_parts();
+    ServiceResponse::new(http_req, response)
 }
 
 #[cfg(test)]
@@ -688,5 +730,69 @@ mod tests {
         // Wait for reset_timeout to elapse
         std::thread::sleep(Duration::from_millis(60));
         assert!(!cb.is_open()); // now in half-open state, allows retry
+    }
+
+    // =========================================================================
+    // AuthStrict fail-closed Tests
+    // =========================================================================
+
+    #[test]
+    fn strict_endpoints_are_detected_for_both_buckets() {
+        assert!(RATE_AUTH_STRICT.is_strict());
+        assert!(RATE_AUTH_STRICT_AUTHENTICATED.is_strict());
+    }
+
+    #[test]
+    fn non_strict_endpoints_are_not_detected() {
+        assert!(!RATE_AUTH.is_strict());
+        assert!(!RATE_AUTH_AUTHENTICATED.is_strict());
+        assert!(!RATE_API.is_strict());
+        assert!(!RATE_API_AUTHENTICATED.is_strict());
+        assert!(!RATE_AUTH_SESSION.is_strict());
+        assert!(!RATE_AUTH_SESSION_AUTHENTICATED.is_strict());
+        assert!(!RATE_UPLOAD.is_strict());
+        assert!(!RATE_MESSAGES.is_strict());
+        assert!(!RATE_MESSAGES_AUTHENTICATED.is_strict());
+    }
+
+    #[test]
+    fn resolved_strict_category_limits_are_strict() {
+        // The resolved limit for brute-force-sensitive routes must carry the
+        // strict flag, otherwise a Redis outage would bypass their throttling.
+        for path in [
+            "/api/v1/auth/login",
+            "/api/v1/auth/register",
+            "/api/v1/auth/recover",
+            "/api/v1/auth/reset",
+        ] {
+            for authenticated in [false, true] {
+                let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+                    &RATE_API,
+                    &Method::POST,
+                    path,
+                    authenticated,
+                );
+                assert!(limit.is_strict(), "expected strict limit for {path}");
+            }
+        }
+    }
+
+    #[test]
+    fn resolved_non_strict_limits_are_not_strict() {
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::POST,
+            "/api/v1/auth/refresh",
+            false,
+        );
+        assert!(!limit.is_strict());
+
+        let limit = RateLimiterMiddleware::<()>::pick_effective_limit(
+            &RATE_API,
+            &Method::GET,
+            "/api/v1/users",
+            false,
+        );
+        assert!(!limit.is_strict());
     }
 }

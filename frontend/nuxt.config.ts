@@ -121,8 +121,9 @@ security: {
       //
       //   Leave empty (default) unless you have a deliberate reason
       //   (e.g. public demo where the backend is also CDN-fronted).
-      //   The server plugin at server/plugins/security-check.ts
-      //   warns at Nitro startup if this is set in production.
+      //   In production-like environments the server plugin at
+      //   server/plugins/security-check.ts clears a configured value
+      //   (secure default → Nitro proxy) unless NUXT_ALLOW_DIRECT_API=true.
       //   Docs: see SECURITY_AUDIT.md and docs/.env.example.
       // ------------------------------------------------------------
       apiDirectBase: process.env.NUXT_PUBLIC_API_BASE || "",

@@ -1,16 +1,17 @@
-function isAuthRequest(request: unknown) {
-  const value =
-    typeof request === "string"
-      ? request
-      : request instanceof Request
-        ? request.url
-        : String(request);
+import { isAuthPath } from '~~/shared/utils/auth-paths'
 
-  return value.includes("/auth/");
+function isAuthRequest(request: unknown) {
+  // Single source of truth shared with the Nitro proxy
+  // (`server/utils/auth.ts`): segment-aware `/auth/**` matching that
+  // accepts relative paths, versioned paths and full URLs.
+  return isAuthPath(request)
 }
 
 function withAuthHeader(headers: Headers, accessToken: string | null) {
-  if (accessToken && !headers.has("authorization")) {
+  // Always overwrite with the current token: on 401→refresh→retry the
+  // retried `options` still carry the stale `authorization` header, and
+  // keeping it (`!headers.has` guard) retries with the expired token.
+  if (accessToken) {
     headers.set("authorization", `Bearer ${accessToken}`);
   }
 

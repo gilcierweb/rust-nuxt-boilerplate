@@ -9,6 +9,10 @@ import type {
   RegisterPayload,
 } from '~/types'
 
+// In-flight dedup promises. Client-only: the Nitro server runtime shares
+// this module across concurrent SSR requests, so sharing a promise there
+// would leak one request's tokens/state into another. On the server every
+// action runs inline, scoped to its own Pinia store + request event.
 let bootstrapPromise: Promise<void> | null = null
 let refreshPromise: Promise<RefreshResponse> | null = null
 let initPromise: Promise<void> | null = null
@@ -33,6 +37,9 @@ function markInitialized() {
 }
 
 export function waitForAuthInit(timeout = 5000): Promise<void> {
+  // Server: each SSR request initializes its own store instance — never
+  // wait on module-level (cross-request) init state.
+  if (import.meta.server) return Promise.resolve()
   return Promise.race([
     getInitPromise(),
     new Promise<void>((_, reject) =>
@@ -146,10 +153,11 @@ export const useAuthStore = defineStore('auth', {
     },
 
     async refreshTokens() {
-      if (refreshPromise) return await refreshPromise
+      // Dedupe concurrent refreshes on the client only (see module note).
+      if (import.meta.client && refreshPromise) return await refreshPromise
 
       const { $api } = useNuxtApp()
-      refreshPromise = (async () => {
+      const task = (async (): Promise<RefreshResponse> => {
         try {
           let data: RefreshResponse
 
@@ -191,38 +199,51 @@ export const useAuthStore = defineStore('auth', {
           const error = new Error('Session expired')
           ;(error as any).statusCode = err.statusCode || err.response?.status || 401
           throw error
-        } finally {
-          refreshPromise = null
         }
       })()
 
-      return await refreshPromise
+      if (!import.meta.client) return await task
+
+      refreshPromise = task
+      try {
+        return await task
+      } finally {
+        refreshPromise = null
+      }
+    },
+
+    async _bootstrapOnce() {
+      this.isBootstrapping = true
+      try {
+        await this.refreshTokens()
+        if (!this.user) {
+          await this.fetchMe()
+        }
+      } catch {
+        this._clear()
+        this.isInitialized = true
+      } finally {
+        this.isBootstrapping = false
+      }
     },
 
     async bootstrapSession() {
       const needsClientHydration = import.meta.client && this.hasSession && !this.accessToken
       if (this.isInitialized && !needsClientHydration) return
+      // Server: run inline, scoped to this request's store (see module note).
+      if (!import.meta.client) {
+        await this._bootstrapOnce()
+        return
+      }
       if (bootstrapPromise) return await bootstrapPromise
 
-      this.isBootstrapping = true
-
       // Create the promise FIRST, before awaiting, to prevent race conditions
-      bootstrapPromise = (async () => {
-        try {
-          await this.refreshTokens()
-          if (!this.user) {
-            await this.fetchMe()
-          }
-        } catch {
-          this._clear()
-          this.isInitialized = true
-        } finally {
-          this.isBootstrapping = false
-          bootstrapPromise = null
-        }
-      })()
-
-      await bootstrapPromise
+      bootstrapPromise = this._bootstrapOnce()
+      try {
+        await bootstrapPromise
+      } finally {
+        bootstrapPromise = null
+      }
     },
 
     // SSR version that receives pre-extracted context to avoid Nuxt context issues

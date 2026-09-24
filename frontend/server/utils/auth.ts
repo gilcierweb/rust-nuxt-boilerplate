@@ -1,4 +1,5 @@
 import { getRequestHeaders, type H3Event } from 'h3'
+import { isPublicAuthPath } from '~~/shared/utils/auth-paths'
 
 /**
  * Extracts a Bearer token from an Authorization header.
@@ -40,15 +41,8 @@ export function classifySessionFetchError(err: unknown): null | never {
 /// Paths that never require an access token (public auth endpoints).
 /// Resolving a token for these would waste time calling /auth/session
 /// with the old refresh_token cookie before the actual request is forwarded.
-const PUBLIC_AUTH_PATHS = [
-  '/auth/login',
-  '/auth/register',
-  '/auth/recover',
-  '/auth/forgot-password',
-  '/auth/reset',
-  '/auth/logout',
-]
-
+/// Single source of truth: `~~/shared/utils/auth-paths` (also used by the
+/// client `$api` plugin).
 export async function resolveAccessTokenForProxy(
   event: H3Event,
 ): Promise<string | null> {
@@ -59,7 +53,7 @@ export async function resolveAccessTokenForProxy(
   }
 
   const path = event.context.params?.path || ''
-  if (PUBLIC_AUTH_PATHS.some((p) => path.startsWith(p))) {
+  if (isPublicAuthPath(path)) {
     return null
   }
 

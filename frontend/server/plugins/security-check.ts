@@ -6,10 +6,13 @@
 //   2. Allows the browser to hit the backend directly, bypassing Nitro's
 //      reverse proxy + cookie/session handling.
 //
-// This plugin emits warnings (NOT errors) at startup:
-//   - In production: warns strongly; lists risks; emits remediation guidance.
-//   - In non-production: warns lightly so devs aren't surprised.
-// Plugin does NOT change behavior — only logs.
+// This plugin ENFORCES the secure default in production-like environments
+// (clears the value so both SSR and the client payload fall back to the
+// Nitro /api/v1 proxy), unless the operator explicitly opts out with
+// NUXT_ALLOW_DIRECT_API=true for a deliberate setup (e.g. CDN-fronted
+// backend). In non-production it only warns.
+import { resolveApiDirectBase } from '~~/server/utils/security'
+
 export default defineNitroPlugin(() => {
   const config = useRuntimeConfig();
 
@@ -21,9 +24,31 @@ export default defineNitroPlugin(() => {
     'development';
   const isProdLike = env === 'production' || env === 'staging';
 
-  // -- 1. apiDirectBase: warn if set, especially in prod ------------------------
+  // -- 1. apiDirectBase: enforce proxy default in prod ------------------------
   const apiDirectBase = (config.public.apiDirectBase || '') as string;
-  if (apiDirectBase) {
+  const resolution = resolveApiDirectBase({
+    apiDirectBase,
+    isProdLike,
+    allowDirectApi: process.env.NUXT_ALLOW_DIRECT_API,
+  });
+  if (resolution.enforced) {
+    // Secure default: force the Nitro proxy at runtime. The cleared value
+    // propagates to the client via the Nuxt payload, so CSR requests also
+    // go through the proxy (no direct-backend bypass).
+    (config.public as Record<string, unknown>).apiDirectBase = '';
+    console.warn(
+      '\n' +
+        '╔══════════════════════════════════════════════════════════╗\n' +
+        '║  SECURITY: NUXT_PUBLIC_API_BASE cleared (secure default)║\n' +
+        '╠══════════════════════════════════════════════════════════╣\n' +
+        '║ Direct backend calls are disabled in production.         ║\n' +
+        '║ All API traffic now uses the Nitro /api/v1 proxy.       ║\n' +
+        '║ To allowlist a deliberate direct setup, set             ║\n' +
+        '║ NUXT_ALLOW_DIRECT_API=true (see SECURITY_AUDIT.md S14). ║\n' +
+        '╚══════════════════════════════════════════════════════════╝\n' +
+        `  configured value was: ${apiDirectBase}\n`,
+    );
+  } else if (apiDirectBase) {
     // Common foot-guns we want to highlight
     const isHttp = /^http:\/\//i.test(apiDirectBase);
     const isLocalhost = /^(http:\/\/)?(localhost|127\.0\.0\.1|0\.0\.0\.0)/i.test(
@@ -32,8 +57,9 @@ export default defineNitroPlugin(() => {
     const isProbablyExample = /example\.com|change-me|placeholder/i.test(apiDirectBase);
 
     if (isProdLike) {
-      // Production: WARN strongly, do not panic — production might have a
-      // legitimate reason (e.g. CDN proxying the backend).
+      // Production with explicit opt-out (NUXT_ALLOW_DIRECT_API=true):
+      // keep the configured value but warn strongly — the operator takes
+      // responsibility for the direct setup (e.g. CDN proxying the backend).
       console.warn(
         '\n' +
           '╔══════════════════════════════════════════════════════════╗\n' +
