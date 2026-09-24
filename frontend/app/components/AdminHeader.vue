@@ -85,6 +85,12 @@
                 <hr class="border-base-content/20 -mx-2 my-1" />
               </li>
               <li>
+                <NuxtLink class="dropdown-item px-3" :to="localePath('/portal')">
+                  <span class="icon-[tabler--app-window] size-5"></span>
+                  Portal
+                </NuxtLink>
+              </li>
+              <li>
                 <a class="dropdown-item px-3" href="/swagger-ui/" target="_blank">
                   <span class="icon-[tabler--api] size-5"></span>
                   API documentation
