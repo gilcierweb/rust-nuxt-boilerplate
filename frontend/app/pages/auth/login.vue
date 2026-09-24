@@ -89,12 +89,7 @@
       </div>
 
       <div>
-        <div class="mb-1.5 flex items-center justify-between">
-          <label class="label-text" for="password">{{ $t('auth.login.password') }}*</label>
-          <NuxtLink :to="localePath('/auth/forgot-password')" class="link link-animated link-primary font-normal">
-            {{ $t('auth.login.forgotPassword') }}
-          </NuxtLink>
-        </div>
+        <label class="label-text mb-1.5 block" for="password">{{ $t('auth.login.password') }}*</label>
         <div class="relative">
           <input
             id="password"
@@ -114,11 +109,14 @@
         <span v-if="errors.password" class="text-error text-xs mt-1 block">{{ errors.password }}</span>
       </div>
 
-      <div class="flex items-center justify-between gap-y-2">
-        <label class="flex items-center gap-2">
+      <div class="flex items-center justify-between gap-2">
+        <label class="flex cursor-pointer items-center gap-2">
           <input type="checkbox" class="checkbox checkbox-primary checkbox-sm" />
           <span class="label-text p-0 text-base text-base-content/80">{{ $t('auth.login.rememberMe') }}</span>
         </label>
+        <NuxtLink :to="localePath('/auth/forgot-password')" class="link link-animated link-primary font-normal">
+          {{ $t('auth.login.forgotPassword') }}
+        </NuxtLink>
       </div>
 
       <button type="submit" :disabled="isLoading || !meta.valid" class="btn btn-lg btn-primary btn-gradient btn-block">
