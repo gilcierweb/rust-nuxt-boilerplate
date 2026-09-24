@@ -191,8 +191,7 @@ mod tests {
 
     #[test]
     fn non_admin_gets_only_whitelisted_dynamic_perm() {
-        let authorities =
-            merge_authorities(3, &roles(&["viewer"]), &perms(&["users:read"]));
+        let authorities = merge_authorities(3, &roles(&["viewer"]), &perms(&["users:read"]));
 
         assert!(authorities.contains("users:read"));
         assert!(authorities.contains("ROLE_VIEWER"));
@@ -211,8 +210,7 @@ mod tests {
     fn non_whitelisted_dynamic_perm_grants_nothing() {
         // Anti-escalation: a directly-granted sensitive code must not confer
         // authority beyond what the user's roles entitle.
-        let authorities =
-            merge_authorities(3, &roles(&["viewer"]), &perms(&["roles:read"]));
+        let authorities = merge_authorities(3, &roles(&["viewer"]), &perms(&["roles:read"]));
 
         assert!(!authorities.contains("roles:read"));
         assert!(authorities.contains("ROLE_VIEWER"));

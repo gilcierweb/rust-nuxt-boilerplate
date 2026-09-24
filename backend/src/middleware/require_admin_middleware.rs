@@ -124,7 +124,7 @@ where
 mod tests {
     use std::sync::Arc;
 
-    use actix_web::{App, HttpResponse, ResponseError as _, test, web};
+    use actix_web::{App, HttpResponse, test, web};
 
     use super::RequireAdmin;
     use crate::middleware::auth::{JwtAuth, JwtAuthConfig, create_token};
@@ -159,17 +159,16 @@ mod tests {
             let mut container = mock_container();
             container.users = Arc::new(mock_users);
             test::init_service(
-                App::new()
-                    .app_data(web::Data::new(container))
-                    .service(
-                        web::scope("/admin")
-                            .wrap(CsrfProtection::new(vec![]))
-                            .wrap(RequireAdmin::new())
-                            .wrap(JwtAuth::new(JwtAuthConfig::new(vec![])))
-                            .route("/ping", web::get().to(|| async {
-                                HttpResponse::Ok().finish()
-                            })),
-                    ),
+                App::new().app_data(web::Data::new(container)).service(
+                    web::scope("/admin")
+                        .wrap(CsrfProtection::new(vec![]))
+                        .wrap(RequireAdmin::new())
+                        .wrap(JwtAuth::new(JwtAuthConfig::new(vec![])))
+                        .route(
+                            "/ping",
+                            web::get().to(|| async { HttpResponse::Ok().finish() }),
+                        ),
+                ),
             )
             .await
         }};
