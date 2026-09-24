@@ -119,3 +119,106 @@ where
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use std::sync::Arc;
+
+    use actix_web::{App, HttpResponse, ResponseError as _, test, web};
+
+    use super::RequireAdmin;
+    use crate::middleware::auth::{JwtAuth, JwtAuthConfig, create_token};
+    use crate::middleware::csrf_protection::CsrfProtection;
+    use crate::models::role::ROLE_ADMIN;
+    use crate::repositories::mocks::{mock_app_config, mock_container};
+    use crate::repositories::users_repository::MockIUserRepository;
+
+    /// Build the `/admin` middleware stack in the SAME registration order as
+    /// `routes::router` (CsrfProtection innermost for its `BoxBody` bound,
+    /// RequireAdmin before JwtAuth so execution is JwtAuth -> RequireAdmin).
+    /// Regression guard for the Actix reverse-execution trap: if RequireAdmin
+    /// runs before JwtAuth, `Claims` are never present in request extensions
+    /// and EVERY admin request fails with 401 `UNAUTHORIZED` even with a
+    /// valid admin token.
+    ///
+    /// `$db_times` bounds how often the user lookups may run: JwtAuth
+    /// resolves authorities (roles + permissions) once per authenticated
+    /// request, while RequireAdmin skips the DB when the JWT already
+    /// carries the admin role.
+    macro_rules! admin_stack_app {
+        ($db_times:expr) => {{
+            let mut mock_users = MockIUserRepository::new();
+            mock_users
+                .expect_get_user_roles()
+                .times($db_times)
+                .returning(|_| Ok(vec!["admin".to_string()]));
+            mock_users
+                .expect_get_user_permissions()
+                .times($db_times)
+                .returning(|_| Ok(Vec::new()));
+            let mut container = mock_container();
+            container.users = Arc::new(mock_users);
+            test::init_service(
+                App::new()
+                    .app_data(web::Data::new(container))
+                    .service(
+                        web::scope("/admin")
+                            .wrap(CsrfProtection::new(vec![]))
+                            .wrap(RequireAdmin::new())
+                            .wrap(JwtAuth::new(JwtAuthConfig::new(vec![])))
+                            .route("/ping", web::get().to(|| async {
+                                HttpResponse::Ok().finish()
+                            })),
+                    ),
+            )
+            .await
+        }};
+    }
+
+    fn admin_bearer_token() -> String {
+        let config = mock_app_config();
+        create_token(
+            uuid::Uuid::new_v4(),
+            uuid::Uuid::new_v4(),
+            ROLE_ADMIN.as_i32(),
+            &config.jwt_secret,
+            3600,
+        )
+        .expect("failed to mint admin test token")
+    }
+
+    #[actix_web::test]
+    async fn admin_stack_allows_valid_admin_token() {
+        let app = admin_stack_app!(1);
+        let req = test::TestRequest::get()
+            .uri("/admin/ping")
+            .insert_header((
+                actix_web::http::header::AUTHORIZATION,
+                format!("Bearer {}", admin_bearer_token()),
+            ))
+            .to_request();
+        let resp = test::call_service(&app, req).await;
+
+        assert_eq!(
+            resp.status(),
+            actix_web::http::StatusCode::OK,
+            "valid admin Bearer token must pass JwtAuth + RequireAdmin"
+        );
+    }
+
+    #[actix_web::test]
+    async fn admin_stack_rejects_missing_token() {
+        // Without a Bearer token JwtAuth rejects with a plain-text 401
+        // before RequireAdmin runs, so only the status is asserted here.
+        let app = admin_stack_app!(0);
+        let req = test::TestRequest::get().uri("/admin/ping").to_request();
+        let err = test::try_call_service(&app, req)
+            .await
+            .expect_err("expected the stack to reject a tokenless request");
+
+        assert_eq!(
+            err.error_response().status(),
+            actix_web::http::StatusCode::UNAUTHORIZED
+        );
+    }
+}

@@ -116,17 +116,24 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
 
     cfg.service(
         web::scope("/api/v1")
-            // 0. API version guard (first) — version negotiation + deprecation headers
+            // API version guard — version negotiation + deprecation headers.
+            // Registered first = innermost = executes last (see note below).
             .wrap(crate::middleware::api_version::ApiVersionGuard::new(
                 crate::middleware::api_version::ApiVersionConfig::new(),
             ))
-            // Middleware order (outermost first, executes first on request):
-            // 1. Rate limiting (global) - first line of defense
+            // Middleware order: Actix runs `wrap()`s in REVERSE registration
+            // order (last registered = outermost = executes first). Execution:
+            // 1. API Key auth - rejects unauthenticated service calls first
+            // 2. Rate limiting (global) - throttles what API-key auth let through
+            // 3. API version guard (innermost) - version negotiation last
+            // These three are mutually independent (no extension data flows
+            // between them), so only their relative cost matters, not data.
             .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
                 redis_pool.clone(),
                 crate::middleware::rate_limit_middleware::RATE_API,
             ))
-            // 2. API Key auth - for service-to-service
+            // API Key auth - for service-to-service (registered last =
+            // outermost = executes first, before rate limiting below)
             // NOTE: /metrics is intentionally NOT in this exempt list.
             // The Prometheus metrics endpoint must require a valid API key
             // (X-API-Key or Authorization: ApiKey <key>) to prevent exposing
@@ -187,18 +194,31 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .configure(webhooks_controller::pix_config),
             )
             // Admin domain routes
-            // Middleware order (outermost first on request):
-            // 1. CsrfProtection (outermost) - checks CSRF for browser forms
-            // 2. JwtAuth - validates JWT, inserts Claims and AuthDetails in extensions
-            // 3. RequireAdmin - enforces ROLE_ADMIN as second barrier
+            // Actix executes `wrap()`s in REVERSE registration order: the LAST
+            // registered middleware is the OUTERMOST and runs FIRST on the
+            // request (actix-web `App::wrap`: `endpoint: apply(mw, self.endpoint)`).
+            // Registration below is therefore bottom-up for execution order.
+            // Execution order:
+            // 1. JwtAuth (outermost) - validates JWT, inserts Claims and
+            //    AuthDetails in extensions
+            // 2. RequireAdmin - enforces ROLE_ADMIN; reads Claims, so it MUST
+            //    run after JwtAuth (i.e. be registered BEFORE it)
+            // 3. CsrfProtection (innermost) - checks CSRF for browser forms.
+            //    Its Transform impl requires `BoxBody`, so it must wrap the
+            //    routes directly. Order vs auth is irrelevant for security:
+            //    cookie-auth paths always enforce CSRF (see CsrfProtection).
             // 4. Admin handlers use AuthDetails from extensions for RBAC
+            // WARNING: registering RequireAdmin after JwtAuth makes it run
+            // BEFORE JwtAuth, so Claims are never present and EVERY admin
+            // request fails with 401 — do not reorder without updating the
+            // stack-order regression test.
             .service(
                 web::scope("/admin")
                     .wrap(CsrfProtection::new(vec![]))
+                    .wrap(RequireAdmin::new())
                     .wrap(crate::middleware::auth::JwtAuth::new(
                         crate::middleware::auth::JwtAuthConfig::new(vec![]),
                     ))
-                    .wrap(RequireAdmin::new())
                     .configure(roles_controller::config)
                     .configure(users_controller::config)
                     .configure(audit_logs_controller::config)
