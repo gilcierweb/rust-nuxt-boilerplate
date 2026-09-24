@@ -76,6 +76,41 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
     Ok(build_authorities_for_claims(&claims, container).await)
 }
 
+/// Merge role-based abilities with dynamic permission grants (pure, unit-tested).
+///
+/// Role abilities ALWAYS apply — including admin `Manage All` — and dynamic
+/// permission codes are strictly ADDITIVE, filtered by the whitelist. The
+/// previous exclusive behavior (any permission row disabled role abilities
+/// entirely) locked every seeded admin out of `roles:read`/`audit-logs:read`,
+/// because the seed links permission rows to the admin role while the
+/// whitelist only contains non-admin codes.
+///
+/// Anti-escalation is preserved: a dynamic code outside the whitelist never
+/// grants anything beyond what the user's roles already entitle.
+pub fn merge_authorities(
+    role_claim: i32,
+    roles: &[String],
+    permission_codes: &[String],
+) -> HashSet<String> {
+    let mut authorities = HashSet::new();
+    for role in roles {
+        authorities.insert(format!("ROLE_{}", role.to_uppercase()));
+    }
+    authorities.extend(build_ability(role_claim, roles).authorities());
+    // Filter permissions against whitelist to prevent privilege escalation
+    for perm in permission_codes {
+        if is_permission_whitelisted(perm) {
+            authorities.insert(perm.clone());
+        } else {
+            tracing::warn!(
+                "grants extractor: permission '{}' not in whitelist, ignoring",
+                perm
+            );
+        }
+    }
+    authorities
+}
+
 pub async fn build_authorities_for_claims(
     claims: &Claims,
     container: Option<&web::Data<AppContainer>>,
@@ -93,44 +128,84 @@ pub async fn build_authorities_for_claims(
     };
 
     match container.users.get_user_permissions(&claims.sub).await {
-        Ok(permission_codes) if !permission_codes.is_empty() => {
-            let mut authorities = HashSet::new();
-            for role in &roles {
-                authorities.insert(format!("ROLE_{}", role.to_uppercase()));
-            }
-            // Filter permissions against whitelist to prevent privilege escalation
-            for perm in permission_codes {
-                if is_permission_whitelisted(&perm) {
-                    authorities.insert(perm);
-                } else {
-                    tracing::warn!(
-                        "grants extractor: permission '{}' not in whitelist, ignoring",
-                        perm
-                    );
-                }
-            }
-            authorities
-        },
-        Ok(_) => {
-            let mut authorities = HashSet::new();
-            for role in &roles {
-                authorities.insert(format!("ROLE_{}", role.to_uppercase()));
-            }
-            authorities.extend(build_ability(claims.role, &roles).authorities());
-            authorities
-        },
+        Ok(permission_codes) => merge_authorities(claims.role, &roles, &permission_codes),
         Err(error) => {
             tracing::warn!(
                 "grants extractor: failed to load user permissions, using ability fallback: {}",
                 error
             );
 
-            let mut authorities = HashSet::new();
-            for role in &roles {
-                authorities.insert(format!("ROLE_{}", role.to_uppercase()));
-            }
-            authorities.extend(build_ability(claims.role, &roles).authorities());
-            authorities
+            merge_authorities(claims.role, &roles, &[])
         },
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::merge_authorities;
+    use crate::authz::ability::{AbilityAction, AbilityResource, authority_for};
+
+    fn roles(names: &[&str]) -> Vec<String> {
+        names.iter().map(ToString::to_string).collect()
+    }
+
+    fn perms(codes: &[&str]) -> Vec<String> {
+        codes.iter().map(ToString::to_string).collect()
+    }
+
+    #[test]
+    fn admin_with_permission_rows_keeps_manage_all() {
+        // Regression: the seed links permission rows to the admin role, so
+        // admins ALWAYS have non-empty permission lists. Role abilities must
+        // still apply, otherwise every admin gets 403 on roles/audit-logs.
+        let authorities = merge_authorities(1, &roles(&["admin"]), &perms(&["users:read"]));
+
+        assert!(authorities.contains(&authority_for(AbilityResource::Roles, AbilityAction::Read)));
+        assert!(authorities.contains(&authority_for(
+            AbilityResource::AuditLogs,
+            AbilityAction::Read
+        )));
+        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
+        assert!(authorities.contains("ROLE_ADMIN"));
+    }
+
+    #[test]
+    fn admin_without_permission_rows_keeps_manage_all() {
+        let authorities = merge_authorities(1, &roles(&["admin"]), &[]);
+
+        assert!(authorities.contains(&authority_for(AbilityResource::Roles, AbilityAction::Read)));
+        assert!(authorities.contains(&authority_for(
+            AbilityResource::AuditLogs,
+            AbilityAction::Read
+        )));
+    }
+
+    #[test]
+    fn non_admin_gets_only_whitelisted_dynamic_perm() {
+        let authorities =
+            merge_authorities(3, &roles(&["viewer"]), &perms(&["users:read"]));
+
+        assert!(authorities.contains("users:read"));
+        assert!(authorities.contains("ROLE_VIEWER"));
+        assert!(!authorities.contains(&authority_for(AbilityResource::Roles, AbilityAction::Read)));
+        assert!(!authorities.contains(&authority_for(
+            AbilityResource::AuditLogs,
+            AbilityAction::Read
+        )));
+        assert!(!authorities.contains(&authority_for(
+            AbilityResource::Users,
+            AbilityAction::Delete
+        )));
+    }
+
+    #[test]
+    fn non_whitelisted_dynamic_perm_grants_nothing() {
+        // Anti-escalation: a directly-granted sensitive code must not confer
+        // authority beyond what the user's roles entitle.
+        let authorities =
+            merge_authorities(3, &roles(&["viewer"]), &perms(&["roles:read"]));
+
+        assert!(!authorities.contains("roles:read"));
+        assert!(authorities.contains("ROLE_VIEWER"));
     }
 }
