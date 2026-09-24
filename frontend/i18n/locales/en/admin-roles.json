@@ -2,11 +2,7 @@
   "admin": {
     "roles": {
       "messages": {
-        "loadError": "Failed to load roles.",
-        "createSuccess": "Role created successfully.",
-        "createError": "Failed to create role.",
-        "updateSuccess": "Role updated successfully.",
-        "updateError": "Failed to update role."
+        "loadError": "Failed to load roles."
       },
       "form": {
         "error_title": "Error",

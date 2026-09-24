@@ -2,11 +2,7 @@
   "admin": {
     "auditLogs": {
       "messages": {
-        "loadError": "Failed to load audit logs.",
-        "createSuccess": "Audit log created successfully.",
-        "createError": "Failed to create audit log.",
-        "updateSuccess": "Audit log updated successfully.",
-        "updateError": "Failed to update audit log."
+        "loadError": "Failed to load audit logs."
       },
       "index": {
         "header": {
@@ -61,49 +57,6 @@
           "identification": "Identification",
           "request": "Request",
           "payload": "Payload"
-        },
-        "fields": {
-          "companyId": {
-            "label": "Company ID"
-          },
-          "actorUserId": {
-            "label": "Actor User ID"
-          },
-          "actorRoleSnapshot": {
-            "label": "Actor role snapshot"
-          },
-          "targetCustomerId": {
-            "label": "Target Customer ID"
-          },
-          "action": {
-            "label": "Action"
-          },
-          "resourceType": {
-            "label": "Resource type"
-          },
-          "resourceId": {
-            "label": "Resource ID"
-          },
-          "ipAddress": {
-            "label": "IP Address"
-          },
-          "userAgent": {
-            "label": "User agent"
-          },
-          "requestId": {
-            "label": "Request ID"
-          },
-          "createdAt": {
-            "label": "Created at"
-          },
-          "changesJson": {
-            "label": "Changes JSON",
-            "placeholder": "JSON with applied changes"
-          },
-          "metadataJson": {
-            "label": "Metadata JSON",
-            "placeholder": "JSON with extra event metadata"
-          }
         },
         "actions": {
           "saving": "@:common.actions.saving"

@@ -2,11 +2,7 @@
   "admin": {
     "auditLogs": {
       "messages": {
-        "loadError": "Falha ao carregar logs de auditoria.",
-        "createSuccess": "Log de auditoria criado com sucesso.",
-        "createError": "Falha ao criar log de auditoria.",
-        "updateSuccess": "Log de auditoria atualizado com sucesso.",
-        "updateError": "Falha ao atualizar log de auditoria."
+        "loadError": "Falha ao carregar logs de auditoria."
       },
       "index": {
         "header": {

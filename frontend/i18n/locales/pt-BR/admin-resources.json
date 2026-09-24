@@ -1,6 +1,6 @@
 {
   "admin": {
-"sidebar": {
+    "sidebar": {
       "closeSidebar": "Fechar barra lateral",
       "sidebar": "Barra lateral",
       "close": "Fechar",
@@ -152,7 +152,7 @@
         "confirmDelete": "Tem certeza que deseja excluir este log?"
       }
     },
-"dashboard": {
+    "dashboard": {
       "activeCustomers": "Clientes ativos",
       "openDebts": "Débitos em aberto",
       "pendingPayments": "Pagamentos pendentes",

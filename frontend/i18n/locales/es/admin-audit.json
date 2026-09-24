@@ -2,11 +2,7 @@
   "admin": {
     "auditLogs": {
       "messages": {
-        "loadError": "Error al cargar los registros de auditoría.",
-        "createSuccess": "Registro de auditoría creado con éxito.",
-        "createError": "Error al crear el registro de auditoría.",
-        "updateSuccess": "Registro de auditoría actualizado con éxito.",
-        "updateError": "Error al actualizar el registro de auditoría."
+        "loadError": "Error al cargar los registros de auditoría."
       },
       "index": {
         "header": {

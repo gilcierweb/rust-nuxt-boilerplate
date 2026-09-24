@@ -1,170 +1,11 @@
 {
-  "common": {
-    "appName": "Rust Nuxt Boilerplate",
-    "success": "Sucesso",
-    "error": "Erro",
-    "loading": "Carregando...",
-    "save": "Salvar",
-    "cancel": "Cancelar",
-    "submit": "Enviar",
-    "back": "Voltar",
-    "next": "Pr\u00f3ximo",
-    "previous": "Anterior",
-    "close": "Fechar",
-    "yes": "Sim",
-    "no": "N\u00e3o",
-    "or": "ou",
-    "and": "e",
-    "actions": {
-      "show": "Ver",
-      "edit": "Editar",
-      "new": "Novo",
-      "refresh": "Atualizar",
-      "saveChanges": "Salvar altera\u00e7\u00f5es",
-      "saving": "Salvando...",
-      "send": "Enviar",
-      "cancel": "Cancelar",
-      "back": "Voltar",
-      "submit": "Enviar"
-    },
-    "table": {
-      "actions": "A\u00e7\u00f5es"
-    }
-  },
-  "auth": {
-    "login": {
-      "title": "Bem-vindo de volta",
-      "noAccount": "N\u00e3o tem uma conta?",
-      "createAccount": "Criar uma conta",
-      "forgotPassword": "Esqueceu a senha?",
-      "email": "E-mail",
-      "password": "Senha",
-      "emailPlaceholder": "seu-email{'@'}exemplo.com",
-      "passwordPlaceholder": "digite sua senha",
-      "rememberMe": "Lembrar-me",
-      "submit": "Entrar",
-      "submitWithGoogle": "Entrar com Google",
-      "magicLink": "Link M\u00e1gico",
-      "loginWith": "Login com",
-      "loginAsUser": "Entrar como Usu\u00e1rio",
-      "loginAsAdmin": "Entrar como Admin",
-      "otp": {
-        "label": "Digite o c\u00f3digo enviado para seu e-mail",
-        "title": "Verificar C\u00f3digo",
-        "placeholder": "------",
-        "invalidCode": "C\u00f3digo de verifica\u00e7\u00e3o inv\u00e1lido"
-      },
-      "error": {
-        "invalidCredentials": "Credenciais inválidas",
-        "emailNotConfirmed": "Confirme seu e-mail antes de entrar",
-        "accountLocked": "Conta bloqueada. Contate o suporte."
-      },
-      "success": "Login realizado com sucesso"
-    },
-    "register": {
-      "title": "Crie sua conta",
-      "hasAccount": "J\u00e1 tem uma conta?",
-      "loginLink": "Entrar",
-      "login": "Entrar",
-      "email": "E-mail",
-      "password": "Senha",
-      "confirmPassword": "Confirmar senha",
-      "emailPlaceholder": "seu-email{'@'}exemplo.com",
-      "passwordPlaceholder": "crie uma senha forte",
-      "confirmPasswordPlaceholder": "repita sua senha",
-      "submit": "Criar conta",
-      "terms": {
-        "consent": "Confirmo que possuo 18 anos ou mais e aceito os",
-        "termsOfUse": "Termos de Uso",
-        "privacyPolicy": "Pol\u00edtica de Privacidade",
-        "and": "e a"
-      },
-      "strength": {
-        "label": "For\u00e7a da senha: {strength}",
-        "weak": "Fraca",
-        "fair": "Regular",
-        "good": "Boa",
-        "strong": "Forte"
-      },
-      "errors": {
-        "setStrongPassword": "Defina uma senha forte para continuar.",
-        "passwordMismatch": "As senhas n\u00e3o coincidem",
-        "emailExists": "Este e-mail j\u00e1 est\u00e1 cadastrado",
-        "weakPassword": "Senha muito fraca. Use 8+ caracteres com letras e n\u00fameros.",
-        "generic": "Falha no registro"
-      },
-      "success": {
-        "title": "Conta criada!",
-        "message": "Enviamos um e-mail de confirma\u00e7\u00e3o para {email}. Por favor, verifique sua caixa de entrada.",
-        "goToLogin": "Ir para Login"
-      }
-    },
-    "forgotPassword": {
-      "title": "Esqueceu a senha?",
-      "remembered": "Lembrou da senha?",
-      "backToLogin": "Entrar",
-      "description": "Digite seu endere\u00e7o de e-mail e enviaremos um link para redefinir sua senha.",
-      "email": "Endere\u00e7o de e-mail",
-      "emailPlaceholder": "seu-email{'@'}exemplo.com",
-      "submit": "Enviar Link de Recupera\u00e7\u00e3o",
-      "success": {
-        "title": "Verifique seu e-mail",
-        "message": "Enviamos um link de redefini\u00e7\u00e3o de senha para seu e-mail."
-      }
-    },
-    "resetPassword": {
-      "title": "Redefinir senha",
-      "newPassword": "Nova senha",
-      "confirmPassword": "Confirmar senha",
-      "newPasswordPlaceholder": "digite nova senha",
-      "confirmPasswordPlaceholder": "repita nova senha",
-      "submit": "Redefinir Senha",
-      "success": {
-        "title": "Senha redefinida!",
-        "login": "Ir para Login"
-      },
-      "error": {
-        "invalidToken": "Token inv\u00e1lido ou expirado",
-        "requestNew": "Solicitar novo link",
-        "passwordMismatch": "As senhas n\u00e3o coincidem"
-      }
-    },
-    "confirm": {
-      "loading": "Confirmando sua conta...",
-      "success": {
-        "title": "Conta confirmada!",
-        "message": "Seu e-mail foi verificado. Voc\u00ea j\u00e1 pode fazer login.",
-        "login": "Ir para Login"
-      },
-      "error": {
-        "title": "Falha na confirma\u00e7\u00e3o",
-        "message": "O link de confirma\u00e7\u00e3o \u00e9 inv\u00e1lido ou expirou.",
-        "backToLogin": "Voltar para Login"
-      }
-    },
-    "validation": {
-      "emailRequired": "Informe seu e-mail",
-      "invalidEmail": "E-mail inválido",
-      "emailTooLong": "E-mail muito longo",
-      "passwordRequired": "Informe sua senha",
-      "passwordTooShort": "A senha deve ter pelo menos 12 caracteres",
-      "passwordTooLong": "Senha muito longa",
-      "passwordNeedsUpper": "Adicione pelo menos uma letra maiúscula",
-      "passwordNeedsDigit": "Adicione pelo menos um número",
-      "passwordNeedsSymbol": "Adicione pelo menos um símbolo",
-      "passwordConfirmRequired": "Confirme sua senha",
-      "passwordMismatch": "As senhas não coincidem",
-      "otpInvalid": "O código deve ter 6 dígitos",
-      "termsRequired": "Você precisa aceitar os termos"
-    }
-  },
   "admin": {
     "section": "Admin",
-    "title": "Vis\u00e3o geral operacional",
-    "description": "Monitore os m\u00f3dulos cr\u00edticos e acompanhe o status atual da administra\u00e7\u00e3o.",
+    "title": "Visão geral operacional",
+    "description": "Monitore os módulos críticos e acompanhe o status atual da administração.",
     "debt_categories": {
       "messages": {
-        "loadError": "Falha ao carregar categorias de d\u00e9bito.",
+        "loadError": "Falha ao carregar categorias de débito.",
         "createSuccess": "Categoria criada com sucesso.",
         "createError": "Falha ao criar categoria.",
         "updateSuccess": "Categoria atualizada com sucesso.",
@@ -175,34 +16,30 @@
         "id": "ID",
         "company": "Empresa",
         "select_company": "Selecione uma empresa",
-        "code": "C\u00f3digo",
+        "code": "Código",
         "name": "Nome",
         "status": "Status",
         "status_active": "Ativo",
         "status_inactive": "Inativo",
-        "description": "Descri\u00e7\u00e3o",
+        "description": "Descrição",
         "sort_order": "Ordem",
         "created_at": "Criado em",
         "updated_at": "Atualizado em",
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_category": "Criar categoria",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "company_required": "A empresa \u00e9 obrigat\u00f3ria",
-        "code_required": "O c\u00f3digo \u00e9 obrigat\u00f3rio",
-        "name_required": "O nome \u00e9 obrigat\u00f3rio",
-        "status_required": "O status \u00e9 obrigat\u00f3rio"
+        "company_required": "A empresa é obrigatória",
+        "code_required": "O código é obrigatório",
+        "name_required": "O nome é obrigatório",
+        "status_required": "O status é obrigatório"
       }
     },
     "debts": {
       "messages": {
-        "loadError": "Falha ao carregar d\u00e9bitos.",
-        "createSuccess": "D\u00e9bito criado com sucesso.",
-        "createError": "Falha ao criar d\u00e9bito.",
-        "updateSuccess": "D\u00e9bito atualizado com sucesso.",
-        "updateError": "Falha ao atualizar d\u00e9bito."
+        "loadError": "Falha ao carregar débitos."
       },
       "form": {
         "error_title": "Erro",
@@ -214,22 +51,22 @@
         "category": "Categoria",
         "select_category": "Selecione uma categoria",
         "status": "Status",
-        "title": "T\u00edtulo",
-        "description": "Descri\u00e7\u00e3o",
+        "title": "Título",
+        "description": "Descrição",
         "amount": "Valor",
         "due_date": "Data de vencimento",
         "cancel": "Cancelar",
         "saving": "Salvando...",
-        "create_debt": "Criar d\u00e9bito",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "create_debt": "Criar débito",
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "company_required": "A empresa \u00e9 obrigat\u00f3ria",
-        "customer_required": "O cliente \u00e9 obrigat\u00f3rio",
-        "category_required": "A categoria \u00e9 obrigat\u00f3ria",
-        "status_required": "O status \u00e9 obrigat\u00f3rio",
-        "title_required": "O t\u00edtulo \u00e9 obrigat\u00f3rio",
-        "amount_required": "O valor \u00e9 obrigat\u00f3rio"
+        "company_required": "A empresa é obrigatória",
+        "customer_required": "O cliente é obrigatório",
+        "category_required": "A categoria é obrigatória",
+        "status_required": "O status é obrigatório",
+        "title_required": "O título é obrigatório",
+        "amount_required": "O valor é obrigatório"
       }
     },
     "payments": {
@@ -247,10 +84,10 @@
         "select_company": "Selecione uma empresa",
         "customer": "Cliente",
         "select_customer": "Selecione um cliente",
-        "debt": "D\u00e9bito",
-        "select_debt": "Selecione um d\u00e9bito",
-        "payment_method": "M\u00e9todo de pagamento",
-        "select_method": "Selecione um m\u00e9todo",
+        "debt": "Débito",
+        "select_debt": "Selecione um débito",
+        "payment_method": "Método de pagamento",
+        "select_method": "Selecione um método",
         "provider": "Provedor",
         "status": "Status",
         "status_pending": "Pendente",
@@ -258,7 +95,7 @@
         "status_failed": "Falhou",
         "status_refunded": "Estornado",
         "amount": "Valor",
-        "provider_reference": "Refer\u00eancia do provedor",
+        "provider_reference": "Referência do provedor",
         "paid_at": "Pago em",
         "metadata": "Metadados",
         "created_at": "Criado em",
@@ -266,16 +103,16 @@
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_payment": "Criar pagamento",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "company_required": "A empresa \u00e9 obrigat\u00f3ria",
-        "customer_required": "O cliente \u00e9 obrigat\u00f3rio",
-        "debt_required": "O d\u00e9bito \u00e9 obrigat\u00f3rio",
-        "provider_required": "O provedor \u00e9 obrigat\u00f3rio",
-        "method_required": "O m\u00e9todo \u00e9 obrigat\u00f3rio",
-        "status_required": "O status \u00e9 obrigat\u00f3rio",
-        "amount_required": "O valor \u00e9 obrigat\u00f3rio"
+        "company_required": "A empresa é obrigatória",
+        "customer_required": "O cliente é obrigatório",
+        "debt_required": "O débito é obrigatório",
+        "provider_required": "O provedor é obrigatório",
+        "method_required": "O método é obrigatório",
+        "status_required": "O status é obrigatório",
+        "amount_required": "O valor é obrigatório"
       }
     },
     "media_files": {
@@ -294,7 +131,7 @@
         "customer": "Cliente",
         "select_customer": "Selecione um cliente",
         "uploaded_by": "Enviado por",
-        "select_user": "Selecione um usu\u00e1rio",
+        "select_user": "Selecione um usuário",
         "category": "Categoria",
         "storage_provider": "Provedor de storage",
         "visibility": "Visibilidade",
@@ -314,28 +151,28 @@
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_file": "Criar arquivo",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "company_required": "A empresa \u00e9 obrigat\u00f3ria",
-        "category_required": "A categoria \u00e9 obrigat\u00f3ria",
-        "provider_required": "O provedor de storage \u00e9 obrigat\u00f3rio",
-        "visibility_required": "A visibilidade \u00e9 obrigat\u00f3ria",
-        "status_required": "O status \u00e9 obrigat\u00f3rio",
-        "bucket_required": "O nome do bucket \u00e9 obrigat\u00f3rio",
-        "key_required": "A chave do objeto \u00e9 obrigat\u00f3ria",
-        "filename_required": "O nome original \u00e9 obrigat\u00f3rio",
-        "mime_type_required": "O tipo MIME \u00e9 obrigat\u00f3rio",
-        "size_required": "O tamanho \u00e9 obrigat\u00f3rio"
+        "company_required": "A empresa é obrigatória",
+        "category_required": "A categoria é obrigatória",
+        "provider_required": "O provedor de storage é obrigatório",
+        "visibility_required": "A visibilidade é obrigatória",
+        "status_required": "O status é obrigatório",
+        "bucket_required": "O nome do bucket é obrigatório",
+        "key_required": "A chave do objeto é obrigatória",
+        "filename_required": "O nome original é obrigatório",
+        "mime_type_required": "O tipo MIME é obrigatório",
+        "size_required": "O tamanho é obrigatório"
       }
     },
     "invoice_requests": {
       "messages": {
-        "loadError": "Falha ao carregar solicita\u00e7\u00f5es de nota fiscal.",
-        "createSuccess": "Solicita\u00e7\u00e3o criada com sucesso.",
-        "createError": "Falha ao criar solicita\u00e7\u00e3o.",
-        "updateSuccess": "Solicita\u00e7\u00e3o atualizada com sucesso.",
-        "updateError": "Falha ao atualizar solicita\u00e7\u00e3o."
+        "loadError": "Falha ao carregar solicitações de nota fiscal.",
+        "createSuccess": "Solicitação criada com sucesso.",
+        "createError": "Falha ao criar solicitação.",
+        "updateSuccess": "Solicitação atualizada com sucesso.",
+        "updateError": "Falha ao atualizar solicitação."
       },
       "form": {
         "error_title": "Erro",
@@ -345,7 +182,7 @@
         "customer": "Cliente",
         "select_customer": "Selecione um cliente",
         "requested_by": "Solicitado por",
-        "select_user": "Selecione um usu\u00e1rio",
+        "select_user": "Selecione um usuário",
         "issued_document": "Documento emitido",
         "select_document": "Selecione um documento",
         "status": "Status",
@@ -354,24 +191,24 @@
         "status_issued": "Emitida",
         "status_cancelled": "Cancelada",
         "fiscal_provider": "Provedor fiscal",
-        "service_description": "Descri\u00e7\u00e3o do servi\u00e7o",
-        "service_amount": "Valor do servi\u00e7o",
-        "service_date": "Data do servi\u00e7o",
-        "provider_reference": "Refer\u00eancia do provedor",
+        "service_description": "Descrição do serviço",
+        "service_amount": "Valor do serviço",
+        "service_date": "Data do serviço",
+        "provider_reference": "Referência do provedor",
         "metadata": "Metadados",
         "created_at": "Criado em",
         "updated_at": "Atualizado em",
         "cancel": "Cancelar",
         "saving": "Salvando...",
-        "create_request": "Criar solicita\u00e7\u00e3o",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "create_request": "Criar solicitação",
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "company_required": "A empresa \u00e9 obrigat\u00f3ria",
-        "customer_required": "O cliente \u00e9 obrigat\u00f3rio",
-        "status_required": "O status \u00e9 obrigat\u00f3rio",
-        "description_required": "A descri\u00e7\u00e3o do servi\u00e7o \u00e9 obrigat\u00f3ria",
-        "amount_required": "O valor do servi\u00e7o \u00e9 obrigat\u00f3rio"
+        "company_required": "A empresa é obrigatória",
+        "customer_required": "O cliente é obrigatório",
+        "status_required": "O status é obrigatório",
+        "description_required": "A descrição do serviço é obrigatória",
+        "amount_required": "O valor do serviço é obrigatório"
       }
     },
     "issued_invoices": {
@@ -387,40 +224,40 @@
         "id": "ID",
         "customer": "Cliente",
         "select_customer": "Selecione um cliente",
-        "invoice_request": "Solicita\u00e7\u00e3o Original",
+        "invoice_request": "Solicitação Original",
         "none": "Nenhuma",
         "provider": "Provedor",
         "provider_other": "Outro",
         "status": "Status",
         "status_issued": "Emitida",
         "status_canceled": "Cancelada",
-        "status_replaced": "Substitu\u00edda",
+        "status_replaced": "Substituída",
         "status_pending": "Pendente",
-        "invoice_number": "N\u00famero da Nota",
-        "series": "S\u00e9rie",
-        "provider_reference": "Refer\u00eancia do Provedor",
+        "invoice_number": "Número da Nota",
+        "series": "Série",
+        "provider_reference": "Referência do Provedor",
         "total_amount": "Valor Total",
         "created_at": "Criado em",
         "issued_at": "Emitida em",
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_invoice": "Criar nota fiscal",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "customer_required": "O cliente \u00e9 obrigat\u00f3rio",
-        "provider_required": "O provedor \u00e9 obrigat\u00f3rio",
-        "status_required": "O status \u00e9 obrigat\u00f3rio",
-        "total_amount_required": "O valor total \u00e9 obrigat\u00f3rio"
+        "customer_required": "O cliente é obrigatório",
+        "provider_required": "O provedor é obrigatório",
+        "status_required": "O status é obrigatório",
+        "total_amount_required": "O valor total é obrigatório"
       }
     },
     "payment_transactions": {
       "messages": {
-        "loadError": "Falha ao carregar transa\u00e7\u00f5es de pagamento.",
-        "createSuccess": "Transa\u00e7\u00e3o criada com sucesso.",
-        "createError": "Falha ao criar transa\u00e7\u00e3o.",
-        "updateSuccess": "Transa\u00e7\u00e3o atualizada com sucesso.",
-        "updateError": "Falha ao atualizar transa\u00e7\u00e3o."
+        "loadError": "Falha ao carregar transações de pagamento.",
+        "createSuccess": "Transação criada com sucesso.",
+        "createError": "Falha ao criar transação.",
+        "updateSuccess": "Transação atualizada com sucesso.",
+        "updateError": "Falha ao atualizar transação."
       },
       "form": {
         "error_title": "Erro",
@@ -431,81 +268,56 @@
         "select_customer": "Selecione um cliente",
         "provider": "Provedor",
         "provider_manual": "Manual",
-        "payment_method": "M\u00e9todo de Pagamento",
-        "method_credit_card": "Cart\u00e3o de Cr\u00e9dito",
+        "payment_method": "Método de Pagamento",
+        "method_credit_card": "Cartão de Crédito",
         "method_boleto": "Boleto",
-        "method_transfer": "Transfer\u00eancia",
+        "method_transfer": "Transferência",
         "method_cash": "Dinheiro",
         "status": "Status",
         "status_pending": "Pendente",
         "status_processing": "Processando",
-        "status_completed": "Conclu\u00eddo",
+        "status_completed": "Concluído",
         "status_failed": "Falha",
         "status_canceled": "Cancelado",
         "received_by": "Recebido por",
         "none": "Nenhum",
         "gross_amount": "Valor Bruto",
-        "net_amount": "Valor L\u00edquido",
-        "provider_reference": "Refer\u00eancia do Provedor",
+        "net_amount": "Valor Líquido",
+        "provider_reference": "Referência do Provedor",
         "paid_at_input": "Data do Pagamento",
         "paid_at": "Pago em",
         "created_at": "Criado em",
         "cancel": "Cancelar",
         "saving": "Salvando...",
-        "create_transaction": "Criar transa\u00e7\u00e3o",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "create_transaction": "Criar transação",
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "company_required": "A empresa \u00e9 obrigat\u00f3ria",
-        "customer_required": "O cliente \u00e9 obrigat\u00f3rio",
-        "provider_required": "O provedor \u00e9 obrigat\u00f3rio",
-        "payment_method_required": "O m\u00e9todo de pagamento \u00e9 obrigat\u00f3rio",
-        "status_required": "O status \u00e9 obrigat\u00f3rio",
-        "gross_amount_required": "O valor bruto \u00e9 obrigat\u00f3rio"
-      }
-    },
-    "roles": {
-      "messages": {
-        "loadError": "Falha ao carregar cargos.",
-        "createSuccess": "Cargo criado com sucesso.",
-        "createError": "Falha ao criar cargo.",
-        "updateSuccess": "Cargo atualizado com sucesso.",
-        "updateError": "Falha ao atualizar cargo."
-      },
-      "form": {
-        "error_title": "Erro",
-        "id": "ID",
-        "name": "Nome",
-        "resource_type": "Tipo de recurso",
-        "resource_id": "ID do recurso",
-        "created_at": "Criado em",
-        "updated_at": "Atualizado em",
-        "cancel": "Cancelar",
-        "saving": "Salvando...",
-        "create_role": "Criar cargo",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
-      },
-      "validation": {
-        "name_required": "O nome \u00e9 obrigat\u00f3rio"
+        "company_required": "A empresa é obrigatória",
+        "customer_required": "O cliente é obrigatório",
+        "provider_required": "O provedor é obrigatório",
+        "payment_method_required": "O método de pagamento é obrigatório",
+        "status_required": "O status é obrigatório",
+        "gross_amount_required": "O valor bruto é obrigatório"
       }
     },
     "customer_users": {
       "messages": {
-        "loadError": "Falha ao carregar usu\u00e1rios de clientes.",
-        "createSuccess": "Usu\u00e1rio de cliente criado com sucesso.",
-        "createError": "Falha ao criar usu\u00e1rio de cliente.",
-        "updateSuccess": "Usu\u00e1rio de cliente atualizado com sucesso.",
-        "updateError": "Falha ao atualizar usu\u00e1rio de cliente."
+        "loadError": "Falha ao carregar usuários de clientes.",
+        "createSuccess": "Usuário de cliente criado com sucesso.",
+        "createError": "Falha ao criar usuário de cliente.",
+        "updateSuccess": "Usuário de cliente atualizado com sucesso.",
+        "updateError": "Falha ao atualizar usuário de cliente."
       },
       "form": {
         "error_title": "Erro",
         "id": "ID",
         "customer": "Cliente",
         "select_customer": "Selecione um cliente",
-        "customer_readonly": "Cliente n\u00e3o pode ser alterado",
-        "user": "Usu\u00e1rio",
-        "select_user": "Selecione um usu\u00e1rio",
-        "user_readonly": "Usu\u00e1rio n\u00e3o pode ser alterado",
+        "customer_readonly": "Cliente não pode ser alterado",
+        "user": "Usuário",
+        "select_user": "Selecione um usuário",
+        "user_readonly": "Usuário não pode ser alterado",
         "portal_role": "Papel no Portal",
         "role_admin": "Administrador",
         "role_financial": "Financeiro",
@@ -516,19 +328,19 @@
         "status_guest": "Convidado",
         "status_suspended": "Suspenso",
         "status_blocked": "Bloqueado",
-        "primary_contact": "Contato Prim\u00e1rio",
+        "primary_contact": "Contato Primário",
         "created_at": "Criado em",
         "invited_at": "Convidado em",
         "cancel": "Cancelar",
         "saving": "Salvando...",
-        "create_link": "Criar v\u00ednculo",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "create_link": "Criar vínculo",
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "customer_required": "O cliente \u00e9 obrigat\u00f3rio",
-        "user_required": "O usu\u00e1rio \u00e9 obrigat\u00f3rio",
-        "portal_role_required": "O papel no portal \u00e9 obrigat\u00f3rio",
-        "access_status_required": "O status de acesso \u00e9 obrigat\u00f3rio"
+        "customer_required": "O cliente é obrigatório",
+        "user_required": "O usuário é obrigatório",
+        "portal_role_required": "O papel no portal é obrigatório",
+        "access_status_required": "O status de acesso é obrigatório"
       }
     },
     "storage_objects": {
@@ -549,12 +361,12 @@
         "storage_provider": "Provedor de Storage",
         "visibility": "Visibilidade",
         "visibility_private": "Privado",
-        "visibility_public": "P\u00fablico",
+        "visibility_public": "Público",
         "visibility_signed": "URL Assinada",
         "status": "Status",
         "status_active": "Ativo",
         "status_inactive": "Inativo",
-        "status_deleted": "Exclu\u00eddo",
+        "status_deleted": "Excluído",
         "bucket_name": "Bucket",
         "object_key": "Object Key",
         "original_file_name": "Nome Original",
@@ -565,40 +377,27 @@
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_file": "Criar arquivo",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "save_changes": "Salvar alterações"
       },
       "validation": {
-        "company_required": "A empresa \u00e9 obrigat\u00f3ria",
-        "storage_provider_required": "O provedor \u00e9 obrigat\u00f3rio",
-        "bucket_name_required": "O bucket \u00e9 obrigat\u00f3rio",
-        "object_key_required": "A chave do objeto \u00e9 obrigat\u00f3ria",
-        "file_name_required": "O nome do arquivo \u00e9 obrigat\u00f3rio",
-        "mime_type_required": "O MIME type \u00e9 obrigat\u00f3rio",
-        "size_required": "O tamanho \u00e9 obrigat\u00f3rio",
-        "visibility_required": "A visibilidade \u00e9 obrigat\u00f3ria",
-        "status_required": "O status \u00e9 obrigat\u00f3rio"
+        "company_required": "A empresa é obrigatória",
+        "storage_provider_required": "O provedor é obrigatório",
+        "bucket_name_required": "O bucket é obrigatório",
+        "object_key_required": "A chave do objeto é obrigatória",
+        "file_name_required": "O nome do arquivo é obrigatório",
+        "mime_type_required": "O MIME type é obrigatório",
+        "size_required": "O tamanho é obrigatório",
+        "visibility_required": "A visibilidade é obrigatória",
+        "status_required": "O status é obrigatório"
       }
     },
-    "statusLabels": {
-      "active": "Ativo",
-      "inactive": "Inativo",
-      "pending": "Pendente",
-      "archived": "Arquivado",
-      "inProgress": "Em andamento",
-      "completed": "Conclu\u00eddo",
-      "cancelled": "Cancelado",
-      "paid": "Pago",
-      "approved": "Aprovado",
-      "rejected": "Rejeitado",
-      "unknown": "Desconhecido"
-    },
     "quickActions": {
-      "title": "A\u00e7\u00f5es r\u00e1pidas",
+      "title": "Ações rápidas",
       "reviewTickets": "Revisar tickets em aberto e definir prioridades.",
-      "publishAnnouncements": "Publicar an\u00fancios pendentes para os clientes.",
+      "publishAnnouncements": "Publicar anúncios pendentes para os clientes.",
       "updateProgress": "Atualizar snapshots de progresso dos projetos."
     },
-    "module": "M\u00f3dulo",
+    "module": "Módulo",
     "modules": {
       "dashboard": {
         "description": "KPIs consolidados e visibilidade operacional."
@@ -607,11 +406,11 @@
         "description": "Acompanhe entregas, marcos e status dos projetos."
       },
       "announcements": {
-        "description": "Gerencie comunica\u00e7\u00f5es enviadas aos clientes."
+        "description": "Gerencie comunicações enviadas aos clientes."
       },
       "settings": {
-        "title": "Configura\u00e7\u00f5es",
-        "description": "Ajuste par\u00e2metros administrativos e pol\u00edticas internas."
+        "title": "Configurações",
+        "description": "Ajuste parâmetros administrativos e políticas internas."
       }
     },
     "navbar": {
@@ -621,69 +420,54 @@
       },
       "profile": {
         "ariaLabel": "Perfil",
-        "avatarAlt": "Avatar do usu\u00e1rio",
+        "avatarAlt": "Avatar do usuário",
         "myAccount": "Minha conta",
-        "settings": "Configura\u00e7\u00f5es",
+        "settings": "Configurações",
         "logout": "Sair",
         "defaultName": "Admin"
       },
       "activity": {
         "title": "Atividade",
         "items": {
-          "ticketCreated": "Novo ticket criado por Jo\u00e3o.",
+          "ticketCreated": "Novo ticket criado por João.",
           "projectUpdated": "Projeto \"Aurora\" atualizado.",
-          "announcementsPending": "2 an\u00fancios aguardando publica\u00e7\u00e3o."
+          "announcementsPending": "2 anúncios aguardando publicação."
         }
       }
     },
     "account": {
       "section": "Conta",
       "title": "Minha conta",
-      "description": "Dados b\u00e1sicos do usu\u00e1rio autenticado no painel administrativo.",
+      "description": "Dados básicos do usuário autenticado no painel administrativo.",
       "profileTitle": "Perfil",
-      "permissionsTitle": "Permiss\u00f5es",
+      "permissionsTitle": "Permissões",
       "fields": {
         "id": "ID",
         "email": "E-mail",
         "profile": "Perfil"
       },
-      "emptyRoles": "Nenhum papel atribu\u00eddo.",
-      "goSettings": "Ir para configura\u00e7\u00f5es"
+      "emptyRoles": "Nenhum papel atribuído.",
+      "goSettings": "Ir para configurações"
     },
     "sidebar": {
-      "closeSidebar": "Fechar menu lateral",
-      "close": "Fechar",
-      "sidebar": "Menu lateral",
       "dropdown": "Menu suspenso",
-      "avatarAlt": "Avatar do usu\u00e1rio",
-      "admin": "Admin",
-      "apiDocs": "Documenta\u00e7\u00e3o da API",
-      "reports": "Relat\u00f3rios",
+      "avatarAlt": "Avatar do usuário",
+      "reports": "Relatórios",
       "alerts": "Alertas",
       "telemetry": "Telemetria",
-      "dashboard": "Painel",
-      "default": "Padr\u00e3o",
-      "core": "N\u00facleo",
-      "coreResources": "Recursos Principais",
-      "operations": "Opera\u00e7\u00f5es",
-      "fieldOperations": "Opera\u00e7\u00f5es de Campo",
+      "core": "Núcleo",
+      "fieldOperations": "Operações de Campo",
       "monitoring": "Monitoramento",
-      "monitoringAndReports": "Monitoramento e Relat\u00f3rios",
-      "financial": "Financeiro",
-      "management": "Gest\u00e3o",
-      "quickLinks": "Links R\u00e1pidos",
+      "monitoringAndReports": "Monitoramento e Relatórios",
       "terms": "Termos",
       "privacy": "Privacidade",
-      "workspace": "Espa\u00e7o de Trabalho",
       "alertsHub": "Central de Alertas",
-      "reportsHub": "Central de Relat\u00f3rios",
-      "openApiDocs": "Abrir Documenta\u00e7\u00e3o da API",
-      "debts": "D\u00e9bitos",
+      "reportsHub": "Central de Relatórios",
+      "debts": "Débitos",
       "documents": "Documentos",
       "payments": "Pagamentos",
       "customers": "Clientes",
-      "audit": "Auditoria",
-      "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
+      "audit": "Auditoria"
     },
     "dashboard": {
       "search": {
@@ -693,67 +477,67 @@
       "profile": {
         "title": "Perfil",
         "myAccount": "Minha conta",
-        "settings": "Configura\u00e7\u00f5es",
+        "settings": "Configurações",
         "billing": "Faturamento",
         "manageTeam": "Gerenciar equipe",
-        "customisation": "Personaliza\u00e7\u00e3o",
+        "customisation": "Personalização",
         "addTeamAccount": "Adicionar conta de equipe",
         "logout": "Sair"
       },
       "activity": {
         "title": "Atividade",
-        "mentionedYou": "mencionou voc\u00ea no t\u00f3pico de tend\u00eancias",
+        "mentionedYou": "mencionou você no tópico de tendências",
         "requestedFeedback": "solicitou feedback sobre seu design.",
-        "invitesYou": "convida voc\u00ea para revisar um arquivo.",
-        "sharedUpdate": "compartilhou uma atualiza\u00e7\u00e3o do projeto.",
+        "invitesYou": "convida você para revisar um arquivo.",
+        "sharedUpdate": "compartilhou uma atualização do projeto.",
         "wantsView": "quer ver seu projeto de design",
         "inviteFromLink": "Convite via link",
         "newTags": "novas tags para Web Redesign",
         "reply": "Responder",
         "time": {
-          "minsAgo": "H\u00e1 {n} min",
-          "hourAgo": "H\u00e1 1 hora",
-          "hoursAgo": "H\u00e1 {n} horas",
-          "daysAgo": "H\u00e1 {n} dias"
+          "minsAgo": "Há {n} min",
+          "hourAgo": "Há 1 hora",
+          "hoursAgo": "Há {n} horas",
+          "daysAgo": "Há {n} dias"
         }
       },
       "sidebar": {
-        "pages": "P\u00e1ginas",
+        "pages": "Páginas",
         "dashboard": "Painel",
-        "default": "Padr\u00e3o",
-        "analytics": "An\u00e1lises",
-        "ecommerce": "Com\u00e9rcio",
-        "accountSetting": "Configura\u00e7\u00e3o de Conta",
+        "default": "Padrão",
+        "analytics": "Análises",
+        "ecommerce": "Comércio",
+        "accountSetting": "Configuração de Conta",
         "account": "Conta",
-        "security": "Seguran\u00e7a",
+        "security": "Segurança",
         "billingPlans": "Faturamento e Planos",
-        "notifications": "Notifica\u00e7\u00f5es",
-        "connections": "Conex\u00f5es",
+        "notifications": "Notificações",
+        "connections": "Conexões",
         "misc": "Diversos",
         "error": "Erro",
-        "underMaintenance": "Em Manuten\u00e7\u00e3o",
-        "authentications": "Autentica\u00e7\u00f5es",
-        "loginBasic": "Login - B\u00e1sico",
+        "underMaintenance": "Em Manutenção",
+        "authentications": "Autenticações",
+        "loginBasic": "Login - Básico",
         "loginCover": "Login - Capa",
-        "registerBasic": "Registro - B\u00e1sico",
+        "registerBasic": "Registro - Básico",
         "registerCover": "Registro - Capa",
-        "forgotPasswordBasic": "Esqueceu senha - B\u00e1sico",
+        "forgotPasswordBasic": "Esqueceu senha - Básico",
         "forgotPasswordCover": "Esqueceu senha - Capa",
         "faq": "FAQ",
-        "pricing": "Pre\u00e7os",
-        "formsTables": "Formul\u00e1rios e Tabelas",
-        "formValidation": "Valida\u00e7\u00e3o de Formul\u00e1rios",
+        "pricing": "Preços",
+        "formsTables": "Formulários e Tabelas",
+        "formValidation": "Validação de Formulários",
         "dataTables": "Tabelas de Dados",
-        "basic": "B\u00e1sico",
-        "advanced": "Avan\u00e7ado",
-        "extensions": "Extens\u00f5es",
-        "applications": "Aplica\u00e7\u00f5es",
-        "user": "Usu\u00e1rio",
+        "basic": "Básico",
+        "advanced": "Avançado",
+        "extensions": "Extensões",
+        "applications": "Aplicações",
+        "user": "Usuário",
         "list": "Lista",
         "view": "Visualizar",
-        "rolesPermissions": "Fun\u00e7\u00f5es e Permiss\u00f5es",
-        "roles": "Fun\u00e7\u00f5es",
-        "permission": "Permiss\u00e3o",
+        "rolesPermissions": "Funções e Permissões",
+        "roles": "Funções",
+        "permission": "Permissão",
         "order": "Pedido",
         "orderList": "Lista de Pedidos",
         "orderDetails": "Detalhes do Pedido",
@@ -764,7 +548,7 @@
         "vendorDetails": "Detalhes do Fornecedor"
       },
       "workspace": {
-        "title": "Espa\u00e7o de Trabalho",
+        "title": "Espaço de Trabalho",
         "flyonui": "FlyonUI"
       }
     },
@@ -782,16 +566,16 @@
         "updateError": "Falha ao atualizar empresa."
       },
       "validation": {
-        "slug_required": "O slug \u00e9 obrigat\u00f3rio",
-        "subdomain_required": "O subdom\u00ednio \u00e9 obrigat\u00f3rio",
-        "legal_name_required": "A raz\u00e3o social \u00e9 obrigat\u00f3ria",
-        "status_required": "O status \u00e9 obrigat\u00f3rio"
+        "slug_required": "O slug é obrigatório",
+        "subdomain_required": "O subdomínio é obrigatório",
+        "legal_name_required": "A razão social é obrigatória",
+        "status_required": "O status é obrigatório"
       },
       "index": {
         "header": {
           "section": "Admin / Companies",
           "title": "Empresas",
-          "description": "Gest\u00e3o de tenants com campos completos de cadastro e configura\u00e7\u00f5es."
+          "description": "Gestão de tenants com campos completos de cadastro e configurações."
         },
         "actions": {
           "new": "Nova empresa",
@@ -803,9 +587,9 @@
           "inactive": "Suspensas/Arquivadas"
         },
         "table": {
-          "legalName": "Raz\u00e3o social",
+          "legalName": "Razão social",
           "slug": "Slug",
-          "subdomain": "Subdom\u00ednio",
+          "subdomain": "Subdomínio",
           "status": "Status",
           "actions": "@:common.table.actions",
           "show": "@:common.actions.show",
@@ -842,80 +626,80 @@
         },
         "sections": {
           "main": "Dados principais",
-          "security": "Status e seguran\u00e7a",
+          "security": "Status e segurança",
           "settings": "Settings JSON"
         },
         "fields": {
-          "legalName": "Raz\u00e3o social",
+          "legalName": "Razão social",
           "tradeName": "Nome fantasia",
           "slug": "Slug",
-          "subdomain": "Subdom\u00ednio",
+          "subdomain": "Subdomínio",
           "status": "Status",
-          "encryptionKeyVersion": "Vers\u00e3o da chave de criptografia",
+          "encryptionKeyVersion": "Versão da chave de criptografia",
           "updatedAt": "Atualizado em"
         },
-        "empty": "Empresa n\u00e3o encontrada."
+        "empty": "Empresa não encontrada."
       },
       "form": {
         "error_title": "Erro",
         "id": "ID",
         "slug": "Slug",
-        "subdomain": "Subdom\u00ednio",
-        "legal_name": "Raz\u00e3o Social",
+        "subdomain": "Subdomínio",
+        "legal_name": "Razão Social",
         "trade_name": "Nome Fantasia",
         "status": "Status",
         "status_active": "Ativo",
         "status_inactive": "Inativo",
         "status_helper": "Selecione o status da empresa",
-        "encryption_key_version": "Vers\u00e3o da Chave",
-        "settings": "Configura\u00e7\u00f5es",
-        "settings_helper": "Configure os par\u00e2metros adicionais em formato JSON",
+        "encryption_key_version": "Versão da Chave",
+        "settings": "Configurações",
+        "settings_helper": "Configure os parâmetros adicionais em formato JSON",
         "created_at": "Criado em",
         "updated_at": "Atualizado em",
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_company": "Criar empresa",
-        "save_changes": "Salvar altera\u00e7\u00f5es",
+        "save_changes": "Salvar alterações",
         "sections": {
           "companyData": "Dados da empresa",
-          "statusPolicies": "Status e pol\u00edticas",
+          "statusPolicies": "Status e políticas",
           "featureFlags": "Feature flags (checkboxes FlyonUI)",
           "advancedWarning": "Use Base64 ou array JSON de bytes para os campos criptografados (ex: [1,2,3])."
         },
         "fields": {
           "legalName": {
-            "label": "Raz\u00e3o social",
+            "label": "Razão social",
             "placeholder": "Build Track Empreendimentos LTDA",
-            "helper": "Informe a raz\u00e3o social completa."
+            "helper": "Informe a razão social completa."
           },
           "tradeName": {
             "label": "Nome fantasia",
             "placeholder": "Build Track",
-            "helper": "Nome de exibi\u00e7\u00e3o opcional."
+            "helper": "Nome de exibição opcional."
           },
           "slug": {
             "label": "Slug",
             "placeholder": "build-track",
             "prefix": "org/",
-            "helper": "Identificador interno \u00fanico."
+            "helper": "Identificador interno único."
           },
           "subdomain": {
-            "label": "Subdom\u00ednio",
+            "label": "Subdomínio",
             "placeholder": "buildtrack",
             "suffix": ".platform",
-            "helper": "Use min\u00fasculas, n\u00fameros e h\u00edfen."
+            "helper": "Use minúsculas, números e hífen."
           },
           "visualTheme": {
             "label": "Tema visual",
             "options": {
-              "default": "Padr\u00e3o",
+              "default": "Padrão",
               "corporate": "Corporativo",
               "light": "Claro",
               "dark": "Escuro"
             }
           },
           "encryptionKeyVersion": {
-            "label": "Vers\u00e3o da chave de criptografia"
+            "label": "Versão da chave de criptografia"
           },
           "status": {
             "label": "Status",
@@ -927,18 +711,18 @@
           },
           "logoFile": {
             "label": "Escolher arquivo",
-            "helper": "O nome do arquivo do logo ser\u00e1 salvo em settings."
+            "helper": "O nome do arquivo do logo será salvo em settings."
           },
-          "advancedSwitch": "Campos criptogr\u00e1ficos avan\u00e7ados",
+          "advancedSwitch": "Campos criptográficos avançados",
           "flags": {
             "portalEnabled": "Portal habilitado",
-            "notifications": "Notifica\u00e7\u00f5es",
+            "notifications": "Notificações",
             "ticketing": "Tickets",
-            "financePreview": "Pr\u00e9via financeira",
-            "publicGallery": "Galeria p\u00fablica",
-            "autoTimeline": "Timeline autom\u00e1tica",
+            "financePreview": "Prévia financeira",
+            "publicGallery": "Galeria pública",
+            "autoTimeline": "Timeline automática",
             "requireLgpd": "Exigir LGPD",
-            "maintenanceMode": "Modo manuten\u00e7\u00e3o"
+            "maintenanceMode": "Modo manutenção"
           },
           "internalNotes": {
             "label": "Notas internas",
@@ -962,129 +746,6 @@
         }
       }
     },
-    "memberships": {
-      "roles": {
-        "admin": "Admin",
-        "manager": "Manager",
-        "editor": "Editor",
-        "viewer": "Viewer"
-      },
-      "status": {
-        "active": "Ativo",
-        "invited": "Convidado",
-        "suspended": "Suspenso"
-      },
-      "messages": {
-        "loadError": "Falha ao carregar v\u00ednculos.",
-        "createSuccess": "V\u00ednculo criado com sucesso.",
-        "createError": "Falha ao criar v\u00ednculo.",
-        "updateSuccess": "V\u00ednculo atualizado com sucesso.",
-        "updateError": "Falha ao atualizar v\u00ednculo."
-      },
-      "index": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "V\u00ednculos Usu\u00e1rio-Empresa"
-        },
-        "actions": {
-          "new": "Novo v\u00ednculo",
-          "refresh": "@:common.actions.refresh"
-        },
-        "metrics": {
-          "total": "Total",
-          "active": "Ativos",
-          "primary": "Prim\u00e1rios"
-        },
-        "table": {
-          "user": "Usu\u00e1rio",
-          "company": "Empresa",
-          "role": "Papel",
-          "status": "Status",
-          "primary": "Principal",
-          "actions": "@:common.table.actions",
-          "show": "@:common.actions.show",
-          "edit": "@:common.actions.edit",
-          "empty": "Nenhum v\u00ednculo carregado."
-        }
-      },
-      "new": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "Novo v\u00ednculo"
-        },
-        "actions": {
-          "submit": "Criar v\u00ednculo"
-        }
-      },
-      "edit": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "Editar v\u00ednculo"
-        },
-        "actions": {
-          "submit": "@:common.actions.saveChanges"
-        }
-      },
-      "show": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "Detalhes do v\u00ednculo"
-        },
-        "actions": {
-          "edit": "@:common.actions.edit"
-        },
-        "fields": {
-          "primary": "Principal"
-        },
-        "empty": "V\u00ednculo n\u00e3o encontrado."
-      },
-      "form": {
-        "sections": {
-          "main": "Dados principais",
-          "audit": "Auditoria"
-        },
-        "fields": {
-          "userId": {
-            "label": "User ID"
-          },
-          "companyId": {
-            "label": "Company ID"
-          },
-          "membershipRole": {
-            "label": "Papel no v\u00ednculo",
-            "options": {
-              "admin": "Admin",
-              "manager": "Manager",
-              "editor": "Editor",
-              "viewer": "Viewer"
-            }
-          },
-          "status": {
-            "label": "Status",
-            "options": {
-              "active": "Ativo",
-              "invited": "Convidado",
-              "suspended": "Suspenso"
-            }
-          },
-          "isPrimary": {
-            "label": "V\u00ednculo principal"
-          },
-          "invitedBy": {
-            "label": "Convidado por"
-          },
-          "joinedAt": {
-            "label": "Data de entrada"
-          },
-          "lastAccessedAt": {
-            "label": "\u00daltimo acesso em"
-          }
-        },
-        "actions": {
-          "saving": "@:common.actions.saving"
-        }
-      }
-    },
     "projects": {
       "types": {
         "residential": "Residencial",
@@ -1096,7 +757,7 @@
         "planning": "Planejamento",
         "inProgress": "Em andamento",
         "paused": "Pausado",
-        "completed": "Conclu\u00eddo"
+        "completed": "Concluído"
       },
       "messages": {
         "loadError": "Falha ao carregar projetos.",
@@ -1122,7 +783,7 @@
         },
         "table": {
           "name": "Nome",
-          "code": "C\u00f3digo",
+          "code": "Código",
           "status": "Status",
           "actions": "@:common.table.actions",
           "empty": "Nenhum projeto carregado."
@@ -1155,17 +816,17 @@
           "edit": "@:common.actions.edit"
         },
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "classification": "Classifica\u00e7\u00e3o",
+          "identification": "Identificação",
+          "classification": "Classificação",
           "timeline": "Cronograma",
-          "address": "Endere\u00e7o"
+          "address": "Endereço"
         },
         "fields": {
           "name": "Nome",
-          "code": "C\u00f3digo",
+          "code": "Código",
           "slug": "Slug",
           "companyId": "Company ID",
-          "description": "Descri\u00e7\u00e3o",
+          "description": "Descrição",
           "type": "Tipo",
           "status": "Status",
           "updatedAt": "Atualizado em",
@@ -1177,24 +838,24 @@
           "city": "Cidade",
           "state": "Estado",
           "neighborhood": "Bairro",
-          "streetAddress": "Endere\u00e7o",
+          "streetAddress": "Endereço",
           "postalCode": "CEP"
         },
-        "empty": "Projeto n\u00e3o encontrado."
+        "empty": "Projeto não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "classification": "Classifica\u00e7\u00e3o",
+          "identification": "Identificação",
+          "classification": "Classificação",
           "timeline": "Cronograma",
-          "location": "Localiza\u00e7\u00e3o"
+          "location": "Localização"
         },
         "fields": {
           "companyId": {
             "label": "Company ID"
           },
           "code": {
-            "label": "C\u00f3digo"
+            "label": "Código"
           },
           "slug": {
             "label": "Slug"
@@ -1203,7 +864,7 @@
             "label": "Nome"
           },
           "description": {
-            "label": "Descri\u00e7\u00e3o"
+            "label": "Descrição"
           },
           "projectType": {
             "label": "Tipo de projeto",
@@ -1220,7 +881,7 @@
               "planning": "Planejamento",
               "inProgress": "Em andamento",
               "paused": "Pausado",
-              "completed": "Conclu\u00eddo"
+              "completed": "Concluído"
             }
           },
           "coverPhotoId": {
@@ -1251,7 +912,7 @@
             "label": "Bairro"
           },
           "streetAddress": {
-            "label": "Endere\u00e7o"
+            "label": "Endereço"
           },
           "postalCode": {
             "label": "CEP"
@@ -1265,52 +926,52 @@
     "references": {
       "project": {
         "placeholder": "Selecione um projeto",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de projeto."
+        "loadError": "Falha ao carregar opções de projeto."
       },
       "company": {
         "placeholder": "Selecione uma empresa",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de empresa."
+        "loadError": "Falha ao carregar opções de empresa."
       },
       "customer": {
         "placeholder": "Selecione um cliente",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de cliente."
+        "loadError": "Falha ao carregar opções de cliente."
       },
       "unit": {
         "placeholder": "Selecione uma unidade",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de unidade."
+        "loadError": "Falha ao carregar opções de unidade."
       },
       "stage": {
         "placeholder": "Selecione uma etapa",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de etapa."
+        "loadError": "Falha ao carregar opções de etapa."
       },
       "user": {
-        "placeholder": "Selecione um usu\u00e1rio",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de usu\u00e1rio."
+        "placeholder": "Selecione um usuário",
+        "loadError": "Falha ao carregar opções de usuário."
       },
       "ticket": {
         "placeholder": "Selecione um ticket",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de ticket."
+        "loadError": "Falha ao carregar opções de ticket."
       },
       "photoAlbum": {
-        "placeholder": "Selecione um \u00e1lbum",
-        "loadError": "Falha ao carregar op\u00e7\u00f5es de \u00e1lbum."
+        "placeholder": "Selecione um álbum",
+        "loadError": "Falha ao carregar opções de álbum."
       },
       "status": {
         "project": {
           "planning": "Planejamento",
           "inProgress": "Em andamento",
           "paused": "Pausado",
-          "completed": "Conclu\u00eddo"
+          "completed": "Concluído"
         },
         "stage": {
           "planning": "Planejamento",
           "inProgress": "Em andamento",
           "paused": "Pausado",
-          "done": "Conclu\u00edda"
+          "done": "Concluída"
         },
         "unit": {
           "planning": "Planejamento",
-          "available": "Dispon\u00edvel",
+          "available": "Disponível",
           "reserved": "Reservada",
           "sold": "Vendida",
           "delivered": "Entregue"
@@ -1336,7 +997,7 @@
       "priority": {
         "ticket": {
           "low": "Baixa",
-          "medium": "M\u00e9dia",
+          "medium": "Média",
           "high": "Alta",
           "urgent": "Urgente"
         }
@@ -1355,13 +1016,13 @@
         "document": {
           "contract": "Contrato",
           "blueprint": "Planta",
-          "permit": "Alvar\u00e1",
+          "permit": "Alvará",
           "other": "Outro"
         },
         "announcement": {
           "general": "Geral",
           "urgent": "Urgente",
-          "update": "Atualiza\u00e7\u00e3o"
+          "update": "Atualização"
         }
       }
     },
@@ -1373,14 +1034,14 @@
       "section": "Admin / {resource}",
       "new": {
         "title": "Novo registro",
-        "description": "Cria\u00e7\u00e3o de item em",
+        "description": "Criação de item em",
         "submit": "Criar"
       },
       "show": {
         "title": "Detalhes do registro",
         "id": "ID",
         "edit": "@:common.actions.edit",
-        "notFound": "Registro n\u00e3o encontrado."
+        "notFound": "Registro não encontrado."
       },
       "edit": {
         "title": "Editar registro",
@@ -1397,24 +1058,24 @@
     },
     "settings": {
       "header": {
-        "section": "Admin / Configura\u00e7\u00f5es",
-        "title": "Configura\u00e7\u00f5es do painel",
-        "description": "\u00c1rea para centralizar par\u00e2metros administrativos, pol\u00edticas operacionais e prefer\u00eancias do ambiente."
+        "section": "Admin / Configurações",
+        "title": "Configurações do painel",
+        "description": "Área para centralizar parâmetros administrativos, políticas operacionais e preferências do ambiente."
       },
       "activeGuidelines": {
         "title": "Diretrizes ativas",
         "items": {
           "rbac": "RBAC habilitado para rotas administrativas.",
-          "announcements": "Publica\u00e7\u00e3o de an\u00fancios com gatilho de notifica\u00e7\u00f5es.",
-          "audit": "Registro de auditoria para muta\u00e7\u00f5es cr\u00edticas."
+          "announcements": "Publicação de anúncios com gatilho de notificações.",
+          "audit": "Registro de auditoria para mutações críticas."
         }
       },
       "nextAdjustments": {
-        "title": "Pr\u00f3ximos ajustes",
+        "title": "Próximos ajustes",
         "items": {
-          "permissions": "Tela de permiss\u00f5es por perfil.",
-          "integrations": "Configura\u00e7\u00e3o de integra\u00e7\u00f5es externas.",
-          "sla": "Par\u00e2metros de SLA para tickets."
+          "permissions": "Tela de permissões por perfil.",
+          "integrations": "Configuração de integrações externas.",
+          "sla": "Parâmetros de SLA para tickets."
         }
       }
     },
@@ -1445,7 +1106,7 @@
     },
     "units": {
       "status": {
-        "available": "Dispon\u00edvel",
+        "available": "Disponível",
         "reserved": "Reservada",
         "sold": "Vendida",
         "blocked": "Bloqueada"
@@ -1468,15 +1129,15 @@
         },
         "metrics": {
           "total": "Total",
-          "available": "Dispon\u00edveis",
-          "avgPrivateArea": "M\u00e9dia de \u00e1rea privativa"
+          "available": "Disponíveis",
+          "avgPrivateArea": "Média de área privativa"
         },
         "table": {
-          "code": "C\u00f3digo",
+          "code": "Código",
           "projectId": "Projeto",
-          "unitLabel": "Identifica\u00e7\u00e3o",
+          "unitLabel": "Identificação",
           "status": "Status",
-          "privateArea": "\u00c1rea privativa",
+          "privateArea": "Área privativa",
           "actions": "@:common.table.actions",
           "show": "@:common.actions.show",
           "edit": "@:common.actions.edit",
@@ -1509,12 +1170,12 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Unidade n\u00e3o encontrada."
+        "empty": "Unidade não encontrada."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "classification": "Classifica\u00e7\u00e3o",
+          "identification": "Identificação",
+          "classification": "Classificação",
           "metadata": "Metadata"
         },
         "fields": {
@@ -1525,7 +1186,7 @@
             "label": "Project ID"
           },
           "code": {
-            "label": "C\u00f3digo"
+            "label": "Código"
           },
           "tower": {
             "label": "Torre"
@@ -1537,31 +1198,31 @@
             "label": "Pavimento"
           },
           "unitLabel": {
-            "label": "Identifica\u00e7\u00e3o da unidade"
+            "label": "Identificação da unidade"
           },
           "unitType": {
             "label": "Tipo de unidade",
             "options": {
               "apartment": "Apartamento",
               "house": "Casa",
-              "office": "Escrit\u00f3rio",
+              "office": "Escritório",
               "store": "Loja"
             }
           },
           "status": {
             "label": "Status",
             "options": {
-              "available": "Dispon\u00edvel",
+              "available": "Disponível",
               "reserved": "Reservada",
               "sold": "Vendida",
               "blocked": "Bloqueada"
             }
           },
           "privateArea": {
-            "label": "\u00c1rea privativa"
+            "label": "Área privativa"
           },
           "totalArea": {
-            "label": "\u00c1rea total"
+            "label": "Área total"
           },
           "bedrooms": {
             "label": "Quartos"
@@ -1595,20 +1256,15 @@
       "origin": {
         "portal": "Portal",
         "salesDesk": "Comercial",
-        "import": "Importa\u00e7\u00e3o",
+        "import": "Importação",
         "support": "Suporte"
       },
       "messages": {
-        "loadError": "Falha ao carregar clientes.",
-        "createSuccess": "Cliente criado com sucesso.",
-        "createError": "Falha ao criar cliente.",
-        "updateSuccess": "Cliente atualizado com sucesso.",
-        "updateError": "Falha ao atualizar cliente."
+        "loadError": "Falha ao carregar clientes."
       },
       "index": {
         "header": {
-          "section": "Admin / Clientes",
-          "title": "Clientes"
+          "section": "Admin / Clientes"
         },
         "actions": {
           "new": "Novo cliente",
@@ -1620,11 +1276,11 @@
           "invited": "Convidados"
         },
         "table": {
-          "customerCode": "C\u00f3digo",
+          "customerCode": "Código",
           "userId": "User ID",
           "status": "Status",
           "origin": "Origem",
-          "lastAccess": "\u00daltimo acesso",
+          "lastAccess": "Último acesso",
           "actions": "@:common.table.actions",
           "show": "@:common.actions.show",
           "edit": "@:common.actions.edit",
@@ -1633,8 +1289,7 @@
       },
       "new": {
         "header": {
-          "section": "Admin / Clientes",
-          "title": "Novo cliente"
+          "section": "Admin / Clientes"
         },
         "actions": {
           "submit": "Criar cliente"
@@ -1642,8 +1297,7 @@
       },
       "edit": {
         "header": {
-          "section": "Admin / Clientes",
-          "title": "Editar cliente"
+          "section": "Admin / Clientes"
         },
         "actions": {
           "submit": "@:common.actions.saveChanges"
@@ -1657,13 +1311,13 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Cliente n\u00e3o encontrado."
+        "empty": "Cliente não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
+          "identification": "Identificação",
           "timeline": "Linha do tempo",
-          "security": "Seguran\u00e7a"
+          "security": "Segurança"
         },
         "fields": {
           "companyId": {
@@ -1673,7 +1327,7 @@
             "label": "User ID"
           },
           "customerCode": {
-            "label": "C\u00f3digo do cliente"
+            "label": "Código do cliente"
           },
           "status": {
             "label": "Status",
@@ -1689,7 +1343,7 @@
             "options": {
               "portal": "Portal",
               "salesDesk": "Comercial",
-              "import": "Importa\u00e7\u00e3o",
+              "import": "Importação",
               "support": "Suporte"
             }
           },
@@ -1703,10 +1357,10 @@
             "label": "Ativado em"
           },
           "lastPortalAccessAt": {
-            "label": "\u00daltimo acesso ao portal"
+            "label": "Último acesso ao portal"
           },
           "encryptionKeyVersion": {
-            "label": "Vers\u00e3o da chave de criptografia"
+            "label": "Versão da chave de criptografia"
           },
           "internalNotesEncryptedRaw": {
             "label": "Notas internas criptografadas",
@@ -1723,7 +1377,7 @@
         "planning": "Planejamento",
         "inProgress": "Em andamento",
         "paused": "Pausado",
-        "done": "Conclu\u00eddo"
+        "done": "Concluído"
       },
       "messages": {
         "loadError": "Falha ao carregar etapas.",
@@ -1744,7 +1398,7 @@
         "metrics": {
           "total": "Total",
           "inProgress": "Em progresso",
-          "avgProgress": "M\u00e9dia de progresso"
+          "avgProgress": "Média de progresso"
         },
         "table": {
           "name": "Nome",
@@ -1782,12 +1436,12 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Etapa n\u00e3o encontrada."
+        "empty": "Etapa não encontrada."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "execution": "Execu\u00e7\u00e3o"
+          "identification": "Identificação",
+          "execution": "Execução"
         },
         "fields": {
           "companyId": {
@@ -1797,16 +1451,16 @@
             "label": "Project ID"
           },
           "code": {
-            "label": "C\u00f3digo"
+            "label": "Código"
           },
           "name": {
             "label": "Nome"
           },
           "description": {
-            "label": "Descri\u00e7\u00e3o"
+            "label": "Descrição"
           },
           "position": {
-            "label": "Posi\u00e7\u00e3o"
+            "label": "Posição"
           },
           "status": {
             "label": "Status",
@@ -1814,17 +1468,17 @@
               "planning": "Planejamento",
               "inProgress": "Em andamento",
               "paused": "Pausado",
-              "done": "Conclu\u00eddo"
+              "done": "Concluído"
             }
           },
           "plannedStartAt": {
-            "label": "In\u00edcio planejado"
+            "label": "Início planejado"
           },
           "plannedEndAt": {
             "label": "Fim planejado"
           },
           "actualStartAt": {
-            "label": "In\u00edcio real"
+            "label": "Início real"
           },
           "actualEndAt": {
             "label": "Fim real"
@@ -1841,8 +1495,8 @@
     "customerUnits": {
       "relationshipType": {
         "owner": "Titular",
-        "spouse": "C\u00f4njuge",
-        "tenant": "Locat\u00e1rio",
+        "spouse": "Cônjuge",
+        "tenant": "Locatário",
         "proxy": "Procurador"
       },
       "accessStatus": {
@@ -1851,51 +1505,51 @@
         "revoked": "Revogado"
       },
       "messages": {
-        "loadError": "Falha ao carregar v\u00ednculos cliente-unidade.",
-        "createSuccess": "V\u00ednculo cliente-unidade criado com sucesso.",
-        "createError": "Falha ao criar v\u00ednculo cliente-unidade.",
-        "updateSuccess": "V\u00ednculo cliente-unidade atualizado com sucesso.",
-        "updateError": "Falha ao atualizar v\u00ednculo cliente-unidade."
+        "loadError": "Falha ao carregar vínculos cliente-unidade.",
+        "createSuccess": "Vínculo cliente-unidade criado com sucesso.",
+        "createError": "Falha ao criar vínculo cliente-unidade.",
+        "updateSuccess": "Vínculo cliente-unidade atualizado com sucesso.",
+        "updateError": "Falha ao atualizar vínculo cliente-unidade."
       },
       "index": {
         "header": {
           "section": "Admin / Cliente-Unidade",
-          "title": "V\u00ednculos Cliente-Unidade"
+          "title": "Vínculos Cliente-Unidade"
         },
         "actions": {
-          "new": "Novo v\u00ednculo",
+          "new": "Novo vínculo",
           "refresh": "@:common.actions.refresh"
         },
         "metrics": {
           "total": "Total",
           "active": "Ativos",
-          "primary": "Prim\u00e1rios"
+          "primary": "Primários"
         },
         "table": {
           "customerId": "Customer ID",
           "unitId": "Unit ID",
           "relationshipType": "Relacionamento",
           "accessStatus": "Acesso",
-          "primary": "Prim\u00e1rio",
+          "primary": "Primário",
           "actions": "@:common.table.actions",
           "show": "@:common.actions.show",
           "edit": "@:common.actions.edit",
-          "empty": "Nenhum v\u00ednculo carregado."
+          "empty": "Nenhum vínculo carregado."
         }
       },
       "new": {
         "header": {
           "section": "Admin / Cliente-Unidade",
-          "title": "Novo v\u00ednculo cliente-unidade"
+          "title": "Novo vínculo cliente-unidade"
         },
         "actions": {
-          "submit": "Criar v\u00ednculo"
+          "submit": "Criar vínculo"
         }
       },
       "edit": {
         "header": {
           "section": "Admin / Cliente-Unidade",
-          "title": "Editar v\u00ednculo cliente-unidade"
+          "title": "Editar vínculo cliente-unidade"
         },
         "actions": {
           "submit": "@:common.actions.saveChanges"
@@ -1904,16 +1558,16 @@
       "show": {
         "header": {
           "section": "Admin / Cliente-Unidade",
-          "title": "Detalhes do v\u00ednculo"
+          "title": "Detalhes do vínculo"
         },
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "V\u00ednculo n\u00e3o encontrado."
+        "empty": "Vínculo não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
+          "identification": "Identificação",
           "relationship": "Relacionamento e acesso"
         },
         "fields": {
@@ -1930,8 +1584,8 @@
             "label": "Tipo de relacionamento",
             "options": {
               "owner": "Titular",
-              "spouse": "C\u00f4njuge",
-              "tenant": "Locat\u00e1rio",
+              "spouse": "Cônjuge",
+              "tenant": "Locatário",
               "proxy": "Procurador"
             }
           },
@@ -1944,13 +1598,13 @@
             }
           },
           "isPrimary": {
-            "label": "V\u00ednculo prim\u00e1rio"
+            "label": "Vínculo primário"
           },
           "grantedBy": {
             "label": "Concedido por"
           },
           "startsAt": {
-            "label": "In\u00edcio do acesso"
+            "label": "Início do acesso"
           },
           "endsAt": {
             "label": "Fim do acesso"
@@ -1963,15 +1617,15 @@
     },
     "timelineEvents": {
       "eventType": {
-        "update": "Atualiza\u00e7\u00e3o",
+        "update": "Atualização",
         "milestone": "Marco",
-        "issue": "Intercorr\u00eancia",
+        "issue": "Intercorrência",
         "delivery": "Entrega"
       },
       "visibility": {
         "internal": "Interno",
         "customer": "Cliente",
-        "public": "P\u00fablico"
+        "public": "Público"
       },
       "messages": {
         "loadError": "Falha ao carregar eventos da timeline.",
@@ -1991,11 +1645,11 @@
         },
         "metrics": {
           "total": "Total",
-          "customerVisible": "Vis\u00edveis ao cliente",
+          "customerVisible": "Visíveis ao cliente",
           "published": "Publicados"
         },
         "table": {
-          "title": "T\u00edtulo",
+          "title": "Título",
           "projectId": "Projeto",
           "eventType": "Tipo",
           "visibility": "Visibilidade",
@@ -2032,12 +1686,12 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Evento n\u00e3o encontrado."
+        "empty": "Evento não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "content": "Conte\u00fado"
+          "identification": "Identificação",
+          "content": "Conteúdo"
         },
         "fields": {
           "companyId": {
@@ -2052,9 +1706,9 @@
           "eventType": {
             "label": "Tipo de evento",
             "options": {
-              "update": "Atualiza\u00e7\u00e3o",
+              "update": "Atualização",
               "milestone": "Marco",
-              "issue": "Intercorr\u00eancia",
+              "issue": "Intercorrência",
               "delivery": "Entrega"
             }
           },
@@ -2063,14 +1717,14 @@
             "options": {
               "internal": "Interno",
               "customer": "Cliente",
-              "public": "P\u00fablico"
+              "public": "Público"
             }
           },
           "title": {
-            "label": "T\u00edtulo"
+            "label": "Título"
           },
           "body": {
-            "label": "Conte\u00fado"
+            "label": "Conteúdo"
           },
           "occurredAt": {
             "label": "Ocorrido em"
@@ -2110,13 +1764,13 @@
         },
         "metrics": {
           "total": "Total",
-          "avgProgress": "M\u00e9dia de progresso",
+          "avgProgress": "Média de progresso",
           "withRisks": "Com riscos"
         },
         "table": {
           "projectId": "Projeto",
           "stageId": "Etapa",
-          "referenceDate": "Refer\u00eancia",
+          "referenceDate": "Referência",
           "progress": "Progresso",
           "createdBy": "Criado por",
           "actions": "@:common.table.actions",
@@ -2151,11 +1805,11 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Snapshot n\u00e3o encontrado."
+        "empty": "Snapshot não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
+          "identification": "Identificação",
           "report": "Relato de progresso"
         },
         "fields": {
@@ -2169,7 +1823,7 @@
             "label": "Stage ID"
           },
           "referenceDate": {
-            "label": "Data de refer\u00eancia"
+            "label": "Data de referência"
           },
           "progressPercentage": {
             "label": "Progresso (%)"
@@ -2181,11 +1835,11 @@
             "label": "Riscos"
           },
           "nextSteps": {
-            "label": "Pr\u00f3ximos passos"
+            "label": "Próximos passos"
           },
           "metricsJson": {
             "label": "Metrics JSON",
-            "placeholder": "JSON de m\u00e9tricas agregadas"
+            "placeholder": "JSON de métricas agregadas"
           },
           "createdBy": {
             "label": "Criado por"
@@ -2198,21 +1852,21 @@
     },
     "announcements": {
       "messages": {
-        "loadError": "Falha ao carregar an\u00fancios.",
-        "createSuccess": "An\u00fancio criado com sucesso.",
-        "createError": "Falha ao criar an\u00fancio.",
-        "updateSuccess": "An\u00fancio atualizado com sucesso.",
-        "updateError": "Falha ao atualizar an\u00fancio.",
-        "publishSuccess": "An\u00fancio publicado e notifica\u00e7\u00f5es emitidas.",
-        "publishError": "Falha ao publicar an\u00fancio."
+        "loadError": "Falha ao carregar anúncios.",
+        "createSuccess": "Anúncio criado com sucesso.",
+        "createError": "Falha ao criar anúncio.",
+        "updateSuccess": "Anúncio atualizado com sucesso.",
+        "updateError": "Falha ao atualizar anúncio.",
+        "publishSuccess": "Anúncio publicado e notificações emitidas.",
+        "publishError": "Falha ao publicar anúncio."
       },
       "index": {
         "header": {
-          "section": "Admin / An\u00fancios",
-          "title": "An\u00fancios"
+          "section": "Admin / Anúncios",
+          "title": "Anúncios"
         },
         "actions": {
-          "new": "Novo an\u00fancio",
+          "new": "Novo anúncio",
           "refresh": "@:common.actions.refresh",
           "publish": "Publicar"
         },
@@ -2228,22 +1882,22 @@
           "draft": "draft",
           "show": "@:common.actions.show",
           "edit": "@:common.actions.edit",
-          "empty": "Nenhum an\u00fancio carregado."
+          "empty": "Nenhum anúncio carregado."
         }
       },
       "new": {
         "header": {
-          "section": "Admin / An\u00fancios",
-          "title": "Novo an\u00fancio"
+          "section": "Admin / Anúncios",
+          "title": "Novo anúncio"
         },
         "actions": {
-          "submit": "Criar an\u00fancio"
+          "submit": "Criar anúncio"
         }
       },
       "edit": {
         "header": {
-          "section": "Admin / An\u00fancios",
-          "title": "Editar an\u00fancio"
+          "section": "Admin / Anúncios",
+          "title": "Editar anúncio"
         },
         "actions": {
           "submit": "@:common.actions.saveChanges"
@@ -2251,18 +1905,18 @@
       },
       "show": {
         "header": {
-          "section": "Admin / An\u00fancios",
-          "title": "Detalhes do an\u00fancio"
+          "section": "Admin / Anúncios",
+          "title": "Detalhes do anúncio"
         },
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "An\u00fancio n\u00e3o encontrado."
+        "empty": "Anúncio não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "content": "Conte\u00fado"
+          "identification": "Identificação",
+          "content": "Conteúdo"
         },
         "fields": {
           "companyId": {
@@ -2275,7 +1929,7 @@
             "label": "Prioridade",
             "options": {
               "low": "Baixa",
-              "medium": "M\u00e9dia",
+              "medium": "Média",
               "high": "Alta"
             }
           },
@@ -2284,14 +1938,14 @@
             "options": {
               "internal": "Interno",
               "customer": "Cliente",
-              "public": "P\u00fablico"
+              "public": "Público"
             }
           },
           "title": {
-            "label": "T\u00edtulo"
+            "label": "Título"
           },
           "body": {
-            "label": "Conte\u00fado"
+            "label": "Conteúdo"
           },
           "publishedAt": {
             "label": "Publicado em"
@@ -2304,7 +1958,7 @@
           },
           "metadataJson": {
             "label": "Metadata JSON",
-            "placeholder": "JSON de metadados do an\u00fancio"
+            "placeholder": "JSON de metadados do anúncio"
           }
         },
         "actions": {
@@ -2314,11 +1968,7 @@
     },
     "documents": {
       "messages": {
-        "loadError": "Falha ao carregar documentos.",
-        "createSuccess": "Documento criado com sucesso.",
-        "createError": "Falha ao criar documento.",
-        "updateSuccess": "Documento atualizado com sucesso.",
-        "updateError": "Falha ao atualizar documento."
+        "loadError": "Falha ao carregar documentos."
       },
       "index": {
         "header": {
@@ -2330,7 +1980,7 @@
           "refresh": "@:common.actions.refresh"
         },
         "table": {
-          "title": "T\u00edtulo",
+          "title": "Título",
           "projectId": "Projeto",
           "category": "Categoria",
           "visibility": "Visibilidade",
@@ -2366,7 +2016,7 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Documento n\u00e3o encontrado."
+        "empty": "Documento não encontrado."
       },
       "form": {
         "error_title": "Erro",
@@ -2378,24 +2028,24 @@
         "file": "Arquivo",
         "select_file": "Selecione um arquivo",
         "uploaded_by": "Enviado por",
-        "select_user": "Selecione um usu\u00e1rio",
+        "select_user": "Selecione um usuário",
         "type": "Tipo",
         "status": "Status",
         "status_draft": "Rascunho",
         "status_published": "Publicado",
         "status_archived": "Arquivado",
-        "title": "T\u00edtulo",
-        "description": "Descri\u00e7\u00e3o",
-        "reference_date": "Data de refer\u00eancia",
-        "visible_to_customer": "Vis\u00edvel ao cliente",
-        "external_reference": "Refer\u00eancia externa",
+        "title": "Título",
+        "description": "Descrição",
+        "reference_date": "Data de referência",
+        "visible_to_customer": "Visível ao cliente",
+        "external_reference": "Referência externa",
         "metadata": "Metadados",
         "created_at": "Criado em",
         "updated_at": "Atualizado em",
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_document": "Criar documento",
-        "save_changes": "Salvar altera\u00e7\u00f5es"
+        "save_changes": "Salvar alterações"
       }
     },
     "tickets": {
@@ -2460,11 +2110,11 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Ticket n\u00e3o encontrado."
+        "empty": "Ticket não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
+          "identification": "Identificação",
           "messages": "Mensagem e auditoria"
         },
         "fields": {
@@ -2491,7 +2141,7 @@
             "options": {
               "support": "Suporte",
               "finance": "Financeiro",
-              "technical": "T\u00e9cnico",
+              "technical": "Técnico",
               "other": "Outros"
             }
           },
@@ -2499,7 +2149,7 @@
             "label": "Prioridade",
             "options": {
               "low": "Baixa",
-              "medium": "M\u00e9dia",
+              "medium": "Média",
               "high": "Alta",
               "urgent": "Urgente"
             }
@@ -2521,13 +2171,13 @@
             "placeholder": "Base64 ou array JSON de bytes"
           },
           "encryptionKeyVersion": {
-            "label": "Vers\u00e3o da chave de criptografia"
+            "label": "Versão da chave de criptografia"
           },
           "lastCustomerMessageAt": {
-            "label": "\u00daltima mensagem do cliente"
+            "label": "Última mensagem do cliente"
           },
           "lastStaffMessageAt": {
-            "label": "\u00daltima mensagem da equipe"
+            "label": "Última mensagem da equipe"
           },
           "closedAt": {
             "label": "Fechado em"
@@ -2540,19 +2190,19 @@
     },
     "notifications": {
       "messages": {
-        "loadError": "Falha ao carregar notifica\u00e7\u00f5es.",
-        "createSuccess": "Notifica\u00e7\u00e3o criada com sucesso.",
-        "createError": "Falha ao criar notifica\u00e7\u00e3o.",
-        "updateSuccess": "Notifica\u00e7\u00e3o atualizada com sucesso.",
-        "updateError": "Falha ao atualizar notifica\u00e7\u00e3o."
+        "loadError": "Falha ao carregar notificações.",
+        "createSuccess": "Notificação criada com sucesso.",
+        "createError": "Falha ao criar notificação.",
+        "updateSuccess": "Notificação atualizada com sucesso.",
+        "updateError": "Falha ao atualizar notificação."
       },
       "index": {
         "header": {
-          "section": "Admin / Notifica\u00e7\u00f5es",
-          "title": "Notifica\u00e7\u00f5es"
+          "section": "Admin / Notificações",
+          "title": "Notificações"
         },
         "actions": {
-          "new": "Nova notifica\u00e7\u00e3o",
+          "new": "Nova notificação",
           "refresh": "@:common.actions.refresh"
         },
         "metrics": {
@@ -2565,22 +2215,22 @@
           "status": "status",
           "show": "@:common.actions.show",
           "edit": "@:common.actions.edit",
-          "empty": "Nenhuma notifica\u00e7\u00e3o carregada."
+          "empty": "Nenhuma notificação carregada."
         }
       },
       "new": {
         "header": {
-          "section": "Admin / Notifica\u00e7\u00f5es",
-          "title": "Nova notifica\u00e7\u00e3o"
+          "section": "Admin / Notificações",
+          "title": "Nova notificação"
         },
         "actions": {
-          "submit": "Criar notifica\u00e7\u00e3o"
+          "submit": "Criar notificação"
         }
       },
       "edit": {
         "header": {
-          "section": "Admin / Notifica\u00e7\u00f5es",
-          "title": "Editar notifica\u00e7\u00e3o"
+          "section": "Admin / Notificações",
+          "title": "Editar notificação"
         },
         "actions": {
           "submit": "@:common.actions.saveChanges"
@@ -2588,18 +2238,18 @@
       },
       "show": {
         "header": {
-          "section": "Admin / Notifica\u00e7\u00f5es",
-          "title": "Detalhes da notifica\u00e7\u00e3o"
+          "section": "Admin / Notificações",
+          "title": "Detalhes da notificação"
         },
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Notifica\u00e7\u00e3o n\u00e3o encontrada."
+        "empty": "Notificação não encontrada."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "content": "Conte\u00fado",
+          "identification": "Identificação",
+          "content": "Conteúdo",
           "schedule": "Agenda e envio"
         },
         "fields": {
@@ -2622,12 +2272,12 @@
             }
           },
           "notificationType": {
-            "label": "Tipo de notifica\u00e7\u00e3o",
+            "label": "Tipo de notificação",
             "options": {
               "general": "Geral",
               "system": "Sistema",
               "ticket": "Ticket",
-              "announcement": "An\u00fancio"
+              "announcement": "Anúncio"
             }
           },
           "status": {
@@ -2640,11 +2290,11 @@
             }
           },
           "encryptionKeyVersion": {
-            "label": "Vers\u00e3o da chave de criptografia"
+            "label": "Versão da chave de criptografia"
           },
-          "targetValidation": "Obrigat\u00f3rio ter User ID ou Customer ID preenchido.",
+          "targetValidation": "Obrigatório ter User ID ou Customer ID preenchido.",
           "title": {
-            "label": "T\u00edtulo"
+            "label": "Título"
           },
           "bodyEncryptedRaw": {
             "label": "Corpo criptografado",
@@ -2652,10 +2302,10 @@
           },
           "payloadJson": {
             "label": "Payload JSON",
-            "placeholder": "JSON do conte\u00fado adicional da notifica\u00e7\u00e3o"
+            "placeholder": "JSON do conteúdo adicional da notificação"
           },
           "dedupeKey": {
-            "label": "Chave de deduplica\u00e7\u00e3o"
+            "label": "Chave de deduplicação"
           },
           "scheduledAt": {
             "label": "Agendada em"
@@ -2677,44 +2327,44 @@
     },
     "photoAlbums": {
       "messages": {
-        "loadError": "Falha ao carregar \u00e1lbuns.",
-        "createSuccess": "\u00c1lbum criado com sucesso.",
-        "createError": "Falha ao criar \u00e1lbum.",
-        "updateSuccess": "\u00c1lbum atualizado com sucesso.",
-        "updateError": "Falha ao atualizar \u00e1lbum."
+        "loadError": "Falha ao carregar álbuns.",
+        "createSuccess": "Álbum criado com sucesso.",
+        "createError": "Falha ao criar álbum.",
+        "updateSuccess": "Álbum atualizado com sucesso.",
+        "updateError": "Falha ao atualizar álbum."
       },
       "index": {
         "header": {
-          "section": "Admin / \u00c1lbuns",
-          "title": "\u00c1lbuns de fotos"
+          "section": "Admin / Álbuns",
+          "title": "Álbuns de fotos"
         },
         "actions": {
-          "new": "Novo \u00e1lbum",
+          "new": "Novo álbum",
           "refresh": "@:common.actions.refresh"
         },
         "table": {
-          "title": "T\u00edtulo",
+          "title": "Título",
           "projectId": "Projeto",
           "visibility": "Visibilidade",
           "actions": "@:common.table.actions",
           "show": "@:common.actions.show",
           "edit": "@:common.actions.edit",
-          "empty": "Nenhum \u00e1lbum carregado."
+          "empty": "Nenhum álbum carregado."
         }
       },
       "new": {
         "header": {
-          "section": "Admin / \u00c1lbuns",
-          "title": "Novo \u00e1lbum"
+          "section": "Admin / Álbuns",
+          "title": "Novo álbum"
         },
         "actions": {
-          "submit": "Criar \u00e1lbum"
+          "submit": "Criar álbum"
         }
       },
       "edit": {
         "header": {
-          "section": "Admin / \u00c1lbuns",
-          "title": "Editar \u00e1lbum"
+          "section": "Admin / Álbuns",
+          "title": "Editar álbum"
         },
         "actions": {
           "submit": "@:common.actions.saveChanges"
@@ -2722,18 +2372,18 @@
       },
       "show": {
         "header": {
-          "section": "Admin / \u00c1lbuns",
-          "title": "Detalhes do \u00e1lbum"
+          "section": "Admin / Álbuns",
+          "title": "Detalhes do álbum"
         },
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "\u00c1lbum n\u00e3o encontrado."
+        "empty": "Álbum não encontrado."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "content": "Conte\u00fado"
+          "identification": "Identificação",
+          "content": "Conteúdo"
         },
         "fields": {
           "companyId": {
@@ -2753,14 +2403,14 @@
             "options": {
               "internal": "Interno",
               "customer": "Cliente",
-              "public": "P\u00fablico"
+              "public": "Público"
             }
           },
           "title": {
-            "label": "T\u00edtulo"
+            "label": "Título"
           },
           "description": {
-            "label": "Descri\u00e7\u00e3o"
+            "label": "Descrição"
           },
           "publishedAt": {
             "label": "Publicado em"
@@ -2790,7 +2440,7 @@
         },
         "table": {
           "originalFilename": "Arquivo",
-          "albumId": "\u00c1lbum",
+          "albumId": "Álbum",
           "sizeBytes": "Tamanho",
           "actions": "@:common.table.actions",
           "show": "@:common.actions.show",
@@ -2824,11 +2474,11 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Foto n\u00e3o encontrada."
+        "empty": "Foto não encontrada."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
+          "identification": "Identificação",
           "file": "Arquivo e metadados"
         },
         "fields": {
@@ -2939,11 +2589,11 @@
         "actions": {
           "edit": "@:common.actions.edit"
         },
-        "empty": "Mensagem n\u00e3o encontrada."
+        "empty": "Mensagem não encontrada."
       },
       "form": {
         "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
+          "identification": "Identificação",
           "message": "Mensagem"
         },
         "fields": {
@@ -2968,7 +2618,7 @@
             "label": "Quantidade de anexos"
           },
           "encryptionKeyVersion": {
-            "label": "Vers\u00e3o da chave de criptografia"
+            "label": "Versão da chave de criptografia"
           },
           "createdAt": {
             "label": "Criada em"
@@ -2985,333 +2635,7 @@
           "saving": "@:common.actions.saving"
         }
       }
-    },
-    "auditLogs": {
-      "messages": {
-        "loadError": "Falha ao carregar logs de auditoria.",
-        "createSuccess": "Log de auditoria criado com sucesso.",
-        "createError": "Falha ao criar log de auditoria.",
-        "updateSuccess": "Log de auditoria atualizado com sucesso.",
-        "updateError": "Falha ao atualizar log de auditoria."
-      },
-      "index": {
-        "header": {
-          "section": "Admin / Auditoria",
-          "title": "Logs de auditoria"
-        },
-        "actions": {
-          "new": "Novo log",
-          "refresh": "@:common.actions.refresh"
-        },
-        "table": {
-          "action": "A\u00e7\u00e3o",
-          "resourceType": "Recurso",
-          "actorUserId": "Ator",
-          "createdAt": "Data",
-          "actions": "@:common.table.actions",
-          "show": "@:common.actions.show",
-          "edit": "@:common.actions.edit",
-          "empty": "Nenhum log carregado."
-        }
-      },
-      "new": {
-        "header": {
-          "section": "Admin / Auditoria",
-          "title": "Novo log de auditoria"
-        },
-        "actions": {
-          "submit": "Criar log"
-        }
-      },
-      "edit": {
-        "header": {
-          "section": "Admin / Auditoria",
-          "title": "Editar log de auditoria"
-        },
-        "actions": {
-          "submit": "@:common.actions.saveChanges"
-        }
-      },
-      "show": {
-        "header": {
-          "section": "Admin / Auditoria",
-          "title": "Detalhes do log"
-        },
-        "actions": {
-          "edit": "@:common.actions.edit"
-        },
-        "empty": "Log n\u00e3o encontrado."
-      },
-      "form": {
-        "sections": {
-          "identification": "Identifica\u00e7\u00e3o",
-          "request": "Requisi\u00e7\u00e3o",
-          "payload": "Payload"
-        },
-        "fields": {
-          "companyId": {
-            "label": "Company ID"
-          },
-          "actorUserId": {
-            "label": "Actor User ID"
-          },
-          "actorRoleSnapshot": {
-            "label": "Snapshot do papel do ator"
-          },
-          "targetCustomerId": {
-            "label": "Target Customer ID"
-          },
-          "action": {
-            "label": "A\u00e7\u00e3o"
-          },
-          "resourceType": {
-            "label": "Tipo do recurso"
-          },
-          "resourceId": {
-            "label": "Resource ID"
-          },
-          "ipAddress": {
-            "label": "IP Address"
-          },
-          "userAgent": {
-            "label": "User agent"
-          },
-          "requestId": {
-            "label": "Request ID"
-          },
-          "createdAt": {
-            "label": "Criado em"
-          },
-          "changesJson": {
-            "label": "Changes JSON",
-            "placeholder": "JSON com altera\u00e7\u00f5es aplicadas"
-          },
-          "metadataJson": {
-            "label": "Metadata JSON",
-            "placeholder": "JSON com metadados extras do evento"
-          }
-        },
-        "actions": {
-          "saving": "@:common.actions.saving"
-        }
-      }
     }
-  },
-  "landing": {
-    "nav": {
-      "technology": "Tecnologia",
-      "cases": "Casos de Sucesso",
-      "impact": "Impacto",
-      "support": "Suporte",
-      "teamAccess": "Acesso Equipe",
-      "buyerPortal": "Portal Comprador"
-    },
-    "hero": {
-      "badge": "Edi\u00e7\u00e3o 2024 / Gest\u00e3o Industrial",
-      "heading": "Comande sua Obra com",
-      "highlight": "Precis\u00e3o Absoluta.",
-      "description": "A nova fronteira da engenharia civil onde dados e execu\u00e7\u00e3o convergem em uma \u00fanica vis\u00e3o panor\u00e2mica de alto desempenho.",
-      "cta": "Solicitar Demonstra\u00e7\u00e3o"
-    },
-    "features": {
-      "sectionTitle": "Diferenciais",
-      "transparency": {
-        "title": "Transpar\u00eancia Total",
-        "description": "Visibilidade completa para clientes e equipe t\u00e9cnica em cada etapa cr\u00edtica do projeto."
-      },
-      "precision": {
-        "title": "Precis\u00e3o de Dados",
-        "description": "Informa\u00e7\u00f5es exatas colhidas em tempo real para uma tomada de decis\u00e3o orientada por evid\u00eancias."
-      },
-      "technology": {
-        "title": "Tecnologia de Ponta",
-        "description": "Sistemas de gest\u00e3o industrial integrados nativamente com ferramentas de campo mobile."
-      }
-    },
-    "schedule": {
-      "title": "Cronograma Vivo",
-      "description": "O pulso da sua constru\u00e7\u00e3o transformado em visualiza\u00e7\u00f5es m\u00e9tricas precisas.",
-      "globalAverage": "M\u00e9dia Global",
-      "task": {
-        "foundation": "Funda\u00e7\u00e3o e Estrutura",
-        "masonry": "Alvenaria e Veda\u00e7\u00f5es",
-        "electrical": "Instala\u00e7\u00f5es El\u00e9tricas"
-      },
-      "status": {
-        "completed": "Conclu\u00eddo {percent}%",
-        "inProgress": "{percent}% Em Andamento",
-        "planned": "{percent}% Planejado"
-      }
-    },
-    "gallery": {
-      "title": "Arquivo Visual",
-      "tabs": {
-        "all": "Todos",
-        "structure": "Estrutura",
-        "finishing": "Acabamento"
-      }
-    },
-    "investor": {
-      "badge": "Investor Insight",
-      "title": "Portal do Investidor",
-      "assetOnSite": "Patrim\u00f4nio em Obra",
-      "description": "Acompanhe o ROI da sua constru\u00e7\u00e3o com gr\u00e1ficos de evolu\u00e7\u00e3o f\u00edsica versus financeira. Transpar\u00eancia que valoriza seu investimento.",
-      "reports": "Relat\u00f3rios Semanais",
-      "audit": "Auditoria de Materiais",
-      "financialControl": "Controle financeiro na palma da m\u00e3o.",
-      "mobileDescription": "Nossa interface foi desenhada para o tomador de decis\u00e3o casual que exige dados t\u00e9cnicos precisos sem a complexidade burocr\u00e1tica."
-    },
-    "field": {
-      "badge": "Opera\u00e7\u00f5es de Campo",
-      "title": "O Motor do Canteiro",
-      "description": "Do RDO (Registro Di\u00e1rio de Obra) \u00e0 gest\u00e3o de insumos, a equipe de campo opera com efici\u00eancia m\u00e1xima atrav\u00e9s de workflows otimizados.",
-      "offlineFirst": {
-        "title": "Offline-First",
-        "description": "Funciona mesmo sem conex\u00e3o est\u00e1vel no canteiro."
-      },
-      "geoTracking": {
-        "title": "Geo-Tracking",
-        "description": "Valida\u00e7\u00e3o espacial de todas as medi\u00e7\u00f5es."
-      },
-      "rdos": {
-        "status": "Ativo",
-        "workforce": "Efetivo:",
-        "workers": "{n} Oper\u00e1rios",
-        "weather": "Clima:",
-        "weatherFormat": "{condition} ({temp})"
-      }
-    },
-    "infrastructure": {
-      "title": "Infraestrutura Operacional",
-      "rdos": {
-        "title": "RDO Digital",
-        "description": "Assinatura biom\u00e9trica e georreferenciamento."
-      },
-      "measurements": {
-        "title": "Medi\u00e7\u00f5es",
-        "description": "Confer\u00eancia via laser e scan de projetos."
-      },
-      "inventory": {
-        "title": "Invent\u00e1rio",
-        "description": "Controle de insumos FIFO automatizado."
-      },
-      "bi": {
-        "title": "BI & Analytics",
-        "description": "Previs\u00e3o de desvios baseada em hist\u00f3rico."
-      }
-    },
-    "cases": {
-      "badge": "Performance Comprovada",
-      "title": "Casos de Sucesso",
-      "description": "Navegue pelos projetos que redefiniram o padr\u00e3o de efici\u00eancia com a plataforma BuildTrack.",
-      "project": {
-        "name": "Complexo Industrial Delta",
-        "result": "Redu\u00e7\u00e3o de 15% em Desperd\u00edcio",
-        "quote": "A implementa\u00e7\u00e3o do sistema de rastreamento de insumos mudou nossa margem de lucro em apenas 6 meses.",
-        "author": "Ricardo Almeida",
-        "role": "Eng. Chefe"
-      }
-    },
-    "esg": {
-      "title": "Sustentabilidade & Compliance ESG",
-      "waste": {
-        "title": "Gest\u00e3o de Res\u00edduos",
-        "description": "Tracking digital de descarte e reutiliza\u00e7\u00e3o de entulho, garantindo aterros sanit\u00e1rios certificados e conformidade legal."
-      },
-      "carbon": {
-        "title": "Pegada de Carbono",
-        "description": "Monitoramento de log\u00edstica e consumo energ\u00e9tico para projetos carbono-zero ou de baixo impacto ambiental."
-      },
-      "wasteAvoided": "Res\u00edduos Evitados",
-      "certification": {
-        "title": "Certifica\u00e7\u00e3o GreenFlow",
-        "description": "O BuildTrack emite certificados de gest\u00e3o de res\u00edduos em tempo real para auditorias de sustentabilidade."
-      },
-      "impact": "IMPACTO",
-      "metric": "{value} Ton"
-    },
-    "security": {
-      "title": "Imutabilidade de Dados",
-      "description": "Nossa infraestrutura utiliza protocolos de seguran\u00e7a que tornam registros fotogr\u00e1ficos e RDOs imut\u00e1veis uma vez validados, garantindo seguran\u00e7a jur\u00eddica absoluta.",
-      "certifications": {
-        "iso": "ISO 27001",
-        "lgpd": "Conformidade LGPD",
-        "aws": "Seguran\u00e7a AWS"
-      }
-    },
-    "testimonials": {
-      "title": "Vozes do Mercado",
-      "badge": "Customer Stories",
-      "quote1": {
-        "quote": "A transpar\u00eancia do BuildTrack zerou os ru\u00eddos de comunica\u00e7\u00e3o com nossos investidores. O portal do comprador tornou-se nossa principal ferramenta de fechamento.",
-        "author": "Carlos Mendes",
-        "role": "Dir. Construtora Apex"
-      },
-      "quote2": {
-        "quote": "Identificar desvios no cronograma antes que eles se tornem custos \u00e9 o que diferencia uma obra lucrativa de uma dor de cabe\u00e7a.",
-        "author": "Mariana Silva",
-        "role": "Planejamento Estrat\u00e9gico"
-      }
-    },
-    "faq": {
-      "title": "Especifica\u00e7\u00f5es T\u00e9cnicas",
-      "items": {
-        "erp": {
-          "question": "Integra\u00e7\u00e3o com ERPs de mercado?",
-          "answer": "Sim. Nossa API RESTful nativa conecta-se com Sienge, TOTVS e SAP, garantindo sincronia bidirecional entre financeiro e obra."
-        },
-        "offline": {
-          "question": "Funcionamento Offline?",
-          "answer": "O app m\u00f3vel \u00e9 offline-first. Armazena fotos e dados localmente e sincroniza automaticamente assim que houver rede dispon\u00edvel."
-        },
-        "storage": {
-          "question": "Limites de Armazenamento?",
-          "answer": "Nossos planos Enterprise incluem armazenamento ilimitado para projetos e registros fotogr\u00e1ficos em nuvem AWS."
-        }
-      }
-    },
-    "footer": {
-      "platform": {
-        "title": "Plataforma",
-        "teamPortal": "Portal de Equipe",
-        "buyerApp": "App do Comprador",
-        "apiIntegrations": "Integra\u00e7\u00f5es API",
-        "esgSecurity": "Seguran\u00e7a ESG"
-      },
-      "company": {
-        "title": "Empresa",
-        "aboutUs": "Sobre N\u00f3s",
-        "careers": "Carreiras",
-        "privacy": "Privacidade",
-        "contact": "Contato"
-      },
-      "copyright": "\u00a9 2024 BuildTrack Sistemas T\u00e9cnicos S.A. TODOS OS DIREITOS RESERVADOS.",
-      "cnpj": "CNPJ @:numberFormat",
-      "location": "{city}, {state}"
-    }
-  },
-  "about": {
-    "title": "Sobre N\u00f3s",
-    "hero": {
-      "title": "Sobre o BuildTrack",
-      "subtitle": "Transformando a engenharia civil com tecnologia"
-    }
-  },
-  "contact": {
-    "title": "Contate-nos",
-    "form": {
-      "name": "Nome",
-      "email": "E-mail",
-      "subject": "Assunto",
-      "message": "Mensagem",
-      "submit": "Enviar Mensagem"
-    }
-  },
-  "terms": {
-    "title": "Termos de Uso"
-  },
-  "privacy": {
-    "title": "Pol\u00edtica de Privacidade"
   },
   "portal": {
     "common": {
@@ -3330,7 +2654,7 @@
         "planning": "Planejamento",
         "inProgress": "Em andamento",
         "paused": "Pausado",
-        "completed": "Conclu\u00eddo",
+        "completed": "Concluído",
         "open": "Aberto",
         "waiting": "Aguardando",
         "resolved": "Resolvido",
@@ -3338,24 +2662,19 @@
       },
       "priority": {
         "low": "Baixa",
-        "medium": "M\u00e9dia",
+        "medium": "Média",
         "high": "Alta",
         "urgent": "Urgente"
       },
-      "loading": "Carregando...",
       "empty": "Nenhum registro encontrado.",
       "error": "Falha ao carregar dados."
     },
     "dashboard": {
-      "title": "Painel do Cliente",
-      "description": "Acompanhe seus projetos, timeline, fotos, documentos e tickets em um s\u00f3 lugar.",
       "cards": {
         "projects": "Meus Projetos",
         "events": "Eventos Recentes",
-        "photos": "Fotos Publicadas",
-        "documents": "Documentos"
-      },
-      "quickAccess": "Acesso R\u00e1pido"
+        "photos": "Fotos Publicadas"
+      }
     },
     "projects": {
       "title": "Meus Projetos",
@@ -3363,40 +2682,38 @@
       "metrics": {
         "total": "Total",
         "active": "Em Andamento",
-        "completed": "Conclu\u00eddos"
+        "completed": "Concluídos"
       },
       "table": {
         "name": "Nome",
-        "code": "C\u00f3digo",
+        "code": "Código",
         "status": "Status",
-        "actions": "A\u00e7\u00f5es"
+        "actions": "Ações"
       },
       "details": {
         "title": "Detalhes do Projeto",
-        "info": "Informa\u00e7\u00f5es Gerais",
-        "description": "Descri\u00e7\u00e3o"
+        "info": "Informações Gerais",
+        "description": "Descrição"
       },
       "fields": {
-        "startDate": "In\u00edcio",
-        "expectedEnd": "Previs\u00e3o"
+        "startDate": "Início",
+        "expectedEnd": "Previsão"
       }
     },
     "timeline": {
       "title": "Timeline de Eventos",
-      "description": "Acompanhe o hist\u00f3rico de eventos e atualiza\u00e7\u00f5es dos seus projetos."
+      "description": "Acompanhe o histórico de eventos e atualizações dos seus projetos."
     },
     "photos": {
       "title": "Galeria de Fotos",
-      "description": "Acompanhe o progresso da obra atrav\u00e9s das fotos publicadas.",
+      "description": "Acompanhe o progresso da obra através das fotos publicadas.",
       "metrics": {
         "total": "Total de Fotos",
-        "albums": "\u00c1lbuns",
-        "lastUpdate": "\u00daltima Atualiza\u00e7\u00e3o"
+        "albums": "Álbuns",
+        "lastUpdate": "Última Atualização"
       }
     },
     "documents": {
-      "title": "Documentos",
-      "description": "Acesse documentos, relat\u00f3rios e arquivos dos seus projetos.",
       "metrics": {
         "total": "Total",
         "size": "Tamanho Total",
@@ -3410,17 +2727,17 @@
       }
     },
     "announcements": {
-      "title": "An\u00fancios e Notifica\u00e7\u00f5es",
-      "description": "Fique por dentro das \u00faltimas novidades e comunicados.",
+      "title": "Anúncios e Notificações",
+      "description": "Fique por dentro das últimas novidades e comunicados.",
       "metrics": {
         "total": "Total",
-        "unread": "N\u00e3o Lidos",
+        "unread": "Não Lidos",
         "important": "Importantes"
       }
     },
     "tickets": {
       "title": "Tickets de Suporte",
-      "description": "Acompanhe seus chamados e solicita\u00e7\u00f5es.",
+      "description": "Acompanhe seus chamados e solicitações.",
       "metrics": {
         "total": "Total",
         "open": "Abertos",
@@ -3438,28 +2755,28 @@
         "description": "Crie um novo chamado para nossa equipe de suporte.",
         "subject": "Assunto",
         "priority": "Prioridade",
-        "body": "Descri\u00e7\u00e3o",
+        "body": "Descrição",
         "submit": "Criar Ticket"
       },
       "details": {
         "title": "Detalhes do Ticket",
-        "history": "Hist\u00f3rico",
+        "history": "Histórico",
         "addMessage": "Adicionar mensagem",
-        "info": "Informa\u00e7\u00f5es"
+        "info": "Informações"
       }
     }
   },
   "seed": {
     "action": {
-      "1": "A\u00e7\u00e3o de seed 1",
-      "2": "A\u00e7\u00e3o de seed 2",
-      "3": "A\u00e7\u00e3o de seed 3",
-      "4": "A\u00e7\u00e3o de seed 4"
+      "1": "Ação de seed 1",
+      "2": "Ação de seed 2",
+      "3": "Ação de seed 3",
+      "4": "Ação de seed 4"
     }
   },
   "proxy": {
-    "unavailable": "API de backend indispon\u00edvel",
-    "unavailableForAuthSession": "API de backend indispon\u00edvel para sess\u00e3o de autentica\u00e7\u00e3o",
-    "unavailableForAuthRefresh": "API de backend indispon\u00edvel para atualiza\u00e7\u00e3o de autentica\u00e7\u00e3o"
+    "unavailable": "API de backend indisponível",
+    "unavailableForAuthSession": "API de backend indisponível para sessão de autenticação",
+    "unavailableForAuthRefresh": "API de backend indisponível para atualização de autenticação"
   }
 }

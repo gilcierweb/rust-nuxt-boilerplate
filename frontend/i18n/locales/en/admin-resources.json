@@ -198,7 +198,7 @@
         "confirmDelete": "Are you sure you want to delete this log?"
       }
     },
-"dashboard": {
+    "dashboard": {
       "totalUsers": "Total Users",
       "totalRoles": "Total Roles",
       "totalAuditLogs": "Total Audit Logs",

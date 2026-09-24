@@ -1,162 +1,6 @@
 {
   "common": {
-    "success": "Success",
-    "error": "Error",
-    "loading": "Loading...",
-    "save": "Save",
-    "cancel": "Cancel",
-    "submit": "Submit",
-    "back": "Back",
-    "next": "Next",
-    "previous": "Previous",
-    "close": "Close",
-    "yes": "Yes",
-    "no": "No",
-    "or": "or",
-    "and": "and",
-    "actions": {
-      "show": "Show",
-      "edit": "Edit",
-      "new": "New",
-      "refresh": "Refresh",
-      "saveChanges": "Save changes",
-      "saving": "Saving...",
-      "send": "Send",
-      "cancel": "Cancel",
-      "back": "Back",
-      "submit": "Submit"
-    },
-    "table": {
-      "actions": "Actions"
-    },
     "appName": "Boilerplate Rust Nuxt"
-  },
-  "auth": {
-    "login": {
-      "title": "Welcome back",
-      "noAccount": "Don't have an account?",
-      "createAccount": "Create an account",
-      "forgotPassword": "Forgot password?",
-      "email": "Email",
-      "password": "Password",
-      "emailPlaceholder": "your-email{'@'}example.com",
-      "passwordPlaceholder": "enter your password",
-      "rememberMe": "Remember Me",
-      "submit": "Sign in",
-      "submitWithGoogle": "Sign in with Google",
-      "magicLink": "Magic Link",
-      "loginWith": "Login with",
-      "loginAsUser": "Login as User",
-      "loginAsAdmin": "Login as Admin",
-      "otp": {
-        "label": "Enter the code sent to your email",
-        "title": "Verify Code",
-        "placeholder": "------",
-        "invalidCode": "Invalid verification code"
-      },
-      "error": {
-        "invalidCredentials": "Invalid credentials",
-        "emailNotConfirmed": "Please confirm your email before logging in",
-        "accountLocked": "Account locked. Contact support."
-      },
-      "success": "Login successful"
-    },
-    "register": {
-      "title": "Create your account",
-      "hasAccount": "Already have an account?",
-      "loginLink": "Log in",
-      "login": "Log in",
-      "email": "Email",
-      "password": "Password",
-      "confirmPassword": "Confirm password",
-      "emailPlaceholder": "your-email{'@'}example.com",
-      "passwordPlaceholder": "create a strong password",
-      "confirmPasswordPlaceholder": "repeat your password",
-      "submit": "Create account",
-      "terms": {
-        "consent": "I confirm I am 18 years or older and accept the",
-        "termsOfUse": "Terms of Use",
-        "privacyPolicy": "Privacy Policy",
-        "and": "and the"
-      },
-      "strength": {
-        "label": "Password strength: {strength}",
-        "weak": "Weak",
-        "fair": "Fair",
-        "good": "Good",
-        "strong": "Strong"
-      },
-      "errors": {
-        "setStrongPassword": "Set a strong password to continue.",
-        "passwordMismatch": "Passwords don't match",
-        "emailExists": "This email is already registered",
-        "weakPassword": "Password too weak. Use 8+ characters with letters and numbers.",
-        "generic": "Registration failed"
-      },
-      "success": {
-        "title": "Account created!",
-        "message": "We sent a confirmation email to {email}. Please check your inbox.",
-        "goToLogin": "Go to Login"
-      }
-    },
-    "forgotPassword": {
-      "title": "Forgot password?",
-      "remembered": "Remembered your password?",
-      "backToLogin": "Log in",
-      "description": "Enter your email address and we'll send you a link to reset your password.",
-      "email": "Email address",
-      "emailPlaceholder": "your-email{'@'}example.com",
-      "submit": "Send Reset Link",
-      "success": {
-        "title": "Check your email",
-        "message": "We sent a password reset link to your email."
-      }
-    },
-    "resetPassword": {
-      "title": "Reset password",
-      "newPassword": "New password",
-      "confirmPassword": "Confirm password",
-      "newPasswordPlaceholder": "enter new password",
-      "confirmPasswordPlaceholder": "repeat new password",
-      "submit": "Reset Password",
-      "success": {
-        "title": "Password reset!",
-        "login": "Go to Login"
-      },
-      "error": {
-        "invalidToken": "Invalid or expired token",
-        "requestNew": "Request new link",
-        "passwordMismatch": "Passwords don't match"
-      }
-    },
-    "confirm": {
-      "loading": "Confirming your account...",
-      "success": {
-        "title": "Account confirmed!",
-        "message": "Your email has been verified. You can now log in.",
-        "login": "Go to Login"
-      },
-      "error": {
-        "title": "Confirmation failed",
-        "message": "The confirmation link is invalid or has expired.",
-        "backToLogin": "Back to Login"
-      }
-    },
-    "validation": {
-      "emailRequired": "Please enter your email",
-      "invalidEmail": "Invalid email address",
-      "emailTooLong": "Email is too long",
-      "passwordRequired": "Please enter your password",
-      "passwordTooShort": "Password must be at least 12 characters",
-      "passwordTooLong": "Password is too long",
-      "passwordNeedsUpper": "Add at least one uppercase letter",
-      "passwordNeedsDigit": "Add at least one number",
-      "passwordNeedsSymbol": "Add at least one symbol",
-      "passwordConfirmRequired": "Please confirm your password",
-      "passwordMismatch": "Passwords do not match",
-      "otpInvalid": "Code must be 6 digits",
-      "termsRequired": "You must accept the terms"
-    }
   },
   "admin": {
     "section": "Admin",
@@ -633,31 +477,6 @@
         "gross_amount_required": "Gross amount is required"
       }
     },
-    "roles": {
-      "messages": {
-        "loadError": "Failed to load roles.",
-        "createSuccess": "Role created successfully.",
-        "createError": "Failed to create role.",
-        "updateSuccess": "Role updated successfully.",
-        "updateError": "Failed to update role."
-      },
-      "form": {
-        "error_title": "Error",
-        "id": "ID",
-        "name": "Name",
-        "resource_type": "Resource type",
-        "resource_id": "Resource ID",
-        "created_at": "Created at",
-        "updated_at": "Updated at",
-        "cancel": "Cancel",
-        "saving": "Saving...",
-        "create_role": "Create role",
-        "save_changes": "Save changes"
-      },
-      "validation": {
-        "name_required": "Name is required"
-      }
-    },
     "customer_users": {
       "messages": {
         "loadError": "Failed to load customer users.",
@@ -748,19 +567,6 @@
         "status_required": "Status is required"
       }
     },
-    "statusLabels": {
-      "active": "Active",
-      "inactive": "Inactive",
-      "pending": "Pending",
-      "archived": "Archived",
-      "inProgress": "In progress",
-      "completed": "Completed",
-      "cancelled": "Cancelled",
-      "paid": "Paid",
-      "approved": "Approved",
-      "rejected": "Rejected",
-      "unknown": "Unknown"
-    },
     "quickActions": {
       "title": "Quick actions",
       "reviewTickets": "Review open tickets and define priorities.",
@@ -820,42 +626,24 @@
       "goSettings": "Go to settings"
     },
     "sidebar": {
-      "closeSidebar": "Close sidebar",
-      "close": "Close",
-      "sidebar": "Sidebar",
       "dropdown": "Dropdown",
       "avatarAlt": "User avatar",
-      "admin": "Admin",
-      "apiDocs": "API Documentation",
       "reports": "Reports",
       "alerts": "Alerts",
       "telemetry": "Telemetry",
-      "dashboard": "Dashboard",
-      "default": "Default",
       "core": "Core",
-      "coreResources": "Core Resources",
-      "operations": "Operations",
       "fieldOperations": "Field Operations",
       "monitoring": "Monitoring",
       "monitoringAndReports": "Monitoring & Reports",
-      "financial": "Financial",
-      "management": "Management",
-      "quickLinks": "Quick Links",
       "terms": "Terms",
       "privacy": "Privacy",
-      "workspace": "Workspace",
       "alertsHub": "Alerts Hub",
       "reportsHub": "Reports Hub",
-      "openApiDocs": "Open API Documentation",
       "debts": "Debts",
       "documents": "Documents",
       "payments": "Payments",
       "customers": "Customers",
-      "audit": "Audit",
-      "users": "Users",
-      "roles": "Roles",
-      "auditLogs": "Audit Logs",
-      "defaultUser": "admin{'@'}app-rust-nuxt-boilerplate.local"
+      "audit": "Audit"
     },
     "dashboard": {
       "search": {
@@ -938,129 +726,6 @@
       "workspace": {
         "title": "Workspace",
         "flyonui": "FlyonUI"
-      }
-    },
-    "memberships": {
-      "roles": {
-        "admin": "Admin",
-        "manager": "Manager",
-        "editor": "Editor",
-        "viewer": "Viewer"
-      },
-      "status": {
-        "active": "Active",
-        "invited": "Invited",
-        "suspended": "Suspended"
-      },
-      "messages": {
-        "loadError": "Failed to load memberships.",
-        "createSuccess": "Membership created successfully.",
-        "createError": "Failed to create membership.",
-        "updateSuccess": "Membership updated successfully.",
-        "updateError": "Failed to update membership."
-      },
-      "index": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "User-Company Memberships"
-        },
-        "actions": {
-          "new": "New membership",
-          "refresh": "@:common.actions.refresh"
-        },
-        "metrics": {
-          "total": "Total",
-          "active": "Active",
-          "primary": "Primary"
-        },
-        "table": {
-          "user": "User",
-          "company": "Company",
-          "role": "Role",
-          "status": "Status",
-          "primary": "Primary",
-          "actions": "@:common.table.actions",
-          "show": "@:common.actions.show",
-          "edit": "@:common.actions.edit",
-          "empty": "No memberships loaded."
-        }
-      },
-      "new": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "New membership"
-        },
-        "actions": {
-          "submit": "Create membership"
-        }
-      },
-      "edit": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "Edit membership"
-        },
-        "actions": {
-          "submit": "@:common.actions.saveChanges"
-        }
-      },
-      "show": {
-        "header": {
-          "section": "Admin / Memberships",
-          "title": "Membership details"
-        },
-        "actions": {
-          "edit": "@:common.actions.edit"
-        },
-        "fields": {
-          "primary": "Primary"
-        },
-        "empty": "Membership not found."
-      },
-      "form": {
-        "sections": {
-          "main": "Main data",
-          "audit": "Audit"
-        },
-        "fields": {
-          "userId": {
-            "label": "User ID"
-          },
-          "companyId": {
-            "label": "Company ID"
-          },
-          "membershipRole": {
-            "label": "Membership Role",
-            "options": {
-              "admin": "Admin",
-              "manager": "Manager",
-              "editor": "Editor",
-              "viewer": "Viewer"
-            }
-          },
-          "status": {
-            "label": "Status",
-            "options": {
-              "active": "Active",
-              "invited": "Invited",
-              "suspended": "Suspended"
-            }
-          },
-          "isPrimary": {
-            "label": "Primary membership"
-          },
-          "invitedBy": {
-            "label": "Invited By"
-          },
-          "joinedAt": {
-            "label": "Joined At"
-          },
-          "lastAccessedAt": {
-            "label": "Last Accessed At"
-          }
-        },
-        "actions": {
-          "saving": "@:common.actions.saving"
-        }
       }
     },
     "projects": {
@@ -2963,333 +2628,7 @@
           "saving": "@:common.actions.saving"
         }
       }
-    },
-    "auditLogs": {
-      "messages": {
-        "loadError": "Failed to load audit logs.",
-        "createSuccess": "Audit log created successfully.",
-        "createError": "Failed to create audit log.",
-        "updateSuccess": "Audit log updated successfully.",
-        "updateError": "Failed to update audit log."
-      },
-      "index": {
-        "header": {
-          "section": "Admin / Audit",
-          "title": "Audit logs"
-        },
-        "actions": {
-          "new": "New log",
-          "refresh": "@:common.actions.refresh"
-        },
-        "table": {
-          "action": "Action",
-          "resourceType": "Resource",
-          "actorUserId": "Actor",
-          "createdAt": "Date",
-          "actions": "@:common.table.actions",
-          "show": "@:common.actions.show",
-          "edit": "@:common.actions.edit",
-          "empty": "No logs loaded."
-        }
-      },
-      "new": {
-        "header": {
-          "section": "Admin / Audit",
-          "title": "New audit log"
-        },
-        "actions": {
-          "submit": "Create log"
-        }
-      },
-      "edit": {
-        "header": {
-          "section": "Admin / Audit",
-          "title": "Edit audit log"
-        },
-        "actions": {
-          "submit": "@:common.actions.saveChanges"
-        }
-      },
-      "show": {
-        "header": {
-          "section": "Admin / Audit",
-          "title": "Audit log details"
-        },
-        "actions": {
-          "edit": "@:common.actions.edit"
-        },
-        "empty": "Log not found."
-      },
-      "form": {
-        "sections": {
-          "identification": "Identification",
-          "request": "Request",
-          "payload": "Payload"
-        },
-        "fields": {
-          "companyId": {
-            "label": "Company ID"
-          },
-          "actorUserId": {
-            "label": "Actor User ID"
-          },
-          "actorRoleSnapshot": {
-            "label": "Actor role snapshot"
-          },
-          "targetCustomerId": {
-            "label": "Target Customer ID"
-          },
-          "action": {
-            "label": "Action"
-          },
-          "resourceType": {
-            "label": "Resource type"
-          },
-          "resourceId": {
-            "label": "Resource ID"
-          },
-          "ipAddress": {
-            "label": "IP Address"
-          },
-          "userAgent": {
-            "label": "User agent"
-          },
-          "requestId": {
-            "label": "Request ID"
-          },
-          "createdAt": {
-            "label": "Created at"
-          },
-          "changesJson": {
-            "label": "Changes JSON",
-            "placeholder": "JSON with applied changes"
-          },
-          "metadataJson": {
-            "label": "Metadata JSON",
-            "placeholder": "JSON with extra event metadata"
-          }
-        },
-        "actions": {
-          "saving": "@:common.actions.saving"
-        }
-      }
     }
-  },
-  "landing": {
-    "nav": {
-      "technology": "Technology",
-      "cases": "Success Cases",
-      "impact": "Impact",
-      "support": "Support",
-      "teamAccess": "Team Access",
-      "buyerPortal": "Buyer Portal"
-    },
-    "hero": {
-      "badge": "Edition 2024 / Industrial Management",
-      "heading": "Command Your Construction with",
-      "highlight": "Absolute Precision.",
-      "description": "The new frontier of civil engineering where data and execution converge in a single high-performance panoramic view.",
-      "cta": "Request Demo"
-    },
-    "features": {
-      "sectionTitle": "Differentials",
-      "transparency": {
-        "title": "Total Transparency",
-        "description": "Complete visibility for clients and technical team at each critical stage of the project."
-      },
-      "precision": {
-        "title": "Data Precision",
-        "description": "Exact information gathered in real-time for evidence-based decision making."
-      },
-      "technology": {
-        "title": "Cutting-edge Technology",
-        "description": "Industrial management systems natively integrated with field mobile tools."
-      }
-    },
-    "schedule": {
-      "title": "Live Schedule",
-      "description": "The pulse of your construction transformed into precise metric visualizations.",
-      "globalAverage": "Global Average",
-      "task": {
-        "foundation": "Foundation and Structure",
-        "masonry": "Masonry and Walls",
-        "electrical": "Electrical Installations"
-      },
-      "status": {
-        "completed": "Completed {percent}%",
-        "inProgress": "{percent}% In Progress",
-        "planned": "{percent}% Planned"
-      }
-    },
-    "gallery": {
-      "title": "Visual Archive",
-      "tabs": {
-        "all": "All",
-        "structure": "Structure",
-        "finishing": "Finishing"
-      }
-    },
-    "investor": {
-      "badge": "Investor Insight",
-      "title": "Investor Portal",
-      "assetOnSite": "Asset on Site",
-      "description": "Follow the ROI of your construction with physical versus financial evolution charts. Transparency that values your investment.",
-      "reports": "Weekly Reports",
-      "audit": "Materials Audit",
-      "financialControl": "Financial control in the palm of your hand.",
-      "mobileDescription": "Our interface was designed for the casual decision maker who demands precise technical data without bureaucratic complexity."
-    },
-    "field": {
-      "badge": "Field Operations",
-      "title": "The Construction Yard Motor",
-      "description": "From the RDO (Daily Work Log) to input management, the field team operates at maximum efficiency through optimized workflows.",
-      "offlineFirst": {
-        "title": "Offline-First",
-        "description": "Works even without stable connection on site."
-      },
-      "geoTracking": {
-        "title": "Geo-Tracking",
-        "description": "Spatial validation of all measurements."
-      },
-      "rdos": {
-        "status": "Active",
-        "workforce": "Workforce:",
-        "workers": "{n} Workers",
-        "weather": "Weather:",
-        "weatherFormat": "{condition} ({temp})"
-      }
-    },
-    "infrastructure": {
-      "title": "Operational Infrastructure",
-      "rdos": {
-        "title": "Digital RDO",
-        "description": "Biometric signature and georeferencing."
-      },
-      "measurements": {
-        "title": "Measurements",
-        "description": "Conference via laser and project scan."
-      },
-      "inventory": {
-        "title": "Inventory",
-        "description": "Automated FIFO input control."
-      },
-      "bi": {
-        "title": "BI & Analytics",
-        "description": "Deviation forecast based on history."
-      }
-    },
-    "cases": {
-      "badge": "Proven Performance",
-      "title": "Success Cases",
-      "description": "Browse the projects that redefined efficiency standards with the BuildTrack platform.",
-      "project": {
-        "name": "Industrial Complex Delta",
-        "result": "15% Waste Reduction",
-        "quote": "Implementing the input tracking system changed our profit margin in just 6 months.",
-        "author": "Ricardo Almeida",
-        "role": "Chief Engineer"
-      }
-    },
-    "esg": {
-      "title": "Sustainability & ESG Compliance",
-      "waste": {
-        "title": "Waste Management",
-        "description": "Digital tracking of disposal and reuse of debris, ensuring certified landfills and legal compliance."
-      },
-      "carbon": {
-        "title": "Carbon Footprint",
-        "description": "Monitoring of logistics and energy consumption for carbon-zero or low environmental impact projects."
-      },
-      "wasteAvoided": "Waste Avoided",
-      "certification": {
-        "title": "GreenFlow Certification",
-        "description": "BuildTrack issues real-time waste management certificates for sustainability audits."
-      },
-      "impact": "IMPACT",
-      "metric": "{value} Ton"
-    },
-    "security": {
-      "title": "Data Immutability",
-      "description": "Our infrastructure uses security protocols that make photographic records and RDOs immutable once validated, guaranteeing absolute legal security.",
-      "certifications": {
-        "iso": "ISO 27001",
-        "lgpd": "LGPD Compliance",
-        "aws": "AWS Secured"
-      }
-    },
-    "testimonials": {
-      "title": "Market Voices",
-      "badge": "Customer Stories",
-      "quote1": {
-        "quote": "The transparency of BuildTrack zeroed communication noise with our investors. The buyer portal became our main closing tool.",
-        "author": "Carlos Mendes",
-        "role": "Director Apex Construction"
-      },
-      "quote2": {
-        "quote": "Identifying schedule deviations before they become costs is what differentiates a profitable construction from a headache.",
-        "author": "Mariana Silva",
-        "role": "Strategic Planning"
-      }
-    },
-    "faq": {
-      "title": "Technical Specifications",
-      "items": {
-        "erp": {
-          "question": "Integration with market ERPs?",
-          "answer": "Yes. Our native RESTful API connects with Sienge, TOTVS and SAP, ensuring bidirectional sync between financial and construction."
-        },
-        "offline": {
-          "question": "Offline operation?",
-          "answer": "The mobile app is offline-first. Stores photos and data locally and syncs automatically as soon as network is available."
-        },
-        "storage": {
-          "question": "Storage limits?",
-          "answer": "Our Enterprise plans include unlimited storage for projects and photographic records in AWS cloud."
-        }
-      }
-    },
-    "footer": {
-      "platform": {
-        "title": "Platform",
-        "teamPortal": "Team Portal",
-        "buyerApp": "Buyer App",
-        "apiIntegrations": "API Integrations",
-        "esgSecurity": "ESG Security"
-      },
-      "company": {
-        "title": "Company",
-        "aboutUs": "About Us",
-        "careers": "Careers",
-        "privacy": "Privacy",
-        "contact": "Contact"
-      },
-      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. ALL RIGHTS RESERVED.",
-      "cnpj": "CNPJ {number}",
-      "location": "{city}, {state}"
-    }
-  },
-  "about": {
-    "title": "About Us",
-    "hero": {
-      "title": "About BuildTrack",
-      "subtitle": "Transforming civil engineering with technology"
-    }
-  },
-  "contact": {
-    "title": "Contact Us",
-    "form": {
-      "name": "Name",
-      "email": "Email",
-      "subject": "Subject",
-      "message": "Message",
-      "submit": "Send Message"
-    }
-  },
-  "terms": {
-    "title": "Terms of Use"
-  },
-  "privacy": {
-    "title": "Privacy Policy"
   },
   "portal": {
     "common": {
@@ -3320,20 +2659,15 @@
         "high": "High",
         "urgent": "Urgent"
       },
-      "loading": "Loading...",
       "empty": "No records found.",
       "error": "Failed to load data."
     },
     "dashboard": {
-      "title": "Customer Dashboard",
-      "description": "Track your projects, timeline, photos, documents and tickets in one place.",
       "cards": {
         "projects": "My Projects",
         "events": "Recent Events",
-        "photos": "Published Photos",
-        "documents": "Documents"
-      },
-      "quickAccess": "Quick Access"
+        "photos": "Published Photos"
+      }
     },
     "projects": {
       "title": "My Projects",
@@ -3373,8 +2707,6 @@
       }
     },
     "documents": {
-      "title": "Documents",
-      "description": "Access documents, reports and files for your projects.",
       "metrics": {
         "total": "Total",
         "size": "Total Size",
@@ -3425,14 +2757,6 @@
         "addMessage": "Add message",
         "info": "Information"
       }
-    }
-  },
-  "seed": {
-    "action": {
-      "1": "Seed action 1",
-      "2": "Seed action 2",
-      "3": "Seed action 3",
-      "4": "Seed action 4"
     }
   },
   "proxy": {

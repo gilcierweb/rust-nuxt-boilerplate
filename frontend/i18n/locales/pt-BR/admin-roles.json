@@ -2,11 +2,7 @@
   "admin": {
     "roles": {
       "messages": {
-        "loadError": "Falha ao carregar cargos.",
-        "createSuccess": "Cargo criado com sucesso.",
-        "createError": "Falha ao criar cargo.",
-        "updateSuccess": "Cargo atualizado com sucesso.",
-        "updateError": "Falha ao atualizar cargo."
+        "loadError": "Falha ao carregar cargos."
       },
       "form": {
         "error_title": "Erro",
