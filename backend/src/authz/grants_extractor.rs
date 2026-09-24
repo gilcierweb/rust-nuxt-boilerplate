@@ -97,16 +97,25 @@ pub fn merge_authorities(
         authorities.insert(format!("ROLE_{}", role.to_uppercase()));
     }
     authorities.extend(build_ability(role_claim, roles).authorities());
-    // Filter permissions against whitelist to prevent privilege escalation
+    // Filter permissions against whitelist to prevent privilege escalation.
+    // Ignored codes are logged ONCE per call at debug level: non-whitelisted
+    // codes are the norm for seeded roles (e.g. admin), so warning per code
+    // would spam ~10 lines on every authenticated request.
+    let mut ignored: Vec<&String> = Vec::new();
     for perm in permission_codes {
         if is_permission_whitelisted(perm) {
             authorities.insert(perm.clone());
         } else {
-            tracing::warn!(
-                "grants extractor: permission '{}' not in whitelist, ignoring",
-                perm
-            );
+            ignored.push(perm);
         }
+    }
+    if !ignored.is_empty() {
+        tracing::debug!(
+            event = "authz.permissions_ignored",
+            ignored = ?ignored,
+            "grants extractor: {} permission(s) not in whitelist, ignoring",
+            ignored.len()
+        );
     }
     authorities
 }
