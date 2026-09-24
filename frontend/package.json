@@ -17,7 +17,7 @@
     "cf-typegen": "wrangler types"
   },
   "dependencies": {
-    "@nuxtjs/i18n": "10.2.4",
+    "@nuxtjs/i18n": "10.6.0",
     "@pinia/nuxt": "0.11.3",
     "@tailwindcss/vite": "^4.2.3",
     "@tanstack/vue-table": "^8.21.3",
@@ -27,7 +27,7 @@
     "@vee-validate/valibot": "^4.15.1",
     "@vite-pwa/nuxt": "^1.1.1",
     "flyonui": "^2.4.1",
-    "nuxt": "^4.5.1",
+    "nuxt": "^4.5.2",
     "nuxt-security": "2.5.1",
     "pinia": "^4.0.2",
     "pinia-plugin-persistedstate": "^4.7.1",
