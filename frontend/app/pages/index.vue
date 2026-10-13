@@ -49,7 +49,7 @@ class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface ho
                     <span class="font-headline-sm text-headline-sm text-on-surface">main.rs</span>
                   </div>
                   <pre
-                      class="flex-1 p-4 overflow-auto font-mono text-sm text-on-surface-variant bg-surface-container-lowest"><code>{`use actix_web::{App, HttpServer, web};
+                      class="flex-1 p-4 overflow-auto font-mono text-sm text-on-surface-variant bg-surface-container-lowest"><code v-pre>use actix_web::{App, HttpServer, web};
 use config::AppConfig;
 use db::database::{Database, DBPool};
 use repositories::AppContainer;
@@ -73,7 +73,7 @@ async fn main() -> std::io::Result<()> {
     .bind((config.host, config.port))?
     .run()
     .await
-}`}</code></pre>
+}</code></pre>
                 </div>
               </div>
             </div>
@@ -415,10 +415,10 @@ Full trail of critical actions with
                 class="order-2 lg:order-1 relative rounded-[2rem] overflow-hidden shadow-xl border border-outline-variant/30 aspect-[4/3] bg-surface-container">
               <div class="absolute inset-0 bg-surface-container-high flex items-center justify-center">
 <pre
-                  class="p-6 bg-surface-container-lowest rounded-xl border border-outline-variant/20 w-full max-w-md text-sm overflow-auto text-on-surface-variant"><code>{`# Hot reload in action
+                  class="p-6 bg-surface-container-lowest rounded-xl border border-outline-variant/20 w-full max-w-md text-sm overflow-auto text-on-surface-variant"><code v-pre># Hot reload in action
 cargo watch -x run
 # Or with docker
-docker compose up --watch`}</code></pre>
+docker compose up --watch</code></pre>
               </div>
             </div>
             <div class="order-1 lg:order-2 max-w-xl">
@@ -711,14 +711,14 @@ Clone the repo, start the stack, and open your
               browser. That's it.
 </p>
             <pre
-                class="bg-surface-container-lowest text-on-surface rounded-xl p-6 overflow-x-auto text-sm font-mono"><code>{`# 1. Clone
+                class="bg-surface-container-lowest text-on-surface rounded-xl p-6 overflow-x-auto text-sm font-mono"><code v-pre># 1. Clone
 git clone https://github.com/your-org/rust-nuxt-boilerplate.git
 cd rust-nuxt-boilerplate
 
 # 2. Start (includes DB, Redis, backend, frontend)
 docker compose up --build
 
-# 3. Open http://localhost:3000`}</code></pre>
+# 3. Open http://localhost:3000</code></pre>
           </div>
           <div class="relative h-[500px] w-full flex justify-center items-center">
             <div
