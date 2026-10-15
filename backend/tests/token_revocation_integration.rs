@@ -17,14 +17,14 @@ use actix_web::dev::Service;
 use actix_web::{App, HttpResponse, test, web};
 use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 
+use backend::AppState;
 use backend::middleware::auth::{JwtAuth, JwtAuthConfig, create_token};
 use backend::repositories::access_token_blacklist::{
     AccessTokenBlacklist, hash_token_for_blacklist,
 };
-use backend::AppState;
 
 mod common;
 
@@ -70,9 +70,8 @@ fn app_config() -> backend::config::AppConfig {
 fn app_state(config: &backend::config::AppConfig) -> web::Data<AppState> {
     let redis = redis_pool();
 
-    let manager = AsyncDieselConnectionManager::<AsyncPgConnection>::new(
-        "postgres://localhost:5432/dummy",
-    );
+    let manager =
+        AsyncDieselConnectionManager::<AsyncPgConnection>::new("postgres://localhost:5432/dummy");
     let db = Pool::builder(manager)
         .max_size(1)
         .build()
@@ -120,15 +119,13 @@ async fn epoch_revokes_tokens_issued_before_credential_change() {
     let config = app_config();
     let blacklist = Arc::new(AccessTokenBlacklist::new(redis_pool()));
     let app = test::init_service(
-        App::new()
-            .app_data(app_state(&config))
-            .service(
-                web::scope("/protected")
-                    .wrap(JwtAuth::new(
-                        JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
-                    ))
-                    .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
-            ),
+        App::new().app_data(app_state(&config)).service(
+            web::scope("/protected")
+                .wrap(JwtAuth::new(
+                    JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
+                ))
+                .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
+        ),
     )
     .await;
 
@@ -148,15 +145,13 @@ async fn epoch_predating_token_does_not_revoke_it() {
     let config = app_config();
     let blacklist = Arc::new(AccessTokenBlacklist::new(redis_pool()));
     let app = test::init_service(
-        App::new()
-            .app_data(app_state(&config))
-            .service(
-                web::scope("/protected")
-                    .wrap(JwtAuth::new(
-                        JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
-                    ))
-                    .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
-            ),
+        App::new().app_data(app_state(&config)).service(
+            web::scope("/protected")
+                .wrap(JwtAuth::new(
+                    JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
+                ))
+                .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
+        ),
     )
     .await;
 
@@ -173,15 +168,13 @@ async fn blacklisted_token_is_rejected() {
     let config = app_config();
     let blacklist = Arc::new(AccessTokenBlacklist::new(redis_pool()));
     let app = test::init_service(
-        App::new()
-            .app_data(app_state(&config))
-            .service(
-                web::scope("/protected")
-                    .wrap(JwtAuth::new(
-                        JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
-                    ))
-                    .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
-            ),
+        App::new().app_data(app_state(&config)).service(
+            web::scope("/protected")
+                .wrap(JwtAuth::new(
+                    JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
+                ))
+                .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
+        ),
     )
     .await;
 
@@ -210,22 +203,23 @@ async fn redis_outage_fails_closed() {
     let blacklist = Arc::new(AccessTokenBlacklist::new(dead_pool));
 
     let app = test::init_service(
-        App::new()
-            .app_data(app_state(&config))
-            .service(
-                web::scope("/protected")
-                    .wrap(JwtAuth::new(
-                        JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
-                    ))
-                    .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
-            ),
+        App::new().app_data(app_state(&config)).service(
+            web::scope("/protected")
+                .wrap(JwtAuth::new(
+                    JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
+                ))
+                .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
+        ),
     )
     .await;
 
     let (_, token) = make_token(&config).await;
 
     let resp = dispatch!(app, || bearer_request(&token));
-    assert_eq!(resp.status(), actix_web::http::StatusCode::SERVICE_UNAVAILABLE);
+    assert_eq!(
+        resp.status(),
+        actix_web::http::StatusCode::SERVICE_UNAVAILABLE
+    );
 
     let body: serde_json::Value = test::read_body_json(resp).await;
     assert_eq!(body["error"]["code"], "AUTH_STATUS_UNAVAILABLE");
@@ -236,15 +230,13 @@ async fn valid_token_without_revocation_record_passes() {
     let config = app_config();
     let blacklist = Arc::new(AccessTokenBlacklist::new(redis_pool()));
     let app = test::init_service(
-        App::new()
-            .app_data(app_state(&config))
-            .service(
-                web::scope("/protected")
-                    .wrap(JwtAuth::new(
-                        JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
-                    ))
-                    .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
-            ),
+        App::new().app_data(app_state(&config)).service(
+            web::scope("/protected")
+                .wrap(JwtAuth::new(
+                    JwtAuthConfig::new(vec![]).with_token_blacklist(blacklist.clone()),
+                ))
+                .default_service(web::to(|| async { HttpResponse::Ok().body("ok") })),
+        ),
     )
     .await;
 

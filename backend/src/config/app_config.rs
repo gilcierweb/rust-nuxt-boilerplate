@@ -714,7 +714,10 @@ impl AppConfig {
             // The literal documented in the repo's local-env guidance is
             // publicly known but matches neither the `changeme_` nor the
             // `REPLACE_WITH_` patterns, so it needs its own check.
-            if self.refresh_token_hash_salt.contains("change_in_production") {
+            if self
+                .refresh_token_hash_salt
+                .contains("change_in_production")
+            {
                 errors.push(
                     "REFRESH_TOKEN_HASH_SALT contains placeholder value \
                      'change_in_production'. Override the secret before \

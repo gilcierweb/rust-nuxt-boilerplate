@@ -326,9 +326,7 @@ async fn test_full_auth_cycle() {
 
     // Missing Bearer → 401 (the middleware inserts Claims; the extractor
     // must reject when they are absent).
-    let resp = dispatch!(app, || {
-        test::TestRequest::get().uri("/api/v1/auth/me")
-    });
+    let resp = dispatch!(app, || { test::TestRequest::get().uri("/api/v1/auth/me") });
     assert_eq!(resp.status(), 401, "me without Bearer must be rejected");
 
     // Garbage Bearer → 401.
@@ -337,7 +335,11 @@ async fn test_full_auth_cycle() {
             .uri("/api/v1/auth/me")
             .insert_header(("Authorization", "Bearer not-a-real-token"))
     });
-    assert_eq!(resp.status(), 401, "me with garbage Bearer must be rejected");
+    assert_eq!(
+        resp.status(),
+        401,
+        "me with garbage Bearer must be rejected"
+    );
 
     // --- Step 4: Refresh token (cookie-authenticated + CSRF) ---
     // The refresh cookie alone is not enough: refresh is a cookie-based
@@ -602,11 +604,7 @@ async fn locked_account_cannot_use_session_refresh_or_login() {
                 format!("refresh_token={}", refresh_cookie.clone().unwrap()),
             ))
     });
-    assert_eq!(
-        resp.status(),
-        401,
-        "session must reject a locked account"
-    );
+    assert_eq!(resp.status(), 401, "session must reject a locked account");
 
     // --- Refresh with a valid refresh cookie must be rejected ---
     let resp = dispatch!(app, || {
@@ -617,11 +615,7 @@ async fn locked_account_cannot_use_session_refresh_or_login() {
                 format!("refresh_token={}", refresh_cookie.clone().unwrap()),
             ))
     });
-    assert_eq!(
-        resp.status(),
-        401,
-        "refresh must reject a locked account"
-    );
+    assert_eq!(resp.status(), 401, "refresh must reject a locked account");
 
     // --- Login with the CORRECT password must return the GENERIC error ---
     // Account-state enumeration resistance: the locked login response must

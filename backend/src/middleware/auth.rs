@@ -555,15 +555,21 @@ mod tests {
         assert!(routes.iter().any(|r| r.pattern == "/api/v1/auth/refresh"));
 
         // Public auth flows issued without any credentials.
-        assert!(routes
-            .iter()
-            .any(|r| r.pattern == "/api/v1/auth/forgot-password"));
-        assert!(routes
-            .iter()
-            .any(|r| r.pattern == "/api/v1/auth/magic-link"));
-        assert!(routes
-            .iter()
-            .any(|r| r.pattern == "/api/v1/auth/magic-link/verify"));
+        assert!(
+            routes
+                .iter()
+                .any(|r| r.pattern == "/api/v1/auth/forgot-password")
+        );
+        assert!(
+            routes
+                .iter()
+                .any(|r| r.pattern == "/api/v1/auth/magic-link")
+        );
+        assert!(
+            routes
+                .iter()
+                .any(|r| r.pattern == "/api/v1/auth/magic-link/verify")
+        );
     }
 
     #[test]
