@@ -6,7 +6,6 @@ use actix_web::{Error, web};
 use crate::AppState;
 use crate::authz::ability::{build_ability, build_authorities};
 use crate::middleware::auth::{Claims, verify_token};
-use crate::repositories::access_token_blacklist::hash_token_for_blacklist;
 use crate::repositories::container::AppContainer;
 
 /// Whitelist of permissions that can be granted via the dynamic permission system.
@@ -41,6 +40,11 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
         return Ok(HashSet::new());
     };
 
+    // NOTE: token revocation (blacklist + credential epoch) is enforced by
+    // the JwtAuth middleware before authorities are built — see
+    // `middleware::auth_middleware`. Do not re-add per-token checks here:
+    // this extractor also runs for public routes, where an empty authority
+    // set must never depend on Redis availability.
     let secret = req
         .app_data::<web::Data<AppState>>()
         .map(|state| state.config.jwt_secret.clone())
@@ -49,20 +53,6 @@ pub async fn extract_authorities(req: &ServiceRequest) -> Result<HashSet<String>
                 .map(|container| container.config.jwt_secret.clone())
         })
         .unwrap_or_default();
-
-    // Check token blacklist first
-    if let Some(container) = req.app_data::<web::Data<AppContainer>>() {
-        let token_hash = hash_token_for_blacklist(raw_token);
-        if container
-            .access_token_blacklist
-            .is_blacklisted(&token_hash)
-            .await
-            .unwrap_or(false)
-        {
-            tracing::warn!("grants extractor: token is blacklisted");
-            return Ok(HashSet::new());
-        }
-    }
 
     let claims = match verify_token(raw_token, &secret) {
         Ok(claims) => claims,

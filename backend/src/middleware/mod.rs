@@ -1,4 +1,3 @@
-pub mod api_access_middleware;
 pub mod api_key_middleware;
 pub mod api_version;
 pub mod auth;
