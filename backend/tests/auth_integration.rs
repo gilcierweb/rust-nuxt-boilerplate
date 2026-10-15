@@ -470,6 +470,169 @@ async fn test_login_invalid_credentials() {
 }
 
 #[actix_web::test]
+async fn locked_account_cannot_use_session_refresh_or_login() {
+    let db = TestDb::new().await;
+    let config = Arc::new(test_config());
+    let r_pool = redis_pool();
+
+    let state = web::Data::new(backend::AppState {
+        db: db.pool().clone(),
+        redis: r_pool.clone(),
+        config: config.clone(),
+        metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
+        ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
+        jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        otel_provider: None,
+    });
+
+    let container = web::Data::new(backend::repositories::AppContainer::new(
+        db.pool().clone(),
+        r_pool.clone(),
+        (*config).clone(),
+    ));
+
+    let email = format!("locked-{}@example.com", uuid::Uuid::new_v4());
+    let password = "StrongPass123!@#";
+
+    let app = test::init_service(
+        App::new()
+            .app_data(state)
+            .app_data(container)
+            .service(
+                web::scope("/api/v1").service(
+                    web::scope("/auth")
+                        .wrap(backend::middleware::auth::JwtAuth::new(
+                            backend::middleware::auth_middleware::JwtAuthConfig::bearer_exempt()
+                                .with_token_blacklist(Arc::new(
+                                    backend::repositories::access_token_blacklist::AccessTokenBlacklist::new(r_pool.clone()),
+                                )),
+                        ))
+                        .service(backend::controllers::auth_controller::register)
+                        .service(backend::controllers::auth_controller::login)
+                        .service(backend::controllers::auth_controller::session)
+                        .service(backend::controllers::auth_controller::refresh),
+                ),
+            ),
+    )
+    .await;
+
+    // --- Register + confirm ---
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/register")
+            .set_json(serde_json::json!({
+                "email": email,
+                "password": password,
+                "password_confirmation": password
+            }))
+            .to_request(),
+    )
+    .await;
+    let register_status = resp.status();
+    let body: Value = test::read_body_json(resp).await;
+    assert!(register_status.is_success(), "Register failed: {:?}", body);
+    let user_id = body["user_id"].as_str().unwrap().to_string();
+
+    {
+        let mut conn = db.pool().get().await.expect("Failed to get connection");
+        diesel::sql_query("UPDATE users SET confirmed_at = NOW() WHERE id = $1")
+            .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(&user_id).unwrap())
+            .execute(&mut *conn)
+            .await
+            .expect("Failed to confirm user email");
+    }
+
+    // --- Login (account still healthy) ---
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/login")
+            .set_json(serde_json::json!({ "email": email, "password": password }))
+            .to_request(),
+    )
+    .await;
+    let login_status = resp.status();
+    let refresh_cookie = extract_cookie(&resp, "refresh_token");
+    let login_body: Value = test::read_body_json(resp).await;
+    assert!(login_status.is_success(), "Login failed: {:?}", login_body);
+    assert!(refresh_cookie.is_some(), "login must set refresh cookie");
+
+    // --- Lock the account (brute-force protection engaged) ---
+    {
+        let mut conn = db.pool().get().await.expect("Failed to get connection");
+        diesel::sql_query("UPDATE users SET locked_at = NOW() WHERE id = $1")
+            .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(&user_id).unwrap())
+            .execute(&mut *conn)
+            .await
+            .expect("Failed to lock user");
+    }
+
+    // --- Session with a valid refresh cookie must be rejected ---
+    let resp = dispatch!(app, || {
+        test::TestRequest::get()
+            .uri("/api/v1/auth/session")
+            .insert_header((
+                "Cookie",
+                format!("refresh_token={}", refresh_cookie.clone().unwrap()),
+            ))
+    });
+    assert_eq!(
+        resp.status(),
+        401,
+        "session must reject a locked account"
+    );
+
+    // --- Refresh with a valid refresh cookie must be rejected ---
+    let resp = dispatch!(app, || {
+        test::TestRequest::post()
+            .uri("/api/v1/auth/refresh")
+            .insert_header((
+                "Cookie",
+                format!("refresh_token={}", refresh_cookie.clone().unwrap()),
+            ))
+    });
+    assert_eq!(
+        resp.status(),
+        401,
+        "refresh must reject a locked account"
+    );
+
+    // --- Login with the CORRECT password must return the GENERIC error ---
+    // Account-state enumeration resistance: the locked login response must
+    // be indistinguishable from a login for a nonexistent user.
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/login")
+            .set_json(serde_json::json!({ "email": email, "password": password }))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 401, "locked login must be Unauthorized");
+    let locked_body: Value = test::read_body_json(resp).await;
+
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/login")
+            .set_json(serde_json::json!({
+                "email": format!("no-such-{}@example.com", uuid::Uuid::new_v4()),
+                "password": password
+            }))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(resp.status(), 401);
+    let unknown_body: Value = test::read_body_json(resp).await;
+
+    assert_eq!(
+        locked_body["error"]["message"], unknown_body["error"]["message"],
+        "locked-account login must return the same generic message as unknown-user login"
+    );
+}
+
+#[actix_web::test]
 async fn test_health_endpoint() {
     let db = TestDb::new().await;
     // Schema is already created by diesel migration run in CI.

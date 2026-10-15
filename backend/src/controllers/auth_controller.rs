@@ -423,29 +423,24 @@ pub async fn login(
         Err(e) => return Err(AppError::Database(e)),
     };
 
-    // Check if account is locked
-    if user.is_locked(container.config.account_lockout_duration_secs) {
+    // Check account state (locked / unconfirmed).
+    //
+    // Returns the GENERIC invalid-credentials error — the same one used
+    // for unknown users and wrong passwords — so probing cannot reveal
+    // account state. The granular event is only visible in server logs.
+    if let Some(reason) = session_block_reason(&user, container.config.as_ref()) {
+        let event_name = match reason {
+            SessionBlockReason::Locked => "auth.login.blocked_locked",
+            SessionBlockReason::Unconfirmed => "auth.login.blocked_unconfirmed",
+        };
         tracing::warn!(
-            event = "auth.login.blocked_locked",
+            event = event_name,
             user_id = %user.id,
             ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
             user_agent = user_agent.as_deref().unwrap_or("unknown"),
-            "login blocked: account locked"
+            "login blocked: invalid account state"
         );
-        return Err(AppError::BadRequest(t!("auth.login.locked").into_owned()));
-    }
-
-    // Check email confirmation
-    if !user.is_confirmed() {
-        tracing::warn!(
-            event = "auth.login.blocked_unconfirmed",
-            user_id = %user.id,
-            ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
-            "login blocked: email not confirmed"
-        );
-        return Err(AppError::BadRequest(
-            t!("auth.login.email_not_confirmed").into_owned(),
-        ));
+        return Err(AppError::Unauthorized(t!("auth.login.failed").into_owned()));
     }
 
     // Verify password
@@ -795,6 +790,27 @@ pub async fn refresh(
         .await
         .map_err(AppError::Database)?;
 
+    // A locked/unconfirmed account must not obtain new access tokens. The
+    // rotated token is revoked as well so the session dies here instead of
+    // lingering until its natural expiry.
+    if let Some(reason) = session_block_reason(&user, container.config.as_ref()) {
+        tracing::warn!(
+            event = "auth.refresh.blocked",
+            block_reason = ?reason,
+            user_id = %user.id,
+            "refresh blocked: invalid account state"
+        );
+        if let Err(e) = container.refresh_tokens.revoke(&rotated.id).await {
+            tracing::warn!(
+                event = "auth.refresh.revoke_failed",
+                error = %e,
+                user_id = %user.id,
+                "failed to revoke rotated refresh token for blocked account"
+            );
+        }
+        return Err(session_block_error(reason));
+    }
+
     // Get profile
     let _profile = container
         .profiles
@@ -852,6 +868,18 @@ async fn session_impl(
         .find(&stored.user_id)
         .await
         .map_err(AppError::Database)?;
+
+    // A locked/unconfirmed account must not obtain new access tokens even
+    // with a valid refresh cookie.
+    if let Some(reason) = session_block_reason(&user, container.config.as_ref()) {
+        tracing::warn!(
+            event = "auth.session.blocked",
+            block_reason = ?reason,
+            user_id = %user.id,
+            "session blocked: invalid account state"
+        );
+        return Err(session_block_error(reason));
+    }
 
     let profile = container
         .profiles
@@ -1834,6 +1862,47 @@ impl UserExt for User {
     }
 }
 
+/// Why a user's account cannot hold an authenticated session.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SessionBlockReason {
+    /// Temporarily locked after repeated failed logins.
+    Locked,
+    /// Email address was never confirmed.
+    Unconfirmed,
+}
+
+/// Pure gate shared by login, session, refresh and magic-link: decides
+/// whether the account state allows issuing or keeping tokens.
+///
+/// Callers map the reason to their own error responses:
+/// - login returns the GENERIC invalid-credentials error so account state
+///   cannot be enumerated by probing;
+/// - session/refresh use specific messages (`session_block_error`) —
+///   reaching them requires a valid refresh-token cookie;
+/// - magic-link keeps its historical BadRequest messages — verifying a
+///   magic-link token already proves control of the mailbox.
+fn session_block_reason(user: &User, config: &AppConfig) -> Option<SessionBlockReason> {
+    if user.is_locked(config.account_lockout_duration_secs) {
+        return Some(SessionBlockReason::Locked);
+    }
+    if !user.is_confirmed() {
+        return Some(SessionBlockReason::Unconfirmed);
+    }
+    None
+}
+
+/// Map a block reason to the 401 used by the cookie-authenticated session
+/// endpoints (session/refresh). Distinct messages are safe here because
+/// reaching these endpoints requires a valid refresh-token cookie.
+fn session_block_error(reason: SessionBlockReason) -> AppError {
+    match reason {
+        SessionBlockReason::Locked => AppError::Unauthorized(t!("auth.login.locked").into_owned()),
+        SessionBlockReason::Unconfirmed => {
+            AppError::Unauthorized(t!("auth.login.email_not_confirmed").into_owned())
+        }
+    }
+}
+
 // =========================================================================
 // MAGIC LINK (passwordless authentication)
 // =========================================================================
@@ -2020,16 +2089,17 @@ pub async fn verify_magic_link(
         .await
         .map_err(AppError::Database)?;
 
-    // Check if account is locked
-    if user.is_locked(container.config.account_lockout_duration_secs) {
-        return Err(AppError::BadRequest(t!("auth.login.locked").into_owned()));
-    }
-
-    // Check email confirmation
-    if !user.is_confirmed() {
-        return Err(AppError::BadRequest(
-            t!("auth.login.email_not_confirmed").into_owned(),
-        ));
+    // Check account state (locked / unconfirmed). A valid magic-link token
+    // proves mailbox control, so specific messages are safe here.
+    if let Some(reason) = session_block_reason(&user, container.config.as_ref()) {
+        return Err(match reason {
+            SessionBlockReason::Locked => {
+                AppError::BadRequest(t!("auth.login.locked").into_owned())
+            },
+            SessionBlockReason::Unconfirmed => AppError::BadRequest(
+                t!("auth.login.email_not_confirmed").into_owned(),
+            ),
+        });
     }
 
     // Fetch profile
@@ -2227,6 +2297,49 @@ mod tests {
             created_at: chrono::Utc::now(),
             updated_at: chrono::Utc::now(),
         }
+    }
+
+    #[actix_web::test]
+    async fn session_block_reason_detects_locked_account() {
+        let config = mock_app_config();
+        let mut user = test_user("locked@example.com");
+        user.locked_at = Some(chrono::Utc::now());
+
+        assert_eq!(
+            session_block_reason(&user, &config),
+            Some(SessionBlockReason::Locked)
+        );
+    }
+
+    #[actix_web::test]
+    async fn session_block_reason_detects_unconfirmed_account() {
+        let config = mock_app_config();
+        let mut user = test_user("unconfirmed@example.com");
+        user.confirmed_at = None;
+
+        assert_eq!(
+            session_block_reason(&user, &config),
+            Some(SessionBlockReason::Unconfirmed)
+        );
+    }
+
+    #[actix_web::test]
+    async fn session_block_reason_none_for_active_account() {
+        let config = mock_app_config();
+        let user = test_user("active@example.com");
+
+        assert_eq!(session_block_reason(&user, &config), None);
+    }
+
+    #[actix_web::test]
+    async fn session_block_reason_ignores_expired_lock() {
+        let config = mock_app_config();
+        let mut user = test_user("stale-lock@example.com");
+        let stale =
+            chrono::Utc::now() - chrono::Duration::seconds(config.account_lockout_duration_secs + 60);
+        user.locked_at = Some(stale);
+
+        assert_eq!(session_block_reason(&user, &config), None);
     }
 
     #[actix_web::test]
