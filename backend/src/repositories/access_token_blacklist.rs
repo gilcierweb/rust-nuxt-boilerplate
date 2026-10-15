@@ -1,10 +1,17 @@
 use deadpool_redis::Pool;
 use redis::AsyncCommands;
+use uuid::Uuid;
 
 pub struct AccessTokenBlacklist {
     redis: Pool,
     prefix: String,
 }
+
+/// Redis key prefix for per-user credential-epoch markers.
+///
+/// Deliberately separate from the blacklist `prefix` so the SCAN-based
+/// `count()` / `cleanup_expired()` helpers stay scoped to blacklist keys.
+const EPOCH_PREFIX: &str = "credential_epoch:";
 
 impl AccessTokenBlacklist {
     pub fn new(redis: Pool) -> Self {
@@ -148,6 +155,57 @@ pub fn hash_token_for_blacklist(token: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
+/// Check whether a JWT issued at `iat` (unix seconds) predates the user's
+/// credential epoch (the unix timestamp of their last password/2FA change).
+///
+/// Tokens issued strictly before the epoch are considered revoked: whoever
+/// holds them acquired them before the credential change that invalidated
+/// every prior session. A token issued at the exact epoch second is still
+/// valid (it postdates the change).
+pub fn is_token_revoked_by_epoch(iat: usize, epoch: Option<u64>) -> bool {
+    epoch.is_some_and(|e| (iat as u64) < e)
+}
+
+impl AccessTokenBlacklist {
+    /// Record a user's credential epoch: the timestamp of their last
+    /// password/2FA change. All access tokens with `iat` below this value
+    /// are rejected by the JWT middleware until they naturally expire.
+    ///
+    /// The TTL matches the access-token lifetime: once every pre-change
+    /// token has expired, the marker is no longer needed, so Redis drops
+    /// it automatically.
+    pub async fn set_credential_epoch(
+        &self,
+        user_id: &Uuid,
+        ttl_seconds: u64,
+    ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+        let mut conn = self.redis.get().await?;
+        let key = format!("{}{}", EPOCH_PREFIX, user_id);
+        let now = chrono::Utc::now().timestamp() as u64;
+        redis::cmd("SET")
+            .arg(&key)
+            .arg(now)
+            .arg("EX")
+            .arg(ttl_seconds)
+            .query_async::<()>(&mut conn)
+            .await?;
+        Ok(())
+    }
+
+    /// Read a user's credential epoch, if one is recorded (and not yet
+    /// expired). `Ok(None)` means no credential change is recent enough
+    /// to invalidate any live access token.
+    pub async fn credential_epoch(
+        &self,
+        user_id: &Uuid,
+    ) -> Result<Option<u64>, Box<dyn std::error::Error + Send + Sync>> {
+        let mut conn = self.redis.get().await?;
+        let key = format!("{}{}", EPOCH_PREFIX, user_id);
+        let value: Option<String> = conn.get(&key).await?;
+        Ok(value.and_then(|v| v.parse::<u64>().ok()))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,5 +229,21 @@ mod tests {
     fn test_hash_token_is_hex_encoded() {
         let hash = hash_token_for_blacklist("test");
         assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn test_is_token_revoked_by_epoch_true_cases() {
+        // Token issued strictly before the epoch → revoked.
+        assert!(is_token_revoked_by_epoch(100, Some(200)));
+        assert!(is_token_revoked_by_epoch(100, Some(101)));
+    }
+
+    #[test]
+    fn test_is_token_revoked_by_epoch_false_cases() {
+        // No epoch recorded → nothing is revoked.
+        assert!(!is_token_revoked_by_epoch(100, None));
+        // Token issued at or after the epoch → still valid.
+        assert!(!is_token_revoked_by_epoch(200, Some(200)));
+        assert!(!is_token_revoked_by_epoch(300, Some(200)));
     }
 }
