@@ -39,15 +39,20 @@ use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 ///    - Uses signed cookies for CSRF token validation
 ///
 /// 5. **JwtAuth (JWT Validation)** - Validates JWT tokens for protected routes
-///    - Applied only to `/admin` scope (global application deferred)
-///    - Handler-level `AuthUser` extractor used for other protected routes
-///    - Public routes exempted via `bearer_exempt_routes()`
+///    - Applied to the `/auth` and `/admin` scopes
+///    - `/auth`: public paths come from `bearer_exempt_routes()` (credential
+///      and cookie-authenticated endpoints); everything else (me,
+///      change-password, 2FA) requires a valid Bearer token and passes the
+///      Redis-backed revocation checks (blacklist + credential epoch)
+///    - `/admin`: no public paths; always Bearer + revocation checks
+///    - Handler-level `AuthUser` extractor reads the Claims JwtAuth inserts
 ///
 /// # Design Decisions
 ///
-/// - **JwtAuth on admin scope only**: Reduces overhead for public/auth routes
-///   while ensuring admin routes are always protected. Handler-level extractors
-///   provide flexibility for routes that need different auth strategies.
+/// - **JwtAuth on `/auth` and `/admin` scopes**: The `AuthUser` extractor
+///   only works when a middleware inserts `Claims` into request extensions,
+///   so every authenticated handler must sit behind a JwtAuth-wrapped
+///   scope. Public/auth endpoints short-circuit before any token work.
 ///
 /// - **CSRF skips Bearer tokens**: Allows API-first applications to use the API
 ///   without CSRF tokens while still protecting browser-based form submissions.
@@ -76,6 +81,13 @@ use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 ///   schemas, and auth scheme details to unauthenticated callers in
 ///   internet-facing environments.
 pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
+    // Redis-backed revocation store shared by every JwtAuth scope:
+    // per-token blacklist (logout) + per-user credential epoch
+    // (password/2FA change). One instance, stateless — safe to share.
+    let token_blacklist = std::sync::Arc::new(
+        crate::repositories::access_token_blacklist::AccessTokenBlacklist::new(redis_pool.clone()),
+    );
+
     // Resolve environment-aware auth policy for the Swagger UI / OpenAPI docs.
     //
     // `actix_web::web::ServiceConfig` exposes no public accessor for the
@@ -168,6 +180,15 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 "/api/v1/health/",
             ]))
             // Auth routes - no RBAC needed
+            //
+            // Middleware nesting (actix: last registered = outermost = runs
+            // first): JwtAuth → RateLimiter → CsrfProtection → routes.
+            // 1. JwtAuth (outermost) validates the Bearer token and enforces
+            //    revocation (blacklist + credential epoch) for
+            //    extractor-based handlers (me, change-password, 2FA); public
+            //    paths from `bearer_exempt_routes()` short-circuit instantly.
+            // 2. CsrfProtection must stay innermost — its Transform requires
+            //    BoxBody, so it wraps the routes directly.
             .service(
                 web::scope("/auth")
                     .wrap(CsrfProtection::new(vec![
@@ -179,6 +200,10 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,
+                    ))
+                    .wrap(crate::middleware::auth::JwtAuth::new(
+                        crate::middleware::auth_middleware::JwtAuthConfig::bearer_exempt()
+                            .with_token_blacklist(token_blacklist.clone()),
                     ))
                     .configure(auth_controller::config),
             )
@@ -217,7 +242,8 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .wrap(CsrfProtection::new(vec![]))
                     .wrap(RequireAdmin::new())
                     .wrap(crate::middleware::auth::JwtAuth::new(
-                        crate::middleware::auth::JwtAuthConfig::new(vec![]),
+                        crate::middleware::auth_middleware::JwtAuthConfig::new(vec![])
+                            .with_token_blacklist(token_blacklist.clone()),
                     ))
                     .configure(roles_controller::config)
                     .configure(users_controller::config)

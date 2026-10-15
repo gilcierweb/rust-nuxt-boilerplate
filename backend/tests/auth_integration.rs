@@ -10,9 +10,8 @@
 
 use std::sync::Arc;
 
-use actix_web::{App, HttpMessage, test, web};
-use backend::middleware::auth::{ACCESS_TOKEN_USE, Claims};
-use chrono::Utc;
+use actix_web::dev::Service;
+use actix_web::{App, test, web};
 use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
@@ -20,20 +19,9 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde_json::Value;
 use uuid::Uuid as UuidType;
 
-fn make_claims(sub: UuidType, profile_id: UuidType) -> Claims {
-    let now = Utc::now();
-    let exp = now + chrono::Duration::hours(1);
-    Claims {
-        sub,
-        profile_id,
-        role: 0, // viewer
-        token_use: ACCESS_TOKEN_USE.to_string(),
-        exp: exp.timestamp() as usize,
-        iat: now.timestamp() as usize,
-        nbf: now.timestamp() as usize,
-        jti: Some(uuid::Uuid::new_v4().to_string()),
-    }
-}
+mod common;
+
+use common::dispatch;
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -240,7 +228,17 @@ async fn test_full_auth_cycle() {
             .service(
                 web::scope("/api/v1")
                     .service(
+                        // Mirror the production /auth middleware chain: the
+                        // real Bearer flow is exercised end-to-end (no manual
+                        // Claims injection), and public paths stay reachable
+                        // without a token.
                         web::scope("/auth")
+                            .wrap(backend::middleware::auth::JwtAuth::new(
+                                backend::middleware::auth_middleware::JwtAuthConfig::bearer_exempt()
+                                    .with_token_blacklist(Arc::new(
+                                        backend::repositories::access_token_blacklist::AccessTokenBlacklist::new(r_pool.clone()),
+                                    )),
+                            ))
                             .service(backend::controllers::auth_controller::register)
                             .service(backend::controllers::auth_controller::login)
                             .service(backend::controllers::auth_controller::session)
@@ -309,34 +307,42 @@ async fn test_full_auth_cycle() {
     assert!(status.is_success(), "Login failed: {:?}", body);
 
     let access_token = body["access_token"].as_str().unwrap();
-    let user_id = body["user"]["id"].as_str().unwrap();
-    let profile_id = body["user"]["profile_id"].as_str().unwrap();
     println!("Refresh cookie: {:?}", refresh_cookie);
 
-    // Create Claims for authenticated requests
-    let claims = make_claims(
-        UuidType::parse_str(user_id).unwrap(),
-        UuidType::parse_str(profile_id).unwrap(),
-    );
-
-    // --- Step 3: Access protected endpoint ---
-    let req = test::TestRequest::get()
-        .uri("/api/v1/auth/me")
-        .insert_header(("Authorization", format!("Bearer {}", access_token)))
-        .to_request();
-    req.extensions_mut().insert(claims.clone());
-    let resp = test::call_service(&app, req).await;
+    // --- Step 3: Access protected endpoint (real Bearer auth) ---
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::get()
+            .uri("/api/v1/auth/me")
+            .insert_header(("Authorization", format!("Bearer {}", access_token)))
+            .to_request(),
+    )
+    .await;
     let status = resp.status();
     let body: Value = test::read_body_json(resp).await;
     println!("Me: {} - {:?}", status, body);
     assert!(status.is_success(), "Me failed: {:?}", body);
     assert_eq!(body["email"], "test@example.com");
 
-    // --- Step 4: Refresh token ---
+    // Missing Bearer → 401 (the middleware inserts Claims; the extractor
+    // must reject when they are absent).
+    let resp = dispatch!(app, || {
+        test::TestRequest::get().uri("/api/v1/auth/me")
+    });
+    assert_eq!(resp.status(), 401, "me without Bearer must be rejected");
+
+    // Garbage Bearer → 401.
+    let resp = dispatch!(app, || {
+        test::TestRequest::get()
+            .uri("/api/v1/auth/me")
+            .insert_header(("Authorization", "Bearer not-a-real-token"))
+    });
+    assert_eq!(resp.status(), 401, "me with garbage Bearer must be rejected");
+
+    // --- Step 4: Refresh token (cookie-authenticated public path) ---
     let mut refresh_req = test::TestRequest::post()
         .uri("/api/v1/auth/refresh")
         .to_request();
-    refresh_req.extensions_mut().insert(claims.clone());
     if let Some(ref cookie) = refresh_cookie {
         refresh_req.headers_mut().insert(
             actix_web::http::header::COOKIE,
@@ -353,12 +359,14 @@ async fn test_full_auth_cycle() {
     assert_ne!(access_token, new_token, "token should rotate");
 
     // --- Step 5: Use new token ---
-    let req = test::TestRequest::get()
-        .uri("/api/v1/auth/me")
-        .insert_header(("Authorization", format!("Bearer {}", new_token)))
-        .to_request();
-    req.extensions_mut().insert(claims.clone());
-    let resp = test::call_service(&app, req).await;
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::get()
+            .uri("/api/v1/auth/me")
+            .insert_header(("Authorization", format!("Bearer {}", new_token)))
+            .to_request(),
+    )
+    .await;
     assert!(resp.status().is_success());
     let body: Value = test::read_body_json(resp).await;
     assert_eq!(body["email"], "test@example.com");
@@ -368,7 +376,6 @@ async fn test_full_auth_cycle() {
         .uri("/api/v1/auth/logout")
         .insert_header(("Authorization", format!("Bearer {}", new_token)))
         .to_request();
-    logout_req.extensions_mut().insert(claims.clone());
     if let Some(ref cookie) = refresh_cookie {
         logout_req.headers_mut().insert(
             actix_web::http::header::COOKIE,
@@ -379,9 +386,19 @@ async fn test_full_auth_cycle() {
     println!("Logout: {}", resp.status());
     assert!(resp.status().is_success() || resp.status().as_u16() == 204);
 
-    // Note: /auth/me is NOT protected by JwtAuth in production (only /admin is).
-    // Token invalidation via blacklist only works when JwtAuth middleware is present.
-    // So we don't test token invalidation here since it would require JwtAuth middleware.
+    // --- Step 7: The logged-out access token is now revoked ---
+    // Logout blacklists the presented token; the JwtAuth middleware wired
+    // above enforces the blacklist, so the token must stop working.
+    let resp = dispatch!(app, || {
+        test::TestRequest::get()
+            .uri("/api/v1/auth/me")
+            .insert_header(("Authorization", format!("Bearer {}", new_token)))
+    });
+    assert_eq!(
+        resp.status(),
+        401,
+        "blacklisted access token must be rejected after logout"
+    );
 
     // Do not drop tables here - other tests in the same file need the schema.
     // CI runs `diesel migration run` before tests, and the scheduled migration

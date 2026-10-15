@@ -26,6 +26,10 @@ use backend::repositories::access_token_blacklist::{
 };
 use backend::AppState;
 
+mod common;
+
+use common::dispatch;
+
 fn redis_pool() -> deadpool_redis::Pool {
     let redis_url =
         std::env::var("REDIS_URL_TEST").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
@@ -99,10 +103,6 @@ async fn make_token(config: &backend::config::AppConfig) -> (uuid::Uuid, String)
     (user_id, token)
 }
 
-/// Write a credential-epoch marker directly, simulating a credential change
-/// at `epoch` seconds. Bypasses `set_credential_epoch` (which always uses
-/// "now") so tests can place the epoch strictly in the future or the past
-/// relative to the token's `iat`.
 async fn set_epoch_marker(user_id: uuid::Uuid, epoch: u64) {
     let mut conn = redis_pool().get().await.expect("redis connection");
     redis::cmd("SET")
@@ -113,26 +113,6 @@ async fn set_epoch_marker(user_id: uuid::Uuid, epoch: u64) {
         .query_async::<()>(&mut conn)
         .await
         .expect("failed to set epoch marker");
-}
-
-/// Dispatch a request through the app, normalizing BOTH middleware
-/// outcomes into a `ServiceResponse`:
-/// - `Ok(response)` — the normal path
-/// - `Err(error)` — how `JwtAuth` rejects requests (`InternalError` carries
-///   the real HTTP response; actix renders it to the client)
-///
-/// `test::call_service` panics on the `Err` path, so tests use this macro.
-/// The builder closure is invoked twice: once to harvest an `HttpRequest`
-/// for `ServiceResponse::from_err`, once for the actual call.
-macro_rules! dispatch {
-    ($app:expr, $req_builder:expr) => {{
-        let http_request = $req_builder().to_srv_request().into_parts().0;
-        let result = $app.call($req_builder().to_request()).await;
-        match result {
-            Ok(res) => res,
-            Err(err) => actix_web::dev::ServiceResponse::from_err(err, http_request),
-        }
-    }};
 }
 
 #[actix_web::test]

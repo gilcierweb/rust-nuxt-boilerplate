@@ -112,6 +112,15 @@ impl PublicRoute {
     }
 }
 
+/// Routes that skip JWT Bearer authentication.
+///
+/// Includes:
+/// - Credential endpoints (login, register, recover, reset, confirm,
+///   magic-link) — issued before any token exists.
+/// - Cookie-authenticated endpoints (session, refresh) — they authenticate
+///   via the httpOnly `refresh_token` cookie, not a Bearer header.
+/// - logout — Bearer is optional; it blacklists the presented token.
+/// - Health, webhooks and WebSocket handshake endpoints.
 pub fn bearer_exempt_routes() -> Vec<PublicRoute> {
     use actix_web::http::Method;
 
@@ -128,6 +137,19 @@ pub fn bearer_exempt_routes() -> Vec<PublicRoute> {
         PublicRoute::method(Method::POST, "/api/v1/auth/recover/"),
         PublicRoute::method(Method::POST, "/api/v1/auth/reset"),
         PublicRoute::method(Method::POST, "/api/v1/auth/reset/"),
+        // Cookie-authenticated session endpoints: no Bearer header exists.
+        PublicRoute::method(Method::GET, "/api/v1/auth/session"),
+        PublicRoute::method(Method::GET, "/api/v1/auth/session/"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/refresh"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/refresh/"),
+        // Password recovery alias.
+        PublicRoute::method(Method::POST, "/api/v1/auth/forgot-password"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/forgot-password/"),
+        // Passwordless magic-link flow.
+        PublicRoute::method(Method::POST, "/api/v1/auth/magic-link"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/magic-link/"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/magic-link/verify"),
+        PublicRoute::method(Method::POST, "/api/v1/auth/magic-link/verify/"),
         PublicRoute::method(Method::GET, "/api/v1/health"),
         PublicRoute::method(Method::GET, "/api/v1/health/"),
         // NOTE: /api/v1/metrics is intentionally NOT exempt from Bearer auth.
@@ -526,6 +548,22 @@ mod tests {
         let routes = bearer_exempt_routes();
         assert!(routes.iter().any(|r| r.pattern == "/api/v1/auth/login"));
         assert!(routes.iter().any(|r| r.pattern == "/api/v1/health"));
+
+        // Cookie-authenticated endpoints must stay reachable without a
+        // Bearer token once JwtAuth wraps the /auth scope.
+        assert!(routes.iter().any(|r| r.pattern == "/api/v1/auth/session"));
+        assert!(routes.iter().any(|r| r.pattern == "/api/v1/auth/refresh"));
+
+        // Public auth flows issued without any credentials.
+        assert!(routes
+            .iter()
+            .any(|r| r.pattern == "/api/v1/auth/forgot-password"));
+        assert!(routes
+            .iter()
+            .any(|r| r.pattern == "/api/v1/auth/magic-link"));
+        assert!(routes
+            .iter()
+            .any(|r| r.pattern == "/api/v1/auth/magic-link/verify"));
     }
 
     #[test]

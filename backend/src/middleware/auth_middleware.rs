@@ -13,7 +13,7 @@ use serde_json::json;
 use crate::AppState;
 use crate::authz::grants_extractor::build_authorities_for_claims;
 use crate::middleware::auth::{
-    ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, bearer_exempt_routes, verify_token_with_secrets,
+    ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, verify_token_with_secrets,
 };
 use crate::repositories::access_token_blacklist::{
     AccessTokenBlacklist, is_token_revoked_by_epoch,
@@ -36,6 +36,17 @@ impl JwtAuthConfig {
             skip_blacklist_check: false,
             token_blacklist: None,
         }
+    }
+
+    /// Config whose public paths mirror `bearer_exempt_routes()` — the
+    /// single source of truth for routes reachable without a Bearer token.
+    pub fn bearer_exempt() -> Self {
+        Self::new(
+            crate::middleware::auth::bearer_exempt_routes()
+                .into_iter()
+                .map(|r| r.pattern)
+                .collect(),
+        )
     }
 
     pub fn with_token_blacklist(mut self, blacklist: Arc<AccessTokenBlacklist>) -> Self {
@@ -71,12 +82,7 @@ impl JwtAuth {
     }
 
     pub fn with_defaults() -> Self {
-        Self::new(JwtAuthConfig::new(
-            bearer_exempt_routes()
-                .into_iter()
-                .map(|r| r.pattern)
-                .collect(),
-        ))
+        Self::new(JwtAuthConfig::bearer_exempt())
     }
 }
 
