@@ -136,6 +136,7 @@
   "middleware.missing_header": "Missing Authorization header",
   "middleware.invalid_token": "Invalid token",
   "middleware.token_revoked": "Token revoked",
+  "middleware.token_status_unavailable": "Token revocation status is temporarily unavailable. Please try again shortly.",
   "middleware.not_authenticated": "Not authenticated",
   "middleware.role_required": "Role '%{role}' required for this action",
   "middleware.access_denied": "You don't have permission to access this resource",

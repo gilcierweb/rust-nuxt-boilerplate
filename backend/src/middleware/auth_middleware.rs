@@ -15,11 +15,16 @@ use crate::authz::grants_extractor::build_authorities_for_claims;
 use crate::middleware::auth::{
     ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, bearer_exempt_routes, verify_token_with_secrets,
 };
-use crate::repositories::access_token_blacklist::AccessTokenBlacklist;
+use crate::repositories::access_token_blacklist::{
+    AccessTokenBlacklist, is_token_revoked_by_epoch,
+};
 
 #[derive(Clone)]
 pub struct JwtAuthConfig {
     pub public_paths: Vec<String>,
+    /// Skip all Redis-backed revocation checks (per-token blacklist and
+    /// per-user credential epoch). Intended for test setups without Redis;
+    /// production wiring must always attach a token blacklist.
     pub skip_blacklist_check: bool,
     pub token_blacklist: Option<Arc<AccessTokenBlacklist>>,
 }
@@ -147,18 +152,29 @@ where
                             crate::repositories::access_token_blacklist::hash_token_for_blacklist(
                                 &token,
                             );
-                        if blacklist.is_blacklisted(&token_hash).await.unwrap_or(false) {
-                            let response = actix_web::HttpResponse::Unauthorized().json(json!({
-                                "error": {
-                                    "code": "TOKEN_REVOKED",
-                                    "message": t!("middleware.token_revoked").into_owned(),
-                                }
-                            }));
-                            return Err(actix_web::error::InternalError::from_response(
-                                "token_revoked",
-                                response,
-                            )
-                            .into());
+                        match blacklist.is_blacklisted(&token_hash).await {
+                            Ok(true) => {
+                                return Err(actix_web::error::InternalError::from_response(
+                                    "token_revoked",
+                                    token_revoked_response(),
+                                )
+                                .into());
+                            },
+                            Ok(false) => {},
+                            Err(error) => {
+                                // Fail CLOSED: if revocation status cannot be
+                                // checked, the token must not be accepted.
+                                tracing::error!(
+                                    event = "auth.blacklist_unavailable",
+                                    error = %error,
+                                    "Token revocation status unavailable (Redis); failing closed"
+                                );
+                                return Err(actix_web::error::InternalError::from_response(
+                                    "auth_status_unavailable",
+                                    auth_status_unavailable_response(),
+                                )
+                                .into());
+                            },
                         }
                     }
 
@@ -197,6 +213,50 @@ where
                                     JwtVerifyOutcome::Rejected => m.record_jwt_rejected(),
                                 }
                             }
+
+                            // Reject tokens issued before the user's last
+                            // credential change (password/2FA). The epoch
+                            // marker lives in Redis with a TTL matching the
+                            // access-token lifetime, so it disappears once
+                            // every pre-change token has expired naturally.
+                            if !config.skip_blacklist_check
+                                && let Some(blacklist) = &config.token_blacklist
+                            {
+                                match blacklist.credential_epoch(&result.claims.sub).await {
+                                    Ok(epoch)
+                                        if is_token_revoked_by_epoch(result.claims.iat, epoch) =>
+                                    {
+                                        tracing::info!(
+                                            event = "auth.token_revoked_by_epoch",
+                                            user_id = %result.claims.sub,
+                                            "Access token predates credential change; rejecting"
+                                        );
+                                        return Err(
+                                            actix_web::error::InternalError::from_response(
+                                                "token_revoked",
+                                                token_revoked_response(),
+                                            )
+                                            .into(),
+                                        );
+                                    },
+                                    Ok(_) => {},
+                                    Err(error) => {
+                                        tracing::error!(
+                                            event = "auth.epoch_unavailable",
+                                            error = %error,
+                                            "Credential epoch unavailable (Redis); failing closed"
+                                        );
+                                        return Err(
+                                            actix_web::error::InternalError::from_response(
+                                                "auth_status_unavailable",
+                                                auth_status_unavailable_response(),
+                                            )
+                                            .into(),
+                                        );
+                                    },
+                                }
+                            }
+
                             req.extensions_mut().insert(result.claims.clone());
 
                             let authorities = build_authorities_for_claims(
@@ -240,4 +300,29 @@ pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::err
     req.extensions().get::<Claims>().cloned().ok_or_else(|| {
         crate::errors::AppError::Unauthorized(t!("middleware.not_authenticated").into_owned())
     })
+}
+
+/// 401 response for tokens rejected by revocation checks (blacklist or
+/// credential epoch). The `TOKEN_REVOKED` code tells the frontend to skip
+/// its refresh-retry path — the refresh tokens are revoked alongside.
+fn token_revoked_response() -> actix_web::HttpResponse {
+    actix_web::HttpResponse::Unauthorized().json(json!({
+        "error": {
+            "code": "TOKEN_REVOKED",
+            "message": t!("middleware.token_revoked").into_owned(),
+        }
+    }))
+}
+
+/// 503 response used when revocation status cannot be verified (Redis
+/// unavailable). Mirrors the rate limiter's fail-closed shape: the request
+/// is neither accepted nor treated as an auth failure the client could
+/// "refresh" its way out of.
+fn auth_status_unavailable_response() -> actix_web::HttpResponse {
+    actix_web::HttpResponse::ServiceUnavailable().json(json!({
+        "error": {
+            "code": "AUTH_STATUS_UNAVAILABLE",
+            "message": t!("middleware.token_status_unavailable").into_owned(),
+        }
+    }))
 }

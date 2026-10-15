@@ -136,6 +136,7 @@
   "middleware.missing_header": "Encabezado de Autorización faltante",
   "middleware.invalid_token": "Token inválido",
   "middleware.token_revoked": "Token revocado",
+  "middleware.token_status_unavailable": "El estado de revocación de tokens no está disponible temporalmente. Inténtalo de nuevo en unos instantes.",
   "middleware.not_authenticated": "No autenticado",
   "middleware.role_required": "Rol '%{role}' requerido para esta acción",
   "middleware.access_denied": "No tiene permiso para acceder a este recurso",

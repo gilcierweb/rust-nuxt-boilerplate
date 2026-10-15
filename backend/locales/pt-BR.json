@@ -136,6 +136,7 @@
   "middleware.missing_header": "Cabeçalho Authorization ausente",
   "middleware.invalid_token": "Token inválido",
   "middleware.token_revoked": "Token revogado",
+  "middleware.token_status_unavailable": "O status de revogação de tokens está temporariamente indisponível. Tente novamente em instantes.",
   "middleware.not_authenticated": "Não autenticado",
   "middleware.role_required": "Papel '%{role}' necessário para esta ação",
   "middleware.access_denied": "Você não tem permissão para acessar este recurso",
