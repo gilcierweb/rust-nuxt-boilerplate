@@ -1221,11 +1221,7 @@ pub async fn reset_password(
         ));
     }
 
-    let revoked_tokens = container
-        .refresh_tokens
-        .revoke_all_for_user(&user_id)
-        .await
-        .map_err(AppError::Database)?;
+    let revoked_tokens = revoke_all_user_sessions(container.as_ref(), &user_id).await?;
 
     // Send password reset confirmation email
     let security = SecurityService::from_config(container.config.as_ref())?;
@@ -1887,7 +1883,7 @@ fn session_block_error(reason: SessionBlockReason) -> AppError {
         SessionBlockReason::Locked => AppError::Unauthorized(t!("auth.login.locked").into_owned()),
         SessionBlockReason::Unconfirmed => {
             AppError::Unauthorized(t!("auth.login.email_not_confirmed").into_owned())
-        }
+        },
     }
 }
 
@@ -2116,9 +2112,9 @@ pub async fn verify_magic_link(
             SessionBlockReason::Locked => {
                 AppError::BadRequest(t!("auth.login.locked").into_owned())
             },
-            SessionBlockReason::Unconfirmed => AppError::BadRequest(
-                t!("auth.login.email_not_confirmed").into_owned(),
-            ),
+            SessionBlockReason::Unconfirmed => {
+                AppError::BadRequest(t!("auth.login.email_not_confirmed").into_owned())
+            },
         });
     }
 
@@ -2355,8 +2351,8 @@ mod tests {
     async fn session_block_reason_ignores_expired_lock() {
         let config = mock_app_config();
         let mut user = test_user("stale-lock@example.com");
-        let stale =
-            chrono::Utc::now() - chrono::Duration::seconds(config.account_lockout_duration_secs + 60);
+        let stale = chrono::Utc::now()
+            - chrono::Duration::seconds(config.account_lockout_duration_secs + 60);
         user.locked_at = Some(stale);
 
         assert_eq!(session_block_reason(&user, &config), None);
@@ -2957,13 +2953,10 @@ mod tests {
         let mut container = mock_container();
         container.users = Arc::new(mock_users);
         container.refresh_tokens = Arc::new(mock_refresh);
+        let data = web::Data::new(container);
+        let blacklist = data.access_token_blacklist.clone();
 
-        let app = test::init_service(
-            App::new()
-                .app_data(web::Data::new(container))
-                .service(reset_password),
-        )
-        .await;
+        let app = test::init_service(App::new().app_data(data).service(reset_password)).await;
 
         let req = test::TestRequest::post()
             .uri("/reset")
@@ -2977,6 +2970,18 @@ mod tests {
         let resp = test::call_service(&app, req).await;
 
         assert_eq!(resp.status(), actix_web::http::StatusCode::OK);
+
+        // A password reset is the post-compromise recovery path: it must
+        // invalidate every previously issued access token (credential
+        // epoch), not just the refresh tokens.
+        let epoch = blacklist
+            .credential_epoch(&expected_user_id)
+            .await
+            .expect("credential epoch lookup failed");
+        assert!(
+            epoch.is_some(),
+            "reset_password must set the credential epoch"
+        );
     }
 
     #[actix_web::test]

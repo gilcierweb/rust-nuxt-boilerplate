@@ -105,7 +105,9 @@ async fn refresh_without_csrf_token_returns_403() {
 
     // Cookie-authenticated state change: must require a CSRF token even
     // though no Bearer header is present.
-    let req = test::TestRequest::post().uri("/api/v1/auth/refresh").to_request();
+    let req = test::TestRequest::post()
+        .uri("/api/v1/auth/refresh")
+        .to_request();
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
@@ -113,8 +115,7 @@ async fn refresh_without_csrf_token_returns_403() {
 #[actix_web::test]
 async fn refresh_with_valid_csrf_token_passes() {
     let config = make_config();
-    let token =
-        backend::middleware::csrf_protection::generate_csrf_token(&config.csrf_secret_key);
+    let token = backend::middleware::csrf_protection::generate_csrf_token(&config.csrf_secret_key);
     // Bare AppConfig registration: the CSRF middleware resolves its secret
     // from `app_data::<AppConfig>()` (not `Data<AppConfig>`).
     let app = test::init_service(
@@ -147,9 +148,46 @@ async fn logout_without_csrf_token_returns_403() {
     )
     .await;
 
-    let req = test::TestRequest::post().uri("/api/v1/auth/logout").to_request();
+    let req = test::TestRequest::post()
+        .uri("/api/v1/auth/logout")
+        .to_request();
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[actix_web::test]
+async fn login_response_sets_csrf_cookie() {
+    // The client-side silent refresh (POST /auth/refresh, no Bearer) needs
+    // the csrf cookie right after login — nothing else guarantees a GET
+    // before the access token expires. The middleware must therefore emit
+    // the csrf cookie on the (excluded) login POST response too.
+    let config = make_config();
+    let app = test::init_service(
+        App::new().app_data(config).service(
+            web::scope("/api/v1")
+                .wrap(CsrfProtection::new(vec![]))
+                .route("/auth/login", web::post().to(state_changing_handler)),
+        ),
+    )
+    .await;
+
+    let req = test::TestRequest::post()
+        .uri("/api/v1/auth/login")
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let set_cookies: Vec<String> = resp
+        .headers()
+        .get_all("set-cookie")
+        .filter_map(|v| v.to_str().ok().map(str::to_string))
+        .collect();
+    assert!(
+        set_cookies.iter().any(|c| c.starts_with("csrf_token=")),
+        "login response must set the csrf cookie so the SPA can echo it on \
+         its next state-changing request; got: {:?}",
+        set_cookies
+    );
 }
 
 #[actix_web::test]

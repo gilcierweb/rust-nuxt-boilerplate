@@ -259,10 +259,16 @@ where
                 }
             }
 
-            // Set CSRF token cookie on GET responses if not already present.
-            // Uses the same three-source lookup so the initial cookie is always
-            // emitted regardless of which app_data variant is registered.
-            if !is_state_changing && !res.response().headers().contains_key("set-cookie") {
+            // Set the CSRF cookie on responses that don't already carry one —
+            // including state-changing responses like login/register/refresh.
+            // The SPA must hold a valid token before its NEXT state-changing
+            // request; in particular the post-login silent refresh
+            // (POST /auth/refresh without a Bearer) would 403 if the login
+            // POST never set the cookie (no GET is guaranteed in between).
+            // Uses the same three-source lookup so the initial cookie is
+            // always emitted regardless of which app_data variant is
+            // registered.
+            if !response_sets_csrf_cookie(&res) {
                 if let Some(config) = extract_csrf_config_from_response(&res) {
                     let csrf_token = generate_csrf_token(&config.csrf_secret_key);
                     let cookie = build_csrf_cookie(&config, &csrf_token);
@@ -454,6 +460,20 @@ fn is_production_like(config: &AppConfig) -> bool {
         crate::config::app_config::Environment::Staging
             | crate::config::app_config::Environment::Production
     )
+}
+
+/// True when the response already carries a `csrf_token` Set-Cookie
+/// (e.g. the rotation branch above just appended one).
+fn response_sets_csrf_cookie<B>(res: &actix_web::dev::ServiceResponse<B>) -> bool {
+    res.response()
+        .headers()
+        .get_all(actix_web::http::header::SET_COOKIE)
+        .any(|value| {
+            value
+                .to_str()
+                .map(|v| v.starts_with("csrf_token="))
+                .unwrap_or(false)
+        })
 }
 
 #[cfg(test)]
