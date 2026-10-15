@@ -1,4 +1,5 @@
 import { isAuthPath } from '~~/shared/utils/auth-paths'
+import { csrfTokenFromCookieHeader } from '~~/shared/utils/csrf'
 
 function isAuthRequest(request: unknown) {
   // Single source of truth shared with the Nitro proxy
@@ -119,21 +120,17 @@ export default defineNuxtPlugin((nuxtApp) => {
       accessToken = event?.context?.authAccessToken ?? null;
     }
 
-    // Read CSRF token from cookie and send in header
-    // Client-side: read from document.cookie
-    // Server-side: parse from the forwarded cookie header
-    const csrfToken = (() => {
-      const cookieHeader = import.meta.client
+    // Read CSRF token from cookie and send in header (shared parser: the
+    // backend CSRF middleware requires the double-submit header on
+    // cookie-authenticated state changes like refresh/logout).
+    const csrfToken = csrfTokenFromCookieHeader(
+      import.meta.client
         ? document.cookie
-        : (headers.get("cookie") ?? "");
-      const match = cookieHeader
-        .split('; ')
-        .find((row) => row.startsWith('csrf_token='));
-      return match ? match.split('=')[1] : null;
-    })();
+        : (headers.get('cookie') ?? ''),
+    );
 
-    if (csrfToken && !headers.has("csrf-token")) {
-      headers.set("csrf-token", csrfToken);
+    if (csrfToken && !headers.has('csrf-token')) {
+      headers.set('csrf-token', csrfToken);
     }
 
     return withAuthHeader(headers, accessToken);

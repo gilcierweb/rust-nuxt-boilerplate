@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 
+import { csrfTokenFromCookieHeader } from '~~/shared/utils/csrf'
 import type {
   User,
   AuthResponse,
@@ -165,10 +166,15 @@ export const useAuthStore = defineStore('auth', {
             const event = useRequestEvent()
             const cookieHeader = event?.node?.req?.headers?.cookie
             const requestFetch = useRequestFetch()
+            // The backend CSRF middleware requires the double-submit header
+            // on the cookie-authenticated refresh POST (no Bearer is
+            // attached on this branch).
+            const csrfToken = csrfTokenFromCookieHeader(cookieHeader)
             data = await requestFetch<RefreshResponse>('/api/v1/auth/refresh', {
               method: 'POST',
               headers: {
                 accept: 'application/json',
+                ...(csrfToken ? { 'csrf-token': csrfToken } : {}),
                 ...(cookieHeader ? { cookie: cookieHeader } : {}),
               },
             })

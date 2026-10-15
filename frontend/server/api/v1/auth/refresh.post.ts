@@ -19,7 +19,10 @@ export default defineEventHandler(async (event) => {
   const headers = createForwardHeaders(
     event,
     backendApiKey,
-    ['accept', 'content-type', 'cookie', 'user-agent'],
+    // 'csrf-token' is echoed by the SPA (client fetches) and by the SSR
+    // refresh branch; the backend CSRF middleware requires it on the
+    // cookie-authenticated refresh POST.
+    ['accept', 'content-type', 'cookie', 'csrf-token', 'user-agent'],
     undefined,
     {
       filterCookies: true,
