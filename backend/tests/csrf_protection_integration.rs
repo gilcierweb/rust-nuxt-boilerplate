@@ -92,6 +92,67 @@ async fn post_without_bearer_and_without_csrf_returns_403() {
 }
 
 #[actix_web::test]
+async fn refresh_without_csrf_token_returns_403() {
+    let config = make_config();
+    let app = test::init_service(
+        App::new().app_data(web::Data::new(config)).service(
+            web::scope("/api/v1")
+                .wrap(CsrfProtection::new(vec![]))
+                .route("/auth/refresh", web::post().to(state_changing_handler)),
+        ),
+    )
+    .await;
+
+    // Cookie-authenticated state change: must require a CSRF token even
+    // though no Bearer header is present.
+    let req = test::TestRequest::post().uri("/api/v1/auth/refresh").to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[actix_web::test]
+async fn refresh_with_valid_csrf_token_passes() {
+    let config = make_config();
+    let token =
+        backend::middleware::csrf_protection::generate_csrf_token(&config.csrf_secret_key);
+    // Bare AppConfig registration: the CSRF middleware resolves its secret
+    // from `app_data::<AppConfig>()` (not `Data<AppConfig>`).
+    let app = test::init_service(
+        App::new().app_data(config).service(
+            web::scope("/api/v1")
+                .wrap(CsrfProtection::new(vec![]))
+                .route("/auth/refresh", web::post().to(state_changing_handler)),
+        ),
+    )
+    .await;
+
+    let req = test::TestRequest::post()
+        .uri("/api/v1/auth/refresh")
+        .insert_header(("csrf-token", token.clone()))
+        .insert_header(("Cookie", format!("csrf_token={}", token)))
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[actix_web::test]
+async fn logout_without_csrf_token_returns_403() {
+    let config = make_config();
+    let app = test::init_service(
+        App::new().app_data(web::Data::new(config)).service(
+            web::scope("/api/v1")
+                .wrap(CsrfProtection::new(vec![]))
+                .route("/auth/logout", web::post().to(state_changing_handler)),
+        ),
+    )
+    .await;
+
+    let req = test::TestRequest::post().uri("/api/v1/auth/logout").to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+}
+
+#[actix_web::test]
 async fn excluded_path_skips_csrf() {
     let config = make_config();
     let app = test::init_service(

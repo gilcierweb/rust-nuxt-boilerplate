@@ -22,6 +22,17 @@ const CSRF_ROTATION_GRACE_SECS: u64 = 30;
 
 /// CSRF protection middleware.
 ///
+/// # Excluded (CSRF-exempt) endpoints
+///
+/// Only endpoints that are unauthenticated by design skip CSRF:
+/// login, register, recover, reset, confirm and webhooks. The
+/// cookie-authenticated endpoints — `refresh` and `logout` — REQUIRE a
+/// CSRF token: they change session state using credentials (cookies)
+/// the browser attaches automatically, which is exactly the CSRF threat
+/// model. The SameSite=Lax refresh cookie already blocks cross-site POSTs
+/// in modern browsers; the token check adds defense in depth (legacy
+/// browsers, SameSite=None deployments via `AUTH_COOKIE_SAME_SITE=none`).
+///
 /// # Bearer Token Bypass
 ///
 /// Requests carrying `Authorization: Bearer <token>` skip CSRF validation
@@ -80,10 +91,6 @@ impl CsrfProtection {
             "/api/v1/auth/recover/".to_string(),
             "/api/v1/auth/reset".to_string(),
             "/api/v1/auth/reset/".to_string(),
-            "/api/v1/auth/refresh".to_string(),
-            "/api/v1/auth/refresh/".to_string(),
-            "/api/v1/auth/logout".to_string(),
-            "/api/v1/auth/logout/".to_string(),
             "/api/v1/auth/confirm".to_string(),
             "/api/v1/auth/confirm/".to_string(),
             "/api/v1/webhooks".to_string(),
@@ -578,6 +585,19 @@ mod tests {
                 .any(|p| p == "/api/v1/auth/register")
         );
         assert!(csrf.exclude_paths.iter().any(|p| p == "/api/v1/webhooks"));
+
+        // Cookie-authenticated endpoints must NOT be excluded — they are
+        // exactly the CSRF-relevant surface (no Bearer header to skip with).
+        assert!(
+            !csrf.exclude_paths.iter().any(|p| p.contains("refresh")),
+            "refresh must be CSRF-protected: got {:?}",
+            csrf.exclude_paths
+        );
+        assert!(
+            !csrf.exclude_paths.iter().any(|p| p.contains("logout")),
+            "logout must be CSRF-protected: got {:?}",
+            csrf.exclude_paths
+        );
     }
 
     #[test]

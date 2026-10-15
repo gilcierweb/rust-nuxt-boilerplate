@@ -228,11 +228,11 @@ async fn test_full_auth_cycle() {
             .service(
                 web::scope("/api/v1")
                     .service(
-                        // Mirror the production /auth middleware chain: the
-                        // real Bearer flow is exercised end-to-end (no manual
-                        // Claims injection), and public paths stay reachable
-                        // without a token.
+                        // Mirror the production /auth middleware chain (JwtAuth
+                        // outermost, CsrfProtection innermost): the real
+                        // Bearer + CSRF flows are exercised end-to-end.
                         web::scope("/auth")
+                            .wrap(backend::middleware::csrf_protection::CsrfProtection::new(vec![]))
                             .wrap(backend::middleware::auth::JwtAuth::new(
                                 backend::middleware::auth_middleware::JwtAuthConfig::bearer_exempt()
                                     .with_token_blacklist(Arc::new(
@@ -339,17 +339,42 @@ async fn test_full_auth_cycle() {
     });
     assert_eq!(resp.status(), 401, "me with garbage Bearer must be rejected");
 
-    // --- Step 4: Refresh token (cookie-authenticated public path) ---
-    let mut refresh_req = test::TestRequest::post()
-        .uri("/api/v1/auth/refresh")
-        .to_request();
-    if let Some(ref cookie) = refresh_cookie {
-        refresh_req.headers_mut().insert(
-            actix_web::http::header::COOKIE,
-            format!("refresh_token={}", cookie).parse().unwrap(),
-        );
-    }
-    let resp = test::call_service(&app, refresh_req).await;
+    // --- Step 4: Refresh token (cookie-authenticated + CSRF) ---
+    // The refresh cookie alone is not enough: refresh is a cookie-based
+    // state change, so the CSRF middleware requires the csrf-token header.
+    // Obtain the CSRF cookie first — the middleware sets it on GET
+    // responses when not already present.
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::get()
+            .uri("/api/v1/auth/session")
+            .insert_header((
+                "Cookie",
+                format!("refresh_token={}", refresh_cookie.clone().unwrap()),
+            ))
+            .to_request(),
+    )
+    .await;
+    assert!(
+        resp.status().is_success(),
+        "session GET failed before refresh"
+    );
+    let csrf_cookie =
+        extract_cookie(&resp, "csrf_token").expect("session GET must set the csrf cookie");
+
+    let resp = dispatch!(app, || {
+        test::TestRequest::post()
+            .uri("/api/v1/auth/refresh")
+            .insert_header((
+                "Cookie",
+                format!(
+                    "refresh_token={}; csrf_token={}",
+                    refresh_cookie.clone().unwrap(),
+                    csrf_cookie
+                ),
+            ))
+            .insert_header(("csrf-token", csrf_cookie.clone()))
+    });
     let status = resp.status();
     let body: Value = test::read_body_json(resp).await;
     println!("Refresh: {} - {:?}", status, body);
