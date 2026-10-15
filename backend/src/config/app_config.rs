@@ -710,6 +710,18 @@ impl AppConfig {
                     ));
                 }
             }
+
+            // The literal documented in the repo's local-env guidance is
+            // publicly known but matches neither the `changeme_` nor the
+            // `REPLACE_WITH_` patterns, so it needs its own check.
+            if self.refresh_token_hash_salt.contains("change_in_production") {
+                errors.push(
+                    "REFRESH_TOKEN_HASH_SALT contains placeholder value \
+                     'change_in_production'. Override the secret before \
+                     deploying to production (see .env.example)."
+                        .to_string(),
+                );
+            }
         }
 
         // Database URL validation
@@ -1039,6 +1051,38 @@ mod placeholder_tests {
                 .iter()
                 .any(|e| e.contains("JWT_SECRET") && e.contains("placeholder")),
             "expected JWT_SECRET placeholder error, got: {:?}",
+            errors
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn production_rejects_refresh_salt_placeholder() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("ENVIRONMENT", "production") };
+        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
+        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
+        // The literal shipped in the repo's local .env docs — long enough to
+        // pass the length check but publicly known, so it must be rejected.
+        unsafe {
+            std::env::set_var(
+                "REFRESH_TOKEN_HASH_SALT",
+                "refresh_token_hash_salt_change_in_production",
+            )
+        };
+
+        let cfg = AppConfig::from_env().expect("config builds");
+        let errors = cfg.validate();
+
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("REFRESH_TOKEN_HASH_SALT") && e.contains("placeholder")),
+            "expected REFRESH_TOKEN_HASH_SALT placeholder error, got: {:?}",
             errors
         );
     }
