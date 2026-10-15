@@ -1408,11 +1408,7 @@ pub async fn enable_2fa(
         .await
         .map_err(AppError::Database)?;
 
-    let revoked_tokens = container
-        .refresh_tokens
-        .revoke_all_for_user(&user_id)
-        .await
-        .map_err(AppError::Database)?;
+    let revoked_tokens = revoke_all_user_sessions(container.as_ref(), &user_id).await?;
 
     // Send 2FA setup email with secret and backup codes
     let security = SecurityService::from_config(container.config.as_ref())?;
@@ -1488,11 +1484,7 @@ pub async fn disable_2fa(
         .await
         .map_err(AppError::Database)?;
 
-    let revoked_tokens = container
-        .refresh_tokens
-        .revoke_all_for_user(&user_id)
-        .await
-        .map_err(AppError::Database)?;
+    let revoked_tokens = revoke_all_user_sessions(container.as_ref(), &user_id).await?;
 
     tracing::info!(
         event = "auth.2fa.disabled",
@@ -1571,11 +1563,7 @@ pub async fn change_password(
         .await
         .map_err(AppError::Database)?;
 
-    let revoked_tokens = container
-        .refresh_tokens
-        .revoke_all_for_user(&user_id)
-        .await
-        .map_err(AppError::Database)?;
+    let revoked_tokens = revoke_all_user_sessions(container.as_ref(), &user_id).await?;
 
     // Send password changed notification email
     let security = SecurityService::from_config(container.config.as_ref())?;
@@ -1901,6 +1889,38 @@ fn session_block_error(reason: SessionBlockReason) -> AppError {
             AppError::Unauthorized(t!("auth.login.email_not_confirmed").into_owned())
         }
     }
+}
+
+/// Revoke every active session for a user:
+/// - refresh tokens are revoked in the database;
+/// - a credential-epoch marker is set in Redis so every access token issued
+///   before this moment is rejected by the JWT middleware until it expires.
+///
+/// The epoch write is best-effort: a Redis blip logs a warning but does not
+/// fail the credential change — refresh tokens are already revoked, so the
+/// residual exposure is limited to the access token's remaining lifetime
+/// (≤ `jwt_access_expiry_secs`).
+async fn revoke_all_user_sessions(container: &AppContainer, user_id: &Uuid) -> AppResult<usize> {
+    let revoked = container
+        .refresh_tokens
+        .revoke_all_for_user(user_id)
+        .await
+        .map_err(AppError::Database)?;
+
+    if let Err(error) = container
+        .access_token_blacklist
+        .set_credential_epoch(user_id, container.config.jwt_access_expiry_secs as u64)
+        .await
+    {
+        tracing::warn!(
+            event = "auth.epoch_set_failed",
+            error = %error,
+            user_id = %user_id,
+            "failed to set credential epoch; pre-change access tokens may remain valid until expiry"
+        );
+    }
+
+    Ok(revoked)
 }
 
 // =========================================================================

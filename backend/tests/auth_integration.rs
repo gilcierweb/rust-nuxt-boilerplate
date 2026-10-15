@@ -633,6 +633,142 @@ async fn locked_account_cannot_use_session_refresh_or_login() {
 }
 
 #[actix_web::test]
+async fn password_change_revokes_existing_access_tokens() {
+    let db = TestDb::new().await;
+    let config = Arc::new(test_config());
+    let r_pool = redis_pool();
+
+    let state = web::Data::new(backend::AppState {
+        db: db.pool().clone(),
+        redis: r_pool.clone(),
+        config: config.clone(),
+        metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
+        ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
+        jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        otel_provider: None,
+    });
+
+    let container = web::Data::new(backend::repositories::AppContainer::new(
+        db.pool().clone(),
+        r_pool.clone(),
+        (*config).clone(),
+    ));
+
+    let email = format!("epoch-{}@example.com", uuid::Uuid::new_v4());
+    let password = "StrongPass123!@#";
+    let new_password = "NewStrongPass456!@#";
+
+    let app = test::init_service(
+        App::new()
+            .app_data(state)
+            .app_data(container)
+            .service(
+                web::scope("/api/v1").service(
+                    web::scope("/auth")
+                        .wrap(backend::middleware::auth::JwtAuth::new(
+                            backend::middleware::auth_middleware::JwtAuthConfig::bearer_exempt()
+                                .with_token_blacklist(Arc::new(
+                                    backend::repositories::access_token_blacklist::AccessTokenBlacklist::new(r_pool.clone()),
+                                )),
+                        ))
+                        .service(backend::controllers::auth_controller::register)
+                        .service(backend::controllers::auth_controller::login)
+                        .service(backend::controllers::auth_controller::me)
+                        .service(backend::controllers::auth_controller::change_password),
+                ),
+            ),
+    )
+    .await;
+
+    // --- Register + confirm ---
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/register")
+            .set_json(serde_json::json!({
+                "email": email,
+                "password": password,
+                "password_confirmation": password
+            }))
+            .to_request(),
+    )
+    .await;
+    let register_status = resp.status();
+    let body: Value = test::read_body_json(resp).await;
+    assert!(register_status.is_success(), "Register failed: {:?}", body);
+    let user_id = body["user_id"].as_str().unwrap().to_string();
+
+    {
+        let mut conn = db.pool().get().await.expect("Failed to get connection");
+        diesel::sql_query("UPDATE users SET confirmed_at = NOW() WHERE id = $1")
+            .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(&user_id).unwrap())
+            .execute(&mut *conn)
+            .await
+            .expect("Failed to confirm user email");
+    }
+
+    // --- Login ---
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/login")
+            .set_json(serde_json::json!({ "email": email, "password": password }))
+            .to_request(),
+    )
+    .await;
+    assert!(resp.status().is_success(), "Login failed");
+    let body: Value = test::read_body_json(resp).await;
+    let access_token = body["access_token"].as_str().unwrap().to_string();
+
+    // The token works before the credential change.
+    let resp = dispatch!(app, || {
+        test::TestRequest::get()
+            .uri("/api/v1/auth/me")
+            .insert_header(("Authorization", format!("Bearer {}", access_token)))
+    });
+    assert_eq!(resp.status(), 200, "token must work before change-password");
+
+    // --- Change password ---
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/change-password")
+            .insert_header(("Authorization", format!("Bearer {}", access_token)))
+            .set_json(serde_json::json!({
+                "current_password": password,
+                "new_password": new_password,
+                "password_confirmation": new_password
+            }))
+            .to_request(),
+    )
+    .await;
+    let change_status = resp.status();
+    let body: Value = test::read_body_json(resp).await;
+    assert!(
+        change_status.is_success(),
+        "change-password failed: {:?}",
+        body
+    );
+
+    // --- The pre-change access token must now be rejected ---
+    let resp = dispatch!(app, || {
+        test::TestRequest::get()
+            .uri("/api/v1/auth/me")
+            .insert_header(("Authorization", format!("Bearer {}", access_token)))
+    });
+    assert_eq!(
+        resp.status(),
+        401,
+        "pre-change access token must be rejected after password change"
+    );
+    let body: Value = test::read_body_json(resp).await;
+    assert_eq!(
+        body["error"]["code"], "TOKEN_REVOKED",
+        "epoch revocation must report TOKEN_REVOKED (frontend skips refresh retry on it)"
+    );
+}
+
+#[actix_web::test]
 async fn test_health_endpoint() {
     let db = TestDb::new().await;
     // Schema is already created by diesel migration run in CI.
