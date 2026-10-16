@@ -1,4 +1,9 @@
+# pnpm >=10 blocks dependency build scripts by default; approved explicitly below.
 allowBuilds:
-  '@parcel/watcher': set this to true or false
-  esbuild: set this to true or false
-  workerd: set this to true or false
+  '@parcel/watcher': true
+  esbuild: true
+  workerd: true
+auditConfig:
+  ignoreGhsas:
+    - GHSA-86w9-cpqp-85rv
+    - GHSA-vfj7-8cjw-p6xm

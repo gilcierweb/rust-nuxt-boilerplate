@@ -80,7 +80,8 @@ opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"] }
 opentelemetry_sdk = { version = "0.32", features = ["rt-tokio", "trace"] }
 tracing-opentelemetry = "0.33"
 dotenvy = "0.15.7"
-rustls = "0.23"
+# RUSTSEC-2026-0346..0349 (secrets in Debug, ECH leak, brotli alloc bomb, downgrade) fixed in >=0.23.46
+rustls = "0.23.46"
 rustls-pemfile = "2"
 futures-util = "0.3.32"
 
@@ -99,7 +100,8 @@ unicode-normalization = "0.1.25"
 bigdecimal = { version = "0.4.10", features = ["serde"] }
 rust_decimal = { version = "1.38", features = ["serde"] }
 
-ammonia = "4.1.4"
+# RUSTSEC-2021-0157/0158 (XSS via SVG animate tags, CSS url("") escaping) fixed in >=4.2.3
+ammonia = "4.2.3"
 actix-multipart = "0.7"
 infer = "0.19"
 mime = "0.3"

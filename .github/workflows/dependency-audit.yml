@@ -43,8 +43,7 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
-          package_json: frontend/package.json
+          version: 12.11.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -57,4 +56,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run pnpm audit
+        # Two advisories are accepted in frontend/pnpm-workspace.yaml (auditConfig.ignoreGhsas):
+        # no patched version exists and both are dev/build-time toolchain only,
+        # not shipped in the Nuxt build output:
+        # - GHSA-86w9-cpqp-85rv (node-forge <=1.4.0): listhen self-signed certs
+        #   for the dev server, via nuxt -> @nuxt/cli / nitropack.
+        # - GHSA-vfj7-8cjw-p6xm (braces <=3.0.3): build-time glob matching,
+        #   via nitropack/globby and @nuxtjs/i18n unplugin.
         run: pnpm audit --prod --audit-level=moderate
