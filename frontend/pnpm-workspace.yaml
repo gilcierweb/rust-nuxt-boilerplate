@@ -3,6 +3,14 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   workerd: true
+# Accepted advisories — no patched version exists upstream (checked 2026-10-15).
+# Both are dev/build-time toolchain only; verified absent from the production
+# build output (.output/server). Remove the entry once a patched version is
+# released and pulled in via `pnpm update`:
+# - GHSA-86w9-cpqp-85rv (node-forge, dev-server self-signed certs via listhen):
+#   fix pending upstream — digitalbazaar/forge#1152 (tracked in #1149).
+# - GHSA-vfj7-8cjw-p6xm (braces, build-time glob via nitropack/i18n unplugin/vitest):
+#   fix pending upstream — micromatch/braces#70.
 auditConfig:
   ignoreGhsas:
     - GHSA-86w9-cpqp-85rv

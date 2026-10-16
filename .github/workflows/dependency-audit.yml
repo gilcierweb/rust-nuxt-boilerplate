@@ -63,4 +63,6 @@ jobs:
         #   for the dev server, via nuxt -> @nuxt/cli / nitropack.
         # - GHSA-vfj7-8cjw-p6xm (braces <=3.0.3): build-time glob matching,
         #   via nitropack/globby and @nuxtjs/i18n unplugin.
+        # When patched versions are released upstream (node-forge >=1.4.1,
+        # braces >=3.0.4), run `pnpm update` and remove the ignores.
         run: pnpm audit --prod --audit-level=moderate
