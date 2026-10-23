@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed, h, resolveComponent } from 'vue'
 import { useAdminResource } from '~/utils/admin-resource-helpers'
-import { formatDateTime } from '~/utils/admin-ui'
+import { adminDeleteButton, formatDateTime } from '~/utils/admin-ui'
 import type { DataTableColumn } from '~/types/data-table'
 
 definePageMeta({ layout: 'admin', keepalive: true })
@@ -169,21 +169,10 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
           },
           { default: () => h('span', { class: 'icon-[tabler--pencil] size-5' }) },
         ),
-        h(
-          'button',
-          {
-            type: 'button',
-            class: 'btn btn-circle btn-text btn-sm text-error',
-            disabled: deletePendingId.value === rowId,
-            onClick: () => removeRole(row),
-          },
-          {
-            default: () =>
-              deletePendingId.value === rowId
-                ? h('span', { class: 'icon-[tabler--loader-2] size-5 animate-spin' })
-                : h('span', { class: 'icon-[tabler--trash] size-5' }),
-          },
-        ),
+        adminDeleteButton({
+          pending: deletePendingId.value === rowId,
+          onClick: () => removeRole(row),
+        }),
       ])
     },
     meta: { align: 'right' },
