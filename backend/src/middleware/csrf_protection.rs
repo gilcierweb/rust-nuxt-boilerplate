@@ -79,8 +79,11 @@ impl CsrfProtection {
     ///   (unauthenticated endpoints like login, register, webhooks).
     /// - `cookie_auth_paths`: Path prefixes that **always** enforce CSRF,
     ///   even with a Bearer token. Set via `CSRF_COOKIE_AUTH_PATHS` env var.
-    ///   Defaults to `["/api/v1/admin"]` because admin routes use refresh_token
-    ///   cookies alongside JWT Bearer tokens.
+    ///   Defaults to the admin scope **plus every cookie-authenticated `/auth`
+    ///   endpoint** (session, refresh, logout): those carry the httpOnly
+    ///   `refresh_token` cookie, so a forged cross-site request must never
+    ///   reach them — not even when the SPA also sends a Bearer header, which
+    ///   would otherwise suppress the CSRF check.
     pub fn new(exclude_paths: Vec<String>) -> Self {
         let mut defaults = vec![
             "/api/v1/auth/login".to_string(),
@@ -99,12 +102,33 @@ impl CsrfProtection {
 
         defaults.extend(exclude_paths);
 
-        let cookie_auth_paths = std::env::var("CSRF_COOKIE_AUTH_PATHS")
-            .unwrap_or_else(|_| "/api/v1/admin".to_string()) // Default: admin routes use cookie auth
-            .split(',')
-            .map(|s| s.trim().to_string())
-            .filter(|s| !s.is_empty())
-            .collect();
+        // Paths that authenticate with the httpOnly `refresh_token` cookie, so
+        // a forged cross-site request must never be able to change session
+        // state. These are checked even when an `Authorization: Bearer` header
+        // is present: a request that carries both a Bearer token and the
+        // session cookies (the SPA's own refresh/logout calls) would otherwise
+        // skip the CSRF check entirely.
+        let default_cookie_auth_paths = [
+            "/api/v1/admin",
+            "/api/v1/auth/refresh",
+            "/api/v1/auth/refresh/",
+            "/api/v1/auth/logout",
+            "/api/v1/auth/logout/",
+            "/api/v1/auth/session",
+            "/api/v1/auth/session/",
+        ];
+
+        let cookie_auth_paths = match std::env::var("CSRF_COOKIE_AUTH_PATHS") {
+            Ok(configured) => configured
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect(),
+            Err(_) => default_cookie_auth_paths
+                .iter()
+                .map(|path| (*path).to_string())
+                .collect(),
+        };
 
         Self {
             exclude_paths: defaults,
@@ -653,6 +677,39 @@ mod tests {
             csrf.cookie_auth_paths
                 .contains(&"/api/v1/admin".to_string())
         );
+    }
+
+    #[test]
+    fn test_cookie_auth_paths_cover_every_cookie_authenticated_endpoint() {
+        // A Bearer header suppresses CSRF validation on ordinary paths, so the
+        // cookie-authenticated endpoints must be listed explicitly or the SPA's
+        // own refresh/logout POSTs would travel without a token check.
+        let csrf = CsrfProtection::new(vec![]);
+        for path in [
+            "/api/v1/auth/refresh",
+            "/api/v1/auth/refresh/",
+            "/api/v1/auth/logout",
+            "/api/v1/auth/logout/",
+            "/api/v1/auth/session",
+            "/api/v1/auth/session/",
+        ] {
+            assert!(
+                csrf.cookie_auth_paths.iter().any(|p| p == path),
+                "cookie-authenticated path {} must always enforce CSRF, got {:?}",
+                path,
+                csrf.cookie_auth_paths
+            );
+        }
+    }
+
+    #[test]
+    fn test_cookie_auth_paths_still_honours_environment_override() {
+        // The override replaces the defaults: an explicit configuration must
+        // not be silently merged with paths the operator never asked for.
+        let configured = vec!["/api/v1/admin".to_string(), "/api/v1/users".to_string()];
+        let csrf = CsrfProtection::new(vec![]).with_cookie_auth_paths(configured.clone());
+        assert_eq!(csrf.cookie_auth_paths.len(), 2);
+        assert_eq!(csrf.cookie_auth_paths, configured);
     }
 
     #[test]
