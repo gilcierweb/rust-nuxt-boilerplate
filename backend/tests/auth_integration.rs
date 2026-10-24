@@ -399,6 +399,9 @@ async fn test_full_auth_cycle() {
     assert_eq!(body["email"], "test@example.com");
 
     // --- Step 6: Logout ---
+    // Logout authenticates with the refresh cookie, so it must carry the CSRF
+    // double-submit pair: the SPA sends both (app/plugins/api.ts) and the Nitro
+    // proxy forwards them (server/utils/proxy.ts).
     let mut logout_req = test::TestRequest::post()
         .uri("/api/v1/auth/logout")
         .insert_header(("Authorization", format!("Bearer {}", new_token)))
@@ -406,9 +409,15 @@ async fn test_full_auth_cycle() {
     if let Some(ref cookie) = refresh_cookie {
         logout_req.headers_mut().insert(
             actix_web::http::header::COOKIE,
-            format!("refresh_token={}", cookie).parse().unwrap(),
+            format!("refresh_token={}; csrf_token={}", cookie, csrf_cookie)
+                .parse()
+                .unwrap(),
         );
     }
+    logout_req.headers_mut().insert(
+        actix_web::http::header::HeaderName::from_static("csrf-token"),
+        csrf_cookie.parse().unwrap(),
+    );
     let resp = test::call_service(&app, logout_req).await;
     println!("Logout: {}", resp.status());
     assert!(resp.status().is_success() || resp.status().as_u16() == 204);
