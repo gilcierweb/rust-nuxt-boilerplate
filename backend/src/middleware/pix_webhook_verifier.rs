@@ -9,6 +9,7 @@ use futures::future::{LocalBoxFuture, Ready, ready};
 
 use crate::AppState;
 use crate::repositories::container::AppContainer;
+use crate::utils::constant_time::constant_time_eq_hex;
 
 pub struct PixWebhookVerifier {
     enabled: bool,
@@ -221,12 +222,8 @@ fn verify_pix_signature(payload: &Bytes, signature: &str, secret: &str) -> bool 
     mac.update(payload);
     let computed = format!("{:x}", mac.finalize().into_bytes());
 
-    // Constant-time comparison
-    computed.len() == expected_signature.len()
-        && computed
-            .chars()
-            .zip(expected_signature.chars())
-            .all(|(a, b)| a == b)
+    // Constant-time comparison (see utils::constant_time).
+    constant_time_eq_hex(&computed, expected_signature)
 }
 
 #[cfg(test)]

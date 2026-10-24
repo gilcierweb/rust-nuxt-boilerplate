@@ -9,6 +9,7 @@ use futures::future::{LocalBoxFuture, Ready, ready};
 
 use crate::AppState;
 use crate::repositories::container::AppContainer;
+use crate::utils::constant_time::constant_time_eq_hex;
 
 pub struct StripeWebhookVerifier {
     enabled: bool,
@@ -255,9 +256,9 @@ fn verify_stripe_signature(payload: &Bytes, signature: &str, secret: &str) -> bo
     mac.update(signed_payload.as_bytes());
     let expected = format!("{:x}", mac.finalize().into_bytes());
 
-    signatures.iter().any(|sig| {
-        sig.len() == expected.len() && sig.chars().zip(expected.chars()).all(|(a, b)| a == b)
-    })
+    signatures
+        .iter()
+        .any(|sig| constant_time_eq_hex(&expected, sig))
 }
 
 #[cfg(test)]
