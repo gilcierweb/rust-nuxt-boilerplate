@@ -149,7 +149,9 @@ jobs:
         run: |
           cargo test --lib --bins \
             --test api_version_integration \
+            --test cors_integration \
             --test csrf_protection_integration \
+            --test health_integration \
             --test migration_rollback \
             -- --test-threads=4 --skip live_migration_rollback_cycle
         env:

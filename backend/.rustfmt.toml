@@ -1,6 +1,13 @@
 # Rustfmt Configuration
 # This file ensures consistent code formatting across all contributors.
-# Uses only stable options.
+#
+# ONLY STABLE OPTIONS: every key below must run identically on stable and on
+# nightly. Nightly-only keys were removed deliberately: the format check in CI
+# runs on the stable toolchain, which silently ignores them, so a config that
+# enables them makes the two toolchains disagree forever (before this change
+# `cargo +nightly fmt --check` reported 23 violations that stable never saw).
+# If a nightly-only style is ever wanted, move the check to nightly instead of
+# mixing both.
 
 edition = "2024"
 max_width = 100
@@ -13,23 +20,9 @@ hard_tabs = false
 # Newline style
 newline_style = "Unix"
 
-# Import grouping and ordering
-imports_granularity = "Module"
-group_imports = "StdExternalCrate"
-
-# Braces
-brace_style = "PreferSameLine"
-control_brace_style = "AlwaysSameLine"
-
-# Function formatting
-fn_args_layout = "Tall"
-
 # Match arms
 match_arm_leading_pipes = "Never"
 match_block_trailing_comma = true
-
-# Trailing commas
-trailing_comma = "Vertical"
 
 # Reorder imports
 reorder_imports = true
@@ -46,6 +39,3 @@ format_macro_bodies = true
 
 # Empty item single line
 empty_item_single_line = true
-
-# Config version
-version = "Two"
