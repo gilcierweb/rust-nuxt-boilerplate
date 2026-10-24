@@ -358,6 +358,23 @@ impl<S> RateLimiterMiddleware<S> {
     }
 }
 
+/// Configuration the middleware reads, from whichever container is registered.
+///
+/// The bootstrap registers `AppState` while the scoped controllers register
+/// `AppContainer`. The container wins when both are present, so a narrower
+/// wiring cannot shadow the process configuration. `None` means the middleware
+/// was mounted outside both (unit tests), and the caller applies a safe default.
+///
+/// The Arc is cloned instead of borrowing because the request is moved into
+/// the handler further down `call`.
+fn middleware_config(req: &ServiceRequest) -> Option<Arc<crate::config::AppConfig>> {
+    if let Some(container) = req.app_data::<web::Data<AppContainer>>() {
+        return Some(container.config.clone());
+    }
+    req.app_data::<web::Data<AppState>>()
+        .map(|state| state.config.clone())
+}
+
 impl<S, B> Service<ServiceRequest> for RateLimiterMiddleware<S>
 where
     S: Service<ServiceRequest, Response = ServiceResponse<B>, Error = Error> + 'static,
@@ -375,25 +392,18 @@ where
         let redis = self.redis.clone();
         let limit = self.limit.clone();
         let circuit_breaker = self.circuit_breaker.clone();
-        let rate_limit_enabled = req
-            .app_data::<web::Data<AppContainer>>()
-            .map(|container| container.config.rate_limit_enabled)
-            .or_else(|| {
-                req.app_data::<web::Data<AppState>>()
-                    .map(|state| state.config.rate_limit_enabled)
-            })
+        let config = middleware_config(&req);
+        let rate_limit_enabled = config
+            .as_ref()
+            .map(|config| config.rate_limit_enabled)
             .unwrap_or(true); // Default to enabled for safety
 
         // Trusted proxy list decides whether `X-Forwarded-For` / `Forwarded`
         // headers may override the peer address. Without it every request
         // behind a reverse proxy is throttled as if it came from the proxy.
-        let trusted_proxies = req
-            .app_data::<web::Data<AppContainer>>()
-            .map(|container| container.config.trusted_proxies.clone())
-            .or_else(|| {
-                req.app_data::<web::Data<AppState>>()
-                    .map(|state| state.config.trusted_proxies.clone())
-            })
+        let trusted_proxies = config
+            .as_ref()
+            .map(|config| config.trusted_proxies.clone())
             .unwrap_or_default();
 
         // Try to extract user_id from JWT claims (set by JwtAuth middleware).
