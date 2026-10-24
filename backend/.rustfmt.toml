@@ -1,23 +1,20 @@
 # Rustfmt Configuration
 # This file ensures consistent code formatting across all contributors.
 #
-# ONLY STABLE OPTIONS: every key below must run identically on stable and on
-# nightly. Nightly-only keys were removed deliberately: the format check in CI
-# runs on the stable toolchain, which silently ignores them, so a config that
-# enables them makes the two toolchains disagree forever (before this change
-# `cargo +nightly fmt --check` reported 23 violations that stable never saw).
-# If a nightly-only style is ever wanted, move the check to nightly instead of
-# mixing both.
+# STABLE OPTIONS ONLY. Every key below is understood by the stable toolchain
+# and behaves identically on nightly. Keys that only nightly applies are
+# excluded deliberately: stable ignores them silently, so a config that sets
+# them lets the two toolchains disagree (before, `cargo +nightly fmt --check`
+# reported 23 violations that stable never saw). If a nightly-only style is
+# ever wanted, move the whole check to nightly instead of mixing both.
 
 edition = "2024"
 max_width = 100
 
-# Use 4 spaces for indentation (not tabs)
-indent_style = "Block"
+# Indentation: 4 spaces, no tabs
 tab_spaces = 4
 hard_tabs = false
 
-# Newline style
 newline_style = "Unix"
 
 # Match arms
@@ -32,10 +29,3 @@ use_field_init_shorthand = true
 
 # Use try shorthand
 use_try_shorthand = true
-
-# Format macros
-format_macro_matchers = true
-format_macro_bodies = true
-
-# Empty item single line
-empty_item_single_line = true
