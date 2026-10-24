@@ -303,7 +303,7 @@ impl<S> RateLimiterMiddleware<S> {
     ///
     /// Authenticated traffic is throttled per profile so a shared NAT cannot
     /// exhaust the budget of other users. Anonymous traffic falls back to the
-    /// **real client IP** — the one `extract_client_ip` derives from the peer
+    /// **real client IP** - the one `extract_client_ip` derives from the peer
     /// address (or `X-Forwarded-For` / `Forwarded` when the peer is a trusted
     /// proxy). Using the raw `peer_addr()` instead keyed every anonymous
     /// request behind a reverse proxy onto the proxy's own IP, collapsing the

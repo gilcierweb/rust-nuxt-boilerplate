@@ -11,7 +11,7 @@
 services:
   # -- Backend / Frontend
   # Development convenience: talk to the API and the SPA directly. In production
-  # do NOT load this override (the base file publishes no host ports) — nginx on
+  # do NOT load this override (the base file publishes no host ports) - nginx on
   # 80/443 is the only ingress, which is what makes TLS, HSTS and the edge rate
   # limits apply to the API. Exposing the backend directly bypasses all three.
   backend:

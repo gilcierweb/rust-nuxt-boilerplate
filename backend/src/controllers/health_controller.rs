@@ -194,7 +194,7 @@ pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpR
 ///
 /// Accepts the same two forms as `RequireApiKey` (`X-API-Key` and
 /// `Authorization: ApiKey <key>`) and compares in constant time. An empty key
-/// list is never a match — there is nothing to authenticate against.
+/// list is never a match - there is nothing to authenticate against.
 fn request_has_valid_api_key(req: &HttpRequest, expected_keys: &[String]) -> bool {
     if expected_keys.is_empty() {
         return false;

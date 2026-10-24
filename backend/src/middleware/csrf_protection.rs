@@ -82,7 +82,7 @@ impl CsrfProtection {
     ///   Defaults to the admin scope **plus every cookie-authenticated `/auth`
     ///   endpoint** (session, refresh, logout): those carry the httpOnly
     ///   `refresh_token` cookie, so a forged cross-site request must never
-    ///   reach them — not even when the SPA also sends a Bearer header, which
+    ///   reach them - not even when the SPA also sends a Bearer header, which
     ///   would otherwise suppress the CSRF check.
     pub fn new(exclude_paths: Vec<String>) -> Self {
         let mut defaults = vec![

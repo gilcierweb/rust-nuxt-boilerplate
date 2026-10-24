@@ -1,7 +1,7 @@
 //! Integration tests for the readiness endpoint.
 //!
-//! Verifies that dependency error strings — which describe internal
-//! infrastructure — are only returned to callers holding a valid internal API
+//! Verifies that dependency error strings - which describe internal
+//! infrastructure - are only returned to callers holding a valid internal API
 //! key. The route is reachable without one, so an anonymous probe must see the
 //! status and nothing more.
 

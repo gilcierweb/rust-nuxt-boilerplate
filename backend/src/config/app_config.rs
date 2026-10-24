@@ -159,7 +159,7 @@ fn parse_jwt_secret_entry(
                     kid = %kid,
                     value = %value.trim(),
                     error = %e,
-                    "Ignoring unparseable JWT_SECRETS expiry — the key stays active. \
+                    "Ignoring unparseable JWT_SECRETS expiry - the key stays active. \
                      Use RFC-3339, e.g. 2030-01-01T00:00:00Z."
                 );
                 None
