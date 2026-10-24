@@ -126,6 +126,12 @@ services:
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-rust_nuxt_boilerplate}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rust_nuxt_boilerplate_dev}
       REDIS_URL: redis://redis:6379
+      # nginx terminates TLS and is the only ingress, so its requests are the
+      # peer the API sees. Declaring the private ranges as trusted proxies lets
+      # the backend recover the real client IP from X-Forwarded-For for rate
+      # limiting, login audit logs and account-lockout accounting (matching the
+      # `set_real_ip_from` ranges in infra/nginx/conf.d/app.conf).
+      TRUSTED_PROXIES: ${TRUSTED_PROXIES:-10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,127.0.0.1}
     ports:
       - "8080:8080"
     volumes:
