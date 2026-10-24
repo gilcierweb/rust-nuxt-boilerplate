@@ -88,7 +88,14 @@ const { t } = useI18n()
 const { $api } = useNuxtApp()
 const localePath = useLocalePath()
 const route = useRoute()
-const token = route.query.token as string | undefined
+const router = useRouter()
+const { token, consume: consumeToken } = useAuthTokenFromQuery(
+  'token',
+  route,
+  router,
+)
+// Drop the reset token from the address bar as soon as it has been read.
+consumeToken()
 
 const showPw = ref(false)
 const loading = ref(false)

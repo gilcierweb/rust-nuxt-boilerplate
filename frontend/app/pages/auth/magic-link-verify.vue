@@ -97,12 +97,18 @@ onMounted(async () => {
     return
   }
 
-  const token = route.query.token as string | undefined
+  const { token, consume: consumeToken } = useAuthTokenFromQuery(
+    'token',
+    route,
+    router,
+  )
   if (!token) {
     errorMsg.value = t('auth.magicLink.invalid')
     isLoading.value = false
     return
   }
+  // The magic link is single-use, so its token must not stay in the address bar.
+  consumeToken()
 
   try {
     await authStore.verifyMagicLink(token)

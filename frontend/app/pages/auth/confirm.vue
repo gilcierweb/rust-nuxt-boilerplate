@@ -35,12 +35,20 @@ definePageMeta({ layout: 'auth' })
 const { $api } = useNuxtApp()
 const localePath = useLocalePath()
 const route = useRoute()
-const token = route.query.token as string | undefined
+const router = useRouter()
+const { token, consume: consumeToken } = useAuthTokenFromQuery(
+  'token',
+  route,
+  router,
+)
 const loading = ref(true)
 const confirmed = ref(false)
 
 onMounted(async () => {
   if (!token) { loading.value = false; return }
+  // The confirmation token is only ever transported in the URL, so strip it
+  // from the address bar before calling the API.
+  consumeToken()
   try {
     await $api(`/auth/confirm?token=${token}`)
     confirmed.value = true
