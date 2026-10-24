@@ -11,8 +11,8 @@ use actix_web::http::StatusCode;
 use actix_web::{App, test, web};
 use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::AsyncPgConnection;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use serde_json::Value;
 
 use backend::AppState;
@@ -57,12 +57,11 @@ fn config_with_api_keys() -> AppConfig {
 }
 
 fn app_state(config: AppConfig) -> web::Data<AppState> {
-    let db: Pool<AsyncDieselConnectionManager<AsyncPgConnection>> = Pool::builder(
-        AsyncDieselConnectionManager::new(UNREACHABLE_DB_URL),
-    )
-    .max_size(1)
-    .build()
-    .expect("db pool");
+    let db: Pool<AsyncDieselConnectionManager<AsyncPgConnection>> =
+        Pool::builder(AsyncDieselConnectionManager::new(UNREACHABLE_DB_URL))
+            .max_size(1)
+            .build()
+            .expect("db pool");
     let redis = RedisConfig::from_url(UNREACHABLE_REDIS_URL)
         .create_pool(Some(Runtime::Tokio1))
         .expect("redis pool");
@@ -72,10 +71,7 @@ fn app_state(config: AppConfig) -> web::Data<AppState> {
         db,
         redis: redis.clone(),
         metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
-        ws: backend::ws::WsRedisState::new(
-            redis.clone(),
-            backend::ws::WsLimits::default(),
-        ),
+        ws: backend::ws::WsRedisState::new(redis.clone(), backend::ws::WsLimits::default()),
         jwt_secrets: Arc::new(config.jwt_secrets.clone()),
         config,
         otel_provider: None,

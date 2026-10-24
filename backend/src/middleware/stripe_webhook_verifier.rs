@@ -148,11 +148,8 @@ where
                 // Verify the signature
                 let signature = stripe_signature.unwrap();
                 let body_bytes = Bytes::from(body_bytes);
-                let is_valid = verify_stripe_signature(
-                    &body_bytes,
-                    &signature,
-                    &cfg.stripe_webhook_secret,
-                );
+                let is_valid =
+                    verify_stripe_signature(&body_bytes, &signature, &cfg.stripe_webhook_secret);
 
                 if !is_valid {
                     let response = HttpResponse::Forbidden()
@@ -323,8 +320,9 @@ mod tests {
                     .wrap(StripeWebhookVerifier::new())
                     .route(
                         "",
-                        web::post()
-                            .to(|| async { HttpResponse::Ok().json(serde_json::json!({"handled": true})) }),
+                        web::post().to(|| async {
+                            HttpResponse::Ok().json(serde_json::json!({"handled": true}))
+                        }),
                     ),
             ),
         )
@@ -335,11 +333,9 @@ mod tests {
         if let Some(signature) = signature {
             request = request.insert_header(("stripe-signature", signature));
         }
-        let response = actix_web::test::call_service(
-            &app,
-            request.set_payload(payload.to_vec()).to_request(),
-        )
-        .await;
+        let response =
+            actix_web::test::call_service(&app, request.set_payload(payload.to_vec()).to_request())
+                .await;
         let status = response.status();
         let body: Value = actix_web::test::read_body_json(response).await;
         (status, body)
@@ -351,11 +347,18 @@ mod tests {
         // which is never registered in production, so the check was skipped and
         // every unsigned webhook reached the handler.
         let container = container_with_webhook_secret("whsec_regression");
-        let signature =
-            make_valid_signature(b"{\"id\":\"evt_regression\"}", "whsec_regression", now_secs());
+        let signature = make_valid_signature(
+            b"{\"id\":\"evt_regression\"}",
+            "whsec_regression",
+            now_secs(),
+        );
 
         let (status, body) = post_status(Some(container), Some(&signature)).await;
-        assert_eq!(status, StatusCode::OK, "a valid signature must pass verification");
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "a valid signature must pass verification"
+        );
         assert_eq!(body["handled"], true);
     }
 

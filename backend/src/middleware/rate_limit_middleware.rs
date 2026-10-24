@@ -308,7 +308,10 @@ impl<S> RateLimiterMiddleware<S> {
     /// proxy). Using the raw `peer_addr()` instead keyed every anonymous
     /// request behind a reverse proxy onto the proxy's own IP, collapsing the
     /// per-client limit into one shared bucket.
-    fn rate_limit_client_key(client_ip: Option<std::net::IpAddr>, claims: Option<&Claims>) -> String {
+    fn rate_limit_client_key(
+        client_ip: Option<std::net::IpAddr>,
+        claims: Option<&Claims>,
+    ) -> String {
         match claims {
             Some(claims) => format!("user:{}", claims.profile_id),
             None => match client_ip {

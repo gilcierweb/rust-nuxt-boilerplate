@@ -213,9 +213,11 @@ fn request_has_valid_api_key(req: &HttpRequest, expected_keys: &[String]) -> boo
                 .map(str::to_owned)
         });
 
-    provided
-        .as_deref()
-        .is_some_and(|provided| expected_keys.iter().any(|expected| constant_time_eq(expected, provided)))
+    provided.as_deref().is_some_and(|provided| {
+        expected_keys
+            .iter()
+            .any(|expected| constant_time_eq(expected, provided))
+    })
 }
 
 /// Register health-check routes.

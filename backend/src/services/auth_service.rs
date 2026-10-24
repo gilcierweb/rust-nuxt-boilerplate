@@ -75,9 +75,8 @@ pub fn dummy_password_hash(config: &AppConfig) -> String {
 }
 
 /// Dummy password hashes keyed by the Argon2id cost tuple they were built with.
-type DummyPasswordHashCache = std::sync::OnceLock<
-    parking_lot::Mutex<std::collections::HashMap<(u32, u32, u32), String>>,
->;
+type DummyPasswordHashCache =
+    std::sync::OnceLock<parking_lot::Mutex<std::collections::HashMap<(u32, u32, u32), String>>>;
 
 /// The plaintext hashed by [`dummy_password_hash`]. It is never used to
 /// authenticate anything; only its hash exists, and only for timing.

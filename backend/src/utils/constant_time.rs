@@ -26,7 +26,8 @@ pub fn constant_time_eq(expected: &str, provided: &str) -> bool {
 
     // Lengths must match. Encode the result as a `subtle::Choice` (1 = equal)
     // so the branch below is not evaluated until after the byte comparison.
-    let lengths_match: Choice = ConstantTimeEq::ct_eq(&(expected.len() as u64), &(provided.len() as u64));
+    let lengths_match: Choice =
+        ConstantTimeEq::ct_eq(&(expected.len() as u64), &(provided.len() as u64));
 
     // Byte comparison. We pad the shorter slice with zeros so that the loop
     // always runs for `max(len_a, len_b)` iterations regardless of input
@@ -38,8 +39,16 @@ pub fn constant_time_eq(expected: &str, provided: &str) -> bool {
     let mut diff = Choice::from(0u8); // accumulates any difference
 
     for index in 0..max_len {
-        let expected_byte = if index < expected.len() { expected[index] } else { 0 };
-        let provided_byte = if index < provided.len() { provided[index] } else { 0 };
+        let expected_byte = if index < expected.len() {
+            expected[index]
+        } else {
+            0
+        };
+        let provided_byte = if index < provided.len() {
+            provided[index]
+        } else {
+            0
+        };
         // ct_ne returns Choice(1) if bytes differ
         diff |= expected_byte.ct_ne(&provided_byte);
     }
@@ -69,14 +78,23 @@ pub fn constant_time_eq_hex(expected: &str, provided: &str) -> bool {
 
 /// Compare two byte slices in constant time.
 pub fn bytes_constant_time_eq(expected: &[u8], provided: &[u8]) -> bool {
-    let lengths_match: Choice = ConstantTimeEq::ct_eq(&(expected.len() as u64), &(provided.len() as u64));
+    let lengths_match: Choice =
+        ConstantTimeEq::ct_eq(&(expected.len() as u64), &(provided.len() as u64));
 
     let max_len = expected.len().max(provided.len());
     let mut diff = Choice::from(0u8);
 
     for index in 0..max_len {
-        let expected_byte = if index < expected.len() { expected[index] } else { 0 };
-        let provided_byte = if index < provided.len() { provided[index] } else { 0 };
+        let expected_byte = if index < expected.len() {
+            expected[index]
+        } else {
+            0
+        };
+        let provided_byte = if index < provided.len() {
+            provided[index]
+        } else {
+            0
+        };
         diff |= expected_byte.ct_ne(&provided_byte);
     }
 

@@ -9,8 +9,8 @@ use utoipa::ToSchema;
 
 use crate::config::AppConfig;
 use crate::errors::{AppError, AppResult};
-use crate::repositories::AppContainer;
 use crate::middleware::auth::AuthUser;
+use crate::repositories::AppContainer;
 use crate::utils::file_validation::{
     FileCategory, FileLimits, FileValidationError, ValidatedFile, validate_upload,
 };

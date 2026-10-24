@@ -150,11 +150,8 @@ where
                     // Verify the signature
                     let signature = pix_signature.unwrap();
                     let body_bytes = Bytes::from(body_bytes);
-                    let is_valid = verify_pix_signature(
-                        &body_bytes,
-                        &signature,
-                        &cfg.pix_webhook_secret,
-                    );
+                    let is_valid =
+                        verify_pix_signature(&body_bytes, &signature, &cfg.pix_webhook_secret);
 
                     if !is_valid {
                         let response = HttpResponse::Forbidden()
@@ -466,7 +463,11 @@ mod tests {
 
         let (status, body) =
             post_status(Some(container), payload.as_bytes(), Some(&signature)).await;
-        assert_eq!(status, StatusCode::OK, "a valid signature must pass verification");
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "a valid signature must pass verification"
+        );
         assert_eq!(body["handled"], true);
     }
 
@@ -475,8 +476,12 @@ mod tests {
         // Before the fix this request passed straight through to the handler.
         let container = container_with_webhook_secret("whsec_pix_regression");
 
-        let (status, body) =
-            post_status(Some(container), b"{\"txid\":\"pix-missing-signature\"}", None).await;
+        let (status, body) = post_status(
+            Some(container),
+            b"{\"txid\":\"pix-missing-signature\"}",
+            None,
+        )
+        .await;
         assert_eq!(status, StatusCode::BAD_REQUEST);
         assert_eq!(body["error"]["code"], "PIX_SIGNATURE_MISSING");
     }
@@ -516,8 +521,7 @@ mod tests {
         let signature = make_valid_signature(payload.as_bytes(), "whsec_pix_regression");
 
         let container = container_with_webhook_secret("whsec_pix_regression");
-        let (status, _) =
-            post_status(Some(container), payload.as_bytes(), Some(&signature)).await;
+        let (status, _) = post_status(Some(container), payload.as_bytes(), Some(&signature)).await;
         assert_eq!(status, StatusCode::OK);
 
         let container = container_with_webhook_secret("whsec_pix_regression");
@@ -535,13 +539,16 @@ mod tests {
         let payload = unique_payload("replay-store-down");
         let signature = make_valid_signature(payload.as_bytes(), "whsec_pix_regression");
         let mut app = App::new();
-        app = app
-            .app_data(web::Data::new(container))
-            .service(
-                web::scope("/api/v1/webhooks/pix")
-                    .wrap(PixWebhookVerifier::new())
-                    .route("", web::post().to(|| async { HttpResponse::Ok().json(serde_json::json!({"handled": true})) })),
-            );
+        app = app.app_data(web::Data::new(container)).service(
+            web::scope("/api/v1/webhooks/pix")
+                .wrap(PixWebhookVerifier::new())
+                .route(
+                    "",
+                    web::post().to(|| async {
+                        HttpResponse::Ok().json(serde_json::json!({"handled": true}))
+                    }),
+                ),
+        );
         let app = actix_web::test::init_service(app).await;
 
         let req = actix_web::test::TestRequest::post()
@@ -613,4 +620,3 @@ mod tests {
         ));
     }
 }
-

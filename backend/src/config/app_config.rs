@@ -139,10 +139,7 @@ pub struct JwtSecretKey {
 /// without it `is_active()` can never reject the key, so a compromised legacy
 /// secret stays usable forever and the only way to retire it is to remove it
 /// from the environment and restart.
-fn parse_jwt_secret_entry(
-    entry: &str,
-    created_at: chrono::NaiveDateTime,
-) -> Option<JwtSecretKey> {
+fn parse_jwt_secret_entry(entry: &str, created_at: chrono::NaiveDateTime) -> Option<JwtSecretKey> {
     let mut parts = entry.trim().splitn(3, ':');
     let kid = parts.next()?.trim();
     let secret = parts.next()?.trim();
@@ -151,19 +148,21 @@ fn parse_jwt_secret_entry(
     }
 
     let expires_at = match parts.next() {
-        Some(value) if !value.trim().is_empty() => match chrono::DateTime::parse_from_rfc3339(value.trim()) {
-            Ok(parsed) => Some(parsed.naive_utc()),
-            Err(e) => {
-                tracing::warn!(
-                    event = "config.jwt_secret_expiry_unparseable",
-                    kid = %kid,
-                    value = %value.trim(),
-                    error = %e,
-                    "Ignoring unparseable JWT_SECRETS expiry - the key stays active. \
-                     Use RFC-3339, e.g. 2030-01-01T00:00:00Z."
-                );
-                None
-            },
+        Some(value) if !value.trim().is_empty() => {
+            match chrono::DateTime::parse_from_rfc3339(value.trim()) {
+                Ok(parsed) => Some(parsed.naive_utc()),
+                Err(e) => {
+                    tracing::warn!(
+                        event = "config.jwt_secret_expiry_unparseable",
+                        kid = %kid,
+                        value = %value.trim(),
+                        error = %e,
+                        "Ignoring unparseable JWT_SECRETS expiry - the key stays active. \
+                         Use RFC-3339, e.g. 2030-01-01T00:00:00Z."
+                    );
+                    None
+                },
+            }
         },
         _ => None,
     };
@@ -1265,7 +1264,10 @@ mod docker_secrets_tests {
             std::env::set_var("DOCKER_SECRETS_ENABLED", "yes");
         }
 
-        assert_eq!(secret_from_env_or_file(SECRET_NAME, "the-default"), "the-default");
+        assert_eq!(
+            secret_from_env_or_file(SECRET_NAME, "the-default"),
+            "the-default"
+        );
         assert!(required_secret(SECRET_NAME).is_err());
     }
 }
@@ -1298,7 +1300,15 @@ mod jwt_secret_entry_tests {
             created_at(),
         )
         .expect("entry must parse");
-        assert_eq!(entry.expires_at, Some(chrono::NaiveDate::from_ymd_opt(2030, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap()));
+        assert_eq!(
+            entry.expires_at,
+            Some(
+                chrono::NaiveDate::from_ymd_opt(2030, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .unwrap()
+            )
+        );
         assert!(entry.is_active(), "a key expiring in 2030 is still active");
     }
 
@@ -1320,11 +1330,8 @@ mod jwt_secret_entry_tests {
     fn an_unparseable_expiry_keeps_the_key_active_but_never_masks_an_error() {
         // A typo must not silently retire a key (that would log users out), but
         // it must not be treated as a valid date either.
-        let entry = parse_jwt_secret_entry(
-            "typo-key:typo-secret:01/01/2030",
-            created_at(),
-        )
-        .expect("entry must still parse");
+        let entry = parse_jwt_secret_entry("typo-key:typo-secret:01/01/2030", created_at())
+            .expect("entry must still parse");
         assert_eq!(entry.expires_at, None);
         assert!(entry.is_active());
     }

@@ -229,5 +229,4 @@ mod tests {
 
         assert_eq!(resp.status(), actix_web::http::StatusCode::OK);
     }
-
-    }
+}

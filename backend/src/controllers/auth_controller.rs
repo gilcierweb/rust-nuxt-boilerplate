@@ -3067,8 +3067,7 @@ mod login_timing_tests {
             .returning(|_, _, _| Ok(1));
         container.users = Arc::new(mock_users);
 
-        let wrong_password =
-            login_elapsed(container, "known@example.com", "NotThePassword1").await;
+        let wrong_password = login_elapsed(container, "known@example.com", "NotThePassword1").await;
 
         // An unregistered address: the lookup finds nothing and the dummy
         // Argon2 verification is what the timing is measured against.
@@ -3081,7 +3080,8 @@ mod login_timing_tests {
         mock_users.expect_count().times(1).returning(|| Ok(0));
         container.users = Arc::new(mock_users);
 
-        let unknown_account = login_elapsed(container, "nobody@example.com", "NotThePassword1").await;
+        let unknown_account =
+            login_elapsed(container, "nobody@example.com", "NotThePassword1").await;
 
         assert!(
             unknown_account >= wrong_password / 2,
