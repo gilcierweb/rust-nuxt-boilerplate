@@ -27,7 +27,7 @@
     "@vee-validate/valibot": "^4.15.1",
     "@vite-pwa/nuxt": "^1.1.1",
     "flyonui": "^2.4.1",
-    "nuxt": "^4.6.1",
+    "nuxt": "^4.6.2",
     "nuxt-security": "2.5.1",
     "pinia": "^4.0.2",
     "pinia-plugin-persistedstate": "^4.7.1",
