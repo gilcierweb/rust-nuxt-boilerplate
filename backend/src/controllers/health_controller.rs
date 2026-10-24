@@ -1,11 +1,12 @@
 use actix_web::http::StatusCode;
-use actix_web::{HttpResponse, get, web};
+use actix_web::{HttpRequest, HttpResponse, get, web};
 use chrono::Utc;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::AppState;
+use crate::utils::constant_time::constant_time_eq;
 
 #[derive(Serialize, ToSchema)]
 pub struct HealthDependencyStatus {
@@ -93,7 +94,7 @@ pub async fn liveness() -> HttpResponse {
     )
 )]
 #[get("/health")]
-pub async fn health_check(state: web::Data<AppState>) -> HttpResponse {
+pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpResponse {
     // --- DB probe with timing ---
     let db_probe_start = std::time::Instant::now();
     let db_result = async {
@@ -159,6 +160,19 @@ pub async fn health_check(state: web::Data<AppState>) -> HttpResponse {
         "degraded"
     };
 
+    // Dependency error strings describe internal infrastructure (host, pool,
+    // credentials) and this route is reachable without an API key, so they are
+    // only returned to callers that authenticate with a valid internal key.
+    // Everyone else gets the status and latency, which is what a probe needs.
+    let is_internal = request_has_valid_api_key(&req, &state.config.internal_api_keys);
+
+    let mut db_status = db_status;
+    let mut redis_status = redis_status;
+    if !is_internal {
+        db_status.error = None;
+        redis_status.error = None;
+    }
+
     let response = HealthResponse {
         status: overall_status,
         timestamp: Utc::now().to_rfc3339(),
@@ -174,6 +188,34 @@ pub async fn health_check(state: web::Data<AppState>) -> HttpResponse {
     };
 
     HttpResponse::build(status_code).json(response)
+}
+
+/// True when the request carries a valid internal API key.
+///
+/// Accepts the same two forms as `RequireApiKey` (`X-API-Key` and
+/// `Authorization: ApiKey <key>`) and compares in constant time. An empty key
+/// list is never a match — there is nothing to authenticate against.
+fn request_has_valid_api_key(req: &HttpRequest, expected_keys: &[String]) -> bool {
+    if expected_keys.is_empty() {
+        return false;
+    }
+
+    let provided = req
+        .headers()
+        .get("X-API-Key")
+        .and_then(|value| value.to_str().ok())
+        .map(str::to_owned)
+        .or_else(|| {
+            req.headers()
+                .get(actix_web::http::header::AUTHORIZATION)
+                .and_then(|value| value.to_str().ok())
+                .and_then(|value| value.strip_prefix("ApiKey "))
+                .map(str::to_owned)
+        });
+
+    provided
+        .as_deref()
+        .is_some_and(|provided| expected_keys.iter().any(|expected| constant_time_eq(expected, provided)))
 }
 
 /// Register health-check routes.
