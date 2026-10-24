@@ -2,6 +2,13 @@
 
 import tailwindcss from "@tailwindcss/vite";
 
+// nuxt.config.ts is loaded by jiti BEFORE Nuxt registers its aliases, so the
+// `~~` / `~` specifiers that work everywhere else in the project do not resolve
+// here. A relative path works in Node, Bun and in the Cloudflare build alike.
+import { contentSecurityPolicy } from "./shared/utils/csp";
+
+const isDev = process.env.NODE_ENV !== "production";
+
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
@@ -74,14 +81,11 @@ export default defineNuxtConfig({
 
 security: {
     headers: {
-      contentSecurityPolicy: {
-        "default-src": ["'self'"],
-        "img-src": ["'self'", "data:", "blob:"],
-        "font-src": ["'self'", "fonts.gstatic.com", "data:"],
-        "style-src": ["'self'", "'unsafe-inline'", "fonts.googleapis.com"],
-        "script-src": ["'self'", "'unsafe-inline'"],
-        "script-src-attr": ["'none'"],
-      },
+      // Assigning this key REPLACES the whole policy nuxt-security would
+      // otherwise build, so the full directive set (including the ones the
+      // default provides, such as base-uri and object-src) comes from the
+      // shared module and is covered by unit tests.
+      contentSecurityPolicy: contentSecurityPolicy(isDev),
     },
     // CSRF disabled at Nitro level for API proxy routes via routeRules above.
     // The Actix backend has its own HMAC-SHA256 CSRF protection (CsrfProtection
