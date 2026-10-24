@@ -153,6 +153,7 @@ jobs:
             --test csrf_protection_integration \
             --test health_integration \
             --test migration_rollback \
+            --test rate_limit_integration \
             -- --test-threads=4 --skip live_migration_rollback_cycle
         env:
           REDIS_URL: redis://localhost:6379
