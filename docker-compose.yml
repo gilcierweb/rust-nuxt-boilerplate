@@ -149,8 +149,9 @@ services:
       - resend_api_key
       - stripe_secret_key
       - stripe_webhook_secret
-    # `DOCKER_SECRETS_ENABLED=1` tells the app to prefer /run/secrets over env vars.
-    # Set this in production; leave unset in dev to keep env_file precedence.
+    # `DOCKER_SECRETS_ENABLED=1` makes the app prefer the mounted /run/secrets
+    # values over env vars, so a stale .env cannot shadow a rotated secret.
+    # Leave it unset in dev, where env_file is the source of truth.
     depends_on:
       postgres:
         condition: service_healthy

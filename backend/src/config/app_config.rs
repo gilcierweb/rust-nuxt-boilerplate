@@ -36,59 +36,47 @@ use base64::Engine as _;
 /// export JWT_SECRET_FILE=/run/secrets/jwt_secret
 /// ```
 fn secret_from_env_or_file(name: &str, default: &str) -> String {
+    if let Some(value) = secret_from_files(name) {
+        return value;
+    }
+
     if let Ok(value) = env::var(name)
         && !value.is_empty()
     {
         return value;
     }
 
-    // Second, check for file-based secret (Docker secrets pattern)
-    let file_var = format!("{}_FILE", name);
-    if let Ok(file_path) = env::var(&file_var) {
-        match fs::read_to_string(&file_path) {
-            Ok(content) => {
-                let trimmed = content.trim().to_string();
-                if !trimmed.is_empty() {
-                    tracing::debug!(secret = %name, "Loaded secret from file");
-                    return trimmed;
-                }
-            },
-            Err(e) => {
-                tracing::warn!(
-                    secret = %name,
-                    path = %file_path,
-                    error = %e,
-                    "Failed to read secret file, falling back to default"
-                );
-            },
-        }
-    }
-
-    // Third, auto-detect /run/secrets/<lowercase_name> (Docker Compose `secrets:`
-    // without explicit _FILE env var). This is consistent with the convention
-    // used in docker-compose.yml infra/secrets/.
-    let secret_path = format!("/run/secrets/{}", name.to_lowercase());
-    if let Ok(content) = fs::read_to_string(&secret_path) {
-        let trimmed = content.trim().to_string();
-        if !trimmed.is_empty() {
-            tracing::debug!(secret = %name, path = %secret_path, "Loaded secret from /run/secrets");
-            return trimmed;
-        }
-    }
-
     default.to_string()
 }
 
-/// Read a required secret from environment or file.
-/// Returns error if not found in either location.
-fn required_secret(name: &str) -> Result<String, env::VarError> {
-    if let Ok(value) = env::var(name)
-        && !value.is_empty()
-    {
-        return Ok(value);
+/// True when mounted secrets must take precedence over environment variables.
+///
+/// `docker-compose.yml` documents `DOCKER_SECRETS_ENABLED=1` for production.
+/// Without the flag a stale `.env` silently overrides a rotated `/run/secrets`
+/// value, which defeats the point of mounting the file at all.
+fn use_docker_secrets() -> bool {
+    matches!(
+        env::var("DOCKER_SECRETS_ENABLED")
+            .unwrap_or_default()
+            .trim()
+            .to_ascii_lowercase()
+            .as_str(),
+        "1" | "true" | "yes" | "on"
+    )
+}
+
+/// Read a secret from the file-based sources Docker/Kubernetes provide.
+///
+/// Sources, in priority order:
+/// 1. `<NAME>_FILE` env var pointing at the file
+/// 2. `/run/secrets/<lowercase_name>` (Compose `secrets:` mount convention)
+///
+/// Returns `None` when the flag is off or no file is readable.
+fn secret_from_files(name: &str) -> Option<String> {
+    if !use_docker_secrets() {
+        return None;
     }
 
-    // Check file-based secret
     let file_var = format!("{}_FILE", name);
     if let Ok(file_path) = env::var(&file_var) {
         match fs::read_to_string(&file_path) {
@@ -96,7 +84,7 @@ fn required_secret(name: &str) -> Result<String, env::VarError> {
                 let trimmed = content.trim().to_string();
                 if !trimmed.is_empty() {
                     tracing::debug!(secret = %name, "Loaded secret from file");
-                    return Ok(trimmed);
+                    return Some(trimmed);
                 }
             },
             Err(e) => {
@@ -110,18 +98,29 @@ fn required_secret(name: &str) -> Result<String, env::VarError> {
         }
     }
 
-    // Auto-detect /run/secrets/<lowercase_name> (Docker Compose `secrets:`
-    // without explicit _FILE env var).
     let secret_path = format!("/run/secrets/{}", name.to_lowercase());
     if let Ok(content) = fs::read_to_string(&secret_path) {
         let trimmed = content.trim().to_string();
         if !trimmed.is_empty() {
             tracing::debug!(secret = %name, path = %secret_path, "Loaded secret from /run/secrets");
-            return Ok(trimmed);
+            return Some(trimmed);
         }
     }
 
-    Err(env::VarError::NotPresent)
+    None
+}
+
+/// Read a required secret from environment or file.
+/// Returns error if not found in either location.
+fn required_secret(name: &str) -> Result<String, env::VarError> {
+    if let Some(value) = secret_from_files(name) {
+        return Ok(value);
+    }
+
+    match env::var(name) {
+        Ok(value) if !value.is_empty() => Ok(value),
+        _ => Err(env::VarError::NotPresent),
+    }
 }
 
 /// A single JWT signing secret with metadata for rotation support.
@@ -1111,5 +1110,123 @@ mod placeholder_tests {
                 e
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod docker_secrets_tests {
+    //! `DOCKER_SECRETS_ENABLED` precedence tests.
+    //!
+    //! docker-compose.yml documents the flag for production so that a stale
+    //! `.env` cannot silently override a rotated `/run/secrets` value.
+
+    use serial_test::serial;
+
+    use super::{required_secret, secret_from_env_or_file};
+
+    const SECRET_NAME: &str = "DOCKER_SECRETS_TEST_VALUE";
+    const FILE_VAR: &str = "DOCKER_SECRETS_TEST_VALUE_FILE";
+    const FILE_CONTENT: &str = "value-from-mounted-secret-file";
+    const ENV_CONTENT: &str = "value-from-environment";
+
+    /// Restores every env var the tests touch, so the shared process state does
+    /// not leak into other tests in the same binary.
+    struct EnvBackup {
+        secret: Option<String>,
+        file_var: Option<String>,
+        flag: Option<String>,
+    }
+
+    impl EnvBackup {
+        fn capture() -> Self {
+            unsafe {
+                Self {
+                    secret: std::env::var(SECRET_NAME).ok(),
+                    file_var: std::env::var(FILE_VAR).ok(),
+                    flag: std::env::var("DOCKER_SECRETS_ENABLED").ok(),
+                }
+            }
+        }
+    }
+
+    impl Drop for EnvBackup {
+        fn drop(&mut self) {
+            unsafe {
+                restore_env(SECRET_NAME, &self.secret);
+                restore_env(FILE_VAR, &self.file_var);
+                restore_env("DOCKER_SECRETS_ENABLED", &self.flag);
+            }
+        }
+    }
+
+    unsafe fn restore_env(key: &str, value: &Option<String>) {
+        match value {
+            Some(value) => unsafe { std::env::set_var(key, value) },
+            None => unsafe { std::env::remove_var(key) },
+        }
+    }
+
+    /// Writes the secret content to a temp file and returns its path.
+    fn write_secret_file() -> tempfile::TempPath {
+        let file = tempfile::NamedTempFile::new().expect("temp file");
+        std::fs::write(file.path(), FILE_CONTENT).expect("write secret file");
+        file.into_temp_path()
+    }
+
+    #[test]
+    #[serial]
+    fn docker_secrets_enabled_prefers_the_mounted_file() {
+        let _backup = EnvBackup::capture();
+        let path = write_secret_file();
+        unsafe {
+            std::env::set_var(SECRET_NAME, ENV_CONTENT);
+            std::env::set_var(FILE_VAR, path.to_str().unwrap());
+            std::env::set_var("DOCKER_SECRETS_ENABLED", "1");
+        }
+
+        assert_eq!(secret_from_env_or_file(SECRET_NAME, "unused"), FILE_CONTENT);
+        assert_eq!(required_secret(SECRET_NAME).unwrap(), FILE_CONTENT);
+    }
+
+    #[test]
+    #[serial]
+    fn without_the_flag_the_environment_variable_still_wins() {
+        let _backup = EnvBackup::capture();
+        let path = write_secret_file();
+        unsafe {
+            std::env::set_var(SECRET_NAME, ENV_CONTENT);
+            std::env::set_var(FILE_VAR, path.to_str().unwrap());
+            std::env::remove_var("DOCKER_SECRETS_ENABLED");
+        }
+
+        assert_eq!(secret_from_env_or_file(SECRET_NAME, "unused"), ENV_CONTENT);
+        assert_eq!(required_secret(SECRET_NAME).unwrap(), ENV_CONTENT);
+    }
+
+    #[test]
+    #[serial]
+    fn the_flag_falls_back_to_the_environment_when_no_file_exists() {
+        let _backup = EnvBackup::capture();
+        unsafe {
+            std::env::set_var(SECRET_NAME, ENV_CONTENT);
+            std::env::remove_var(FILE_VAR);
+            std::env::set_var("DOCKER_SECRETS_ENABLED", "true");
+        }
+
+        assert_eq!(secret_from_env_or_file(SECRET_NAME, "unused"), ENV_CONTENT);
+    }
+
+    #[test]
+    #[serial]
+    fn the_flag_falls_back_to_the_default_when_nothing_is_configured() {
+        let _backup = EnvBackup::capture();
+        unsafe {
+            std::env::remove_var(SECRET_NAME);
+            std::env::remove_var(FILE_VAR);
+            std::env::set_var("DOCKER_SECRETS_ENABLED", "yes");
+        }
+
+        assert_eq!(secret_from_env_or_file(SECRET_NAME, "the-default"), "the-default");
+        assert!(required_secret(SECRET_NAME).is_err());
     }
 }
