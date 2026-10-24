@@ -9,6 +9,19 @@
 # See SECURITY_AUDIT.md I1.
 
 services:
+  # -- Backend / Frontend
+  # Development convenience: talk to the API and the SPA directly. In production
+  # do NOT load this override (the base file publishes no host ports) — nginx on
+  # 80/443 is the only ingress, which is what makes TLS, HSTS and the edge rate
+  # limits apply to the API. Exposing the backend directly bypasses all three.
+  backend:
+    ports:
+      - "8080:8080"
+
+  frontend:
+    ports:
+      - "3000:3000"
+
   # -- PostgreSQL
   # Map container port 5432 to host port 5432 for dev tooling (psql, DBeaver).
   postgres:
