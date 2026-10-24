@@ -54,7 +54,17 @@ derive_more = { version = "2.0", features = ["display", "error"] }
 diesel = { version = "2.3.11", features = ["postgres", "r2d2", "chrono", "uuid", "ipnet-address", "numeric", "64-column-tables", "serde_json"] }
 diesel-async = { version = "0.9.2", features = ["postgres", "deadpool"] }
 
-jsonwebtoken = { version = "10.4.0", features = ["rust_crypto"] }
+# 11.x: none of the 11.0 breaking changes touch this app's usage (`Algorithm` is
+# only constructed, `Header`/`EncodingKey`/`DecodingKey` internals are never
+# accessed, `insecure_disable_signature_validation` is not used).
+#
+# The crypto backend is `aws_lc_rs`, not `rust_crypto`: the latter drags in
+# p256/p384/primeorder/elliptic-curve/crypto-bigint (RUSTSEC-2026-0387,
+# RUSTSEC-2026-0385) purely to offer ES256/ES384/RS256, none of which this app
+# issues or accepts (HS256 only, pinned in `middleware::auth::verify_token_for_use`).
+# aws-lc-rs is already in the graph through lettre, so this adds no new native
+# dependency.
+jsonwebtoken = { version = "11.1.0", default-features = false, features = ["aws_lc_rs"] }
 rand = "0.8"
 rand_core = "0.6"
 redis              = { version = "1.2.0", features = ["tokio-comp", "connection-manager"] }
@@ -93,15 +103,19 @@ totp-rs = { version = "5", features = ["qr", "zeroize", "gen_secret"] }
 actix-governor = "0.10.0"
 governor = "0.10.4"
 
-utoipa = { version = "5.4.0", features = ["actix_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "9.0.2", features = ["actix-web"] }
+utoipa = { version = "6.0.0", features = ["actix_extras", "chrono", "uuid"] }
+# 10.x builds against zip 9, closing RUSTSEC-2026-0367/0368/0369
+# (symlink, SUID/SGID and permission escapes in `ZipArchive::extract`),
+# all three of which fire on the 9.x build-time dependency.
+utoipa-swagger-ui = { version = "10.0.2", features = ["actix-web"] }
 urlencoding = "2.1"
 unicode-normalization = "0.1.25"
 bigdecimal = { version = "0.4.10", features = ["serde"] }
 rust_decimal = { version = "1.38", features = ["serde"] }
 
 # RUSTSEC-2021-0157/0158 (XSS via SVG animate tags, CSS url("") escaping) fixed in >=4.2.3
-ammonia = "4.2.3"
+# RUSTSEC-2026-0373 (CSS url() bypass via case variations) fixed in >=4.2.4
+ammonia = "4.2.4"
 actix-multipart = "0.7"
 infer = "0.19"
 mime = "0.3"
@@ -119,7 +133,7 @@ lettre = { version = "0.11", default-features = false, features = ["builder", "h
 tempfile = "3.10"
 # -- Synchronization primitives for test capture and concurrent helpers
 parking_lot = "0.12"
-utoipa-scalar = { version = "0.3.0", features = ["actix-web"] }
+utoipa-scalar = { version = "0.4.0", features = ["actix-web"] }
 
 [dev-dependencies]
 actix-rt = "2.9"
