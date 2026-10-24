@@ -2,7 +2,6 @@
 
 use std::sync::Arc;
 
-use actix_cors::Cors;
 use actix_web::{
     App, HttpResponse, HttpServer,
     middleware::{NormalizePath, TrailingSlash},
@@ -269,61 +268,6 @@ fn start_background_tasks(
     });
 }
 
-/// Parse CORS origins from config (validation done in AppConfig::validate()).
-fn parse_cors_origins(config: &AppConfig) -> Vec<String> {
-    let cors_origins: Vec<String> = config
-        .frontend_url
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
-
-    if cors_origins.is_empty() {
-        tracing::warn!(
-            event = "security.cors_no_valid_origins",
-            "No valid CORS origins configured. CORS will deny all cross-origin requests."
-        );
-    } else {
-        tracing::info!(
-            event = "security.cors_configured",
-            origins = ?cors_origins,
-            "CORS origins configured"
-        );
-    }
-
-    cors_origins
-}
-
-fn build_cors(cors_origins: &[String]) -> Cors {
-    let mut cors = Cors::default()
-        .allowed_methods(vec!["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
-        .allowed_headers(vec![
-            actix_web::http::header::AUTHORIZATION,
-            actix_web::http::header::CONTENT_TYPE,
-            actix_web::http::header::ACCEPT,
-            actix_web::http::header::ACCESS_CONTROL_REQUEST_HEADERS,
-            // The SPA submits the CSRF double-submit header on refresh/logout,
-            // and the proxy propagates the Nitro request-id for correlation.
-            // Without them a cross-origin deployment fails its preflight.
-            actix_web::http::header::HeaderName::from_static("csrf-token"),
-            actix_web::http::header::HeaderName::from_static("x-request-id"),
-        ])
-        .allowed_header("x-api-key")
-        .supports_credentials()
-        .max_age(3600);
-
-    for origin in cors_origins {
-        cors = cors.allowed_origin(origin);
-    }
-
-    cors
-}
-
-// TLS termination is handled at reverse proxy (nginx/traefik).
-// actix-web http2 (h2 0.3.27, RUSTSEC-2026-0258) is disabled in Cargo.toml
-// to eliminate vulnerable h2 0.3 from Cargo.lock. See Cargo.toml actix-web
-// comment. Plain HTTP bind is used; configure TLS at proxy.
-/// Bootstrap and run the HTTP API server until shutdown.
 pub async fn run() -> std::io::Result<()> {
     let boot_start = std::time::Instant::now();
 
@@ -343,7 +287,7 @@ pub async fn run() -> std::io::Result<()> {
     let runtime = build_runtime(&config, boot_start, otel_provider).await;
     start_background_tasks(&runtime.state, &runtime.container);
 
-    let cors_origins = parse_cors_origins(&config);
+    let cors_origins = crate::middleware::cors::parse_cors_origins(&config);
     let json_limit = config.json_payload_limit;
     let form_limit = config.form_payload_limit;
 
@@ -365,7 +309,7 @@ pub async fn run() -> std::io::Result<()> {
                     }),
             )
             .app_data(web::PayloadConfig::new(form_limit))
-            .wrap(build_cors(&cors_origins))
+            .wrap(crate::middleware::cors::build_cors(&cors_origins))
             .wrap(actix_web::middleware::Compress::default())
             .wrap(NormalizePath::new(TrailingSlash::MergeOnly))
             .wrap(crate::middleware::security_headers::SecurityHeaders)
@@ -402,54 +346,4 @@ pub async fn run() -> std::io::Result<()> {
 
     // OpenTelemetry provider shutdown is handled automatically on process exit
     result
-}
-
-#[cfg(test)]
-mod tests {
-    use actix_web::http::{Method, StatusCode};
-    use actix_web::{App, HttpResponse, web};
-
-    use super::build_cors;
-
-    #[actix_web::test]
-    async fn preflight_allows_csrf_and_request_id_headers() {
-        // The SPA sends the CSRF double-submit header on refresh/logout. A
-        // cross-origin deployment whose preflight does not echo it cannot
-        // authenticate at all.
-        let app = actix_web::test::init_service(
-            App::new()
-                .wrap(build_cors(&["https://app.example.com".to_string()]))
-                .route(
-                    "/api/v1/auth/refresh",
-                    web::route().to(|| async { HttpResponse::Ok().finish() }),
-                ),
-        )
-        .await;
-
-        let req = actix_web::test::TestRequest::with_uri("/api/v1/auth/refresh")
-            .method(Method::OPTIONS)
-            .insert_header(("origin", "https://app.example.com"))
-            .insert_header(("access-control-request-method", "POST"))
-            .insert_header((
-                "access-control-request-headers",
-                "authorization,content-type,csrf-token,x-request-id",
-            ))
-            .to_request();
-
-        let response = actix_web::test::call_service(&app, req).await;
-        assert_eq!(response.status(), StatusCode::OK);
-
-        let allowed = response
-            .headers()
-            .get("access-control-allow-headers")
-            .expect("CORS must answer the preflight")
-            .to_str()
-            .unwrap();
-        assert!(allowed.contains("csrf-token"), "got: {allowed}");
-        assert!(allowed.contains("x-request-id"), "got: {allowed}");
-        assert!(
-            allowed.contains("authorization"),
-            "existing headers must keep working, got: {allowed}"
-        );
-    }
 }

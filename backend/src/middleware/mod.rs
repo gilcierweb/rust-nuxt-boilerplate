@@ -2,6 +2,7 @@ pub mod api_key_middleware;
 pub mod api_version;
 pub mod auth;
 pub mod auth_middleware;
+pub mod cors;
 pub mod csrf_protection;
 pub mod locale;
 pub mod metrics_middleware;
