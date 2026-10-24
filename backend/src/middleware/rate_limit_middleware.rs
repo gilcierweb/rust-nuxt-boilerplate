@@ -8,6 +8,7 @@ use std::time::{Duration, Instant};
 use actix_web::body::BoxBody;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
 use actix_web::http::Method;
+use actix_web::http::header::{HeaderMap, HeaderName, HeaderValue};
 use actix_web::{Error, HttpMessage, HttpResponse, web};
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
@@ -209,20 +210,18 @@ impl Default for RedisCircuitBreaker {
 /// (INCR, EXPIRE on first request only). Trades sliding-window precision
 /// for significantly lower latency under load.
 ///
-/// Returns: 1 if allowed, 0 if rate limited
+/// Returns the counter after this request together with the TTL of the window,
+/// so the caller can enforce the limit and answer the quota headers without a
+/// second round trip.
 const RATE_LIMIT_LUA_SCRIPT: &str = r#"
 local key = KEYS[1]
-local limit = tonumber(ARGV[1])
-local window = tonumber(ARGV[2])
+local window = tonumber(ARGV[1])
 
 local current = redis.call('INCR', key)
 if current == 1 then
     redis.call('EXPIRE', key, window)
 end
-if current > limit then
-    return 0
-end
-return 1
+return {current, redis.call('TTL', key)}
 "#;
 
 pub struct RateLimiter {
@@ -453,39 +452,53 @@ where
 
             // Attempt rate limiting with Redis.
             // On failure, circuit breaker decides whether to fail closed or open.
-            let allowed = async {
+            let quota = async {
                 let mut conn = redis.get().await.ok()?;
 
-                // Use fixed-window Lua script (2 Redis ops vs 5 for sliding window)
-                let result: u64 = redis::cmd("EVAL")
+                // Use fixed-window Lua script (2 Redis ops vs 5 for sliding
+                // window). Counter and window TTL arrive in one response,
+                // which is everything the quota headers need.
+                let (used, ttl): (u64, i64) = redis::cmd("EVAL")
                     .arg(RATE_LIMIT_LUA_SCRIPT)
                     .arg(1) // number of keys
                     .arg(&key)
-                    .arg(effective_limit.max_requests)
                     .arg(effective_limit.window_secs)
                     .query_async(&mut conn)
                     .await
                     .ok()?;
 
-                Some(result == 1)
+                Some(QuotaOutcome {
+                    allowed: used <= effective_limit.max_requests,
+                    remaining: effective_limit.max_requests.saturating_sub(used),
+                    // A negative TTL means the key lost its expiry, so the
+                    // full window is the honest answer.
+                    reset_secs: u64::try_from(ttl).unwrap_or(effective_limit.window_secs),
+                })
             }
             .await;
 
-            match allowed {
-                Some(true) => {
-                    // Success — close circuit if it was half-open
+            let allowed_quota = match quota {
+                Some(outcome) if outcome.allowed => {
+                    // Success - close circuit if it was half-open
                     circuit_breaker.record_success();
-                    // Allowed - continue to handler
+                    Some(outcome)
                 },
-                Some(false) => {
-                    // Rate limited — also counts as success (Redis is healthy)
+                Some(outcome) => {
+                    // Rate limited - also counts as success (Redis is healthy)
                     circuit_breaker.record_success();
-                    let response = HttpResponse::TooManyRequests()
+                    tracing::debug!(
+                        event = "rate_limit.throttled",
+                        key = %key,
+                        remaining = outcome.remaining,
+                        reset_secs = outcome.reset_secs,
+                        "Request rejected by the rate limiter"
+                    );
+                    let mut response = HttpResponse::TooManyRequests();
+                    for (name, value) in quota_headers(&effective_limit, &outcome) {
+                        response.insert_header((name, value));
+                    }
+                    let response = response
                         .insert_header(("Retry-After", effective_limit.window_secs.to_string()))
-                        .insert_header((
-                            "X-RateLimit-Limit",
-                            effective_limit.max_requests.to_string(),
-                        ))
                         .json(json!({
                             "error": {
                                 "code": "RATE_LIMITED",
@@ -532,11 +545,58 @@ where
                     );
                     return Ok(service_unavailable_response(req));
                 },
-            }
+            };
 
-            let res = svc.call(req).await?;
+            let mut res = svc.call(req).await?;
+            if let Some(outcome) = allowed_quota {
+                insert_quota_headers(res.headers_mut(), &effective_limit, &outcome);
+            }
             Ok(res.map_into_boxed_body())
         })
+    }
+}
+
+/// Quota outcome of a request that Redis could evaluate.
+///
+/// Carries the numbers the quota headers need, so an allowed request and a
+/// throttled one answer with the same information.
+#[derive(Debug)]
+struct QuotaOutcome {
+    /// Whether the request may proceed to the handler.
+    allowed: bool,
+    /// Requests left in the current window, zero once the bucket is full.
+    remaining: u64,
+    /// Seconds left before the current window resets.
+    reset_secs: u64,
+}
+
+/// Quota header names, lowercase because `HeaderName::from_static` requires
+/// it and HTTP treats the names case-insensitively on the wire.
+const QUOTA_HEADER_LIMIT: &str = "x-ratelimit-limit";
+const QUOTA_HEADER_REMAINING: &str = "x-ratelimit-remaining";
+const QUOTA_HEADER_RESET: &str = "x-ratelimit-reset";
+
+/// Quota header values for an outcome, ready to be inserted either on a
+/// response builder or on an already built response.
+fn quota_headers(limit: &RateLimit, outcome: &QuotaOutcome) -> [(&'static str, String); 3] {
+    [
+        (QUOTA_HEADER_LIMIT, limit.max_requests.to_string()),
+        (QUOTA_HEADER_REMAINING, outcome.remaining.to_string()),
+        (QUOTA_HEADER_RESET, outcome.reset_secs.to_string()),
+    ]
+}
+
+/// Insert the quota headers into an already built response.
+///
+/// The allowed path cannot set them on a builder, since the response is
+/// produced by the handler.
+fn insert_quota_headers(headers: &mut HeaderMap, limit: &RateLimit, outcome: &QuotaOutcome) {
+    for (name, value) in quota_headers(limit, outcome) {
+        // Values are digits, so conversion cannot fail. Skip rather than
+        // panic on a request path.
+        if let Ok(value) = HeaderValue::from_str(&value) {
+            headers.insert(HeaderName::from_static(name), value);
+        }
     }
 }
 
