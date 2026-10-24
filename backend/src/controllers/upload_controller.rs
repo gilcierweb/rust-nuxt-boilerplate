@@ -9,6 +9,7 @@ use utoipa::ToSchema;
 
 use crate::config::AppConfig;
 use crate::errors::{AppError, AppResult};
+use crate::repositories::AppContainer;
 use crate::middleware::auth::AuthUser;
 use crate::utils::file_validation::{
     FileCategory, FileLimits, FileValidationError, ValidatedFile, validate_upload,
@@ -94,9 +95,9 @@ fn file_validation_error_to_app(err: FileValidationError) -> AppError {
 pub async fn upload_file(
     _user: AuthUser,
     mut payload: Multipart,
-    config: web::Data<AppConfig>,
+    container: web::Data<AppContainer>,
 ) -> AppResult<HttpResponse> {
-    let limits = limits_from_config(&config);
+    let limits = limits_from_config(container.config.as_ref());
 
     while let Some(item) = payload.next().await {
         let mut field = item.map_err(|e| AppError::BadRequest(e.to_string()))?;
@@ -181,7 +182,55 @@ pub fn test_config(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use actix_web::HttpMessage;
+    use actix_web::http::StatusCode;
+    use actix_web::{App, web};
+
     use super::*;
+    use crate::middleware::auth::Claims;
+
+    fn test_claims() -> Claims {
+        Claims {
+            sub: uuid::Uuid::new_v4(),
+            profile_id: uuid::Uuid::new_v4(),
+            role: 0,
+            token_use: "access".to_string(),
+            exp: 0,
+            iat: 0,
+            nbf: 0,
+            jti: None,
+        }
+    }
+
+    #[actix_web::test]
+    async fn upload_resolves_limits_from_the_container() {
+        // Regression: the handler used to extract `Data<AppConfig>`, which is
+        // never registered in production (only `Data<AppState>` and
+        // `Data<AppContainer>` are), so every upload answered 500.
+        let mut container = crate::repositories::mocks::mock_container();
+        let mut config = (*container.config).clone();
+        config.max_photo_size_bytes = 1024;
+        container.config = Arc::new(config);
+
+        let app = actix_web::test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .configure(crate::controllers::upload_controller::test_config),
+        )
+        .await;
+
+        // No `file` field in the multipart body: the handler must reach the
+        // "no file field" branch (400), not fail extracting its dependencies.
+        let req = actix_web::test::TestRequest::post()
+            .uri("/admin/upload")
+            .to_request();
+        req.extensions_mut().insert(test_claims());
+
+        let response = actix_web::test::call_service(&app, req).await;
+        assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+    }
 
     fn test_app_config() -> AppConfig {
         use crate::config::app_config::Environment;
