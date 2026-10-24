@@ -299,6 +299,25 @@ impl<S> RateLimiterMiddleware<S> {
         }
     }
 
+    /// Redis bucket key owner for a request.
+    ///
+    /// Authenticated traffic is throttled per profile so a shared NAT cannot
+    /// exhaust the budget of other users. Anonymous traffic falls back to the
+    /// **real client IP** — the one `extract_client_ip` derives from the peer
+    /// address (or `X-Forwarded-For` / `Forwarded` when the peer is a trusted
+    /// proxy). Using the raw `peer_addr()` instead keyed every anonymous
+    /// request behind a reverse proxy onto the proxy's own IP, collapsing the
+    /// per-client limit into one shared bucket.
+    fn rate_limit_client_key(client_ip: Option<std::net::IpAddr>, claims: Option<&Claims>) -> String {
+        match claims {
+            Some(claims) => format!("user:{}", claims.profile_id),
+            None => match client_ip {
+                Some(ip) => ip.to_string(),
+                None => "unknown".to_string(),
+            },
+        }
+    }
+
     fn pick_effective_limit(
         base_limit: &RateLimit,
         method: &Method,
@@ -362,18 +381,26 @@ where
             })
             .unwrap_or(true); // Default to enabled for safety
 
-        // Try to extract user_id from JWT claims (set by JwtAuth middleware)
-        // If authenticated, use user_id for rate limiting; otherwise fall back to IP
+        // Trusted proxy list decides whether `X-Forwarded-For` / `Forwarded`
+        // headers may override the peer address. Without it every request
+        // behind a reverse proxy is throttled as if it came from the proxy.
+        let trusted_proxies = req
+            .app_data::<web::Data<AppContainer>>()
+            .map(|container| container.config.trusted_proxies.clone())
+            .or_else(|| {
+                req.app_data::<web::Data<AppState>>()
+                    .map(|state| state.config.trusted_proxies.clone())
+            })
+            .unwrap_or_default();
+
+        // Try to extract user_id from JWT claims (set by JwtAuth middleware).
+        // If authenticated, use user_id for rate limiting; otherwise fall back
+        // to the real client IP.
         let is_authenticated = req.extensions().get::<Claims>().is_some();
-        let client_key = req
-            .extensions()
-            .get::<Claims>()
-            .map(|claims| format!("user:{}", claims.profile_id))
-            .unwrap_or_else(|| {
-                req.peer_addr()
-                    .map(|addr| addr.ip().to_string())
-                    .unwrap_or_else(|| "unknown".to_string())
-            });
+        let client_key = Self::rate_limit_client_key(
+            crate::utils::ip::extract_client_ip(req.request(), &trusted_proxies),
+            req.extensions().get::<Claims>(),
+        );
 
         Box::pin(async move {
             if !rate_limit_enabled {
@@ -520,9 +547,76 @@ fn service_unavailable_response(req: ServiceRequest) -> ServiceResponse<BoxBody>
 
 #[cfg(test)]
 mod tests {
+    use std::net::IpAddr;
+
     use actix_web::http::Method;
+    use uuid::Uuid;
 
     use super::*;
+
+    #[test]
+    fn rate_limit_key_uses_authenticated_profile_id() {
+        let claims = Claims {
+            sub: Uuid::new_v4(),
+            profile_id: Uuid::new_v4(),
+            role: 0,
+            token_use: "access".to_string(),
+            exp: 0,
+            iat: 0,
+            nbf: 0,
+            jti: None,
+        };
+
+        assert_eq!(
+            RateLimiterMiddleware::<()>::rate_limit_client_key(None, Some(&claims)),
+            format!("user:{}", claims.profile_id),
+            "an authenticated request must never share a bucket with anonymous traffic"
+        );
+    }
+
+    #[test]
+    fn rate_limit_key_falls_back_to_client_ip() {
+        let ip: IpAddr = "203.0.113.9".parse().unwrap();
+        assert_eq!(
+            RateLimiterMiddleware::<()>::rate_limit_client_key(Some(ip), None),
+            "203.0.113.9"
+        );
+        assert_eq!(
+            RateLimiterMiddleware::<()>::rate_limit_client_key(None, None),
+            "unknown"
+        );
+    }
+
+    #[actix_web::test]
+    async fn rate_limit_reads_client_ip_from_trusted_proxy_header() {
+        // The limiter used to read `peer_addr()` directly, so every anonymous
+        // request behind nginx shared the proxy's IP in one Redis bucket.
+        let trusted = vec!["10.0.0.0/8".parse::<ipnet::IpNet>().unwrap()];
+        let untrusted: Vec<ipnet::IpNet> = Vec::new();
+
+        let behind_proxy = actix_web::test::TestRequest::get()
+            .uri("/api/v1/users")
+            .peer_addr("10.1.2.3:5000".parse().unwrap())
+            .insert_header(("x-forwarded-for", "203.0.113.9, 10.1.2.3"))
+            .to_request();
+        let http_req = actix_web::test::TestRequest::get()
+            .uri("/api/v1/users")
+            .peer_addr("10.1.2.3:5000".parse().unwrap())
+            .insert_header(("x-forwarded-for", "203.0.113.9, 10.1.2.3"))
+            .to_http_request();
+
+        assert_eq!(
+            crate::utils::ip::extract_client_ip(&http_req, &trusted),
+            Some("203.0.113.9".parse().unwrap()),
+            "a trusted proxy must contribute the real client IP"
+        );
+        assert_eq!(
+            crate::utils::ip::extract_client_ip(&http_req, &untrusted),
+            Some("10.1.2.3".parse::<IpAddr>().unwrap()),
+            "an untrusted peer's forwarded header must be ignored"
+        );
+        let _ = behind_proxy;
+    }
 
     #[test]
     fn anonymous_gets_base_api_limit() {
