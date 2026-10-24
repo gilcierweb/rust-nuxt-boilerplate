@@ -161,7 +161,10 @@ jobs:
   backend-integration-tests:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # Compiles the test binaries, runs a migration rollback cycle, migrates and
+    # seeds, then the auth cycle. On a cold cache this is close to 8 minutes,
+    # which is what cancelled the run before.
+    timeout-minutes: 15
     needs: [backend-build-debug]
     defaults:
       run:
@@ -228,6 +231,11 @@ jobs:
           rm -rf "$TMPDIR"
           diesel --version
 
+      - name: Compile test binaries once
+        # The lib is built in the test profile a single time here. Running the
+        # binaries afterwards reuses it, instead of recompiling it per step.
+        run: cargo test --no-run
+
       - name: Run migration rollback test (clean DB)
         run: cargo test --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
         env:
@@ -240,16 +248,11 @@ jobs:
       - name: Run diesel migrations
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
 
-      - name: Run database seed
-        run: cargo run --bin seed
+      - name: Run integration tests (sequential, with DB)
+        run: cargo test --test auth_integration -- --test-threads=1
         env:
-          DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'ci-test-jwt-secret-32-chars-long!!' }}
-          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY || 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtMzItYnl0ZXMtbG9uZw==' }}
-          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY || 'dGVzdC1ibGluZC1pbmRleC1rZXktMzItYnl0ZXMtbG9uZw==' }}
-          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY || 'ci-test-csrf-secret-32-chars-long!' }}
-          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT || 'ci-test-refresh-salt-32-chars-long!' }}
 
       - name: Run integration tests (sequential, with DB)
         run: cargo test --test auth_integration -- --test-threads=1
