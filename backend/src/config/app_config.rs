@@ -132,6 +132,50 @@ pub struct JwtSecretKey {
     pub expires_at: Option<chrono::NaiveDateTime>,
 }
 
+/// Parse one entry of `JWT_SECRETS`.
+///
+/// Format: `kid:secret` or `kid:secret:expires_at`, where `expires_at` is an
+/// RFC-3339 timestamp. The expiry is what makes a rotated key *retirable*:
+/// without it `is_active()` can never reject the key, so a compromised legacy
+/// secret stays usable forever and the only way to retire it is to remove it
+/// from the environment and restart.
+fn parse_jwt_secret_entry(
+    entry: &str,
+    created_at: chrono::NaiveDateTime,
+) -> Option<JwtSecretKey> {
+    let mut parts = entry.trim().splitn(3, ':');
+    let kid = parts.next()?.trim();
+    let secret = parts.next()?.trim();
+    if kid.is_empty() || secret.is_empty() {
+        return None;
+    }
+
+    let expires_at = match parts.next() {
+        Some(value) if !value.trim().is_empty() => match chrono::DateTime::parse_from_rfc3339(value.trim()) {
+            Ok(parsed) => Some(parsed.naive_utc()),
+            Err(e) => {
+                tracing::warn!(
+                    event = "config.jwt_secret_expiry_unparseable",
+                    kid = %kid,
+                    value = %value.trim(),
+                    error = %e,
+                    "Ignoring unparseable JWT_SECRETS expiry — the key stays active. \
+                     Use RFC-3339, e.g. 2030-01-01T00:00:00Z."
+                );
+                None
+            },
+        },
+        _ => None,
+    };
+
+    Some(JwtSecretKey {
+        kid: kid.to_string(),
+        secret: secret.to_string(),
+        created_at,
+        expires_at,
+    })
+}
+
 impl JwtSecretKey {
     pub fn is_active(&self) -> bool {
         let now = chrono::Utc::now().naive_utc();
@@ -409,18 +453,15 @@ impl AppConfig {
                     expires_at: None,
                 }];
 
-                // Support additional rotation secrets via JWT_SECRETS=old_kid:old_secret,prev_kid:prev_secret
+                // Support additional rotation secrets via
+                // JWT_SECRETS=old_kid:old_secret,prev_kid:prev_secret[:expires_at]
                 if let Ok(extra) = env::var("JWT_SECRETS") {
-                    for entry in extra.split(',').filter(|s| !s.trim().is_empty()) {
-                        if let Some((kid, secret)) = entry.trim().split_once(':') {
-                            secrets.push(JwtSecretKey {
-                                kid: kid.to_string(),
-                                secret: secret.to_string(),
-                                created_at: now,
-                                expires_at: None,
-                            });
-                        }
-                    }
+                    secrets.extend(
+                        extra
+                            .split(',')
+                            .filter(|entry| !entry.trim().is_empty())
+                            .filter_map(|entry| parse_jwt_secret_entry(entry, now)),
+                    );
                 }
 
                 secrets
@@ -1228,5 +1269,72 @@ mod docker_secrets_tests {
 
         assert_eq!(secret_from_env_or_file(SECRET_NAME, "the-default"), "the-default");
         assert!(required_secret(SECRET_NAME).is_err());
+    }
+}
+
+#[cfg(test)]
+mod jwt_secret_entry_tests {
+    use super::*;
+
+    fn created_at() -> chrono::NaiveDateTime {
+        chrono::NaiveDate::from_ymd_opt(2026, 1, 1)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+    }
+
+    #[test]
+    fn parses_kid_and_secret_without_expiry() {
+        let entry = parse_jwt_secret_entry("legacy-key:legacy-secret-value", created_at())
+            .expect("entry must parse");
+        assert_eq!(entry.kid, "legacy-key");
+        assert_eq!(entry.secret, "legacy-secret-value");
+        assert_eq!(entry.expires_at, None);
+        assert!(entry.is_active());
+    }
+
+    #[test]
+    fn parses_an_expiry_so_a_key_can_be_retired() {
+        let entry = parse_jwt_secret_entry(
+            "old-key:old-secret-value:2030-01-01T00:00:00Z",
+            created_at(),
+        )
+        .expect("entry must parse");
+        assert_eq!(entry.expires_at, Some(chrono::NaiveDate::from_ymd_opt(2030, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap()));
+        assert!(entry.is_active(), "a key expiring in 2030 is still active");
+    }
+
+    #[test]
+    fn rejects_an_expired_key() {
+        let entry = parse_jwt_secret_entry(
+            "retired-key:retired-secret:2020-01-01T00:00:00Z",
+            created_at(),
+        )
+        .expect("entry must parse");
+
+        assert!(
+            !entry.is_active(),
+            "an expired rotation key must no longer sign or verify tokens"
+        );
+    }
+
+    #[test]
+    fn an_unparseable_expiry_keeps_the_key_active_but_never_masks_an_error() {
+        // A typo must not silently retire a key (that would log users out), but
+        // it must not be treated as a valid date either.
+        let entry = parse_jwt_secret_entry(
+            "typo-key:typo-secret:01/01/2030",
+            created_at(),
+        )
+        .expect("entry must still parse");
+        assert_eq!(entry.expires_at, None);
+        assert!(entry.is_active());
+    }
+
+    #[test]
+    fn ignores_malformed_entries() {
+        assert!(parse_jwt_secret_entry("", created_at()).is_none());
+        assert!(parse_jwt_secret_entry(":secret", created_at()).is_none());
+        assert!(parse_jwt_secret_entry("kid:", created_at()).is_none());
     }
 }
