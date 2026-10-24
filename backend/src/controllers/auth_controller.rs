@@ -23,7 +23,8 @@ use crate::repositories::container::AppContainer;
 use crate::repositories::traits::users_trait::IUserRepositoryTransaction;
 use crate::security::SecurityService;
 use crate::services::auth_service::{
-    hash_password, needs_rehash, rehash_password, validate_password_strength, verify_password,
+    dummy_password_hash, hash_password, needs_rehash, rehash_password, validate_password_strength,
+    verify_password,
 };
 use crate::services::token_service::hash_token;
 use crate::utils::ip::extract_client_ip;
@@ -418,6 +419,14 @@ pub async fn login(
                 user_agent = user_agent.as_deref().unwrap_or("unknown"),
                 "login failed: user not found"
             );
+
+            // Burn the same Argon2id work the known-account path performs, so a
+            // faster response cannot be used to enumerate registered addresses.
+            let _ = verify_password(
+                &body.password,
+                &dummy_password_hash(container.config.as_ref()),
+            );
+
             return Err(AppError::Unauthorized(t!("auth.login.failed").into_owned()));
         },
         Err(e) => return Err(AppError::Database(e)),
@@ -2256,7 +2265,7 @@ mod tests {
     use crate::repositories::users_repository::MockIUserRepository;
     use crate::security::SecurityService;
 
-    fn test_user(email: &str) -> User {
+    pub(super) fn test_user(email: &str) -> User {
         let security = SecurityService::from_config(&mock_app_config()).unwrap();
         let protected_email = security.protect_email(email).unwrap();
 
@@ -2290,7 +2299,7 @@ mod tests {
         }
     }
 
-    fn test_profile(user_id: Uuid) -> Profile {
+    pub(super) fn test_profile(user_id: Uuid) -> Profile {
         Profile {
             id: Uuid::new_v4(),
             user_id,
@@ -3000,5 +3009,83 @@ mod tests {
 
         assert_eq!(cookie.value(), "");
         assert_eq!(cookie.max_age().map(|age| age.whole_seconds()), Some(0));
+    }
+}
+
+#[cfg(test)]
+mod login_timing_tests {
+    use std::sync::Arc;
+
+    use actix_web::{App, test, web};
+
+    use super::tests::test_user;
+    use super::*;
+    use crate::repositories::mocks::mock_container;
+
+    async fn login_elapsed(container: AppContainer, email: &str, password: &str) -> u128 {
+        let app = actix_web::test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .service(web::scope("/api/v1/auth").configure(config)),
+        )
+        .await;
+
+        let started = std::time::Instant::now();
+        let resp = test::call_service(
+            &app,
+            test::TestRequest::post()
+                .uri("/api/v1/auth/login")
+                .set_json(serde_json::json!({ "email": email, "password": password }))
+                .to_request(),
+        )
+        .await;
+        let elapsed = started.elapsed().as_millis();
+        assert_eq!(
+            resp.status(),
+            actix_web::http::StatusCode::UNAUTHORIZED,
+            "both paths must reject with the generic credentials error"
+        );
+        elapsed
+    }
+
+    #[actix_web::test]
+    async fn unknown_account_costs_the_same_as_a_wrong_password() {
+        // A not-found branch that returns before any Argon2 work makes the
+        // response measurably faster, which enumerates registered addresses.
+        // A known account with a wrong password: the Argon2 verification runs
+        // and `record_failed_login` records the attempt.
+        let mut container = mock_container();
+        let user = test_user("known@example.com");
+        let mut mock_users = crate::repositories::users_repository::MockIUserRepository::new();
+        mock_users
+            .expect_find_by_email()
+            .times(1)
+            .returning(move |_| Ok(Some(user.clone())));
+        mock_users
+            .expect_record_failed_login()
+            .times(1)
+            .returning(|_, _, _| Ok(1));
+        container.users = Arc::new(mock_users);
+
+        let wrong_password =
+            login_elapsed(container, "known@example.com", "NotThePassword1").await;
+
+        // An unregistered address: the lookup finds nothing and the dummy
+        // Argon2 verification is what the timing is measured against.
+        let mut container = mock_container();
+        let mut mock_users = crate::repositories::users_repository::MockIUserRepository::new();
+        mock_users
+            .expect_find_by_email()
+            .times(1)
+            .returning(|_| Ok(None));
+        mock_users.expect_count().times(1).returning(|| Ok(0));
+        container.users = Arc::new(mock_users);
+
+        let unknown_account = login_elapsed(container, "nobody@example.com", "NotThePassword1").await;
+
+        assert!(
+            unknown_account >= wrong_password / 2,
+            "unknown-account login took {unknown_account}ms vs {wrong_password}ms for a wrong password"
+        );
     }
 }

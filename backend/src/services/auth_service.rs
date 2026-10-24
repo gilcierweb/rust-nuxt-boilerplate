@@ -45,6 +45,42 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
         .is_ok())
 }
 
+/// A throwaway Argon2id hash built with the configured cost parameters.
+///
+/// `login` verifies the candidate password against it when the address is not
+/// registered, so an unknown account costs the same wall-clock time as a known
+/// one. Without it the not-found branch returns before any Argon2 work and the
+/// response latency tells an attacker which addresses exist.
+///
+/// Cached per parameter tuple: the hash encodes the cost parameters, so one
+/// cached value per configuration keeps the verification cost identical to the
+/// real path while paying for the derivation only once.
+pub fn dummy_password_hash(config: &AppConfig) -> String {
+    use std::collections::HashMap;
+    use std::sync::OnceLock;
+
+    static CACHE: OnceLock<parking_lot::Mutex<HashMap<(u32, u32, u32), String>>> = OnceLock::new();
+
+    let params = (
+        config.argon2_m_cost,
+        config.argon2_t_cost,
+        config.argon2_p_cost,
+    );
+
+    CACHE
+        .get_or_init(|| parking_lot::Mutex::new(HashMap::new()))
+        .lock()
+        .entry(params)
+        .or_insert_with(|| {
+            hash_password(DUMMY_PASSWORD, config).expect("dummy hash must be derivable")
+        })
+        .clone()
+}
+
+/// The plaintext hashed by [`dummy_password_hash`]. It is never used to
+/// authenticate anything; only its hash exists, and only for timing.
+const DUMMY_PASSWORD: &str = "timing-equalisation-placeholder-password";
+
 /// Check if a password hash needs to be rehashed with current parameters.
 /// Returns true if the hash was created with different parameters than the current policy.
 pub fn needs_rehash(hash: &str, config: &AppConfig) -> bool {
@@ -402,5 +438,59 @@ mod tests {
         let hash1 = hash_token(token, "key1");
         let hash2 = hash_token(token, "key2");
         assert_ne!(hash1, hash2);
+    }
+}
+
+#[cfg(test)]
+mod dummy_hash_tests {
+    use super::{dummy_password_hash, verify_password};
+    use crate::repositories::mocks::mock_app_config;
+
+    fn config_with_costs(m_cost: u32, t_cost: u32, p_cost: u32) -> crate::config::AppConfig {
+        let mut config = mock_app_config();
+        config.argon2_m_cost = m_cost;
+        config.argon2_t_cost = t_cost;
+        config.argon2_p_cost = p_cost;
+        config
+    }
+
+    #[test]
+    fn dummy_hash_encodes_the_configured_cost() {
+        // The known-account path derives with these parameters; the unknown
+        // path must pay the same work to stay timing-equivalent. PHC layout is
+        // $argon2id$v=19$m=<..>,t=<..>,p=<..>$<salt>$<digest>.
+        let config = config_with_costs(64, 4, 2);
+        let hash = dummy_password_hash(&config);
+
+        let params_segment = hash
+            .split('$')
+            .nth(3)
+            .unwrap_or_else(|| panic!("missing parameters in {hash}"));
+        assert_eq!(params_segment, "m=64,t=4,p=2", "hash: {hash}");
+        assert!(
+            hash.starts_with("$argon2id$"),
+            "dummy hash must use the same algorithm: {hash}"
+        );
+    }
+
+    #[test]
+    fn dummy_hash_never_authenticates_a_candidate() {
+        let config = mock_app_config();
+        let hash = dummy_password_hash(&config);
+
+        assert!(!verify_password("any", &hash).expect("verification runs"));
+        assert!(!verify_password(&hash, &hash).expect("verification runs"));
+    }
+
+    #[test]
+    fn dummy_hash_is_cached_per_cost_parameters() {
+        // Same configuration => same value (a cache hit); different parameters
+        // => a different hash, so the cache cannot drift from the policy.
+        let config = config_with_costs(64, 3, 1);
+        let other = config_with_costs(128, 3, 1);
+
+        assert_eq!(dummy_password_hash(&config), dummy_password_hash(&config));
+        assert_eq!(dummy_password_hash(&other), dummy_password_hash(&other));
+        assert_ne!(dummy_password_hash(&config), dummy_password_hash(&other));
     }
 }
