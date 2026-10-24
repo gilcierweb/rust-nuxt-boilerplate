@@ -302,6 +302,11 @@ fn build_cors(cors_origins: &[String]) -> Cors {
             actix_web::http::header::CONTENT_TYPE,
             actix_web::http::header::ACCEPT,
             actix_web::http::header::ACCESS_CONTROL_REQUEST_HEADERS,
+            // The SPA submits the CSRF double-submit header on refresh/logout,
+            // and the proxy propagates the Nitro request-id for correlation.
+            // Without them a cross-origin deployment fails its preflight.
+            actix_web::http::header::HeaderName::from_static("csrf-token"),
+            actix_web::http::header::HeaderName::from_static("x-request-id"),
         ])
         .allowed_header("x-api-key")
         .supports_credentials()
@@ -397,4 +402,54 @@ pub async fn run() -> std::io::Result<()> {
 
     // OpenTelemetry provider shutdown is handled automatically on process exit
     result
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::http::{Method, StatusCode};
+    use actix_web::{App, HttpResponse, web};
+
+    use super::build_cors;
+
+    #[actix_web::test]
+    async fn preflight_allows_csrf_and_request_id_headers() {
+        // The SPA sends the CSRF double-submit header on refresh/logout. A
+        // cross-origin deployment whose preflight does not echo it cannot
+        // authenticate at all.
+        let app = actix_web::test::init_service(
+            App::new()
+                .wrap(build_cors(&["https://app.example.com".to_string()]))
+                .route(
+                    "/api/v1/auth/refresh",
+                    web::route().to(|| async { HttpResponse::Ok().finish() }),
+                ),
+        )
+        .await;
+
+        let req = actix_web::test::TestRequest::with_uri("/api/v1/auth/refresh")
+            .method(Method::OPTIONS)
+            .insert_header(("origin", "https://app.example.com"))
+            .insert_header(("access-control-request-method", "POST"))
+            .insert_header((
+                "access-control-request-headers",
+                "authorization,content-type,csrf-token,x-request-id",
+            ))
+            .to_request();
+
+        let response = actix_web::test::call_service(&app, req).await;
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let allowed = response
+            .headers()
+            .get("access-control-allow-headers")
+            .expect("CORS must answer the preflight")
+            .to_str()
+            .unwrap();
+        assert!(allowed.contains("csrf-token"), "got: {allowed}");
+        assert!(allowed.contains("x-request-id"), "got: {allowed}");
+        assert!(
+            allowed.contains("authorization"),
+            "existing headers must keep working, got: {allowed}"
+        );
+    }
 }
