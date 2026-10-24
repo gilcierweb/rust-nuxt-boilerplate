@@ -56,10 +56,7 @@ pub fn verify_password(password: &str, hash: &str) -> Result<bool, AppError> {
 /// cached value per configuration keeps the verification cost identical to the
 /// real path while paying for the derivation only once.
 pub fn dummy_password_hash(config: &AppConfig) -> String {
-    use std::collections::HashMap;
-    use std::sync::OnceLock;
-
-    static CACHE: OnceLock<parking_lot::Mutex<HashMap<(u32, u32, u32), String>>> = OnceLock::new();
+    static CACHE: DummyPasswordHashCache = DummyPasswordHashCache::new();
 
     let params = (
         config.argon2_m_cost,
@@ -68,7 +65,7 @@ pub fn dummy_password_hash(config: &AppConfig) -> String {
     );
 
     CACHE
-        .get_or_init(|| parking_lot::Mutex::new(HashMap::new()))
+        .get_or_init(|| parking_lot::Mutex::new(std::collections::HashMap::new()))
         .lock()
         .entry(params)
         .or_insert_with(|| {
@@ -76,6 +73,11 @@ pub fn dummy_password_hash(config: &AppConfig) -> String {
         })
         .clone()
 }
+
+/// Dummy password hashes keyed by the Argon2id cost tuple they were built with.
+type DummyPasswordHashCache = std::sync::OnceLock<
+    parking_lot::Mutex<std::collections::HashMap<(u32, u32, u32), String>>,
+>;
 
 /// The plaintext hashed by [`dummy_password_hash`]. It is never used to
 /// authenticate anything; only its hash exists, and only for timing.

@@ -1180,12 +1180,10 @@ mod docker_secrets_tests {
 
     impl EnvBackup {
         fn capture() -> Self {
-            unsafe {
-                Self {
-                    secret: std::env::var(SECRET_NAME).ok(),
-                    file_var: std::env::var(FILE_VAR).ok(),
-                    flag: std::env::var("DOCKER_SECRETS_ENABLED").ok(),
-                }
+            Self {
+                secret: std::env::var(SECRET_NAME).ok(),
+                file_var: std::env::var(FILE_VAR).ok(),
+                flag: std::env::var("DOCKER_SECRETS_ENABLED").ok(),
             }
         }
     }

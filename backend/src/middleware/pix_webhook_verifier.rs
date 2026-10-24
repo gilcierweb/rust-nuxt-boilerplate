@@ -266,6 +266,60 @@ fn verify_pix_signature(payload: &Bytes, signature: &str, secret: &str) -> bool 
     constant_time_eq_hex(&computed, expected_signature)
 }
 
+/// How long an accepted Pix signature stays remembered.
+///
+/// Long enough that a replay within the window is refused, short enough that
+/// the Redis footprint stays small.
+const PIX_REPLAY_TTL_SECS: u64 = 600;
+
+/// Redis key for a signature we already accepted.
+///
+/// The signature is hashed rather than stored in full: the key stays a fixed
+/// length, and a high-entropy value is never written to Redis verbatim.
+fn pix_replay_key(signature: &str) -> String {
+    use sha2::{Digest, Sha256};
+
+    format!(
+        "webhook:pix:replay:{}",
+        hex::encode(Sha256::digest(signature.as_bytes()))
+    )
+}
+
+/// Record an accepted signature. Returns `true` when it was already recorded,
+/// meaning the request is a replay and must be refused.
+///
+/// `SET ... NX EX` is a single atomic operation, so two concurrent copies of
+/// the same event cannot both pass the check.
+///
+/// An unavailable Redis is an error, not a pass: the caller fails closed rather
+/// than accepting a webhook whose replay status it could not establish.
+async fn reject_replayed_signature(
+    signature: &str,
+    req: &actix_web::HttpRequest,
+) -> Result<bool, String> {
+    let pool = req
+        .app_data::<web::Data<AppState>>()
+        .map(|state| state.redis.clone())
+        .ok_or_else(|| "AppState not registered in app_data".to_string())?;
+
+    let mut conn = pool
+        .get()
+        .await
+        .map_err(|error| format!("redis pool: {error}"))?;
+
+    let stored: Option<String> = redis::cmd("SET")
+        .arg(pix_replay_key(signature))
+        .arg("1")
+        .arg("NX")
+        .arg("EX")
+        .arg(PIX_REPLAY_TTL_SECS)
+        .query_async(&mut conn)
+        .await
+        .map_err(|error| format!("redis set: {error}"))?;
+
+    Ok(stored.is_none())
+}
+
 #[cfg(test)]
 mod tests {
     use std::sync::Arc;
@@ -560,56 +614,3 @@ mod tests {
     }
 }
 
-/// How long an accepted Pix signature stays remembered.
-///
-/// Long enough that a replay within the window is refused, short enough that
-/// the Redis footprint stays small.
-const PIX_REPLAY_TTL_SECS: u64 = 600;
-
-/// Redis key for a signature we already accepted.
-///
-/// The signature is hashed rather than stored in full: the key stays a fixed
-/// length, and a high-entropy value is never written to Redis verbatim.
-fn pix_replay_key(signature: &str) -> String {
-    use sha2::{Digest, Sha256};
-
-    format!(
-        "webhook:pix:replay:{}",
-        hex::encode(Sha256::digest(signature.as_bytes()))
-    )
-}
-
-/// Record an accepted signature. Returns `true` when it was already recorded,
-/// meaning the request is a replay and must be refused.
-///
-/// `SET ... NX EX` is a single atomic operation, so two concurrent copies of
-/// the same event cannot both pass the check.
-///
-/// An unavailable Redis is an error, not a pass: the caller fails closed rather
-/// than accepting a webhook whose replay status it could not establish.
-async fn reject_replayed_signature(
-    signature: &str,
-    req: &actix_web::HttpRequest,
-) -> Result<bool, String> {
-    let pool = req
-        .app_data::<web::Data<AppState>>()
-        .map(|state| state.redis.clone())
-        .ok_or_else(|| "AppState not registered in app_data".to_string())?;
-
-    let mut conn = pool
-        .get()
-        .await
-        .map_err(|error| format!("redis pool: {error}"))?;
-
-    let stored: Option<String> = redis::cmd("SET")
-        .arg(pix_replay_key(signature))
-        .arg("1")
-        .arg("NX")
-        .arg("EX")
-        .arg(PIX_REPLAY_TTL_SECS)
-        .query_async(&mut conn)
-        .await
-        .map_err(|error| format!("redis set: {error}"))?;
-
-    Ok(stored.is_none())
-}
