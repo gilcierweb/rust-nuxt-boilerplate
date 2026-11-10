@@ -367,6 +367,27 @@ pub async fn register(
         "user registered"
     );
 
+    // Audit trail: a registration is the entry point of an abuse campaign, so
+    // the event must be reviewable even when the address is never confirmed.
+    // Best effort — a failing audit insert must not undo the registration.
+    let audit_entry = build_registration_audit_entry(
+        user.id,
+        extract_client_ip(&req, &container.config.trusted_proxies),
+        req.headers()
+            .get("user-agent")
+            .and_then(|value| value.to_str().ok())
+            .map(str::to_string),
+        &email_fingerprint,
+    );
+    if let Err(error) = container.domain_audit_logs.create(&audit_entry).await {
+        tracing::warn!(
+            event = "auth.register.audit_log_failed",
+            user_id = %user.id,
+            error = %error,
+            "failed to record the registration audit entry"
+        );
+    }
+
     Ok(HttpResponse::Created().json(serde_json::json!({
         "message": t!("auth.register.success"),
         "user_id": user.id,
@@ -3201,6 +3222,99 @@ mod login_timing_tests {
         assert!(
             unknown_account >= wrong_password / 2,
             "unknown-account login took {unknown_account}ms vs {wrong_password}ms for a wrong password"
+        );
+    }
+}
+
+/// Build the audit entry describing a successful registration.
+///
+/// The entry carries the caller address (the real client IP, proxy-aware) and
+/// the user agent, so a registration campaign can be reviewed afterwards. The
+/// email address itself stays out: only its fingerprint is stored, exactly
+/// like in the structured logs.
+fn build_registration_audit_entry(
+    user_id: Uuid,
+    client_ip: Option<std::net::IpAddr>,
+    user_agent: Option<String>,
+    email_fingerprint: &str,
+) -> crate::models::audit_log::NewAuditLog {
+    use ipnet::IpNet;
+
+    // Host addresses are stored with their full prefix (/32, /128): an audit
+    // entry must name the exact client, not a network.
+    let ip_address = client_ip.and_then(|ip| match ip {
+        std::net::IpAddr::V4(v4) => format!("{v4}/32").parse::<IpNet>().ok(),
+        std::net::IpAddr::V6(v6) => format!("{v6}/128").parse::<IpNet>().ok(),
+    });
+
+    crate::models::audit_log::NewAuditLog {
+        actor_user_id: Some(user_id),
+        actor_role_snapshot: Some("user:self".to_string()),
+        action: "auth.register".to_string(),
+        resource_type: "user".to_string(),
+        resource_id: Some(user_id),
+        ip_address,
+        user_agent,
+        request_id: None,
+        changes: serde_json::json!({}),
+        metadata: serde_json::json!({ "email_fingerprint": email_fingerprint }),
+        prev_hash: None,
+        hash: String::new(),
+    }
+}
+
+#[cfg(test)]
+mod registration_audit_tests {
+    //! The registration audit entry is the forensic trail of a registration
+    //! campaign: it must record who registered, from where, with which client —
+    //! and never the plaintext email address.
+
+    use super::*;
+
+    #[test]
+    fn registration_audit_entry_records_who_and_where_without_the_plaintext_email() {
+        let user_id = Uuid::new_v4();
+        let entry = build_registration_audit_entry(
+            user_id,
+            Some("198.51.100.44".parse().unwrap()),
+            Some("curl/8.4.0".to_string()),
+            "fingerprint-abc",
+        );
+
+        assert_eq!(entry.action, "auth.register");
+        assert_eq!(entry.resource_type, "user");
+        assert_eq!(entry.resource_id, Some(user_id));
+        assert_eq!(entry.user_agent.as_deref(), Some("curl/8.4.0"));
+        assert_eq!(
+            entry.ip_address.map(|net| net.to_string()),
+            Some("198.51.100.44/32".to_string()),
+        );
+        assert_eq!(entry.metadata["email_fingerprint"], "fingerprint-abc");
+        assert!(
+            !entry.metadata.to_string().contains('@'),
+            "the audit entry must not carry a plaintext email address"
+        );
+    }
+
+    #[test]
+    fn registration_audit_entry_tolerates_a_missing_ip_and_user_agent() {
+        let entry = build_registration_audit_entry(Uuid::new_v4(), None, None, "fingerprint-abc");
+        assert!(entry.ip_address.is_none());
+        assert!(entry.user_agent.is_none());
+        assert_eq!(entry.action, "auth.register");
+    }
+
+    #[test]
+    fn registration_audit_entry_keeps_ipv6_hosts_precise() {
+        let entry = build_registration_audit_entry(
+            Uuid::new_v4(),
+            Some("2001:db8::1".parse().unwrap()),
+            None,
+            "fingerprint-abc",
+        );
+        assert_eq!(
+            entry.ip_address.map(|net| net.to_string()),
+            Some("2001:db8::1/128".to_string()),
         );
     }
 }
