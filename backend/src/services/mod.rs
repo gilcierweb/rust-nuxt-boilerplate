@@ -5,6 +5,7 @@ pub mod cache_service;
 pub mod email_service;
 pub mod email_templates;
 pub mod email_test_capture;
+pub mod email_validation;
 pub mod http_client;
 pub mod metrics_service;
 pub mod token;

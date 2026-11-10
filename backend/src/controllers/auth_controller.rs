@@ -202,6 +202,7 @@ pub async fn register(
         use crate::security::captcha::{CaptchaDecision, decide_captcha};
         let decision = decide_captcha(
             container.config.captcha_provider,
+            container.config.captcha_verify_url.as_deref(),
             container.config.captcha_secret.as_deref(),
             body.captcha_token.as_deref(),
         )
@@ -230,6 +231,59 @@ pub async fn register(
                     t!("errors.service_unavailable", locale = locale).into_owned(),
                 ));
             },
+        }
+    }
+
+    // Optional email sanity checks. Both are opt-in policies (see AppConfig):
+    // the disposable-mail denylist and the mail-exchanger check. They run
+    // before the Argon2id hash, so a rejected address costs nothing.
+    if let Some(domain) = crate::services::email_validation::email_domain(&body.email) {
+        if container.config.disposable_email_blocking
+            && crate::services::email_validation::is_disposable_domain(
+                &domain,
+                &container.config.extra_disposable_domains,
+            )
+        {
+            tracing::warn!(
+                event = "auth.register.disposable_email",
+                domain = %domain,
+                "register blocked: disposable email provider"
+            );
+            return Err(AppError::Validation(
+                t!("auth.validation.disposable_email", locale = locale).into_owned(),
+            ));
+        }
+
+        if container.config.email_mx_check_enabled
+            && let Some(resolver_url) = container.config.email_dns_resolver_url.as_deref()
+        {
+            match crate::services::email_validation::has_mail_exchanger_with_url(
+                &domain,
+                resolver_url,
+            )
+            .await
+            {
+                Some(false) => {
+                    tracing::warn!(
+                        event = "auth.register.no_mail_exchanger",
+                        domain = %domain,
+                        "register blocked: domain publishes no MX records"
+                    );
+                    return Err(AppError::Validation(
+                        t!("auth.validation.email_no_mailbox", locale = locale).into_owned(),
+                    ));
+                },
+                Some(true) => {},
+                None => {
+                    // Fail open on resolver trouble: the check is advisory and
+                    // the rate-limit stack still bounds the abuse.
+                    tracing::warn!(
+                        event = "auth.register.mx_lookup_unavailable",
+                        domain = %domain,
+                        "mail exchanger lookup failed — continuing"
+                    );
+                },
+            }
         }
     }
 

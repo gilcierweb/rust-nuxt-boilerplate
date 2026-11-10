@@ -239,5 +239,7 @@
   "email.password_changed.sessions_notice": "Por segurança, todas as suas sessões ativas foram encerradas.",
   "errors.service_unavailable": "Serviço temporariamente indisponível, tente novamente em instantes",
   "auth.validation.captcha_required": "Complete a verificação humana (captcha) para continuar",
-  "auth.validation.captcha_invalid": "A verificação captcha falhou. Tente novamente"
+  "auth.validation.captcha_invalid": "A verificação captcha falhou. Tente novamente",
+  "auth.validation.disposable_email": "Endereços de e-mail temporários/descartáveis não são aceitos",
+  "auth.validation.email_no_mailbox": "Este domínio de e-mail não consegue receber mensagens"
 }

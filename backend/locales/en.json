@@ -239,5 +239,7 @@
   "email.password_changed.sessions_notice": "For your security, all your active sessions have been revoked.",
   "errors.service_unavailable": "Service temporarily unavailable, please try again shortly",
   "auth.validation.captcha_required": "Complete the human verification (captcha) to continue",
-  "auth.validation.captcha_invalid": "Captcha verification failed. Please retry"
+  "auth.validation.captcha_invalid": "Captcha verification failed. Please retry",
+  "auth.validation.disposable_email": "Temporary/disposable email addresses are not accepted",
+  "auth.validation.email_no_mailbox": "This email domain cannot receive mail"
 }

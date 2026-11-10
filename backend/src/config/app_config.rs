@@ -289,13 +289,27 @@ pub struct AppConfig {
     // that the per-IP limits cannot see. Default 2000/day.
     pub register_daily_limit: u64,
 
-    // Optional CAPTCHA (Cloudflare Turnstile / Google reCAPTCHA) for
-    // brute-force-sensitive endpoints. Disabled by default — the boilerplate
-    // must run without any third-party verification service; hostile-facing
-    // deployments (staging, production) opt in via CAPTCHA_PROVIDER +
-    // CAPTCHA_SECRET.
+    // Optional CAPTCHA (Cloudflare Turnstile / Google reCAPTCHA / any custom
+    // site-verify service) for brute-force-sensitive endpoints. Disabled by
+    // default — the boilerplate must run without any third-party verification
+    // service; hostile-facing deployments opt in via CAPTCHA_PROVIDER +
+    // CAPTCHA_SECRET (+ CAPTCHA_VERIFY_URL for the custom provider).
     pub captcha_provider: crate::security::captcha::CaptchaProvider,
     pub captcha_secret: Option<String>,
+    /// Endpoint used by the `custom` CAPTCHA provider (and any override).
+    pub captcha_verify_url: Option<String>,
+
+    // Disposable-mail policy. Opt-in: blocking temporary-mail providers is a
+    // product decision, not a security requirement, so the boilerplate leaves
+    // it off and lets each deployment choose.
+    pub disposable_email_blocking: bool,
+    /// Extra domains to treat as disposable, on top of the curated list.
+    pub extra_disposable_domains: Vec<String>,
+
+    // Mail-exchanger (MX) check. Opt-in and vendor-neutral: the deployment
+    // points EMAIL_DNS_RESOLVER_URL at its own DNS-over-HTTPS resolver.
+    pub email_mx_check_enabled: bool,
+    pub email_dns_resolver_url: Option<String>,
 
     // Cookie security override — set COOKIE_SECURE=true in development when
     // routing through an HTTPS tunnel (ngrok, Cloudflare Tunnel, etc.) to
@@ -602,6 +616,39 @@ impl AppConfig {
                 .ok()
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty()),
+            // Endpoint for the `custom` CAPTCHA provider (and for deployments
+            // that speak the site-verify protocol through their own service).
+            captcha_verify_url: env::var("CAPTCHA_VERIFY_URL")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty()),
+
+            // Disposable-mail policy — opt-in (see the struct docs).
+            disposable_email_blocking: env::var("DISPOSABLE_EMAIL_BLOCKING")
+                .ok()
+                .and_then(|value| value.parse::<bool>().ok())
+                .unwrap_or(false),
+            extra_disposable_domains: env::var("DISPOSABLE_EMAIL_DOMAINS")
+                .ok()
+                .map(|value| {
+                    value
+                        .split(',')
+                        .map(|domain| domain.trim().to_ascii_lowercase())
+                        .filter(|domain| !domain.is_empty())
+                        .collect()
+                })
+                .unwrap_or_default(),
+
+            // Mail-exchanger check — opt-in, and vendor-neutral: the operator
+            // chooses the DNS-over-HTTPS resolver the app may query.
+            email_mx_check_enabled: env::var("EMAIL_MX_CHECK_ENABLED")
+                .ok()
+                .and_then(|value| value.parse::<bool>().ok())
+                .unwrap_or(false),
+            email_dns_resolver_url: env::var("EMAIL_DNS_RESOLVER_URL")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty()),
 
             // Cookie Secure flag override for development tunnels.
             // Set COOKIE_SECURE=true when using ngrok/Cloudflare Tunnel in dev
@@ -648,9 +695,12 @@ impl AppConfig {
     /// A provider alone (without its secret) is a misconfiguration that
     /// production validation refuses at boot; outside production the flag
     /// simply stays disabled so development never needs an upstream service.
+    /// The `custom` provider additionally needs its own endpoint.
     pub fn captcha_enabled(&self) -> bool {
         self.captcha_provider != crate::security::captcha::CaptchaProvider::None
             && self.captcha_secret.is_some()
+            && (self.captcha_provider != crate::security::captcha::CaptchaProvider::Custom
+                || self.captcha_verify_url.is_some())
     }
 
     pub fn is_production_like(&self) -> bool {
@@ -909,6 +959,32 @@ impl AppConfig {
             ));
         }
 
+        // The custom CAPTCHA provider has no built-in endpoint: without one
+        // the verification could never succeed, so refuse the boot instead of
+        // silently disabling it.
+        if self.captcha_provider == crate::security::captcha::CaptchaProvider::Custom
+            && self.captcha_verify_url.is_none()
+            && self.is_production_like()
+        {
+            errors.push(
+                "CAPTCHA_VERIFY_URL must be set when CAPTCHA_PROVIDER=custom. Point \
+                 it at the site-verify endpoint of your CAPTCHA service"
+                    .to_string(),
+            );
+        }
+
+        // The mail-exchanger check needs a resolver to query. Enabling the
+        // check without one is an explicit misconfiguration (the operator
+        // asked for the check), so it is an error in every environment.
+        if self.email_mx_check_enabled && self.email_dns_resolver_url.is_none() {
+            errors.push(
+                "EMAIL_DNS_RESOLVER_URL must be set when EMAIL_MX_CHECK_ENABLED=true. \
+                 Point it at a DNS-over-HTTPS resolver you trust (your own \
+                 resolver, or any public DoH endpoint)"
+                    .to_string(),
+            );
+        }
+
         // CORS origin validation (FRONTEND_URL)
         // Must not contain wildcard "*" when using credentials
         // Each origin must start with http:// or https://
@@ -1001,6 +1077,15 @@ mod placeholder_tests {
         csrf_secret_key: Option<String>,
         refresh_token_hash_salt: Option<String>,
         blind_index_key: Option<String>,
+        rate_limit_enabled: Option<String>,
+        register_daily_limit: Option<String>,
+        captcha_provider: Option<String>,
+        captcha_secret: Option<String>,
+        captcha_verify_url: Option<String>,
+        disposable_email_blocking: Option<String>,
+        disposable_email_domains: Option<String>,
+        email_mx_check_enabled: Option<String>,
+        email_dns_resolver_url: Option<String>,
     }
 
     impl EnvBackup {
@@ -1028,6 +1113,15 @@ mod placeholder_tests {
                 csrf_secret_key: read("CSRF_SECRET_KEY"),
                 refresh_token_hash_salt: read("REFRESH_TOKEN_HASH_SALT"),
                 blind_index_key: read("BLIND_INDEX_KEY"),
+                rate_limit_enabled: read("RATE_LIMIT_ENABLED"),
+                register_daily_limit: read("REGISTER_DAILY_LIMIT"),
+                captcha_provider: read("CAPTCHA_PROVIDER"),
+                captcha_secret: read("CAPTCHA_SECRET"),
+                captcha_verify_url: read("CAPTCHA_VERIFY_URL"),
+                disposable_email_blocking: read("DISPOSABLE_EMAIL_BLOCKING"),
+                disposable_email_domains: read("DISPOSABLE_EMAIL_DOMAINS"),
+                email_mx_check_enabled: read("EMAIL_MX_CHECK_ENABLED"),
+                email_dns_resolver_url: read("EMAIL_DNS_RESOLVER_URL"),
             }
         }
     }
@@ -1077,6 +1171,21 @@ mod placeholder_tests {
                 self.refresh_token_hash_salt.take(),
             );
             set("BLIND_INDEX_KEY", self.blind_index_key.take());
+            set("RATE_LIMIT_ENABLED", self.rate_limit_enabled.take());
+            set("REGISTER_DAILY_LIMIT", self.register_daily_limit.take());
+            set("CAPTCHA_PROVIDER", self.captcha_provider.take());
+            set("CAPTCHA_SECRET", self.captcha_secret.take());
+            set("CAPTCHA_VERIFY_URL", self.captcha_verify_url.take());
+            set(
+                "DISPOSABLE_EMAIL_BLOCKING",
+                self.disposable_email_blocking.take(),
+            );
+            set(
+                "DISPOSABLE_EMAIL_DOMAINS",
+                self.disposable_email_domains.take(),
+            );
+            set("EMAIL_MX_CHECK_ENABLED", self.email_mx_check_enabled.take());
+            set("EMAIL_DNS_RESOLVER_URL", self.email_dns_resolver_url.take());
         }
     }
 
@@ -1184,6 +1293,122 @@ mod placeholder_tests {
         assert!(
             message.contains("CAPTCHA_PROVIDER"),
             "panic must name the offending variable, got: {message}"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn custom_captcha_provider_uses_the_configured_verify_url() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "custom") };
+        unsafe { std::env::set_var("CAPTCHA_SECRET", "secret-value") };
+        unsafe { std::env::set_var("CAPTCHA_VERIFY_URL", "https://captcha.example/siteverify") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(config.captcha_provider, CaptchaProvider::Custom);
+        assert!(config.captcha_enabled());
+        assert_eq!(
+            config.captcha_verify_url.as_deref(),
+            Some("https://captcha.example/siteverify")
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn custom_captcha_provider_without_verify_url_is_a_production_validation_error() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("ENVIRONMENT", "production") };
+        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
+        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
+        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "custom") };
+        unsafe { std::env::set_var("CAPTCHA_SECRET", "secret-value") };
+        unsafe { std::env::remove_var("CAPTCHA_VERIFY_URL") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        let errors = config.validate();
+        assert!(
+            errors.iter().any(|e| e.contains("CAPTCHA_VERIFY_URL")),
+            "a custom provider without its endpoint must refuse boot, got: {:?}",
+            errors
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn disposable_email_policy_is_opt_in() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::remove_var("DISPOSABLE_EMAIL_BLOCKING") };
+        unsafe { std::env::remove_var("DISPOSABLE_EMAIL_DOMAINS") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(
+            !config.disposable_email_blocking,
+            "the boilerplate must not impose a disposable-mail policy by default"
+        );
+        assert!(config.extra_disposable_domains.is_empty());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn disposable_email_policy_can_be_enabled_with_extra_domains() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("DISPOSABLE_EMAIL_BLOCKING", "true") };
+        unsafe { std::env::set_var("DISPOSABLE_EMAIL_DOMAINS", "spam.test, Other.test") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(config.disposable_email_blocking);
+        assert_eq!(
+            config.extra_disposable_domains,
+            vec!["spam.test".to_string(), "other.test".to_string()],
+            "extra domains must be trimmed and lowercased"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn mail_exchanger_check_is_opt_in_and_needs_a_resolver() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::remove_var("EMAIL_MX_CHECK_ENABLED") };
+        unsafe { std::env::remove_var("EMAIL_DNS_RESOLVER_URL") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(!config.email_mx_check_enabled);
+        assert!(config.email_dns_resolver_url.is_none());
+        assert!(
+            config.validate().is_empty(),
+            "the default configuration must validate cleanly"
+        );
+
+        // Enabling the check without telling the app where to resolve DNS is a
+        // misconfiguration, not a silent no-op.
+        unsafe { std::env::set_var("EMAIL_MX_CHECK_ENABLED", "true") };
+        let config = AppConfig::from_env().expect("config builds");
+        let errors = config.validate();
+        assert!(
+            errors.iter().any(|e| e.contains("EMAIL_DNS_RESOLVER_URL")),
+            "the mail-exchanger check must require a resolver, got: {:?}",
+            errors
+        );
+
+        unsafe { std::env::set_var("EMAIL_DNS_RESOLVER_URL", "https://dns.example/dns-query") };
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(config.email_mx_check_enabled);
+        assert!(
+            config.validate().is_empty(),
+            "a resolver URL satisfies the requirement, got: {:?}",
+            config.validate()
         );
     }
 

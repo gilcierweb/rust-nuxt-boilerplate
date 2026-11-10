@@ -32,6 +32,11 @@ const TURNSTILE_SITEVERIFY_URL: &str = "https://challenges.cloudflare.com/turnst
 const RECAPTCHA_SITEVERIFY_URL: &str = "https://www.google.com/recaptcha/api/siteverify";
 
 /// CAPTCHA provider selected via `CAPTCHA_PROVIDER`.
+///
+/// The boilerplate never selects a vendor: `none` is the default and the
+/// operator chooses between the two widely used site-verify protocols
+/// (`turnstile`, `recaptcha`) or points `CAPTCHA_VERIFY_URL` at any other
+/// service speaking the same protocol (`custom`).
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum CaptchaProvider {
     /// No human verification (boilerplate default).
@@ -41,6 +46,9 @@ pub enum CaptchaProvider {
     Turnstile,
     /// Google reCAPTCHA (v2 checkbox / invisible).
     Recaptcha,
+    /// Any other site-verify-compatible service, configured through
+    /// `CAPTCHA_VERIFY_URL`.
+    Custom,
 }
 
 impl FromStr for CaptchaProvider {
@@ -51,6 +59,7 @@ impl FromStr for CaptchaProvider {
             "" | "none" | "off" => Ok(Self::None),
             "turnstile" => Ok(Self::Turnstile),
             "recaptcha" => Ok(Self::Recaptcha),
+            "custom" => Ok(Self::Custom),
             other => Err(other.to_string()),
         }
     }
@@ -63,6 +72,8 @@ impl CaptchaProvider {
             Self::None => None,
             Self::Turnstile => Some(TURNSTILE_SITEVERIFY_URL),
             Self::Recaptcha => Some(RECAPTCHA_SITEVERIFY_URL),
+            // The endpoint is deployment-specific; it is passed in explicitly.
+            Self::Custom => None,
         }
     }
 }
@@ -139,14 +150,32 @@ pub async fn verify_with_url(
     }
 }
 
+/// Resolve the site-verify endpoint for a provider.
+///
+/// Presets carry their own endpoint; the `custom` provider (and any explicit
+/// override) uses the deployment's `CAPTCHA_VERIFY_URL`.
+pub fn resolve_siteverify_url(
+    provider: CaptchaProvider,
+    custom_url: Option<&str>,
+) -> Option<String> {
+    match provider {
+        CaptchaProvider::Custom => custom_url
+            .map(str::trim)
+            .filter(|url| !url.is_empty())
+            .map(str::to_string),
+        other => other.siteverify_url().map(str::to_string),
+    }
+}
+
 /// Verify a token against the provider's official endpoint.
 pub async fn verify_captcha_token(
     provider: CaptchaProvider,
+    siteverify_url: Option<&str>,
     secret: &str,
     token: &str,
 ) -> Result<CaptchaOutcome, CaptchaUnavailable> {
-    let url = provider.siteverify_url().ok_or(CaptchaUnavailable)?;
-    verify_with_url(shared_client(), url, secret, token).await
+    let url = resolve_siteverify_url(provider, siteverify_url).ok_or(CaptchaUnavailable)?;
+    verify_with_url(shared_client(), &url, secret, token).await
 }
 
 /// Enforce the CAPTCHA policy for one submitted token.
@@ -164,6 +193,7 @@ pub async fn verify_captcha_token(
 ///   provider is disabled (the boilerplate's default).
 pub async fn decide_captcha(
     provider: CaptchaProvider,
+    siteverify_url: Option<&str>,
     secret: Option<&str>,
     token: Option<&str>,
 ) -> CaptchaDecision {
@@ -176,9 +206,13 @@ pub async fn decide_captcha(
         _ => return CaptchaDecision::ServiceUnavailable,
     };
 
+    if resolve_siteverify_url(provider, siteverify_url).is_none() {
+        return CaptchaDecision::ServiceUnavailable;
+    }
+
     match token {
         None => CaptchaDecision::Required,
-        Some(token) => match verify_captcha_token(provider, secret, token).await {
+        Some(token) => match verify_captcha_token(provider, siteverify_url, secret, token).await {
             Ok(CaptchaOutcome::Valid) => CaptchaDecision::Verified,
             Ok(CaptchaOutcome::Invalid) => CaptchaDecision::Rejected,
             Err(CaptchaUnavailable) => CaptchaDecision::ServiceUnavailable,
@@ -310,6 +344,33 @@ mod tests {
         assert_eq!(CaptchaProvider::None.siteverify_url(), None);
         assert!(CaptchaProvider::Turnstile.siteverify_url().is_some());
         assert!(CaptchaProvider::Recaptcha.siteverify_url().is_some());
+        assert_eq!(CaptchaProvider::Custom.siteverify_url(), None);
+    }
+
+    #[test]
+    fn custom_provider_resolves_the_deployment_endpoint() {
+        assert_eq!(
+            resolve_siteverify_url(CaptchaProvider::Custom, Some("https://captcha.test/verify")),
+            Some("https://captcha.test/verify".to_string()),
+        );
+        assert_eq!(
+            resolve_siteverify_url(CaptchaProvider::Custom, None),
+            None,
+            "a custom provider without an endpoint cannot be verified"
+        );
+    }
+
+    #[test]
+    fn presets_ignore_the_custom_endpoint() {
+        assert_eq!(
+            resolve_siteverify_url(
+                CaptchaProvider::Turnstile,
+                Some("https://captcha.test/verify")
+            ),
+            CaptchaProvider::Turnstile
+                .siteverify_url()
+                .map(str::to_string),
+        );
     }
 
     // -------------------------------------------------------------------------
@@ -321,13 +382,13 @@ mod tests {
         // Documented contract: callers gate on `captcha_enabled()`; treat a
         // disabled provider as verified so call-order regressions cannot lock
         // register behind invisible requirements.
-        let decision = decide_captcha(CaptchaProvider::None, None, None).await;
+        let decision = decide_captcha(CaptchaProvider::None, None, None, None).await;
         assert_eq!(decision, CaptchaDecision::Verified);
     }
 
     #[tokio::test]
     async fn missing_token_is_required_not_rejected() {
-        let decision = decide_captcha(CaptchaProvider::Turnstile, Some("secret"), None).await;
+        let decision = decide_captcha(CaptchaProvider::Turnstile, None, Some("secret"), None).await;
         assert_eq!(decision, CaptchaDecision::Required);
     }
 
@@ -335,8 +396,13 @@ mod tests {
     async fn whitespace_token_is_rejected_without_a_round_trip() {
         // No responder exists; a network attempt would surface as
         // ServiceUnavailable while the expected outcome is an explicit reject.
-        let decision =
-            decide_captcha(CaptchaProvider::Turnstile, Some("secret"), Some("   ")).await;
+        let decision = decide_captcha(
+            CaptchaProvider::Turnstile,
+            None,
+            Some("secret"),
+            Some("   "),
+        )
+        .await;
         assert_eq!(decision, CaptchaDecision::Rejected);
     }
 
@@ -344,7 +410,14 @@ mod tests {
     async fn half_enabled_provider_is_an_outage() {
         // Provider set but secret forgotten: fail closed (production refuses
         // this configuration at boot; outside production it stays closed).
-        let decision = decide_captcha(CaptchaProvider::Turnstile, None, Some("token")).await;
+        let decision = decide_captcha(CaptchaProvider::Turnstile, None, None, Some("token")).await;
+        assert_eq!(decision, CaptchaDecision::ServiceUnavailable);
+    }
+
+    #[tokio::test]
+    async fn custom_provider_without_endpoint_is_an_outage() {
+        let decision =
+            decide_captcha(CaptchaProvider::Custom, None, Some("secret"), Some("token")).await;
         assert_eq!(decision, CaptchaDecision::ServiceUnavailable);
     }
 }
