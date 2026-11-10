@@ -942,6 +942,19 @@ impl AppConfig {
             }
         }
 
+        // Rate limiting must never be switched off in production: the
+        // brute-force budgets (per IP, per subnet, register daily aggregate)
+        // are the primary protection against scripted registration and login
+        // attacks. Development keeps the escape hatch for local testing.
+        if !self.rate_limit_enabled && self.is_production_like() {
+            errors.push(
+                "RATE_LIMIT_ENABLED must not be false in staging/production. \
+                 The per-IP, per-subnet and daily registration budgets are \
+                 the primary protection against scripted attacks"
+                    .to_string(),
+            );
+        }
+
         // CAPTCHA (optional anti-bot verification) validation.
         // A provider half-enabled (provider set, secret missing) silently
         // disables the protection it was configured for — in production the
@@ -1371,6 +1384,48 @@ mod placeholder_tests {
             config.extra_disposable_domains,
             vec!["spam.test".to_string(), "other.test".to_string()],
             "extra domains must be trimmed and lowercased"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn production_refuses_disabled_rate_limiting() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("ENVIRONMENT", "production") };
+        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
+        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
+        unsafe { std::env::set_var("RATE_LIMIT_ENABLED", "false") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        let errors = config.validate();
+        assert!(
+            errors.iter().any(|e| e.contains("RATE_LIMIT_ENABLED")),
+            "production must refuse to boot with rate limiting disabled, got: {:?}",
+            errors
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn development_may_disable_rate_limiting() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::remove_var("ENVIRONMENT") };
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("RATE_LIMIT_ENABLED", "false") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(!config.rate_limit_enabled);
+        assert!(
+            !config
+                .validate()
+                .iter()
+                .any(|e| e.contains("RATE_LIMIT_ENABLED")),
+            "local development keeps the escape hatch"
         );
     }
 
