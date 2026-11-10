@@ -736,6 +736,9 @@ cd frontend && pnpm audit --prod
 - Rate limiting on auth endpoints
 - CSRF protection on state-changing operations
 - Field-level encryption with blind indexes
+- Anti-bot protection on registration (per-IP, per-subnet and daily budgets,
+  proxy-aware client IP) — see
+  [Registration Abuse Protection](docs/REGISTRATION_ABUSE_PROTECTION.md)
 
 ---
 
@@ -903,6 +906,9 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD"              # Connect 
 - **Key Rotation**: Multi-key JWT support with versioning
 - **CSRF Protection**: Signed cookies for browser-based attacks
 - **Rate Limiting**: Redis-backed sliding window algorithm
+- **Anti-Bot Registration**: per-IP, per-subnet and daily registration budgets,
+  proxy-aware client IP, optional CAPTCHA (any vendor) —
+  [details](docs/REGISTRATION_ABUSE_PROTECTION.md)
 - **API Key Auth**: Service-to-service authentication
 - **Signature Verification**: Stripe/Pix webhook signature validation
 
