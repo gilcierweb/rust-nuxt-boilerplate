@@ -156,6 +156,10 @@ const showPassword = ref(false)
 const errorMsg = ref('')
 const success = ref(false)
 
+// Human verification is optional and vendor-neutral: a deployment renders the
+// widget of its choice and hands the solved token over through this composable.
+const { token: captchaToken, clear: clearCaptchaToken } = useCaptchaToken()
+
 const schema = computed(() => toTypedSchema(registerSchema(t)))
 const { handleSubmit, errors, meta, defineField } = useForm<RegisterValues>({
   validationSchema: schema,
@@ -201,10 +205,15 @@ const onSubmit = handleSubmit(async (values) => {
       email: values.email,
       password: values.password,
       password_confirmation: values.password_confirmation,
+      // Only sent when a widget handed a token over (see useCaptchaToken).
+      ...(captchaToken.value ? { captcha_token: captchaToken.value } : {}),
     })
     success.value = true
   } catch (err: any) {
     errorMsg.value = mapAuthError(err, t, 'auth.register.error.generic')
+    // A rejected token is single-use: drop it so the next attempt asks the
+    // widget for a fresh one.
+    captchaToken.value && clearCaptchaToken()
   } finally {
     isLoading.value = false
   }

@@ -38,6 +38,10 @@ export interface RegisterPayload {
   email: string
   password: string
   password_confirmation: string
+  // Opaque human-verification token, when the deployment enabled CAPTCHA on
+  // the backend. The frontend never assumes a vendor: whatever widget the
+  // deployment renders hands its token over through `useCaptchaToken()`.
+  captcha_token?: string
 }
 
 // -- Profile 
