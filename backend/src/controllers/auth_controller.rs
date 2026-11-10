@@ -344,12 +344,21 @@ pub async fn register(
     let email_service = container.email_service.clone();
     // Get locale from request for localized emails
     let locale = crate::middleware::locale::RequestLocale::from_request(&req);
-    if let Err(error) = email_service
-        .send_confirmation_email(&body.email, &confirmation_token, &locale)
-        .await
-    {
-        tracing::warn!("confirmation email delivery skipped or failed: {}", error);
-    }
+
+    // Dispatch the confirmation email outside the request path: a slow mail
+    // relay must not hold the Actix worker, and the response must not wait for
+    // the SMTP round trip. Failures are logged inside the task.
+    let recipient = body.email.clone();
+    let email_token = confirmation_token.clone();
+    let email_locale = locale.clone();
+    crate::utils::background::spawn_background(async move {
+        if let Err(error) = email_service
+            .send_confirmation_email(&recipient, &email_token, &email_locale)
+            .await
+        {
+            tracing::warn!("confirmation email delivery skipped or failed: {}", error);
+        }
+    });
 
     tracing::info!(
         event = "auth.register.success",
@@ -1216,14 +1225,20 @@ async fn recover_password_handler(
     }
 
     // Always attempt to send email (will fail silently for non-existent users)
-    // This ensures the same timing regardless of user existence
+    // This ensures the same timing regardless of user existence.
+    // The send happens outside the request path: the response never waits for
+    // the mail relay, and a slow relay cannot be used to pin down workers.
     let email_service = container.email_service.clone();
-    if let Err(error) = email_service
-        .send_password_reset_email(&body.email, &token, &locale)
-        .await
-    {
-        tracing::debug!("password reset email delivery skipped or failed: {}", error);
-    }
+    let recipient = body.email.clone();
+    let email_locale = locale.clone();
+    crate::utils::background::spawn_background(async move {
+        if let Err(error) = email_service
+            .send_password_reset_email(&recipient, &token, &email_locale)
+            .await
+        {
+            tracing::debug!("password reset email delivery skipped or failed: {}", error);
+        }
+    });
 
     tracing::info!(
         event = "auth.recover.requested",
