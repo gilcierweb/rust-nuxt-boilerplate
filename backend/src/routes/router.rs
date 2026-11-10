@@ -197,7 +197,10 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                         "/api/v1/auth/magic-link/verify".to_string(),
                         "/api/v1/auth/magic-link/verify/".to_string(),
                     ]))
-                    .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
+                    // Monitors only the Default category: the outer /api/v1
+                    // limiter already charges AuthStrict and AuthSession with
+                    // the same category-derived keys (single-charge rule).
+                    .wrap(crate::middleware::rate_limit_middleware::RateLimiter::default_only(
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,
                     ))

@@ -93,6 +93,7 @@ pub fn test_config() -> AppConfig {
         refresh_token_hash_salt: generate_deterministic_string(16, 0xFEEDFACE),
         account_lockout_duration_secs: 15 * 60,
         rate_limit_enabled: true,
+        register_daily_limit: 2000,
         cookie_secure_override: false,
         argon2_m_cost: 65536,
         argon2_t_cost: 3,

@@ -283,6 +283,11 @@ pub struct AppConfig {
     // Rate limiting
     pub rate_limit_enabled: bool,
 
+    // Global daily registration ceiling for the register endpoint (the
+    // `rl:register_global` bucket). Blunts distributed registration campaigns
+    // that the per-IP limits cannot see. Default 2000/day.
+    pub register_daily_limit: u64,
+
     // Cookie security override — set COOKIE_SECURE=true in development when
     // routing through an HTTPS tunnel (ngrok, Cloudflare Tunnel, etc.) to
     // prevent the refresh_token and csrf_token cookies from being sent over
@@ -563,6 +568,13 @@ impl AppConfig {
                 .ok()
                 .and_then(|s| s.parse::<bool>().ok())
                 .unwrap_or(true),
+
+            // Global daily register ceiling (all IPs combined), for
+            // distributed-registration protection. Default 2000/day.
+            register_daily_limit: env::var("REGISTER_DAILY_LIMIT")
+                .ok()
+                .and_then(|s| s.parse::<u64>().ok())
+                .unwrap_or(crate::middleware::rate_limit_middleware::DEFAULT_REGISTER_DAILY_LIMIT),
 
             // Cookie Secure flag override for development tunnels.
             // Set COOKIE_SECURE=true when using ngrok/Cloudflare Tunnel in dev

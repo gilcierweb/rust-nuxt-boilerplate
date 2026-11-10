@@ -297,6 +297,7 @@ mod tests {
             account_lockout_duration_secs: 15 * 60,
             pix_webhook_secret: String::new(),
             rate_limit_enabled: false,
+            register_daily_limit: 2000,
             cookie_secure_override: false,
             argon2_m_cost: 65536,
             argon2_t_cost: 3,

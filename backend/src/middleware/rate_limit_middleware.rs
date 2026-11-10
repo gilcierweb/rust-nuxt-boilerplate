@@ -73,6 +73,20 @@ pub const RATE_AUTH_AUTHENTICATED: RateLimit = RateLimit::new(200, 60, "rl:auth"
 /// Limit: 10 requests per minute (per IP)
 pub const RATE_AUTH_STRICT: RateLimit = RateLimit::new(10, 60, "rl:auth_strict");
 
+/// Brute-force-sensitive endpoints charged per subnet aggregate in addition to
+/// the per-IP budget. Blunts IP rotation: a bot cycling the last octet of an
+/// IPv4 /24 (or roaming an IPv6 /48) hits this aggregate ceiling even though
+/// every individual address stays under the per-IP limit.
+pub const RATE_AUTH_STRICT_SUBNET: RateLimit = RateLimit::new(30, 60, "rl:auth_strict_mask");
+
+/// Global daily registration ceiling. Rate limiting restricts *time*, not
+/// *volume*: without an aggregate cap a distributed registration campaign can
+/// still poison the users table with ~14k rows/day per IP. This bucket is
+/// process-wide (single Redis key) and only charged by register paths.
+pub const REGISTER_GLOBAL_KEY: &str = "rl:register_global";
+pub const SECONDS_PER_DAY: u64 = 86_400;
+pub const DEFAULT_REGISTER_DAILY_LIMIT: u64 = 2_000;
+
 /// Strict authentication endpoints — authenticated
 /// Limit: 20 requests per minute (per user)
 pub const RATE_AUTH_STRICT_AUTHENTICATED: RateLimit = RateLimit::new(20, 60, "rl:auth_strict");
@@ -228,6 +242,7 @@ pub struct RateLimiter {
     redis: deadpool_redis::Pool,
     limit: RateLimit,
     circuit_breaker: Arc<RedisCircuitBreaker>,
+    charge_scope: ChargeScope,
 }
 
 impl RateLimiter {
@@ -236,6 +251,22 @@ impl RateLimiter {
             redis,
             limit,
             circuit_breaker: Arc::new(RedisCircuitBreaker::default()),
+            charge_scope: ChargeScope::All,
+        }
+    }
+
+    /// Rate limiter mounted on a nested scope that already lives under a
+    /// scope-wide limiter (the router mounts one on `/api/v1`). Category-derived
+    /// buckets (`AuthStrict`, `AuthSession`) resolve to the same Redis key
+    /// regardless of which instance charges them, so charging them here would
+    /// consume the outer budget twice per request. This variant charges only
+    /// the `Default` category, whose key prefix comes from the base limit.
+    pub fn default_only(redis: deadpool_redis::Pool, limit: RateLimit) -> Self {
+        Self {
+            redis,
+            limit,
+            circuit_breaker: Arc::new(RedisCircuitBreaker::default()),
+            charge_scope: ChargeScope::DefaultOnly,
         }
     }
 
@@ -250,7 +281,115 @@ impl RateLimiter {
             redis,
             limit,
             circuit_breaker: Arc::new(RedisCircuitBreaker::new(failure_threshold, reset_timeout)),
+            charge_scope: ChargeScope::All,
         }
+    }
+}
+
+/// Which rate-limit categories a limiter instance charges.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ChargeScope {
+    /// Charge every category (scope-wide / outer limiters).
+    All,
+    /// Charge only `Default`; higher-cost categories are left to the outer
+    /// limiter (single-charge rule, see [`RateLimiter::default_only`]).
+    DefaultOnly,
+}
+
+/// Whether a limiter instance with `scope` must charge `category`.
+fn charges(scope: ChargeScope, category: RateLimitCategory) -> bool {
+    match scope {
+        ChargeScope::All => true,
+        ChargeScope::DefaultOnly => category == RateLimitCategory::Default,
+    }
+}
+
+/// One Redis bucket the limiter must evaluate for a request.
+#[derive(Debug, Clone)]
+struct Charge {
+    key: String,
+    limit: RateLimit,
+}
+
+/// Compact per-network bucket key: IPv4 masks the last octet (/24), IPv6
+/// keeps the first three hextets (/48).
+fn subnet_bucket_key(ip: &std::net::IpAddr) -> String {
+    match ip {
+        std::net::IpAddr::V4(v4) => {
+            let octets = v4.octets();
+            format!("{}.{}.{}.mask", octets[0], octets[1], octets[2])
+        },
+        std::net::IpAddr::V6(v6) => {
+            let segments = v6.segments();
+            format!("{:x}:{:x}:{:x}.mask", segments[0], segments[1], segments[2])
+        },
+    }
+}
+
+fn is_register_path(path: &str) -> bool {
+    path == "/api/v1/auth/register" || path == "/api/v1/auth/register/"
+}
+
+/// Buckets charged by a brute-force-sensitive request.
+///
+/// 1. exact client budget — full per-IP limit (`effective_limit`);
+/// 2. subnet aggregate — `RATE_AUTH_STRICT_SUBNET`, shared by rotating IPs;
+/// 3. register only: the global daily ceiling configured as
+///    `REGISTER_DAILY_LIMIT` (default 2000/day), one key for the whole app.
+fn strict_charge_buckets(
+    effective_limit: &RateLimit,
+    client_ip: Option<std::net::IpAddr>,
+    path: &str,
+    register_daily_limit: u64,
+) -> Vec<Charge> {
+    let mut buckets = Vec::with_capacity(3);
+
+    let exact_key = match client_ip {
+        Some(ip) => format!("{}:{}", effective_limit.key_prefix, ip),
+        None => format!("{}:unknown", effective_limit.key_prefix),
+    };
+    buckets.push(Charge {
+        key: exact_key,
+        limit: effective_limit.clone(),
+    });
+
+    if let Some(ip) = client_ip {
+        buckets.push(Charge {
+            key: format!(
+                "{}:{}",
+                RATE_AUTH_STRICT_SUBNET.key_prefix,
+                subnet_bucket_key(&ip)
+            ),
+            limit: RATE_AUTH_STRICT_SUBNET,
+        });
+    }
+
+    if is_register_path(path) {
+        buckets.push(Charge {
+            key: REGISTER_GLOBAL_KEY.to_string(),
+            limit: RateLimit::new(register_daily_limit, SECONDS_PER_DAY, "rl:register_global"),
+        });
+    }
+
+    buckets
+}
+
+/// Buckets charged by an arbitrary request: the multi-dimensional list for
+/// strict endpoints, the single base bucket for everything else.
+fn charges_for_request(
+    effective_limit: &RateLimit,
+    path: &str,
+    client_key: &str,
+    client_ip: Option<std::net::IpAddr>,
+    register_daily_limit: u64,
+) -> Vec<Charge> {
+    if effective_limit.is_strict() {
+        strict_charge_buckets(effective_limit, client_ip, path, register_daily_limit)
+    } else {
+        vec![Charge {
+            key: format!("{}:{}", effective_limit.key_prefix, client_key),
+            limit: effective_limit.clone(),
+        }]
     }
 }
 
@@ -272,6 +411,7 @@ where
             redis: self.redis.clone(),
             limit: self.limit.clone(),
             circuit_breaker: self.circuit_breaker.clone(),
+            charge_scope: self.charge_scope,
         }))
     }
 }
@@ -281,6 +421,7 @@ pub struct RateLimiterMiddleware<S> {
     redis: deadpool_redis::Pool,
     limit: RateLimit,
     circuit_breaker: Arc<RedisCircuitBreaker>,
+    charge_scope: ChargeScope,
 }
 
 impl<S> RateLimiterMiddleware<S> {
@@ -295,6 +436,7 @@ impl<S> RateLimiterMiddleware<S> {
             redis,
             limit,
             circuit_breaker,
+            charge_scope: ChargeScope::All,
         }
     }
 
@@ -391,6 +533,7 @@ where
         let redis = self.redis.clone();
         let limit = self.limit.clone();
         let circuit_breaker = self.circuit_breaker.clone();
+        let charge_scope = self.charge_scope;
         let config = middleware_config(&req);
         let rate_limit_enabled = config
             .as_ref()
@@ -409,13 +552,27 @@ where
         // If authenticated, use user_id for rate limiting; otherwise fall back
         // to the real client IP.
         let is_authenticated = req.extensions().get::<Claims>().is_some();
-        let client_key = Self::rate_limit_client_key(
-            crate::utils::ip::extract_client_ip(req.request(), &trusted_proxies),
-            req.extensions().get::<Claims>(),
-        );
+        let client_ip = crate::utils::ip::extract_client_ip(req.request(), &trusted_proxies);
+        let client_key = Self::rate_limit_client_key(client_ip, req.extensions().get::<Claims>());
+        // Aggregated users-table protection: configurable ceiling for the
+        // register endpoint alone (`REGISTER_DAILY_LIMIT`).
+        let register_daily_limit = config
+            .as_ref()
+            .map(|config| config.register_daily_limit)
+            .unwrap_or(DEFAULT_REGISTER_DAILY_LIMIT);
 
         Box::pin(async move {
             if !rate_limit_enabled {
+                let res = svc.call(req).await?;
+                return Ok(res.map_into_boxed_body());
+            }
+
+            let category = rate_limit_category(req.method(), req.path());
+
+            // Single-charge rule: nested scope limiters leave the category-
+            // resolved buckets (AuthStrict, AuthSession) to the outer scope-wide
+            // limiter, which charges the same key.
+            if !charges(charge_scope, category) {
                 let res = svc.call(req).await?;
                 return Ok(res.map_into_boxed_body());
             }
@@ -448,88 +605,86 @@ where
                 return Ok(res.map_into_boxed_body());
             }
 
-            let key = format!("{}:{}", effective_limit.key_prefix, client_key);
+            // Strict endpoints charge several dimensions (per IP, per subnet,
+            // register daily aggregate); everything else keeps its single
+            // category bucket.
+            let charge_list = charges_for_request(
+                &effective_limit,
+                req.path(),
+                &client_key,
+                client_ip,
+                register_daily_limit,
+            );
+            let first_charge = charge_list
+                .first()
+                .cloned()
+                .expect("charges_for_request always returns at least one bucket");
 
             // Attempt rate limiting with Redis.
             // On failure, circuit breaker decides whether to fail closed or open.
             let quota = async {
                 let mut conn = redis.get().await.ok()?;
+                let mut first_outcome: Option<QuotaOutcome> = None;
+                let mut throttled: Option<(QuotaOutcome, RateLimit)> = None;
 
-                // Use fixed-window Lua script (2 Redis ops vs 5 for sliding
-                // window). Counter and window TTL arrive in one response,
-                // which is everything the quota headers need.
-                let (used, ttl): (u64, i64) = redis::cmd("EVAL")
-                    .arg(RATE_LIMIT_LUA_SCRIPT)
-                    .arg(1) // number of keys
-                    .arg(&key)
-                    .arg(effective_limit.window_secs)
-                    .query_async(&mut conn)
-                    .await
-                    .ok()?;
+                for charge in &charge_list {
+                    // Fixed-window Lua script: 2 Redis ops per bucket, counter
+                    // and window TTL arrive in one response.
+                    let result: Option<(u64, i64)> = redis::cmd("EVAL")
+                        .arg(RATE_LIMIT_LUA_SCRIPT)
+                        .arg(1) // number of keys
+                        .arg(&charge.key)
+                        .arg(charge.limit.window_secs)
+                        .query_async(&mut conn)
+                        .await
+                        .ok();
+                    let result = result?;
 
-                Some(QuotaOutcome {
-                    allowed: used <= effective_limit.max_requests,
-                    remaining: effective_limit.max_requests.saturating_sub(used),
-                    // A negative TTL means the key lost its expiry, so the
-                    // full window is the honest answer.
-                    reset_secs: u64::try_from(ttl).unwrap_or(effective_limit.window_secs),
-                })
+                    let outcome = QuotaOutcome {
+                        allowed: result.0 <= charge.limit.max_requests,
+                        remaining: charge.limit.max_requests.saturating_sub(result.0),
+                        // A negative TTL means the key lost its expiry, so the
+                        // full window is the honest answer.
+                        reset_secs: u64::try_from(result.1).unwrap_or(charge.limit.window_secs),
+                    };
+
+                    if first_outcome.is_none() {
+                        // The per-IP budget stands for the quota headers; an
+                        // aggregate bucket would only owe shared credit.
+                        first_outcome = Some(outcome.clone());
+                    }
+                    if !outcome.allowed {
+                        throttled = Some((outcome, charge.limit.clone()));
+                        break;
+                    }
+                }
+
+                Some((first_outcome, throttled))
             }
             .await;
 
-            let allowed_quota = match quota {
-                Some(outcome) if outcome.allowed => {
-                    // Success - close circuit if it was half-open
-                    circuit_breaker.record_success();
-                    Some(outcome)
-                },
-                Some(outcome) => {
-                    // Rate limited - also counts as success (Redis is healthy)
-                    circuit_breaker.record_success();
-                    tracing::debug!(
-                        event = "rate_limit.throttled",
-                        key = %key,
-                        remaining = outcome.remaining,
-                        reset_secs = outcome.reset_secs,
-                        "Request rejected by the rate limiter"
-                    );
-                    let mut response = HttpResponse::TooManyRequests();
-                    for (name, value) in quota_headers(&effective_limit, &outcome) {
-                        response.insert_header((name, value));
-                    }
-                    let response = response
-                        .insert_header(("Retry-After", effective_limit.window_secs.to_string()))
-                        .json(json!({
-                            "error": {
-                                "code": "RATE_LIMITED",
-                                "message": t!("errors.rate_limited")
-                            }
-                        }))
-                        .map_into_boxed_body();
-
-                    let (http_req, _payload) = req.into_parts();
-                    return Ok(ServiceResponse::new(http_req, response));
-                },
+            let quota = match quota {
+                Some((first_outcome, throttled)) => (first_outcome, throttled),
                 None => {
                     // Redis unavailable or error
                     circuit_breaker.record_failure();
 
                     // After recording the failure, check if circuit is now open
-                    if circuit_breaker.is_open() {
+                    if circuit_breaker.is_open() && effective_limit.is_strict() {
                         // AuthStrict never fails open (see is_strict).
-                        if effective_limit.is_strict() {
-                            tracing::warn!(
-                                event = "rate_limit.strict_fail_closed",
-                                key = %key,
-                                "Redis failure on AuthStrict endpoint — failing closed despite open circuit"
-                            );
-                            return Ok(service_unavailable_response(req));
-                        }
+                        tracing::warn!(
+                            event = "rate_limit.strict_fail_closed",
+                            key = %first_charge.key,
+                            "Redis failure on AuthStrict endpoint — failing closed despite open circuit"
+                        );
+                        return Ok(service_unavailable_response(req));
+                    }
+                    if circuit_breaker.is_open() {
                         // Circuit just opened — fail OPEN this request to avoid
                         // cascading failures, but log the degradation
                         tracing::warn!(
                             event = "rate_limit.circuit_breaker_opened_on_failure",
-                            key = %key,
+                            key = %first_charge.key,
                             "Redis failure triggered circuit breaker — allowing request through"
                         );
                         // Let the request proceed without rate limiting
@@ -540,16 +695,52 @@ where
                     // Circuit not yet open — fail closed with 503
                     tracing::warn!(
                         event = "rate_limit.redis_unavailable",
-                        key = %key,
+                        key = %first_charge.key,
                         "Rate limiter Redis unavailable, failing closed"
                     );
                     return Ok(service_unavailable_response(req));
                 },
             };
 
+            let (first_outcome, throttled): (
+                Option<QuotaOutcome>,
+                Option<(QuotaOutcome, RateLimit)>,
+            ) = quota;
+
+            if let Some((outcome, charge_limit)) = throttled {
+                // Rate limited - also counts as success (Redis is healthy)
+                circuit_breaker.record_success();
+                tracing::debug!(
+                    event = "rate_limit.throttled",
+                    key = %first_charge.key,
+                    remaining = outcome.remaining,
+                    reset_secs = outcome.reset_secs,
+                    "Request rejected by the rate limiter"
+                );
+                let mut response = HttpResponse::TooManyRequests();
+                for (name, value) in quota_headers(&charge_limit, &outcome) {
+                    response.insert_header((name, value));
+                }
+                let response = response
+                    .insert_header(("Retry-After", charge_limit.window_secs.to_string()))
+                    .json(json!({
+                        "error": {
+                            "code": "RATE_LIMITED",
+                            "message": t!("errors.rate_limited")
+                        }
+                    }))
+                    .map_into_boxed_body();
+
+                let (http_req, _payload) = req.into_parts();
+                return Ok(ServiceResponse::new(http_req, response));
+            }
+
+            // Success - close circuit if it was half-open
+            circuit_breaker.record_success();
+
             let mut res = svc.call(req).await?;
-            if let Some(outcome) = allowed_quota {
-                insert_quota_headers(res.headers_mut(), &effective_limit, &outcome);
+            if let Some(outcome) = first_outcome {
+                insert_quota_headers(res.headers_mut(), &first_charge.limit, &outcome);
             }
             Ok(res.map_into_boxed_body())
         })
@@ -560,7 +751,7 @@ where
 ///
 /// Carries the numbers the quota headers need, so an allowed request and a
 /// throttled one answer with the same information.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct QuotaOutcome {
     /// Whether the request may proceed to the handler.
     allowed: bool,
@@ -840,6 +1031,135 @@ mod tests {
             RATE_MESSAGES.key_prefix,
             RATE_MESSAGES_AUTHENTICATED.key_prefix
         );
+    }
+
+    // =========================================================================
+    // Multi-dimensional strict budgets
+    // =========================================================================
+
+    #[test]
+    fn subnet_bucket_key_masks_the_last_ipv4_octet() {
+        assert_eq!(
+            subnet_bucket_key(&"198.51.100.44".parse().unwrap()),
+            "198.51.100.mask",
+        );
+    }
+
+    #[test]
+    fn ipv4_neighbors_share_one_subnet_bucket() {
+        assert_eq!(
+            subnet_bucket_key(&"198.51.100.44".parse().unwrap()),
+            subnet_bucket_key(&"198.51.100.99".parse().unwrap()),
+            "rotating the last octet must not open a new subnet bucket",
+        );
+    }
+
+    #[test]
+    fn ipv4_depositors_on_different_networks_get_different_buckets() {
+        assert_ne!(
+            subnet_bucket_key(&"198.51.100.44".parse().unwrap()),
+            subnet_bucket_key(&"198.52.100.44".parse().unwrap()),
+        );
+    }
+
+    #[test]
+    fn subnet_bucket_key_keeps_the_first_three_ipv6_hextets() {
+        assert_eq!(
+            subnet_bucket_key(&"2001:db8:1234:5678::1".parse().unwrap()),
+            "2001:db8:1234.mask",
+        );
+    }
+
+    #[test]
+    fn ipv6_rotation_within_the_allocation_shares_one_bucket() {
+        assert_eq!(
+            subnet_bucket_key(&"2001:db8:1234:5678::1".parse().unwrap()),
+            subnet_bucket_key(&"2001:db8:1234:9abc::2".parse().unwrap()),
+            "rotating within a /48 must not open a new subnet bucket",
+        );
+    }
+
+    #[test]
+    fn register_charges_the_exact_subnet_and_global_daily_buckets() {
+        let buckets = strict_charge_buckets(
+            &RATE_AUTH_STRICT,
+            Some("198.51.100.44".parse().unwrap()),
+            "/api/v1/auth/register",
+            2000,
+        );
+
+        assert_eq!(buckets.len(), 3, "register must charge three dimensions");
+        assert_eq!(buckets[0].key, "rl:auth_strict:198.51.100.44");
+        assert_eq!(buckets[0].limit.max_requests, RATE_AUTH_STRICT.max_requests);
+        assert_eq!(
+            buckets[1].key, "rl:auth_strict_mask:198.51.100.mask",
+            "the subnet bucket must blunt last-octet rotation",
+        );
+        assert_eq!(
+            buckets[1].limit.max_requests,
+            RATE_AUTH_STRICT_SUBNET.max_requests
+        );
+        assert_eq!(buckets[2].key, REGISTER_GLOBAL_KEY);
+        assert_eq!(buckets[2].limit.max_requests, 2000);
+        assert_eq!(buckets[2].limit.window_secs, SECONDS_PER_DAY);
+    }
+
+    #[test]
+    fn login_charges_no_register_daily_bucket() {
+        let buckets = strict_charge_buckets(
+            &RATE_AUTH_STRICT,
+            Some("198.51.100.44".parse().unwrap()),
+            "/api/v1/auth/login",
+            2000,
+        );
+        assert_eq!(buckets.len(), 2, "login must charge exact + subnet only");
+        assert_eq!(buckets[0].key, "rl:auth_strict:198.51.100.44");
+        assert_eq!(buckets[1].key, "rl:auth_strict_mask:198.51.100.mask");
+    }
+
+    #[test]
+    fn register_still_charges_daily_cap_when_the_ip_is_unknown() {
+        let buckets = strict_charge_buckets(&RATE_AUTH_STRICT, None, "/api/v1/auth/register", 2000);
+        assert_eq!(buckets.len(), 2, "no subnet dimension without an address");
+        assert_eq!(buckets[0].key, "rl:auth_strict:unknown");
+        assert_eq!(buckets[1].key, REGISTER_GLOBAL_KEY);
+    }
+
+    #[test]
+    fn strict_subnet_budget_is_looser_than_the_per_ip_budget() {
+        const {
+            assert!(RATE_AUTH_STRICT.max_requests < RATE_AUTH_STRICT_SUBNET.max_requests);
+        }
+    }
+
+    // =========================================================================
+    // Charge scope (single-charge rule)
+    // =========================================================================
+
+    #[test]
+    fn nested_scopes_charge_only_the_default_category() {
+        // Category-resolved strict/session buckets collide between the outer
+        // (scope-wide) limiter and the nested auth-scope limiter, so the nested
+        // one must charge just the Default category.
+        assert!(!charges(
+            ChargeScope::DefaultOnly,
+            RateLimitCategory::AuthStrict
+        ));
+        assert!(!charges(
+            ChargeScope::DefaultOnly,
+            RateLimitCategory::AuthSession
+        ));
+        assert!(charges(
+            ChargeScope::DefaultOnly,
+            RateLimitCategory::Default
+        ));
+    }
+
+    #[test]
+    fn scope_wide_limiters_charge_every_category() {
+        assert!(charges(ChargeScope::All, RateLimitCategory::AuthStrict));
+        assert!(charges(ChargeScope::All, RateLimitCategory::AuthSession));
+        assert!(charges(ChargeScope::All, RateLimitCategory::Default));
     }
 
     // =========================================================================
