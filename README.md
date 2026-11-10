@@ -736,9 +736,62 @@ cd frontend && pnpm audit --prod
 - Rate limiting on auth endpoints
 - CSRF protection on state-changing operations
 - Field-level encryption with blind indexes
-- Anti-bot protection on registration (per-IP, per-subnet and daily budgets,
-  proxy-aware client IP) — see
-  [Registration Abuse Protection](docs/REGISTRATION_ABUSE_PROTECTION.md)
+
+### Anti-Bot Registration Protection
+
+`POST /api/v1/auth/register` (and the other brute-force-sensitive auth
+endpoints) are defended against scripted mass registration. **Everything in the
+"always on" list requires no third-party service**, and every optional policy
+is opt-in and vendor-neutral.
+
+**Always on**
+
+- **Proxy-aware client IP** — `X-Forwarded-For` / `Forwarded` are walked
+  right to left, skipping trusted hops. The leftmost (attacker-controlled)
+  entry is ignored, which is what used to let a bot mint a fresh rate-limit
+  bucket per request.
+- **Three budgets per strict request** — exact client IP (10/min), subnet
+  aggregate (IPv4 `/24`, IPv6 `/48`: 30/min) and a global daily registration
+  ceiling (`REGISTER_DAILY_LIMIT`, default 2000/day). The rate is bounded *and*
+  the volume is bounded.
+- **Fail closed** — if Redis is unavailable, strict endpoints answer `503`
+  instead of letting traffic through.
+- **Expensive work last** — Argon2id runs after validation, so rejected
+  payloads never pay for it.
+- **Mail outside the request path** — confirmation/reset mails are dispatched
+  as background tasks; a slow relay cannot hold workers or delay responses.
+- **Audit trail** — every successful registration writes an `auth.register`
+  audit entry (user, client address, user agent, email *fingerprint* — never
+  the plaintext address).
+- **Production refuses to boot unprotected** — `RATE_LIMIT_ENABLED=false` is
+  rejected in staging/production.
+
+**Optional (all off by default, no vendor imposed)**
+
+```dotenv
+# CAPTCHA — none | turnstile | recaptcha | custom (any site-verify service)
+CAPTCHA_PROVIDER=none
+CAPTCHA_SECRET=
+CAPTCHA_VERIFY_URL=
+
+# Temporary/disposable mailbox policy (product policy, not security)
+DISPOSABLE_EMAIL_BLOCKING=false
+DISPOSABLE_EMAIL_DOMAINS=
+
+# Reject domains without MX records, resolved through YOUR DNS-over-HTTPS resolver
+EMAIL_MX_CHECK_ENABLED=false
+EMAIL_DNS_RESOLVER_URL=
+```
+
+The CAPTCHA token is verified server-side before the password hash: a rejected
+token answers `422`, an unreachable verifier answers `503` (fail closed), and
+production refuses to boot when a provider is configured without its secret.
+The frontend stays vendor-neutral — your widget publishes the solved token
+through the `useCaptchaToken()` composable, and the register form sends it when
+present.
+
+> Behind a reverse proxy, set `TRUSTED_PROXIES` to the proxy's CIDRs —
+> otherwise every request is keyed on the proxy address.
 
 ---
 
@@ -907,8 +960,7 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD"              # Connect 
 - **CSRF Protection**: Signed cookies for browser-based attacks
 - **Rate Limiting**: Redis-backed sliding window algorithm
 - **Anti-Bot Registration**: per-IP, per-subnet and daily registration budgets,
-  proxy-aware client IP, optional CAPTCHA (any vendor) —
-  [details](docs/REGISTRATION_ABUSE_PROTECTION.md)
+  proxy-aware client IP, optional vendor-neutral CAPTCHA
 - **API Key Auth**: Service-to-service authentication
 - **Signature Verification**: Stripe/Pix webhook signature validation
 
