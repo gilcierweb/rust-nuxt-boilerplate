@@ -94,6 +94,8 @@ pub fn test_config() -> AppConfig {
         account_lockout_duration_secs: 15 * 60,
         rate_limit_enabled: true,
         register_daily_limit: 2000,
+        captcha_provider: crate::security::captcha::CaptchaProvider::None,
+        captcha_secret: None,
         cookie_secure_override: false,
         argon2_m_cost: 65536,
         argon2_t_cost: 3,

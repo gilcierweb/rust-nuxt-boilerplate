@@ -53,6 +53,12 @@ pub struct RegisterRequest {
     // avoid asymmetric allocation.
     #[validate(length(max = 128, message = "auth.validation.password_invalid_length"))]
     pub password_confirmation: String,
+    // Optional human-verification token (Cloudflare Turnstile / reCAPTCHA).
+    // Enforced only when the deployment opts into `CAPTCHA_PROVIDER`; absent
+    // from responses otherwise, so the boilerplate ships with zero
+    // third-party verification dependencies.
+    #[validate(length(max = 4096, message = "auth.validation.token_invalid"))]
+    pub captcha_token: Option<String>,
 }
 
 #[derive(Debug, Deserialize, Validate, ToSchema)]
@@ -172,7 +178,9 @@ pub struct UserInfo {
         (status = 201, description = "User registered successfully"),
         (status = 400, description = "Validation error"),
         (status = 409, description = "Email already exists"),
-        (status = 429, description = "Too many requests")
+        (status = 422, description = "Captcha missing or invalid"),
+        (status = 429, description = "Too many requests"),
+        (status = 503, description = "Captcha verification service unreachable (fail closed)")
     )
 )]
 #[post("/register")]
@@ -186,6 +194,44 @@ pub async fn register(
 
     // Get locale from request for localized emails/errors
     let locale = crate::middleware::locale::RequestLocale::from_request(&req);
+
+    // CAPTCHA enforcement first: reject bots for the cost of one validation
+    // pass, never for the cost of an Argon2id hash. Disabled deployments
+    // (boilerplate default) skip this entirely.
+    if container.config.captcha_enabled() {
+        use crate::security::captcha::{CaptchaDecision, decide_captcha};
+        let decision = decide_captcha(
+            container.config.captcha_provider,
+            container.config.captcha_secret.as_deref(),
+            body.captcha_token.as_deref(),
+        )
+        .await;
+
+        match decision {
+            CaptchaDecision::Verified => {},
+            CaptchaDecision::Required => {
+                return Err(AppError::Validation(
+                    t!("auth.validation.captcha_required", locale = locale).into_owned(),
+                ));
+            },
+            CaptchaDecision::Rejected => {
+                return Err(AppError::Validation(
+                    t!("auth.validation.captcha_invalid", locale = locale).into_owned(),
+                ));
+            },
+            CaptchaDecision::ServiceUnavailable => {
+                // Fail closed: an unreachable verifier must not lose strength
+                // the deployment explicitly paid for by enabling it.
+                tracing::warn!(
+                    event = "auth.register.captcha_unavailable",
+                    "captcha siteverify unreachable — failing closed"
+                );
+                return Err(AppError::ServiceUnavailable(
+                    t!("errors.service_unavailable", locale = locale).into_owned(),
+                ));
+            },
+        }
+    }
 
     if body.password != body.password_confirmation {
         return Err(AppError::Validation(

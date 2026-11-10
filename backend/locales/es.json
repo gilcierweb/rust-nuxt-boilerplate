@@ -236,5 +236,8 @@
   "email.password_changed.body_text": "Su contraseña fue cambiada exitosamente. Si usted no hizo este cambio, por favor contacte al soporte inmediatamente.",
   "email.password_changed.heading": "Su contraseña ha sido cambiada exitosamente.",
   "email.password_changed.warning": "Si usted no hizo este cambio, por favor contacte al soporte inmediatamente.",
-  "email.password_changed.sessions_notice": "Por su seguridad, todas sus sesiones activas han sido revocadas."
+  "email.password_changed.sessions_notice": "Por su seguridad, todas sus sesiones activas han sido revocadas.",
+  "errors.service_unavailable": "Servicio temporalmente no disponible, inténtalo de nuevo en breve",
+  "auth.validation.captcha_required": "Completa la verificación humana (captcha) para continuar",
+  "auth.validation.captcha_invalid": "La verificación captcha falló. Inténtalo de nuevo"
 }

@@ -236,5 +236,8 @@
   "email.password_changed.body_text": "Your password was successfully changed. If you didn't make this change, please contact support immediately.",
   "email.password_changed.heading": "Your password has been changed successfully.",
   "email.password_changed.warning": "If you didn't make this change, please contact support immediately.",
-  "email.password_changed.sessions_notice": "For your security, all your active sessions have been revoked."
+  "email.password_changed.sessions_notice": "For your security, all your active sessions have been revoked.",
+  "errors.service_unavailable": "Service temporarily unavailable, please try again shortly",
+  "auth.validation.captcha_required": "Complete the human verification (captcha) to continue",
+  "auth.validation.captcha_invalid": "Captcha verification failed. Please retry"
 }

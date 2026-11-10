@@ -31,6 +31,7 @@ impl ResponseError for AppError {
             AppError::Internal(_) => actix_web::http::StatusCode::INTERNAL_SERVER_ERROR,
             AppError::TooManyRequests(_) => actix_web::http::StatusCode::TOO_MANY_REQUESTS,
             AppError::RateLimited(_) => actix_web::http::StatusCode::TOO_MANY_REQUESTS,
+            AppError::ServiceUnavailable(_) => actix_web::http::StatusCode::SERVICE_UNAVAILABLE,
         }
     }
 
@@ -74,5 +75,25 @@ mod tests {
 
         assert_eq!(json["error"]["code"], "INTERNAL_ERROR");
         assert_eq!(json["error"]["message"], "An internal error occurred");
+    }
+
+    #[actix_rt::test]
+    async fn service_unavailable_maps_to_503_with_generic_message() {
+        let response =
+            AppError::ServiceUnavailable("verify upstream detail".to_string()).error_response();
+        assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+
+        let body = to_bytes(response.into_body()).await.unwrap();
+        let json: Value = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(json["error"]["code"], "SERVICE_UNAVAILABLE");
+        // The raw cause never reaches the client response.
+        assert!(
+            !json["error"]["message"]
+                .as_str()
+                .unwrap()
+                .contains("verify upstream"),
+            "internal outage detail must not leak to the client"
+        );
     }
 }

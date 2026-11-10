@@ -1,4 +1,5 @@
 pub mod blind_index;
+pub mod captcha;
 pub mod encryption;
 pub mod key_manager;
 mod normalization;

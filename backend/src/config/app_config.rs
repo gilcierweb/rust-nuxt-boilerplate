@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::{env, fs};
 
 use base64::Engine as _;
@@ -288,6 +289,14 @@ pub struct AppConfig {
     // that the per-IP limits cannot see. Default 2000/day.
     pub register_daily_limit: u64,
 
+    // Optional CAPTCHA (Cloudflare Turnstile / Google reCAPTCHA) for
+    // brute-force-sensitive endpoints. Disabled by default — the boilerplate
+    // must run without any third-party verification service; hostile-facing
+    // deployments (staging, production) opt in via CAPTCHA_PROVIDER +
+    // CAPTCHA_SECRET.
+    pub captcha_provider: crate::security::captcha::CaptchaProvider,
+    pub captcha_secret: Option<String>,
+
     // Cookie security override — set COOKIE_SECURE=true in development when
     // routing through an HTTPS tunnel (ngrok, Cloudflare Tunnel, etc.) to
     // prevent the refresh_token and csrf_token cookies from being sent over
@@ -576,6 +585,24 @@ impl AppConfig {
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(crate::middleware::rate_limit_middleware::DEFAULT_REGISTER_DAILY_LIMIT),
 
+            // Optional human verification for hostile-facing deployments:
+            // disabled unless CAPTCHA_PROVIDER names a supported provider.
+            // An unknown provider name must refuse the boot instead of
+            // silently disabling the protection it was configured for.
+            captcha_provider: match env::var("CAPTCHA_PROVIDER") {
+                Ok(raw) => crate::security::captcha::CaptchaProvider::from_str(&raw)
+                    .unwrap_or_else(|error| {
+                        panic!(
+                            "CAPTCHA_PROVIDER must be none, turnstile or recaptcha, got '{error}'"
+                        )
+                    }),
+                Err(_) => crate::security::captcha::CaptchaProvider::None,
+            },
+            captcha_secret: env::var("CAPTCHA_SECRET")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty()),
+
             // Cookie Secure flag override for development tunnels.
             // Set COOKIE_SECURE=true when using ngrok/Cloudflare Tunnel in dev
             // so that cookies are not sent in plaintext over the tunnel edge.
@@ -614,6 +641,16 @@ impl AppConfig {
 
     pub fn is_production(&self) -> bool {
         self.is_production_like()
+    }
+
+    /// Whether the register flow must verify a human-verification token.
+    ///
+    /// A provider alone (without its secret) is a misconfiguration that
+    /// production validation refuses at boot; outside production the flag
+    /// simply stays disabled so development never needs an upstream service.
+    pub fn captcha_enabled(&self) -> bool {
+        self.captcha_provider != crate::security::captcha::CaptchaProvider::None
+            && self.captcha_secret.is_some()
     }
 
     pub fn is_production_like(&self) -> bool {
@@ -855,6 +892,23 @@ impl AppConfig {
             }
         }
 
+        // CAPTCHA (optional anti-bot verification) validation.
+        // A provider half-enabled (provider set, secret missing) silently
+        // disables the protection it was configured for — in production the
+        // operator explicitly opted in, so the boot must refuse instead.
+        if self.captcha_provider != crate::security::captcha::CaptchaProvider::None
+            && self.captcha_secret.is_none()
+            && self.is_production_like()
+        {
+            errors.push(format!(
+                "CAPTCHA_SECRET must be set when CAPTCHA_PROVIDER={:?} is \
+                 enabled in production. Generate a Turn secret at \
+                 https://dash.cloudflare.com or a reCAPTCHA one at \
+                 https://www.google.com/recaptcha/admin",
+                self.captcha_provider
+            ));
+        }
+
         // CORS origin validation (FRONTEND_URL)
         // Must not contain wildcard "*" when using credentials
         // Each origin must start with http:// or https://
@@ -916,6 +970,7 @@ mod placeholder_tests {
     //! "REPLACE_WITH_*" (JWT_SECRET, encryption keys). The development
     //! environment intentionally allows these markers.
     use super::*;
+    use crate::security::captcha::CaptchaProvider;
 
     fn minimal_valid_secret() -> String {
         // 48-byte base64 string that decodes to ≥32 bytes
@@ -1051,6 +1106,85 @@ mod placeholder_tests {
         set("REFRESH_TOKEN_HASH_SALT", &valid);
         set("BLIND_INDEX_KEY", &valid);
         set("MASTER_KEY", &valid);
+    }
+
+    // ---------------------------------------------------------------------------
+    // CAPTCHA (opt-in anti-bot verification)
+    // ---------------------------------------------------------------------------
+
+    #[test]
+    #[serial_test::serial]
+    fn captcha_defaults_to_disabled() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::remove_var("CAPTCHA_PROVIDER") };
+        unsafe { std::env::remove_var("CAPTCHA_SECRET") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(config.captcha_provider, CaptchaProvider::None);
+        assert!(config.captcha_secret.is_none());
+        assert!(!config.captcha_enabled());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn captcha_provider_and_secret_enable_human_verification() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "turnstile") };
+        unsafe { std::env::set_var("CAPTCHA_SECRET", "0x0000000000000000000000000000") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(config.captcha_provider, CaptchaProvider::Turnstile);
+        assert!(config.captcha_enabled());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn captcha_enabled_without_secret_is_a_production_validation_error() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("ENVIRONMENT", "production") };
+        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
+        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
+        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
+        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "recaptcha") };
+        unsafe { std::env::remove_var("CAPTCHA_SECRET") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        let errors = config.validate();
+        assert!(
+            errors
+                .iter()
+                .any(|e| e.contains("CAPTCHA_SECRET") && e.contains("CAPTCHA_PROVIDER")),
+            "production with a provider but no secret must refuse boot, got: {:?}",
+            errors
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn unknown_captcha_provider_names_refuse_to_boot() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "bogus") };
+
+        let result = std::panic::catch_unwind(AppConfig::from_env);
+        let error = result.expect_err("unknown providers must fail");
+        let message = error
+            .downcast_ref::<String>()
+            .cloned()
+            .or_else(|| error.downcast_ref::<&str>().map(|s| s.to_string()))
+            .unwrap_or_default();
+        assert!(
+            message.contains("CAPTCHA_PROVIDER"),
+            "panic must name the offending variable, got: {message}"
+        );
     }
 
     #[test]

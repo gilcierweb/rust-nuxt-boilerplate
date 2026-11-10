@@ -236,5 +236,8 @@
   "email.password_changed.body_text": "Sua senha foi alterada com sucesso. Se você não fez esta alteração, entre em contato com o suporte imediatamente.",
   "email.password_changed.heading": "Sua senha foi alterada com sucesso.",
   "email.password_changed.warning": "Se você não fez esta alteração, entre em contato com o suporte imediatamente.",
-  "email.password_changed.sessions_notice": "Por segurança, todas as suas sessões ativas foram encerradas."
+  "email.password_changed.sessions_notice": "Por segurança, todas as suas sessões ativas foram encerradas.",
+  "errors.service_unavailable": "Serviço temporariamente indisponível, tente novamente em instantes",
+  "auth.validation.captcha_required": "Complete a verificação humana (captcha) para continuar",
+  "auth.validation.captcha_invalid": "A verificação captcha falhou. Tente novamente"
 }

@@ -36,6 +36,9 @@ pub enum AppError {
     #[display("{_0}")]
     #[allow(dead_code)]
     RateLimited(String),
+
+    #[display("{_0}")]
+    ServiceUnavailable(String),
 }
 
 impl Error for AppError {
@@ -67,6 +70,7 @@ impl AppError {
             AppError::Internal(_) => "INTERNAL_ERROR",
             AppError::TooManyRequests(_) => "TOO_MANY_REQUESTS",
             AppError::RateLimited(_) => "RATE_LIMITED",
+            AppError::ServiceUnavailable(_) => "SERVICE_UNAVAILABLE",
         }
     }
 
@@ -121,6 +125,7 @@ impl AppError {
             },
             AppError::TooManyRequests(_) => t!("errors.too_many_requests").into_owned(),
             AppError::RateLimited(_) => t!("errors.rate_limited").into_owned(),
+            AppError::ServiceUnavailable(_) => t!("errors.service_unavailable").into_owned(),
         }
     }
 
@@ -180,11 +185,15 @@ impl AppError {
             },
             AppError::TooManyRequests(_) => "errors.too_many_requests".to_string(),
             AppError::RateLimited(_) => "errors.rate_limited".to_string(),
+            AppError::ServiceUnavailable(_) => "errors.service_unavailable".to_string(),
         }
     }
 
     pub fn should_log_internal_details(&self) -> bool {
-        matches!(self, AppError::Database(_) | AppError::Internal(_))
+        matches!(
+            self,
+            AppError::Database(_) | AppError::Internal(_) | AppError::ServiceUnavailable(_)
+        )
     }
 
     /// Convert a Diesel query error to an `AppError`, mapping `NotFound` to
