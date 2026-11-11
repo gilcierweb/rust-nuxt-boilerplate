@@ -1,14 +1,19 @@
-use actix_web::{HttpResponse, delete, get, patch, post, web};
-use serde::Deserialize;
+use std::sync::Arc;
+
+use actix_web::{HttpResponse, delete, get, patch, post, put, web};
+use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::authz::ability::{AbilityAction, AbilityResource, CurrentAbility};
+use crate::authz::ability::{AbilityAction, AbilityResource, CurrentAbility, PermissionEffect};
+use crate::authz::guards::ADMINISTRATOR_CODES;
 use crate::controllers::auth_controller::invalidate_role_cache;
 use crate::errors::{AppError, AppResult};
+use crate::models::permission::RolePermissionItem;
 use crate::models::role::{NewRole, Role};
 use crate::repositories::container::AppContainer;
+use crate::repositories::traits::roles_trait::RoleMemberItem;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 use crate::utils::sanitize::{sanitize_input, strip_html};
 use crate::utils::validation::first_validation_error_message;
@@ -208,10 +213,234 @@ pub async fn update_role(
     Ok(HttpResponse::Ok().json(updated))
 }
 
+/// The replacement of every link of a role.
+///
+/// The effect is the stored SMALLINT and the handler only accepts the two
+/// values the model defines: the database stays CHECK free (AGENTS.md database
+/// conventions) and the refusal happens before the write.
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+pub struct RolePermissionsRequest {
+    #[validate(length(min = 1, message = "admin.roles.validation.permissions_empty"))]
+    permissions: Vec<RolePermissionItem>,
+}
+
+/// Validates the payload of a link replacement: every code must belong to the
+/// catalog and every effect must be one the model defines.
+fn validate_permission_links(items: &[RolePermissionItem]) -> AppResult<()> {
+    for item in items {
+        let code = item.code.trim();
+        let Some((resource_code, action_code)) = code.split_once(':') else {
+            return Err(AppError::Validation(
+                t!("admin.roles.validation.code_unknown").into_owned(),
+            ));
+        };
+
+        if AbilityResource::from_code(resource_code).is_none()
+            || AbilityAction::from_code(action_code).is_none()
+        {
+            return Err(AppError::Validation(
+                t!("admin.roles.validation.code_unknown").into_owned(),
+            ));
+        }
+
+        if item.effect().is_none() {
+            return Err(AppError::Validation(
+                t!("admin.roles.validation.effect_invalid").into_owned(),
+            ));
+        }
+    }
+
+    Ok(())
+}
+
+/// The administrator codes as owned strings, the shape the repository reads.
+fn administrator_codes() -> Vec<String> {
+    ADMINISTRATOR_CODES
+        .iter()
+        .map(|code| (*code).to_string())
+        .collect()
+}
+
+/// The roles that would still hold the administrator codes after a link
+/// replacement of `role_id`: every current holder except the edited one, plus
+/// the edited one when the new set still carries both codes.
+fn administrator_sources_after(
+    holders_before: &[Uuid],
+    role_id: Uuid,
+    items: &[RolePermissionItem],
+) -> Vec<Uuid> {
+    let mut after: Vec<Uuid> = holders_before
+        .iter()
+        .copied()
+        .filter(|holder| *holder != role_id)
+        .collect();
+
+    let keeps_administrator_codes = ADMINISTRATOR_CODES.iter().all(|code| {
+        items
+            .iter()
+            .any(|item| &item.code == code && item.effect() == Some(PermissionEffect::Can))
+    });
+    if keeps_administrator_codes {
+        after.push(role_id);
+    }
+
+    after
+}
+
+/// The permission links of a role, as the admin interface reads them back.
+///
+/// Requires the `roles:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/roles/{id}/permissions",
+    tag = "roles",
+    params(
+        ("id" = Uuid, Path, description = "Role identifier")
+    ),
+    responses(
+        (status = 200, description = "Permission links of the role", body = RolePermissionLinksResponse),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:read` authority"),
+        (status = 404, description = "Role not found")
+    ),
+    security(("bearer_auth" = []))
+)]
+#[get("/roles/{id}/permissions")]
+pub async fn get_role_permissions(
+    ability: CurrentAbility,
+    container: web::Data<AppContainer>,
+    id: web::Path<Uuid>,
+) -> AppResult<HttpResponse> {
+    ability.authorize(AbilityAction::Read, AbilityResource::Roles)?;
+    let role_id = id.into_inner();
+    container
+        .roles
+        .find(&role_id)
+        .await
+        .map_err(|error| AppError::from_diesel(error, "Role"))?;
+
+    let links = container
+        .roles
+        .list_permission_links(&role_id)
+        .await
+        .map_err(AppError::Database)?;
+
+    Ok(HttpResponse::Ok().json(RolePermissionLinksResponse { permissions: links }))
+}
+
+/// Replaces every permission link of a role in one transaction.
+///
+/// Requires the `roles:update` authority. Refuses when the change would leave
+/// no role holding both administrator codes, because nobody could repair the
+/// system afterwards.
+#[utoipa::path(
+    put,
+    path = "/api/v1/admin/roles/{id}/permissions",
+    tag = "roles",
+    params(
+        ("id" = Uuid, Path, description = "Role identifier")
+    ),
+    request_body = RolePermissionsRequest,
+    responses(
+        (status = 200, description = "Links replaced", body = UpdatedCountResponse),
+        (status = 400, description = "Validation error"),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:update` authority"),
+        (status = 404, description = "Role not found"),
+        (status = 422, description = "Unknown code or effect, or the last administrator source")
+    ),
+    security(("bearer_auth" = []))
+)]
+#[put("/roles/{id}/permissions")]
+pub async fn put_role_permissions(
+    ability: CurrentAbility,
+    container: web::Data<AppContainer>,
+    id: web::Path<Uuid>,
+    body: web::Json<RolePermissionsRequest>,
+) -> AppResult<HttpResponse> {
+    ability.authorize(AbilityAction::Update, AbilityResource::Roles)?;
+    let payload = body.into_inner();
+    payload
+        .validate()
+        .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
+    validate_permission_links(&payload.permissions)?;
+
+    let role_id = id.into_inner();
+    container
+        .roles
+        .find(&role_id)
+        .await
+        .map_err(|error| AppError::from_diesel(error, "Role"))?;
+
+    let holders_before = container
+        .roles
+        .role_ids_holding_all_codes(&administrator_codes())
+        .await
+        .map_err(AppError::Database)?;
+    let holders_after = administrator_sources_after(&holders_before, role_id, &payload.permissions);
+    crate::authz::guards::ensure_role_administration_survives(&holders_after)?;
+
+    let updated = container
+        .roles
+        .replace_permission_links(&role_id, &payload.permissions)
+        .await
+        .map_err(AppError::Database)?;
+
+    // The ability of the members of the role changed: their cached grants and
+    // tokens have to go.
+    invalidate_role_cache(&container, &role_id).await;
+
+    Ok(HttpResponse::Ok().json(UpdatedCountResponse { updated }))
+}
+
+/// The members of a role, with the decrypted email.
+///
+/// Requires the `roles:read` authority.
+#[utoipa::path(
+    get,
+    path = "/api/v1/admin/roles/{id}/members",
+    tag = "roles",
+    params(
+        ("id" = Uuid, Path, description = "Role identifier")
+    ),
+    responses(
+        (status = 200, description = "Members of the role", body = Vec<RoleMemberItem>),
+        (status = 401, description = "Authentication required"),
+        (status = 403, description = "Missing `roles:read` authority"),
+        (status = 404, description = "Role not found")
+    ),
+    security(("bearer_auth" = []))
+)]
+#[get("/roles/{id}/members")]
+pub async fn get_role_members(
+    ability: CurrentAbility,
+    container: web::Data<AppContainer>,
+    id: web::Path<Uuid>,
+) -> AppResult<HttpResponse> {
+    ability.authorize(AbilityAction::Read, AbilityResource::Roles)?;
+    let role_id = id.into_inner();
+    container
+        .roles
+        .find(&role_id)
+        .await
+        .map_err(|error| AppError::from_diesel(error, "Role"))?;
+
+    let security = crate::security::SecurityService::from_config(&container.config)
+        .map_err(|error| AppError::Internal(error.to_string()))?;
+    let members = container
+        .roles
+        .list_members(&role_id, Arc::new(security))
+        .await
+        .map_err(AppError::Database)?;
+
+    Ok(HttpResponse::Ok().json(members))
+}
+
 /// Delete a role by its UUID.
 ///
-/// Requires the `roles:delete` authority. Invalidates cached roles for any
-/// users that were assigned to the deleted role.
+/// Requires the `roles:delete` authority. Refuses the administrator role, the
+/// role the registration resolves by default and any deletion that would leave
+/// no role holding the administrator codes.
 #[utoipa::path(
     delete,
     path = "/api/v1/admin/roles/{id}",
@@ -235,6 +464,40 @@ pub async fn delete_role(
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Delete, AbilityResource::Roles)?;
     let role_id = id.into_inner();
+
+    let role = container
+        .roles
+        .find(&role_id)
+        .await
+        .map_err(|error| AppError::from_diesel(error, "Role"))?;
+
+    // The administrator role is the one every deployment keeps: deleting it
+    // would take the whole catalog of links with it.
+    if role.name == "admin" {
+        return Err(AppError::Validation(
+            t!("admin.roles.guard.administrator_role").into_owned(),
+        ));
+    }
+
+    // The registration resolves its default role by name, so the row cannot
+    // disappear while REGISTER_DEFAULT_ROLE points at it.
+    if role.name == container.config.register_default_role {
+        return Err(AppError::Validation(
+            t!("admin.roles.guard.default_role").into_owned(),
+        ));
+    }
+
+    // And no deletion may empty the administrator sources.
+    let holders = container
+        .roles
+        .role_ids_holding_all_codes(&administrator_codes())
+        .await
+        .map_err(AppError::Database)?;
+    let remaining: Vec<Uuid> = holders
+        .into_iter()
+        .filter(|holder| *holder != role_id)
+        .collect();
+    crate::authz::guards::ensure_role_administration_survives(&remaining)?;
 
     // Get all users who have this role BEFORE deleting (for token revocation)
     let affected_users = container
@@ -271,7 +534,22 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         .service(get_role)
         .service(create_role)
         .service(update_role)
-        .service(delete_role);
+        .service(delete_role)
+        .service(get_role_permissions)
+        .service(put_role_permissions)
+        .service(get_role_members);
+}
+
+/// The links of a role as the admin interface reads them back.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct RolePermissionLinksResponse {
+    permissions: Vec<RolePermissionItem>,
+}
+
+/// The number of links a replacement wrote.
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct UpdatedCountResponse {
+    updated: usize,
 }
 
 #[cfg(test)]

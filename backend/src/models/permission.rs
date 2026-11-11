@@ -56,6 +56,26 @@ pub struct NewPermission {
     pub description: Option<String>,
 }
 
+/// The link of a role and a permission as the admin interface writes and reads
+/// it: the machine code and the stored effect.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, ToSchema)]
+pub struct RolePermissionItem {
+    pub code: String,
+    pub effect: i16,
+}
+
+impl RolePermissionItem {
+    /// The modeled effect of the link, or `None` for a value the model does
+    /// not define (fail closed: the caller refuses it).
+    pub fn effect(&self) -> Option<PermissionEffect> {
+        match self.effect {
+            0 => Some(PermissionEffect::Can),
+            1 => Some(PermissionEffect::Cannot),
+            _ => None,
+        }
+    }
+}
+
 /// The link between a role and a permission. `effect` decides whether the
 /// permission is granted (allow) or refused (deny); deny wins over allow.
 #[derive(Serialize, Deserialize, Debug, Clone, Queryable, Selectable, ToSchema)]

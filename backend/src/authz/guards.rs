@@ -3,6 +3,9 @@
 //! These pure functions protect the rbac mutation endpoints against the two
 //! disaster scenarios of a permissions admin: locking every administrator out
 //! of role administration and granting an actor more authority than they hold.
+//!
+//! They take the holder sets as input, so a caller reads the database once and
+//! stays testable without one.
 
 use std::collections::HashSet;
 
@@ -19,7 +22,7 @@ pub const ADMINISTRATOR_CODES: [&str; 2] = ["roles:read", "roles:update"];
 pub fn ensure_role_administration_survives(roles_holding_after: &[Uuid]) -> Result<(), AppError> {
     if roles_holding_after.is_empty() {
         return Err(AppError::Validation(
-            "operation would remove every role holding roles:read and roles:update".to_string(),
+            t!("admin.roles.guard.administrator_source").into_owned(),
         ));
     }
 
@@ -34,7 +37,7 @@ pub fn ensure_assignment_keeps_administrator(
 ) -> Result<(), AppError> {
     if holders_before.len() == 1 && holders_after.is_empty() {
         return Err(AppError::Validation(
-            "operation would remove the last role holding roles:read and roles:update".to_string(),
+            t!("admin.roles.guard.last_administrator_source").into_owned(),
         ));
     }
 
@@ -50,7 +53,7 @@ pub fn ensure_no_escalation(
 ) -> Result<(), AppError> {
     if !role_allow.is_subset(actor_allow) {
         return Err(AppError::Validation(
-            "cannot assign a role granting authorities beyond your own".to_string(),
+            t!("admin.roles.guard.escalation").into_owned(),
         ));
     }
 

@@ -39,6 +39,9 @@ use utoipa::{Modify, OpenApi};
         crate::controllers::roles_controller::create_role,
         crate::controllers::roles_controller::update_role,
         crate::controllers::roles_controller::delete_role,
+        crate::controllers::roles_controller::get_role_permissions,
+        crate::controllers::roles_controller::put_role_permissions,
+        crate::controllers::roles_controller::get_role_members,
         // -- admin / users
         crate::controllers::users_controller::list_users,
         crate::controllers::users_controller::get_user,
@@ -78,7 +81,12 @@ use utoipa::{Modify, OpenApi};
             crate::utils::pagination::PaginatedResponse<crate::models::permission::PermissionWithRoles>,
             // roles
             crate::controllers::roles_controller::RoleWriteRequest,
+            crate::controllers::roles_controller::RolePermissionsRequest,
+            crate::controllers::roles_controller::RolePermissionLinksResponse,
+            crate::controllers::roles_controller::UpdatedCountResponse,
             crate::models::role::Role,
+            crate::models::permission::RolePermissionItem,
+            crate::repositories::traits::roles_trait::RoleMemberItem,
             crate::models::role::NewRole,
             // users
             crate::repositories::traits::users_trait::AdminUserLookupItem,
