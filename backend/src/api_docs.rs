@@ -23,6 +23,9 @@ use utoipa::{Modify, OpenApi};
         // -- webhooks
         crate::controllers::webhooks_controller::stripe_webhook,
         crate::controllers::webhooks_controller::pix_webhook,
+        // -- self service / profile
+        crate::controllers::profile_controller::find_own_profile,
+        crate::controllers::profile_controller::update_own_profile,
         // -- health / metrics
         crate::controllers::health_controller::liveness,
         crate::controllers::health_controller::health_check,
@@ -102,6 +105,8 @@ use utoipa::{Modify, OpenApi};
             crate::models::audit_log::NewAuditLog,
             // upload
             crate::controllers::upload_controller::UploadResponse,
+            // self service profile
+            crate::controllers::profile_controller::ProfileUpdateRequest,
             // pagination
             crate::utils::pagination::PaginationParams,
             crate::utils::pagination::PaginationMeta,

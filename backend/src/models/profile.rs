@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use diesel::{Insertable, Queryable, Selectable};
+use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use utoipa::ToSchema;
@@ -65,6 +65,20 @@ pub struct NewProfile {
     pub status: bool,
     pub social_network: Value,
     pub encryption_key_version: i32,
+}
+
+/// The profile fields a subject may edit about itself, as a partial update: a
+/// field left `None` keeps its stored value.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, AsChangeset, ToSchema)]
+#[diesel(table_name = profiles)]
+pub struct ProfilePatch {
+    pub first_name: Option<String>,
+    pub last_name: Option<String>,
+    pub full_name: Option<String>,
+    pub nickname: Option<String>,
+    pub bio: Option<String>,
+    pub avatar: Option<String>,
+    pub birthday: Option<NaiveDate>,
 }
 
 impl NewProfile {

@@ -115,6 +115,27 @@ impl IProfileRepository for ProfilesRepository {
             .await
     }
 
+    /// A partial update: a field left `None` keeps its stored value.
+    async fn patch(
+        &self,
+        pid: &Uuid,
+        patch: &crate::models::profile::ProfilePatch,
+    ) -> diesel::QueryResult<Profile> {
+        let pid = *pid;
+        let patch = patch.clone();
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    diesel::update(profiles_table::table.find(pid))
+                        .set(&patch)
+                        .returning(Profile::as_returning())
+                        .get_result(conn)
+                        .await
+                })
+            })
+            .await
+    }
+
     async fn find_by_user_id(&self, uid: &Uuid) -> diesel::QueryResult<Option<Profile>> {
         let uid = *uid;
         use crate::db::schema::profiles::dsl::*;

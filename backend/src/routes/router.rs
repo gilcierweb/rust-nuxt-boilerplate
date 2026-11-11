@@ -6,8 +6,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::api_docs::ApiDoc;
 pub use crate::controllers::{
     audit_logs_controller, auth_controller, health_controller, metrics_controller,
-    permissions_controller, roles_controller, upload_controller, users_controller,
-    webhooks_controller,
+    permissions_controller, profile_controller, roles_controller, upload_controller,
+    users_controller, webhooks_controller,
 };
 use crate::middleware::csrf_protection::CsrfProtection;
 use crate::middleware::pix_webhook_verifier::PixWebhookVerifier;
@@ -227,6 +227,18 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                 web::scope("/webhooks/pix")
                     .wrap(PixWebhookVerifier::new())
                     .configure(webhooks_controller::pix_config),
+            )
+            // Self service profile routes (outside the admin domain): the
+            // subject only ever touches its own record, so the handlers
+            // authorize with an instance check.
+            .service(
+                web::scope("/api/v1")
+                    .wrap(CsrfProtection::new(vec![]))
+                    .wrap(crate::middleware::auth::JwtAuth::new(
+                        crate::middleware::auth_middleware::JwtAuthConfig::new(vec![])
+                            .with_token_blacklist(token_blacklist.clone()),
+                    ))
+                    .configure(profile_controller::config),
             )
             // Admin domain routes
             // Actix executes `wrap()`s in REVERSE registration order: the LAST

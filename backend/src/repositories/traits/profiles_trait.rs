@@ -15,6 +15,14 @@ pub trait IProfileRepository: Send + Sync {
     async fn update(&self, id: &Uuid, item: &NewProfile) -> QueryResult<Profile>;
     async fn destroy(&self, id: &Uuid) -> QueryResult<usize>;
 
+    /// A partial update of the editable fields: a field left `None` keeps its
+    /// stored value, so a self service PATCH never blanks a record.
+    async fn patch(
+        &self,
+        id: &Uuid,
+        patch: &crate::models::profile::ProfilePatch,
+    ) -> QueryResult<Profile>;
+
     async fn find_by_user_id(&self, user_id: &Uuid) -> QueryResult<Option<Profile>>;
     async fn find_by_cpf_blind_index(&self, cpf_blind_index: &[u8])
     -> QueryResult<Option<Profile>>;
