@@ -7,8 +7,10 @@ use ipnet::IpNet;
 use uuid::Uuid;
 
 use crate::db::database::DBPool;
+use crate::db::schema::roles as roles_table;
 use crate::db::schema::users as users_table;
 use crate::models::profile::Profile;
+use crate::models::role::Role;
 use crate::models::user::{NewUser, User};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::users_trait::{
@@ -488,6 +490,23 @@ impl IUserRepository for UsersRepository {
                         .inner_join(roles::table)
                         .select(roles::dsl::name)
                         .load::<String>(conn)
+                        .await
+                })
+            })
+            .await
+    }
+
+    async fn find_assignable_roles_by_name(&self, name: &str) -> diesel::QueryResult<Vec<Role>> {
+        let role_name = name.to_string();
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    use crate::db::schema::roles::dsl::*;
+
+                    roles_table::table
+                        .filter(name.eq(&role_name))
+                        .filter(resource_id.is_null())
+                        .load::<Role>(conn)
                         .await
                 })
             })

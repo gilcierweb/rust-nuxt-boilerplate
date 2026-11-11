@@ -3,7 +3,7 @@ use actix_web::cookie::{Cookie, SameSite};
 use actix_web::{HttpRequest, HttpResponse, get, post, web};
 use chrono::Utc;
 use diesel::result::Error as DieselError;
-use diesel::{ExpressionMethods, QueryDsl};
+use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
@@ -11,6 +11,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::authz::ability::{CurrentAbility, build_ability_from_grants};
+use crate::authz::default_role::resolve_default_registration_role;
 use crate::authz::grants::RoleGrant;
 use crate::authz::tier::presentation_tier;
 use crate::config::AppConfig;
@@ -320,8 +321,79 @@ pub async fn register(
         updated_at: now,
     };
 
-    let user: User = match container.users.create(&new_user).await {
-        Ok(u) => u,
+    // Resolve the role of the new account before writing anything: a missing
+    // or ambiguous role refuses the registration (fail closed), so an account
+    // never lands without a role.
+    let default_role_id = match resolve_default_registration_role(
+        &container
+            .users
+            .find_assignable_roles_by_name(&container.config.register_default_role)
+            .await
+            .map_err(AppError::Database)?,
+    ) {
+        Ok(role_id) => role_id,
+        Err(error) => {
+            tracing::error!(
+                event = "auth.register.default_role_unusable",
+                role_name = %container.config.register_default_role,
+                error = ?error,
+                "the default registration role is missing or ambiguous"
+            );
+            return Err(AppError::Internal(t!("errors.internal").into_owned()));
+        },
+    };
+
+    // The user, its profile and its role land in one transaction: a
+    // registration never leaves a user without a profile, nor a profile
+    // without a role.
+    let new_profile = NewProfile::for_user(new_user.id, protected_email.key_version);
+    let transaction: Result<User, DieselError> = container
+        .users_tx
+        .run_transaction(move |conn| {
+            Box::pin(async move {
+                use crate::db::schema::profiles as profiles_table;
+                use crate::db::schema::users_roles as users_roles_table;
+
+                let inserted_user: User = diesel::insert_into(users_table::table)
+                    .values((
+                        users_table::id.eq(new_user.id),
+                        users_table::email_blind_index.eq(&new_user.email_blind_index),
+                        users_table::email_encrypted.eq(&new_user.email_encrypted),
+                        users_table::encrypted_password.eq(&new_user.encrypted_password),
+                        users_table::confirmation_token_digest
+                            .eq(&new_user.confirmation_token_digest),
+                        users_table::unconfirmed_email_blind_index
+                            .eq(&new_user.unconfirmed_email_blind_index),
+                        users_table::unconfirmed_email_encrypted
+                            .eq(&new_user.unconfirmed_email_encrypted),
+                        users_table::encryption_key_version.eq(new_user.encryption_key_version),
+                        users_table::created_at.eq(new_user.created_at),
+                        users_table::updated_at.eq(new_user.updated_at),
+                    ))
+                    .returning(User::as_returning())
+                    .get_result(conn)
+                    .await?;
+
+                diesel::insert_into(profiles_table::table)
+                    .values(&new_profile)
+                    .execute(conn)
+                    .await?;
+
+                diesel::insert_into(users_roles_table::table)
+                    .values((
+                        users_roles_table::user_id.eq(inserted_user.id),
+                        users_roles_table::role_id.eq(default_role_id),
+                    ))
+                    .execute(conn)
+                    .await?;
+
+                Ok(inserted_user)
+            })
+        })
+        .await;
+
+    let user: User = match transaction {
+        Ok(user) => user,
         Err(DieselError::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
             tracing::warn!(
                 event = "auth.register.duplicate_email",
@@ -332,16 +404,8 @@ pub async fn register(
                 t!("auth.register.email_exists").into_owned(),
             ));
         },
-        Err(e) => return Err(AppError::Database(e)),
+        Err(error) => return Err(AppError::Database(error)),
     };
-
-    // Create profile for the user
-    let new_profile = NewProfile::for_user(user.id, protected_email.key_version);
-    container
-        .profiles
-        .create(&new_profile)
-        .await
-        .map_err(AppError::Database)?;
 
     let email_service = container.email_service.clone();
     // Get locale from request for localized emails

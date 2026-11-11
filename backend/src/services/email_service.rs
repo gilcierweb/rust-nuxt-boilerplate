@@ -119,6 +119,7 @@ pub fn test_config() -> AppConfig {
         email_mx_check_enabled: false,
         email_dns_resolver_url: None,
         register_daily_limit: 2000,
+        register_default_role: "customer".to_string(),
         cookie_secure_override: false,
         argon2_m_cost: 65536,
         argon2_t_cost: 3,

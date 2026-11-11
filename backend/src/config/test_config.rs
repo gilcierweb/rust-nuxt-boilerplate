@@ -94,6 +94,7 @@ pub fn test_config() -> AppConfig {
         account_lockout_duration_secs: 15 * 60,
         rate_limit_enabled: true,
         register_daily_limit: 2000,
+        register_default_role: "customer".to_string(),
         captcha_provider: crate::security::captcha::CaptchaProvider::None,
         captcha_secret: None,
         captcha_verify_url: None,

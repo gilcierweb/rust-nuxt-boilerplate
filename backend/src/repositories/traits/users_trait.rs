@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
+use crate::models::role::Role;
 use crate::models::user::{NewUser, User};
 use crate::security::SecurityService;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
@@ -89,6 +90,11 @@ pub trait IUserRepository: Send + Sync {
     ) -> QueryResult<usize>;
     async fn get_user_roles(&self, user_id: &Uuid) -> QueryResult<Vec<String>>;
     async fn get_user_permissions(&self, user_id: &Uuid) -> QueryResult<Vec<String>>;
+    /// The roles of the given name that can be assigned to a new account.
+    ///
+    /// A role bound to a specific subject (`resource_id` set) is never
+    /// assignable: it belongs to another account.
+    async fn find_assignable_roles_by_name(&self, name: &str) -> QueryResult<Vec<Role>>;
     async fn get_user_grants(
         &self,
         user_id: &Uuid,

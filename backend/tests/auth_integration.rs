@@ -14,6 +14,7 @@ use actix_web::dev::Service;
 use actix_web::{App, test, web};
 use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
+use diesel::Connection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde_json::Value;
@@ -21,7 +22,11 @@ use uuid::Uuid as UuidType;
 
 mod common;
 
+use backend::services::rbac_catalog_service;
 use common::dispatch;
+
+/// Serializes the shared catalog seed across the parallel tests.
+static CATALOG_SEED_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -56,6 +61,22 @@ fn redis_pool() -> deadpool_redis::Pool {
     cfg.pool = Some(deadpool_redis::PoolConfig::new(5));
     cfg.create_pool(Some(Runtime::Tokio1))
         .expect("Failed to create Redis pool")
+}
+
+/// Seeds the canonical catalog (idempotent, serialized against other tests).
+///
+/// The registration assigns the default role by name, so the role must exist
+/// before the flow runs: a missing role refuses the registration (fail
+/// closed).
+fn seed_catalog() {
+    let _guard = CATALOG_SEED_MUTEX
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let database_url = std::env::var("DATABASE_URL_TEST")
+        .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string());
+    let mut conn = diesel::PgConnection::establish(&database_url)
+        .expect("Failed to connect for the catalog seed");
+    rbac_catalog_service::ensure_canonical_catalog(&mut conn).expect("catalog seed run failed");
 }
 
 fn test_config() -> backend::config::AppConfig {
@@ -157,6 +178,7 @@ fn test_config() -> backend::config::AppConfig {
         email_mx_check_enabled: false,
         email_dns_resolver_url: None,
         register_daily_limit: 2000,
+        register_default_role: "customer".to_string(),
         argon2_m_cost: 65536,
         argon2_t_cost: 3,
         argon2_p_cost: 1,
@@ -194,6 +216,7 @@ fn extract_cookie(
 
 #[actix_web::test]
 async fn test_full_auth_cycle() {
+    seed_catalog();
     let db = TestDb::new().await;
     // Use existing schema from diesel migrations (applied in CI before this test)
     // db.drop_all_tables().await;
@@ -515,6 +538,7 @@ async fn test_login_invalid_credentials() {
 
 #[actix_web::test]
 async fn locked_account_cannot_use_session_refresh_or_login() {
+    seed_catalog();
     let db = TestDb::new().await;
     let config = Arc::new(test_config());
     let r_pool = redis_pool();
@@ -670,6 +694,7 @@ async fn locked_account_cannot_use_session_refresh_or_login() {
 
 #[actix_web::test]
 async fn password_change_revokes_existing_access_tokens() {
+    seed_catalog();
     let db = TestDb::new().await;
     let config = Arc::new(test_config());
     let r_pool = redis_pool();

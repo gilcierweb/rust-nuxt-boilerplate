@@ -289,6 +289,11 @@ pub struct AppConfig {
     // that the per-IP limits cannot see. Default 2000/day.
     pub register_daily_limit: u64,
 
+    // Role assigned to a new registration, resolved by name. The role must
+    // exist and must be unambiguous, otherwise the registration fails
+    // closed: a user without a role has no permissions at all.
+    pub register_default_role: String,
+
     // Optional CAPTCHA (Cloudflare Turnstile / Google reCAPTCHA / any custom
     // site-verify service) for brute-force-sensitive endpoints. Disabled by
     // default — the boilerplate must run without any third-party verification
@@ -598,6 +603,14 @@ impl AppConfig {
                 .ok()
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(crate::middleware::rate_limit_middleware::DEFAULT_REGISTER_DAILY_LIMIT),
+
+            // Role assigned to a new registration, resolved by name. The
+            // customer role is the default: the account starts with the self
+            // service permissions and nothing else.
+            register_default_role: env::var("REGISTER_DEFAULT_ROLE")
+                .ok()
+                .filter(|name| !name.trim().is_empty())
+                .unwrap_or_else(|| "customer".to_string()),
 
             // Optional human verification for hostile-facing deployments:
             // disabled unless CAPTCHA_PROVIDER names a supported provider.
@@ -1092,6 +1105,7 @@ mod placeholder_tests {
         blind_index_key: Option<String>,
         rate_limit_enabled: Option<String>,
         register_daily_limit: Option<String>,
+        register_default_role: Option<String>,
         captcha_provider: Option<String>,
         captcha_secret: Option<String>,
         captcha_verify_url: Option<String>,
@@ -1128,6 +1142,7 @@ mod placeholder_tests {
                 blind_index_key: read("BLIND_INDEX_KEY"),
                 rate_limit_enabled: read("RATE_LIMIT_ENABLED"),
                 register_daily_limit: read("REGISTER_DAILY_LIMIT"),
+                register_default_role: read("REGISTER_DEFAULT_ROLE"),
                 captcha_provider: read("CAPTCHA_PROVIDER"),
                 captcha_secret: read("CAPTCHA_SECRET"),
                 captcha_verify_url: read("CAPTCHA_VERIFY_URL"),
@@ -1186,6 +1201,7 @@ mod placeholder_tests {
             set("BLIND_INDEX_KEY", self.blind_index_key.take());
             set("RATE_LIMIT_ENABLED", self.rate_limit_enabled.take());
             set("REGISTER_DAILY_LIMIT", self.register_daily_limit.take());
+            set("REGISTER_DEFAULT_ROLE", self.register_default_role.take());
             set("CAPTCHA_PROVIDER", self.captcha_provider.take());
             set("CAPTCHA_SECRET", self.captcha_secret.take());
             set("CAPTCHA_VERIFY_URL", self.captcha_verify_url.take());
@@ -1464,6 +1480,48 @@ mod placeholder_tests {
             config.validate().is_empty(),
             "a resolver URL satisfies the requirement, got: {:?}",
             config.validate()
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn the_default_registration_role_is_the_customer_role() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::remove_var("REGISTER_DEFAULT_ROLE") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(
+            config.register_default_role, "customer",
+            "a registration must land on the customer role by default"
+        );
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn the_default_registration_role_is_configurable() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("REGISTER_DEFAULT_ROLE", "trial") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(config.register_default_role, "trial");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn a_blank_default_registration_role_falls_back_to_the_customer_role() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("REGISTER_DEFAULT_ROLE", "   ") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(
+            config.register_default_role, "customer",
+            "a blank role name must not reach the resolver"
         );
     }
 

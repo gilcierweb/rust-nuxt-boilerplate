@@ -138,6 +138,7 @@ fn limiter_config(register_daily_limit: u64) -> backend::config::AppConfig {
         email_mx_check_enabled: false,
         email_dns_resolver_url: None,
         register_daily_limit,
+        register_default_role: "customer".to_string(),
         argon2_m_cost: 65536,
         argon2_t_cost: 3,
         argon2_p_cost: 1,
