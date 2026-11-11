@@ -13,8 +13,8 @@ use crate::models::role::ROLE_ADMIN;
 pub struct Claims {
     pub sub: uuid::Uuid,
     pub profile_id: uuid::Uuid,
-    /// Presentation tier of the subject (1 administrator, 2 operator, 3
-    /// viewer). It is derived from the effective permissions of the subject
+    /// Presentation role of the subject (1 admin, 2 operator, 3 viewer). It is
+    /// derived from the effective permissions of the subject
     /// and never takes part in an authorization decision: only the grants read
     /// from the database decide what the subject may do.
     pub role: i32,
@@ -46,10 +46,10 @@ impl Claims {
         self.role == ROLE_ADMIN.as_i32()
     }
 
-    /// True when the claim carries the operator tier or the administrator one.
+    /// True when the claim carries the operator role or the admin one.
     ///
-    /// The tier numbers grow downwards (1 administrator, 2 operator, 3
-    /// viewer), so the comparison is reversed.
+    /// The role numbers grow downwards (1 admin, 2 operator, 3 viewer), so the
+    /// comparison is reversed.
     pub fn is_operator_or_higher(&self) -> bool {
         self.role <= crate::models::role::ROLE_OPERATOR.as_i32()
     }
@@ -569,7 +569,7 @@ mod tests {
         );
         assert!(
             !claims_with_role(ROLE_VIEWER.as_i32()).is_operator_or_higher(),
-            "the viewer is below the operator tier"
+            "the viewer is below the operator role"
         );
     }
 

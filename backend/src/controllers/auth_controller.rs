@@ -12,8 +12,8 @@ use validator::Validate;
 
 use crate::authz::ability::{CurrentAbility, build_ability_from_grants};
 use crate::authz::default_role::resolve_default_registration_role;
+use crate::authz::effective_role::effective_role;
 use crate::authz::grants::RoleGrant;
-use crate::authz::tier::presentation_tier;
 use crate::config::AppConfig;
 use crate::db::schema::users as users_table;
 use crate::errors::{AppError, AppResult};
@@ -543,8 +543,8 @@ async fn get_cached_user_roles(container: &AppContainer, user_id: &Uuid) -> AppR
 
 /// Loads the grants of the user and builds the ability they describe.
 ///
-/// The ability is the only source of truth for the tier carried by the
-/// issued token, so the tier always mirrors the effective permissions.
+/// The ability is the only source of truth for the role carried by the
+/// issued token, so the role always mirrors the effective permissions.
 async fn user_ability(container: &AppContainer, user_id: Uuid) -> AppResult<CurrentAbility> {
     let rows = container
         .users
@@ -770,7 +770,7 @@ pub async fn login(
     // Fetch the user roles for the response payload. Cached for 10 min (see
     // P3); explicit invalidation on role changes.
     let roles = get_cached_user_roles(&container, &user.id).await?;
-    // The tier carried by the token is derived from the effective permissions
+    // The role carried by the token is derived from the effective permissions
     // of the subject, never from the role names.
     let ability = user_ability(container.as_ref(), user.id).await?;
     let role_claim = primary_role_claim(&ability);
@@ -1041,7 +1041,7 @@ pub async fn refresh(
         .ok_or(AppError::Internal(
             t!("users.profile_not_found").into_owned(),
         ))?;
-    // The tier of the new access token follows the effective permissions of
+    // The role of the new access token follows the effective permissions of
     // the subject (see login note above).
     let ability = user_ability(container.as_ref(), user.id).await?;
     let role_claim = primary_role_claim(&ability);
@@ -1112,7 +1112,7 @@ async fn session_impl(
             t!("users.profile_not_found").into_owned(),
         ))?;
 
-    // The roles feed the response payload, the tier of the issued token
+    // The roles feed the response payload, the role of the issued token
     // follows the effective permissions (see login note above).
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let ability = user_ability(container.as_ref(), user.id).await?;
@@ -1862,13 +1862,13 @@ fn build_user_info(
     })
 }
 
-/// The numeric tier carried by the access token.
+/// The numeric `role` claim carried by the access token.
 ///
 /// The claim is a presentation value derived from the effective permissions
 /// of the subject: it mirrors what the subject can do and never takes part in
 /// an authorization decision.
 fn primary_role_claim(current: &CurrentAbility) -> i32 {
-    presentation_tier(current).as_i32()
+    effective_role(current).as_i32()
 }
 
 fn verify_totp(secret_base32: &str, code: &str) -> AppResult<()> {
@@ -2349,7 +2349,7 @@ pub async fn verify_magic_link(
             t!("users.profile_not_found").into_owned(),
         ))?;
 
-    // The roles feed the response payload, the tier of the issued token
+    // The roles feed the response payload, the role of the issued token
     // follows the effective permissions (see login note above).
     let roles = get_cached_user_roles(&container, &user.id).await?;
     let ability = user_ability(container.as_ref(), user.id).await?;
@@ -2826,7 +2826,7 @@ mod tests {
         assert_eq!(
             claims.role,
             ROLE_VIEWER.as_i32(),
-            "the role name must not raise the tier: the grants only allow reading"
+            "the role name must not raise the role: the grants only allow reading"
         );
     }
 
