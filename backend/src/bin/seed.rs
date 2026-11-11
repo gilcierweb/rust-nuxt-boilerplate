@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::env;
 
 use argon2::Argon2;
@@ -6,11 +5,11 @@ use argon2::password_hash::{PasswordHasher, SaltString};
 use backend::config::AppConfig;
 use backend::security::SecurityService;
 use backend::services::email_service::EmailService;
+use backend::services::rbac_catalog_service;
 use chrono::Utc;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
-use diesel::sql_types::{Text, Uuid as SqlUuid};
 use faker_rust::name;
 use ipnet::IpNet;
 use uuid::Uuid;
@@ -26,12 +25,6 @@ struct SeedUserData {
     last_name: String,
     full_name: String,
     nickname: String,
-}
-
-#[derive(QueryableByName)]
-struct SqlUuidRow {
-    #[diesel(sql_type = SqlUuid)]
-    id: Uuid,
 }
 
 fn sanitize_seed_text(input: &str, fallback: &str, max_chars: usize) -> String {
@@ -242,88 +235,6 @@ fn ensure_refresh_token(
         .get_result(conn)?)
 }
 
-fn ensure_role(conn: &mut PgConnection, role_name: &str) -> SeedResult<Uuid> {
-    use schema::roles::dsl::*;
-
-    if let Some(existing_id) = roles
-        .filter(name.eq(role_name))
-        .select(id)
-        .first::<Uuid>(conn)
-        .optional()?
-    {
-        return Ok(existing_id);
-    }
-
-    Ok(diesel::insert_into(roles)
-        .values((
-            id.eq(Uuid::new_v4()),
-            name.eq(role_name),
-            created_at.eq(Utc::now()),
-            updated_at.eq(Utc::now()),
-        ))
-        .returning(id)
-        .get_result(conn)?)
-}
-
-/// Find a role by name, returning a descriptive error if not found.
-/// This should only be called after ensure_role has been run for the role.
-fn find_role_id(role_ids: &[(String, Uuid)], role_name: &str) -> SeedResult<Uuid> {
-    role_ids
-        .iter()
-        .find(|(name, _)| name == role_name)
-        .map(|(_, id)| *id)
-        .ok_or_else(|| {
-            format!(
-                "Role '{}' not found after creation - this should not happen",
-                role_name
-            )
-            .into()
-        })
-}
-
-fn ensure_permission(
-    conn: &mut PgConnection,
-    permission_code: &str,
-    permission_description: Option<&str>,
-) -> SeedResult<Uuid> {
-    if let Some(existing) = diesel::sql_query("SELECT id FROM permissions WHERE code = $1 LIMIT 1")
-        .bind::<Text, _>(permission_code)
-        .get_result::<SqlUuidRow>(conn)
-        .optional()?
-    {
-        return Ok(existing.id);
-    }
-
-    let created = diesel::sql_query(
-        "INSERT INTO permissions (id, code, description, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         RETURNING id",
-    )
-    .bind::<SqlUuid, _>(Uuid::new_v4())
-    .bind::<Text, _>(permission_code)
-    .bind::<diesel::sql_types::Nullable<Text>, _>(permission_description)
-    .get_result::<SqlUuidRow>(conn)?;
-
-    Ok(created.id)
-}
-
-fn ensure_role_permission(
-    conn: &mut PgConnection,
-    role_uuid: Uuid,
-    permission_uuid: Uuid,
-) -> SeedResult<()> {
-    diesel::sql_query(
-        "INSERT INTO roles_permissions (role_id, permission_id, created_at)
-         VALUES ($1, $2, NOW())
-         ON CONFLICT (role_id, permission_id) DO NOTHING",
-    )
-    .bind::<SqlUuid, _>(role_uuid)
-    .bind::<SqlUuid, _>(permission_uuid)
-    .execute(conn)?;
-
-    Ok(())
-}
-
 fn ensure_user(
     conn: &mut PgConnection,
     security: &SecurityService,
@@ -514,71 +425,21 @@ fn main() -> SeedResult<()> {
     let security = build_security_service()?;
 
     conn.transaction(|conn| {
-        let role_names = ["admin", "manager", "editor", "viewer", "support", "finance"];
-        let mut role_ids = Vec::with_capacity(role_names.len());
-        for role_name in role_names {
-            role_ids.push((role_name.to_string(), ensure_role(conn, role_name)?));
-        }
+        // Canonical RBAC catalog: roles, permissions, and allow links.
+        let canonical_roles = rbac_catalog_service::ensure_canonical_catalog(conn)?;
+        let finance_role_id = rbac_catalog_service::ensure_role(conn, "finance", None, None)?;
 
-        let permission_codes = [
-            "users:read",
-            "users:create",
-            "users:update",
-            "users:delete",
-            "roles:read",
-            "roles:create",
-            "roles:update",
-            "roles:delete",
-            "audit_logs:read",
-            "audit_logs:create",
-            "profiles:read",
-            "profiles:update",
+        let admin_role_id = canonical_roles["admin"];
+
+        // Non admin users rotate over these roles (unchanged distribution).
+        let role_ids: Vec<Uuid> = vec![
+            canonical_roles["admin"],
+            canonical_roles["manager"],
+            canonical_roles["editor"],
+            canonical_roles["viewer"],
+            canonical_roles["support"],
+            finance_role_id,
         ];
-
-        let mut permission_ids = HashMap::new();
-        for code in permission_codes {
-            let id = ensure_permission(conn, code, None)?;
-            permission_ids.insert(code.to_string(), id);
-        }
-
-        let admin_role_id = find_role_id(&role_ids, "admin")?;
-
-        for permission_id in permission_ids.values() {
-            ensure_role_permission(conn, admin_role_id, *permission_id)?;
-        }
-
-        let manager_role_id = find_role_id(&role_ids, "manager")?;
-
-        let manager_permissions = [
-            "users:read",
-            "users:create",
-            "users:update",
-            "roles:read",
-            "audit_logs:read",
-            "profiles:read",
-            "profiles:update",
-        ];
-
-        for permission_code in manager_permissions {
-            if let Some(permission_id) = permission_ids.get(permission_code) {
-                ensure_role_permission(conn, manager_role_id, *permission_id)?;
-            }
-        }
-
-        let viewer_role_id = find_role_id(&role_ids, "viewer")?;
-
-        let viewer_permissions = [
-            "users:read",
-            "roles:read",
-            "audit_logs:read",
-            "profiles:read",
-        ];
-
-        for permission_code in viewer_permissions {
-            if let Some(permission_id) = permission_ids.get(permission_code) {
-                ensure_role_permission(conn, viewer_role_id, *permission_id)?;
-            }
-        }
 
         for index in 1..=100 {
             let user_data = generate_user_data(index);
@@ -587,7 +448,7 @@ fn main() -> SeedResult<()> {
             let role_id = if index == 1 {
                 admin_role_id
             } else {
-                role_ids[(index - 1) % role_ids.len()].1
+                role_ids[(index - 1) % role_ids.len()]
             };
             ensure_user_role(conn, user_id, role_id)?;
             let _refresh_token_id = ensure_refresh_token(conn, user_id, index)?;

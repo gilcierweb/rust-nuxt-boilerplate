@@ -47,6 +47,8 @@ diesel::table! {
         description -> Nullable<Text>,
         created_at -> Timestamptz,
         updated_at -> Timestamptz,
+        #[max_length = 255]
+        name -> Varchar,
     }
 }
 
@@ -116,6 +118,7 @@ diesel::table! {
         role_id -> Uuid,
         permission_id -> Uuid,
         created_at -> Timestamptz,
+        effect -> Int2,
     }
 }
 
