@@ -166,6 +166,20 @@ pub struct UserInfo {
     pub roles: Vec<String>,
 }
 
+/// The payload of `/auth/me`: the capabilities the frontend reads, all derived
+/// from the grants of the database rather than from the token.
+#[derive(Debug, Serialize, ToSchema)]
+pub struct MeResponse {
+    pub id: Uuid,
+    pub email: String,
+    /// The names of the roles assigned to the subject.
+    pub roles: Vec<String>,
+    /// The effective class level `resource:action` authorities.
+    pub permissions: Vec<String>,
+    /// The presentation role (1 admin, 2 operator, 3 viewer).
+    pub role: i32,
+}
+
 // POST /api/v1/auth/register
 /// Register a new user account.
 ///
@@ -1821,13 +1835,17 @@ pub async fn change_password(
     path = "/api/v1/auth/me",
     tag = "auth",
     responses(
-        (status = 200, description = "Authenticated user info"),
+        (status = 200, description = "Authenticated user capabilities", body = MeResponse),
         (status = 401, description = "Authentication required")
     ),
     security(("bearer_auth" = []))
 )]
 #[get("/me")]
-pub async fn me(user: AuthUser, container: web::Data<AppContainer>) -> AppResult<HttpResponse> {
+pub async fn me(
+    user: AuthUser,
+    container: web::Data<AppContainer>,
+    ability: CurrentAbility,
+) -> AppResult<HttpResponse> {
     let user_data = container
         .users
         .find(&user.claims().sub)
@@ -1836,9 +1854,23 @@ pub async fn me(user: AuthUser, container: web::Data<AppContainer>) -> AppResult
     let security = SecurityService::from_config(container.config.as_ref())?;
     let current_email = security.decrypt_user_email(&user_data)?;
 
+    // The capabilities the frontend reads, all derived from the grants of the
+    // database: the role names, the effective class level permissions and the
+    // presentation role. Nothing here comes from the token claims.
+    let roles = container
+        .users
+        .get_user_roles(&user.claims().sub)
+        .await
+        .map_err(AppError::Database)?;
+    let permissions = ability.permissions().can;
+    let role = crate::authz::effective_role::effective_role(&ability);
+
     Ok(HttpResponse::Ok().json(serde_json::json!({
         "id": user.claims().sub,
         "email": current_email,
+        "roles": roles,
+        "permissions": permissions,
+        "role": role.as_i32(),
     })))
 }
 

@@ -66,6 +66,7 @@ use utoipa::{Modify, OpenApi};
             crate::controllers::auth_controller::AuthResponse,
             crate::controllers::auth_controller::SessionResponse,
             crate::controllers::auth_controller::UserInfo,
+            crate::controllers::auth_controller::MeResponse,
             // health
             crate::controllers::health_controller::HealthResponse,
             crate::controllers::health_controller::HealthDependencyStatus,
