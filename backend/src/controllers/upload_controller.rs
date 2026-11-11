@@ -99,7 +99,7 @@ pub async fn upload_file(
     mut payload: Multipart,
     container: web::Data<AppContainer>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Upload, AbilityAction::Create)?;
+    ability.authorize(AbilityAction::Create, AbilityResource::Upload)?;
 
     let limits = limits_from_config(container.config.as_ref());
 

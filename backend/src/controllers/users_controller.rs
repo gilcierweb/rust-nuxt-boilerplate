@@ -42,7 +42,7 @@ pub async fn list_users(
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Users, AbilityAction::Read)?;
+    ability.authorize(AbilityAction::Read, AbilityResource::Users)?;
 
     let security = Arc::new(
         SecurityService::from_config(&container.config)
@@ -84,12 +84,12 @@ pub async fn get_user(
     container: web::Data<AppContainer>,
     user_id: web::Path<uuid::Uuid>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Users, AbilityAction::Read)?;
+    ability.authorize(AbilityAction::Read, AbilityResource::Users)?;
 
     // Instance check: a scoped grant applies only inside its scope, so a
     // subject restricted to itself can never read another record.
     let target_user_id = user_id.into_inner();
-    ability.authorize_subject(AbilityResource::Users, AbilityAction::Read, target_user_id)?;
+    ability.authorize_subject(AbilityAction::Read, AbilityResource::Users, target_user_id)?;
 
     let security = Arc::new(
         SecurityService::from_config(&container.config)

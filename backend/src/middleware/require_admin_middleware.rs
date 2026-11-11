@@ -73,7 +73,7 @@ where
                 return Ok(req.into_response(response));
             };
 
-            if !ability.can_check_domain(&DOMAIN_RESOURCES) {
+            if !ability.has_class_permission_in(&DOMAIN_RESOURCES) {
                 let response = forbidden_response().map_into_right_body();
                 return Ok(req.into_response(response));
             }

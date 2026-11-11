@@ -37,7 +37,7 @@ pub async fn list_audit_logs(
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::AuditLogs, AbilityAction::Read)?;
+    ability.authorize(AbilityAction::Read, AbilityResource::AuditLogs)?;
     let pagination = pagination.into_inner().validated();
     let response = container
         .domain_audit_logs
@@ -72,7 +72,7 @@ pub async fn get_audit_log(
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::AuditLogs, AbilityAction::Read)?;
+    ability.authorize(AbilityAction::Read, AbilityResource::AuditLogs)?;
     let item = container
         .domain_audit_logs
         .find(&id.into_inner())
@@ -104,7 +104,7 @@ pub async fn create_audit_log(
     user: AuthUser,
     body: web::Json<NewAuditLog>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::AuditLogs, AbilityAction::Create)?;
+    ability.authorize(AbilityAction::Create, AbilityResource::AuditLogs)?;
     let mut payload = body.into_inner();
 
     // SECURITY: actor_user_id must come from authenticated user, not request body

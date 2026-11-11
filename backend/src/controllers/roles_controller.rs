@@ -67,7 +67,7 @@ pub async fn list_roles(
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Roles, AbilityAction::Read)?;
+    ability.authorize(AbilityAction::Read, AbilityResource::Roles)?;
     let pagination = pagination.into_inner().validated();
     let response = container
         .roles
@@ -102,7 +102,7 @@ pub async fn get_role(
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Roles, AbilityAction::Read)?;
+    ability.authorize(AbilityAction::Read, AbilityResource::Roles)?;
     let item = container
         .roles
         .find(&id.into_inner())
@@ -133,7 +133,7 @@ pub async fn create_role(
     container: web::Data<AppContainer>,
     body: web::Json<RoleWriteRequest>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Roles, AbilityAction::Create)?;
+    ability.authorize(AbilityAction::Create, AbilityResource::Roles)?;
     let mut payload = body.into_inner();
     normalize_role_payload(&mut payload);
     payload
@@ -182,7 +182,7 @@ pub async fn update_role(
     id: web::Path<Uuid>,
     body: web::Json<RoleWriteRequest>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Roles, AbilityAction::Update)?;
+    ability.authorize(AbilityAction::Update, AbilityResource::Roles)?;
     let mut payload = body.into_inner();
     normalize_role_payload(&mut payload);
     payload
@@ -233,7 +233,7 @@ pub async fn delete_role(
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
-    ability.authorize(AbilityResource::Roles, AbilityAction::Delete)?;
+    ability.authorize(AbilityAction::Delete, AbilityResource::Roles)?;
     let role_id = id.into_inner();
 
     // Get all users who have this role BEFORE deleting (for token revocation)

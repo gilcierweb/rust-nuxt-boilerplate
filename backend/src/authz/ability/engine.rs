@@ -196,10 +196,10 @@ impl Ability {
         denied
     }
 
-    /// True when at least one class level allow rule covers a resource of the
-    /// given domain. Scoped rules never satisfy this: they do not open class
-    /// or admin access.
-    pub fn has_class_allow_in_domain(&self, domain: &[AbilityResource]) -> bool {
+    /// True when at least one effective class level permission covers a
+    /// resource of the given domain. A scoped rule never satisfies this: it
+    /// grants nothing at the class level, so it never opens the domain.
+    pub fn has_class_permission_in(&self, domain: &[AbilityResource]) -> bool {
         for resource in domain {
             for action in CRUD_ACTIONS {
                 if self.can_check(action, *resource)
@@ -445,14 +445,14 @@ mod tests {
     }
 
     #[test]
-    fn has_class_allow_in_domain_distinguishes_class_and_scoped() {
+    fn has_class_permission_in_distinguishes_class_and_scoped() {
         let mut scoped_only = Ability::new(subject());
         scoped_only.can_self(Read, Profiles);
-        assert!(!scoped_only.has_class_allow_in_domain(&DOMAIN_RESOURCES));
+        assert!(!scoped_only.has_class_permission_in(&DOMAIN_RESOURCES));
 
         let mut class_level = Ability::new(subject());
         class_level.can(Read, Users);
-        assert!(class_level.has_class_allow_in_domain(&DOMAIN_RESOURCES));
+        assert!(class_level.has_class_permission_in(&DOMAIN_RESOURCES));
     }
 
     #[test]

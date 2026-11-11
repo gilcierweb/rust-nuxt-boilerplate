@@ -36,20 +36,21 @@ impl CurrentAbility {
         self.ability.subject()
     }
 
-    /// Checks a class level permission (the CanCanCan `authorize!`).
-    pub fn authorize(&self, resource: AbilityResource, action: AbilityAction) -> AppResult<()> {
-        authorize(&self.ability, resource, action)
+    /// Checks a class level permission (the CanCanCan `authorize!`), in the
+    /// argument order of the gem: the action first, then the subject.
+    pub fn authorize(&self, action: AbilityAction, resource: AbilityResource) -> AppResult<()> {
+        authorize(&self.ability, action, resource)
     }
 
     /// Checks a permission on one subject (the CanCanCan `authorize!` with an
     /// instance).
     pub fn authorize_subject(
         &self,
-        resource: AbilityResource,
         action: AbilityAction,
+        resource: AbilityResource,
         subject_id: Uuid,
     ) -> AppResult<()> {
-        authorize_subject(&self.ability, resource, action, subject_id)
+        authorize_subject(&self.ability, action, resource, subject_id)
     }
 
     /// The CanCanCan `can?` on the class level.
@@ -88,13 +89,13 @@ impl CurrentAbility {
         self.ability.permissions()
     }
 
-    /// Checks whether the subject holds a class level allow over at least one
-    /// resource of the domain.
+    /// True when the subject holds at least one effective class level
+    /// permission over a resource of the domain.
     ///
     /// The scoped rules never open a domain: they only answer the instance
     /// checks of the handlers.
-    pub fn can_check_domain(&self, domain: &[AbilityResource]) -> bool {
-        self.ability.has_class_allow_in_domain(domain)
+    pub fn has_class_permission_in(&self, domain: &[AbilityResource]) -> bool {
+        self.ability.has_class_permission_in(domain)
     }
 }
 
@@ -158,12 +159,12 @@ mod tests {
         assert!(current.cannot_check(AbilityAction::Delete, AbilityResource::Users));
         assert!(
             current
-                .authorize(AbilityResource::Users, AbilityAction::Read)
+                .authorize(AbilityAction::Read, AbilityResource::Users)
                 .is_ok()
         );
         assert!(
             current
-                .authorize(AbilityResource::Users, AbilityAction::Delete)
+                .authorize(AbilityAction::Delete, AbilityResource::Users)
                 .is_err()
         );
         assert!(current.permissions().can.contains("users:read"));
@@ -175,7 +176,7 @@ mod tests {
         ability.can(AbilityAction::Read, AbilityResource::Users);
         let current = CurrentAbility::new(ability);
 
-        assert!(current.can_check_domain(&DOMAIN_RESOURCES));
+        assert!(current.has_class_permission_in(&DOMAIN_RESOURCES));
     }
 
     #[test]
@@ -185,7 +186,7 @@ mod tests {
         let current = CurrentAbility::new(ability);
 
         assert!(
-            !current.can_check_domain(&DOMAIN_RESOURCES),
+            !current.has_class_permission_in(&DOMAIN_RESOURCES),
             "a self scoped grant must not open the admin domain"
         );
     }

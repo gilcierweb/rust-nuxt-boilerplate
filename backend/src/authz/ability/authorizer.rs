@@ -4,12 +4,12 @@ use super::engine::Ability;
 use super::types::{AbilityAction, AbilityResource};
 use crate::errors::AppError;
 
-/// Checks a class level permission: the ability must carry an allow rule for
-/// the resource and the action.
+/// Checks a class level permission (the CanCanCan `authorize!`): the action
+/// first, then the subject, exactly the argument order of the gem.
 pub fn authorize(
     ability: &Ability,
-    resource: AbilityResource,
     action: AbilityAction,
+    resource: AbilityResource,
 ) -> Result<(), AppError> {
     if ability.can_check(action, resource) {
         return Ok(());
@@ -22,8 +22,8 @@ pub fn authorize(
 /// target, scoped rules apply only inside their scope.
 pub fn authorize_subject(
     ability: &Ability,
-    resource: AbilityResource,
     action: AbilityAction,
+    resource: AbilityResource,
     target_id: uuid::Uuid,
 ) -> Result<(), AppError> {
     if ability.can_check_subject(action, resource, target_id) {
@@ -84,26 +84,26 @@ mod tests {
         let mut ability = Ability::new(subject());
         ability.can(AbilityAction::Read, AbilityResource::Users);
 
-        assert!(authorize(&ability, AbilityResource::Users, AbilityAction::Read).is_ok());
+        assert!(authorize(&ability, AbilityAction::Read, AbilityResource::Users).is_ok());
     }
 
     #[test]
     fn authorize_refuses_a_missing_permission() {
         let ability = Ability::new(subject());
 
-        assert!(authorize(&ability, AbilityResource::Users, AbilityAction::Read).is_err());
+        assert!(authorize(&ability, AbilityAction::Read, AbilityResource::Users).is_err());
     }
 
     #[test]
-    fn authorize_on_respects_the_self_scope() {
+    fn authorize_subject_respects_the_self_scope() {
         let mut ability = Ability::new(subject());
         ability.can_self(AbilityAction::Read, AbilityResource::Profiles);
 
         assert!(
             authorize_subject(
                 &ability,
-                AbilityResource::Profiles,
                 AbilityAction::Read,
+                AbilityResource::Profiles,
                 subject()
             )
             .is_ok()
@@ -111,8 +111,8 @@ mod tests {
         assert!(
             authorize_subject(
                 &ability,
-                AbilityResource::Profiles,
                 AbilityAction::Read,
+                AbilityResource::Profiles,
                 other()
             )
             .is_err()
