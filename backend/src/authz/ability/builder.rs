@@ -1,33 +1,35 @@
-use std::collections::HashSet;
-
 use super::engine::Ability;
-use super::{admin_ability, customer_ability};
+use super::types::{AbilityAction, AbilityResource};
 use crate::models::role::ROLE_ADMIN;
 
+/// Temporary shim: builds the ability from the role claim and role names so
+/// the crate keeps compiling while the grants based transport lands in the
+/// transport switch task. The hardcoded branches die there; every rule then
+/// comes from database grants only.
 pub fn build_ability(role_claim: i32, roles: &[String]) -> Ability {
-    let mut ability = Ability::new();
+    let mut ability = Ability::new(uuid::Uuid::nil());
 
-    if is_admin(role_claim, roles) {
-        admin_ability::apply_admin_ability(&mut ability);
+    let has_admin_name = roles.iter().any(|role| role.eq_ignore_ascii_case("admin"));
+    if role_claim == ROLE_ADMIN.as_i32() || has_admin_name {
+        ability.can(AbilityAction::Manage, AbilityResource::All);
     }
 
     if roles
         .iter()
         .any(|role| role.eq_ignore_ascii_case("customer"))
     {
-        customer_ability::apply_customer_ability(&mut ability);
-
-        // If customer profile is present together with admin role, keep admin grants as final rule.
-        if is_admin(role_claim, roles) {
-            admin_ability::apply_admin_ability(&mut ability);
-        }
+        // Previous behavior (customer_ability.rs): class level users:read.
+        // Preserved verbatim so the extractor tests keep passing; the grants
+        // based builder in the transport switch replaces this with scoped
+        // rules from the database.
+        ability.can(AbilityAction::Read, AbilityResource::Users);
     }
 
     ability
 }
 
-pub fn build_authorities(role_claim: i32, roles: &[String]) -> HashSet<String> {
-    let mut authorities = HashSet::new();
+pub fn build_authorities(role_claim: i32, roles: &[String]) -> std::collections::HashSet<String> {
+    let mut authorities = std::collections::HashSet::new();
 
     for role in roles {
         authorities.insert(format!("ROLE_{}", role.to_uppercase()));
@@ -35,10 +37,6 @@ pub fn build_authorities(role_claim: i32, roles: &[String]) -> HashSet<String> {
 
     authorities.extend(build_ability(role_claim, roles).authorities());
     authorities
-}
-
-fn is_admin(role_claim: i32, roles: &[String]) -> bool {
-    role_claim == ROLE_ADMIN.as_i32() || roles.iter().any(|role| role.eq_ignore_ascii_case("admin"))
 }
 
 #[cfg(test)]
@@ -66,9 +64,12 @@ mod tests {
     }
 
     #[test]
-    fn customer_gets_read_authorities_in_fallback() {
+    fn customer_gets_class_level_read_authority_in_shim() {
         let ability = build_ability(3, &["customer".to_string()]);
-        let authorities = ability.authorities();
-        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
+        assert!(
+            ability
+                .authorities()
+                .contains(&authority_for(AbilityResource::Users, AbilityAction::Read))
+        );
     }
 }

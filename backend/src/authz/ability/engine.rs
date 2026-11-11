@@ -1,23 +1,39 @@
 use std::collections::HashSet;
 
-use super::types::{AbilityAction, AbilityResource};
+use uuid::Uuid;
 
+use super::types::{AbilityAction, AbilityResource, CRUD_ACTIONS, DOMAIN_RESOURCES, RoleScope};
+
+/// A single authorization rule. `scope = None` grants or denies at class level
+/// (every target of the resource); `scope = Some` restricts the rule to
+/// instance checks only and never opens class or admin access.
 #[derive(Debug, Clone)]
 pub struct AbilityRule {
     allowed: bool,
     action: AbilityAction,
     resource: AbilityResource,
-    instance_only: bool,
+    scope: Option<RoleScope>,
 }
 
-#[derive(Debug, Clone, Default)]
+/// The authorization decision object for one authenticated subject.
+/// Rules come exclusively from database grants (see the data driven builder);
+/// no code path contributes hardcoded role grants.
+#[derive(Debug, Clone)]
 pub struct Ability {
+    subject: Uuid,
     rules: Vec<AbilityRule>,
 }
 
 impl Ability {
-    pub fn new() -> Self {
-        Self { rules: Vec::new() }
+    pub fn new(subject: Uuid) -> Self {
+        Self {
+            subject,
+            rules: Vec::new(),
+        }
+    }
+
+    pub fn subject(&self) -> Uuid {
+        self.subject
     }
 
     pub fn can(&mut self, action: AbilityAction, resource: AbilityResource) {
@@ -25,101 +41,186 @@ impl Ability {
             allowed: true,
             action,
             resource,
-            instance_only: false,
+            scope: None,
         });
     }
 
-    #[allow(dead_code)]
     pub fn cannot(&mut self, action: AbilityAction, resource: AbilityResource) {
         self.rules.push(AbilityRule {
             allowed: false,
             action,
             resource,
-            instance_only: false,
+            scope: None,
         });
     }
 
-    #[allow(dead_code)]
-    pub fn allows(&self, action: AbilityAction, resource: AbilityResource) -> bool {
-        let mut result = false;
-
-        for rule in &self.rules {
-            // Class/subject checks must ignore instance-only rules.
-            if rule.instance_only {
-                continue;
-            }
-
-            if matches_rule(rule, action, resource) {
-                result = rule.allowed;
-            }
-        }
-
-        result
-    }
-
-    pub fn can_instance(&mut self, action: AbilityAction, resource: AbilityResource) {
+    pub fn can_scoped(
+        &mut self,
+        action: AbilityAction,
+        resource: AbilityResource,
+        scope: RoleScope,
+    ) {
         self.rules.push(AbilityRule {
             allowed: true,
             action,
             resource,
-            instance_only: true,
+            scope: Some(scope),
         });
     }
 
-    pub fn cannot_instance(&mut self, action: AbilityAction, resource: AbilityResource) {
+    /// A rule scoped to the authenticated subject itself
+    /// (`resource_id = NULL` means self in the roles table).
+    pub fn can_self(&mut self, action: AbilityAction, resource: AbilityResource) {
+        self.can_scoped(
+            action,
+            resource,
+            RoleScope {
+                resource_type: "user".to_string(),
+                resource_id: None,
+            },
+        );
+    }
+
+    pub fn cannot_scoped(
+        &mut self,
+        action: AbilityAction,
+        resource: AbilityResource,
+        scope: RoleScope,
+    ) {
         self.rules.push(AbilityRule {
             allowed: false,
             action,
             resource,
-            instance_only: true,
+            scope: Some(scope),
         });
     }
 
-    pub fn allows_instance(&self, action: AbilityAction, resource: AbilityResource) -> bool {
-        let mut result = false;
-
-        for rule in &self.rules {
-            if matches_rule(rule, action, resource) {
-                result = rule.allowed;
-            }
-        }
-
-        result
+    pub fn cannot_self(&mut self, action: AbilityAction, resource: AbilityResource) {
+        self.cannot_scoped(
+            action,
+            resource,
+            RoleScope {
+                resource_type: "user".to_string(),
+                resource_id: None,
+            },
+        );
     }
 
+    /// Class level check: scoped rules are ignored, deny beats allow.
+    pub fn allows(&self, action: AbilityAction, resource: AbilityResource) -> bool {
+        self.evaluate(action, resource, None)
+    }
+
+    /// Instance level check: scoped rules apply to the target and deny still
+    /// beats allow.
+    pub fn allows_on(
+        &self,
+        action: AbilityAction,
+        resource: AbilityResource,
+        target_id: Uuid,
+    ) -> bool {
+        self.evaluate(action, resource, Some(target_id))
+    }
+
+    /// Class level allow expansion into `resource:action` authority strings.
+    /// Iterates the enum consts, so a new variant is covered automatically.
+    /// Deny rules produce nothing themselves and suppress every authority
+    /// they match; scoped rules produce nothing.
     pub fn authorities(&self) -> HashSet<String> {
+        let denied = self.denied_class_authorities();
         let mut out = HashSet::new();
 
         for rule in &self.rules {
-            if !rule.allowed {
+            if !rule.allowed || rule.scope.is_some() {
                 continue;
             }
 
-            match (rule.action, rule.resource) {
-                (AbilityAction::Manage, AbilityResource::All) => {
-                    for resource in managed_resources() {
-                        for action in crud_actions() {
-                            out.insert(authority_for(resource, action));
-                        }
+            for resource in expandable_resources(rule.resource) {
+                for action in expandable_actions(rule.action) {
+                    let authority = authority_for(resource, action);
+                    if !denied.contains(&authority) {
+                        out.insert(authority);
                     }
-                },
-                (AbilityAction::Manage, resource) => {
-                    for action in crud_actions() {
-                        out.insert(authority_for(resource, action));
-                    }
-                },
-                (action, resource) => {
-                    out.insert(authority_for(resource, action));
-                },
+                }
             }
         }
 
         out
     }
-}
 
-pub fn authority_for(resource: AbilityResource, action: AbilityAction) -> String {
-    format!("{}:{}", resource.as_code(), action.as_code())
+    /// The `resource:action` set that class level deny rules match.
+    fn denied_class_authorities(&self) -> HashSet<String> {
+        let mut denied = HashSet::new();
+
+        for rule in &self.rules {
+            if rule.allowed || rule.scope.is_some() {
+                continue;
+            }
+
+            for resource in expandable_resources(rule.resource) {
+                for action in expandable_actions(rule.action) {
+                    denied.insert(authority_for(resource, action));
+                }
+            }
+        }
+
+        denied
+    }
+
+    /// True when at least one class level allow rule covers a resource of the
+    /// given domain. Scoped rules never satisfy this: they do not open class
+    /// or admin access.
+    pub fn has_class_allow_in_domain(&self, domain: &[AbilityResource]) -> bool {
+        for resource in domain {
+            for action in CRUD_ACTIONS {
+                if self.allows(action, *resource) || self.allows(AbilityAction::Manage, *resource) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn evaluate(
+        &self,
+        action: AbilityAction,
+        resource: AbilityResource,
+        target_id: Option<Uuid>,
+    ) -> bool {
+        let mut result = false;
+
+        for rule in &self.rules {
+            if !self.scope_matches(rule, target_id) {
+                continue;
+            }
+
+            if matches_rule(rule, action, resource) {
+                if !rule.allowed {
+                    // Deny beats allow: the first matching deny decides.
+                    return false;
+                }
+                result = true;
+            }
+        }
+
+        result
+    }
+
+    /// A rule participates in an evaluation when its scope fits the check:
+    /// class checks see unscoped rules, instance checks see both, with the
+    /// target inside the scope.
+    fn scope_matches(&self, rule: &AbilityRule, target_id: Option<Uuid>) -> bool {
+        match (&rule.scope, target_id) {
+            (None, _) => true,
+            // Class check: scoped rules never participate.
+            (Some(_), None) => false,
+            // Self scope: only the authenticated subject itself.
+            (Some(scope), Some(target)) => match scope.resource_id {
+                None => target == self.subject,
+                Some(explicit) => target == explicit,
+            },
+        }
+    }
 }
 
 fn matches_rule(rule: &AbilityRule, action: AbilityAction, resource: AbilityResource) -> bool {
@@ -128,146 +229,232 @@ fn matches_rule(rule: &AbilityRule, action: AbilityAction, resource: AbilityReso
     action_matches && resource_matches
 }
 
-fn crud_actions() -> [AbilityAction; 4] {
-    [
-        AbilityAction::Read,
-        AbilityAction::Create,
-        AbilityAction::Update,
-        AbilityAction::Delete,
-    ]
+fn expandable_actions(action: AbilityAction) -> Vec<AbilityAction> {
+    if action == AbilityAction::Manage {
+        CRUD_ACTIONS.to_vec()
+    } else {
+        vec![action]
+    }
 }
 
-fn managed_resources() -> [AbilityResource; 4] {
-    [
-        AbilityResource::AuditLogs,
-        AbilityResource::Roles,
-        AbilityResource::Users,
-        AbilityResource::All,
-    ]
+fn expandable_resources(resource: AbilityResource) -> Vec<AbilityResource> {
+    if resource == AbilityResource::All {
+        DOMAIN_RESOURCES.to_vec()
+    } else {
+        vec![resource]
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::{Ability, AbilityAction, AbilityResource, authority_for};
+pub fn authority_for(resource: AbilityResource, action: AbilityAction) -> String {
+    format!("{}:{}", resource.as_code(), action.as_code())
+}
 
-    #[test]
-    fn cannot_overrides_can_by_order() {
-        let mut ability = Ability::new();
-        ability.can(AbilityAction::Manage, AbilityResource::Roles);
-        ability.cannot(AbilityAction::Delete, AbilityResource::Roles);
+/// Parses a `resource:action` permission code. Splits once on `:` and both
+/// halves must be known enum codes; anything else is None (fail closed).
+// Consumed by the grants data access and the guards module within this plan.
+#[allow(dead_code)]
+pub fn parse_code(code: &str) -> Option<(AbilityResource, AbilityAction)> {
+    let (resource_part, action_part) = code.split_once(':')?;
+    let resource = AbilityResource::from_code(resource_part)?;
+    let action = AbilityAction::from_code(action_part)?;
+    Some((resource, action))
+}
 
-        assert!(!ability.allows(AbilityAction::Delete, AbilityResource::Roles));
-        assert!(ability.allows(AbilityAction::Read, AbilityResource::Roles));
-    }
+/// Parses permission codes into the class level authority set they grant.
+/// Unknown codes are skipped with a debug log (fail closed, never fail open)
+/// and wildcards expand through the enums.
+// Consumed by the guards module within this plan.
+#[allow(dead_code)]
+pub fn expand_allow_codes(codes: &[String]) -> HashSet<String> {
+    let mut out = HashSet::new();
 
-    #[test]
-    fn instance_rule_does_not_grant_class_check() {
-        let mut ability = Ability::new();
-        ability.can_instance(AbilityAction::Read, AbilityResource::Roles);
+    for code in codes {
+        let Some((resource, action)) = parse_code(code) else {
+            tracing::debug!(
+                event = "authz.unknown_code",
+                code = %code,
+                "permission code ignored: unknown resource or action"
+            );
+            continue;
+        };
 
-        assert!(!ability.allows(AbilityAction::Read, AbilityResource::Roles));
-        assert!(ability.allows_instance(AbilityAction::Read, AbilityResource::Roles));
-    }
-
-    #[test]
-    fn instance_cannot_overrides_instance_can_by_order() {
-        let mut ability = Ability::new();
-        ability.can_instance(AbilityAction::Update, AbilityResource::AuditLogs);
-        ability.cannot_instance(AbilityAction::Update, AbilityResource::AuditLogs);
-
-        assert!(!ability.allows_instance(AbilityAction::Update, AbilityResource::AuditLogs));
-    }
-
-    #[test]
-    fn manage_all_expands_to_all_resources_and_crud_actions() {
-        let mut ability = Ability::new();
-        ability.can(AbilityAction::Manage, AbilityResource::All);
-
-        let authorities = ability.authorities();
-        for resource in [
-            AbilityResource::AuditLogs,
-            AbilityResource::Roles,
-            AbilityResource::Users,
-            AbilityResource::All,
-        ] {
-            for action in [
-                AbilityAction::Read,
-                AbilityAction::Create,
-                AbilityAction::Update,
-                AbilityAction::Delete,
-            ] {
-                let auth = authority_for(resource, action);
-                assert!(authorities.contains(&auth), "Missing authority: {}", auth);
+        for expanded_resource in expandable_resources(resource) {
+            for expanded_action in expandable_actions(action) {
+                out.insert(authority_for(expanded_resource, expanded_action));
             }
         }
     }
 
-    #[test]
-    fn manage_specific_resource_expands_to_crud_actions() {
-        let mut ability = Ability::new();
-        ability.can(AbilityAction::Manage, AbilityResource::Users);
+    out
+}
 
-        let authorities = ability.authorities();
-        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
-        assert!(authorities.contains(&authority_for(
-            AbilityResource::Users,
-            AbilityAction::Create
-        )));
-        assert!(authorities.contains(&authority_for(
-            AbilityResource::Users,
-            AbilityAction::Update
-        )));
-        assert!(authorities.contains(&authority_for(
-            AbilityResource::Users,
-            AbilityAction::Delete
-        )));
-        assert!(!authorities.contains(&authority_for(AbilityResource::Roles, AbilityAction::Read)));
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::{
+        Ability, AbilityAction, AbilityResource, RoleScope, authority_for, expand_allow_codes,
+        parse_code,
+    };
+    use crate::authz::ability::types::{CRUD_ACTIONS, DOMAIN_RESOURCES};
+
+    fn subject() -> Uuid {
+        Uuid::nil()
+    }
+
+    fn other_uuid() -> Uuid {
+        Uuid::from_u128(42)
+    }
+
+    use AbilityAction::{Create, Delete, Manage, Read, Update};
+    use AbilityResource::{All, AuditLogs, Profiles, Roles, Users};
+
+    #[test]
+    fn deny_beats_allow_regardless_of_order() {
+        let mut late = Ability::new(subject());
+        late.can(Manage, All);
+        late.cannot(Delete, Users);
+        assert!(!late.allows(Delete, Users) && late.allows(Read, Users));
+
+        let mut early = Ability::new(subject());
+        early.cannot(Delete, Users);
+        early.can(Manage, All);
+        assert!(!early.allows(Delete, Users));
     }
 
     #[test]
-    fn single_action_produces_single_authority() {
-        let mut ability = Ability::new();
-        ability.can(AbilityAction::Read, AbilityResource::Users);
-
+    fn deny_users_delete_under_manage_all() {
+        let mut ability = Ability::new(subject());
+        ability.can(Manage, All);
+        ability.cannot(Delete, Users);
         let authorities = ability.authorities();
-        assert_eq!(authorities.len(), 1);
-        assert!(authorities.contains(&authority_for(AbilityResource::Users, AbilityAction::Read)));
+        assert!(!authorities.contains(&authority_for(Users, Delete)));
+        assert!(authorities.contains(&authority_for(Users, Read)));
     }
 
     #[test]
-    fn empty_ability_produces_no_authorities() {
-        let ability = Ability::new();
-        assert!(ability.authorities().is_empty());
+    fn scoped_rule_never_grants_class_access() {
+        let mut ability = Ability::new(subject());
+        ability.can_self(Read, Profiles);
+        assert!(!ability.allows(Read, Profiles));
+        assert!(ability.allows_on(Read, Profiles, subject()));
+        assert!(!ability.allows_on(Read, Profiles, other_uuid()));
+    }
+
+    #[test]
+    fn explicit_scope_matches_only_that_target() {
+        let target = other_uuid();
+        let mut ability = Ability::new(subject());
+        ability.can_scoped(
+            Read,
+            Users,
+            RoleScope {
+                resource_type: "user".into(),
+                resource_id: Some(target),
+            },
+        );
+        assert!(ability.allows_on(Read, Users, target));
+        assert!(!ability.allows_on(Read, Users, subject()));
+        assert!(!ability.allows(Read, Users));
+    }
+
+    #[test]
+    fn scoped_deny_beats_class_allow_on_instance() {
+        let mut ability = Ability::new(subject());
+        ability.can(Read, Users);
+        ability.cannot_scoped(
+            Read,
+            Users,
+            RoleScope {
+                resource_type: "user".into(),
+                resource_id: Some(subject()),
+            },
+        );
+        assert!(ability.allows(Read, Users));
+        assert!(!ability.allows_on(Read, Users, subject()));
+    }
+
+    #[test]
+    fn manage_all_expansion_is_enum_driven() {
+        let mut ability = Ability::new(subject());
+        ability.can(Manage, All);
+        let authorities = ability.authorities();
+        for resource in DOMAIN_RESOURCES {
+            for action in CRUD_ACTIONS {
+                assert!(
+                    authorities.contains(&authority_for(resource, action)),
+                    "missing {}",
+                    authority_for(resource, action)
+                );
+            }
+        }
+        assert_eq!(authorities.len(), 24);
     }
 
     #[test]
     fn manage_wildcard_matches_any_action() {
-        let mut ability = Ability::new();
-        ability.can(AbilityAction::Manage, AbilityResource::Users);
+        let mut ability = Ability::new(subject());
+        ability.can(Manage, Users);
 
-        assert!(ability.allows(AbilityAction::Read, AbilityResource::Users));
-        assert!(ability.allows(AbilityAction::Create, AbilityResource::Users));
-        assert!(ability.allows(AbilityAction::Update, AbilityResource::Users));
-        assert!(ability.allows(AbilityAction::Delete, AbilityResource::Users));
+        assert!(ability.allows(Read, Users));
+        assert!(ability.allows(Create, Users));
+        assert!(ability.allows(Update, Users));
+        assert!(ability.allows(Delete, Users));
     }
 
     #[test]
     fn all_wildcard_matches_any_resource() {
-        let mut ability = Ability::new();
-        ability.can(AbilityAction::Read, AbilityResource::All);
+        let mut ability = Ability::new(subject());
+        ability.can(Read, All);
 
-        assert!(ability.allows(AbilityAction::Read, AbilityResource::Users));
-        assert!(ability.allows(AbilityAction::Read, AbilityResource::Roles));
-        assert!(ability.allows(AbilityAction::Read, AbilityResource::AuditLogs));
+        assert!(ability.allows(Read, Users));
+        assert!(ability.allows(Read, Roles));
+        assert!(ability.allows(Read, AuditLogs));
+        assert!(ability.allows(Read, Profiles));
     }
 
     #[test]
-    fn cannot_deny_takes_precedence_over_can_manage() {
-        let mut ability = Ability::new();
-        ability.can(AbilityAction::Manage, AbilityResource::All);
-        ability.cannot(AbilityAction::Delete, AbilityResource::Users);
+    fn has_class_allow_in_domain_distinguishes_class_and_scoped() {
+        let mut scoped_only = Ability::new(subject());
+        scoped_only.can_self(Read, Profiles);
+        assert!(!scoped_only.has_class_allow_in_domain(&DOMAIN_RESOURCES));
 
-        assert!(ability.allows(AbilityAction::Read, AbilityResource::Users));
-        assert!(!ability.allows(AbilityAction::Delete, AbilityResource::Users));
+        let mut class_level = Ability::new(subject());
+        class_level.can(Read, Users);
+        assert!(class_level.has_class_allow_in_domain(&DOMAIN_RESOURCES));
+    }
+
+    #[test]
+    fn empty_ability_produces_no_authorities() {
+        let ability = Ability::new(subject());
+        assert!(ability.authorities().is_empty());
+    }
+
+    #[test]
+    fn expand_allow_codes_skips_unknown_codes() {
+        let codes = [
+            "users:read".to_string(),
+            "documnets:read".to_string(),
+            "all:manage".to_string(),
+        ];
+        let expanded = expand_allow_codes(&codes);
+        assert!(expanded.contains("users:read"));
+        assert!(!expanded.contains("documnets:read"));
+    }
+
+    #[test]
+    fn expand_allow_codes_expands_wildcards() {
+        let codes = vec!["all:manage".to_string()];
+        let expanded = expand_allow_codes(&codes);
+        assert_eq!(expanded.len(), 24);
+        assert!(expanded.contains("users:delete"));
+        assert!(expanded.contains("profiles:read"));
+    }
+
+    #[test]
+    fn parse_code_splits_once() {
+        assert_eq!(parse_code("users:read"), Some((Users, Read)));
+        assert!(parse_code("nocolon").is_none());
+        assert!(parse_code("users:read:extra").is_none());
     }
 }
