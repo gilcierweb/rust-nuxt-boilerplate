@@ -6,7 +6,8 @@ use utoipa_swagger_ui::SwaggerUi;
 use crate::api_docs::ApiDoc;
 pub use crate::controllers::{
     audit_logs_controller, auth_controller, health_controller, metrics_controller,
-    roles_controller, upload_controller, users_controller, webhooks_controller,
+    permissions_controller, roles_controller, upload_controller, users_controller,
+    webhooks_controller,
 };
 use crate::middleware::csrf_protection::CsrfProtection;
 use crate::middleware::pix_webhook_verifier::PixWebhookVerifier;
@@ -256,6 +257,7 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                         crate::middleware::auth_middleware::JwtAuthConfig::new(vec![])
                             .with_token_blacklist(token_blacklist.clone()),
                     ))
+                    .configure(permissions_controller::config)
                     .configure(roles_controller::config)
                     .configure(users_controller::config)
                     .configure(audit_logs_controller::config)

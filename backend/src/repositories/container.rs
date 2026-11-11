@@ -9,6 +9,7 @@ use crate::repositories::audit_logs_repository::{AuditLogsRepository, IAuditLogR
 use crate::repositories::magic_link_token_repository::{
     IMagicLinkTokenRepository, MagicLinkTokenRepository,
 };
+use crate::repositories::permissions_repository::{IPermissionRepository, PermissionsRepository};
 use crate::repositories::profiles_repository::{IProfileRepository, ProfilesRepository};
 use crate::repositories::refresh_tokens_repository::{
     IRefreshTokenRepository, RefreshTokensRepository,
@@ -27,6 +28,7 @@ pub struct AppContainer {
     pub refresh_tokens: Arc<dyn IRefreshTokenRepository>,
     pub user_roles: Arc<dyn IUserRoleRepository>,
     pub roles: Arc<dyn IRoleRepository>,
+    pub permissions: Arc<dyn IPermissionRepository>,
     pub domain_audit_logs: Arc<dyn IAuditLogRepository>,
     pub magic_link_tokens: Arc<dyn IMagicLinkTokenRepository>,
     pub access_token_blacklist: Arc<AccessTokenBlacklist>,
@@ -55,6 +57,7 @@ impl AppContainer {
             refresh_tokens: Arc::new(RefreshTokensRepository::new(pool.clone())),
             user_roles: Arc::new(UserRolesRepository::new(pool.clone())),
             roles: Arc::new(RolesRepository::new(pool.clone())),
+            permissions: Arc::new(PermissionsRepository::new(pool.clone())),
             domain_audit_logs: Arc::new(AuditLogsRepository::new(pool.clone())),
             magic_link_tokens: Arc::new(MagicLinkTokenRepository::new(pool.clone())),
             access_token_blacklist: Arc::new(AccessTokenBlacklist::new(redis_pool)),

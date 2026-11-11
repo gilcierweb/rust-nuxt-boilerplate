@@ -24,6 +24,17 @@ impl AbilityAction {
         }
     }
 
+    /// The i18n key of the human readable label of the action.
+    pub fn label_key(self) -> &'static str {
+        match self {
+            AbilityAction::Read => "authorization.actions.read",
+            AbilityAction::Create => "authorization.actions.create",
+            AbilityAction::Update => "authorization.actions.update",
+            AbilityAction::Delete => "authorization.actions.delete",
+            AbilityAction::Manage => "authorization.actions.manage",
+        }
+    }
+
     /// Parses an action code from a permission code segment.
     /// Unknown segments return None and callers must fail closed.
     pub fn from_code(code: &str) -> Option<Self> {
@@ -77,6 +88,19 @@ impl AbilityResource {
             AbilityResource::Roles => "roles",
             AbilityResource::Upload => "upload",
             AbilityResource::Users => "users",
+        }
+    }
+
+    /// The i18n key of the human readable label of the resource.
+    pub fn label_key(self) -> &'static str {
+        match self {
+            AbilityResource::All => "authorization.resources.all",
+            AbilityResource::AuditLogs => "authorization.resources.audit_logs",
+            AbilityResource::Permissions => "authorization.resources.permissions",
+            AbilityResource::Profiles => "authorization.resources.profiles",
+            AbilityResource::Roles => "authorization.resources.roles",
+            AbilityResource::Upload => "authorization.resources.upload",
+            AbilityResource::Users => "authorization.resources.users",
         }
     }
 

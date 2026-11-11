@@ -8,6 +8,7 @@ pub mod macros;
 pub mod magic_link_token_repository;
 #[cfg(test)]
 pub(crate) mod mocks;
+pub mod permissions_repository;
 pub mod profiles_repository;
 pub mod refresh_tokens_repository;
 pub mod roles_repository;

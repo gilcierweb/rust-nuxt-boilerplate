@@ -27,6 +27,12 @@ use utoipa::{Modify, OpenApi};
         crate::controllers::health_controller::liveness,
         crate::controllers::health_controller::health_check,
         crate::controllers::metrics_controller::metrics,
+        // -- admin / permissions
+        crate::controllers::permissions_controller::list_permissions,
+        crate::controllers::permissions_controller::permission_catalog,
+        crate::controllers::permissions_controller::create_permission,
+        crate::controllers::permissions_controller::update_permission,
+        crate::controllers::permissions_controller::delete_permission,
         // -- admin / roles
         crate::controllers::roles_controller::list_roles,
         crate::controllers::roles_controller::get_role,
@@ -58,6 +64,18 @@ use utoipa::{Modify, OpenApi};
             // health
             crate::controllers::health_controller::HealthResponse,
             crate::controllers::health_controller::HealthDependencyStatus,
+            // permissions
+            crate::controllers::permissions_controller::PermissionRequest,
+            crate::controllers::permissions_controller::PermissionUpdateRequest,
+            crate::controllers::permissions_controller::PermissionSearch,
+            crate::models::permission::Permission,
+            crate::models::permission::NewPermission,
+            crate::models::permission::PermissionPatch,
+            crate::models::permission::PermissionWithRoles,
+            crate::models::permission::PermissionRole,
+            crate::models::permission::PermissionCatalog,
+            crate::models::permission::CatalogEntry,
+            crate::utils::pagination::PaginatedResponse<crate::models::permission::PermissionWithRoles>,
             // roles
             crate::controllers::roles_controller::RoleWriteRequest,
             crate::models::role::Role,
@@ -84,6 +102,7 @@ use utoipa::{Modify, OpenApi};
         (name = "webhooks", description = "External system webhooks (Stripe, Pix)"),
         (name = "health", description = "Service health probes"),
         (name = "metrics", description = "Prometheus-compatible operational metrics"),
+        (name = "permissions", description = "Permission catalog management (admin)"),
         (name = "roles", description = "Role management (admin)"),
         (name = "users", description = "User management (admin)"),
         (name = "audit_logs", description = "Tamper-evident audit log (admin)"),

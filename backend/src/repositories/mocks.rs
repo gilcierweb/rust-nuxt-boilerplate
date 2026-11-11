@@ -5,6 +5,7 @@ use crate::config::test_config::test_config;
 use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
 use crate::repositories::container::AppContainer;
 use crate::repositories::magic_link_token_repository::MockIMagicLinkTokenRepository;
+use crate::repositories::permissions_repository::MockIPermissionRepository;
 use crate::repositories::profiles_repository::MockIProfileRepository;
 use crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository;
 use crate::repositories::roles_repository::MockIRoleRepository;
@@ -57,6 +58,7 @@ pub fn mock_container() -> AppContainer {
         refresh_tokens: Arc::new(MockIRefreshTokenRepository::new()),
         user_roles: Arc::new(MockIUserRoleRepository::new()),
         roles: Arc::new(MockIRoleRepository::new()),
+        permissions: Arc::new(MockIPermissionRepository::new()),
         domain_audit_logs: Arc::new(MockIAuditLogRepository::new()),
         magic_link_tokens: Arc::new(MockIMagicLinkTokenRepository::new()),
         access_token_blacklist: Arc::new(

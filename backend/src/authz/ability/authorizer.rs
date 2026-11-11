@@ -35,24 +35,8 @@ pub fn authorize_subject(
 
 /// The forbidden error of a refused check, with the localized labels.
 fn forbidden(resource: AbilityResource, action: AbilityAction) -> AppError {
-    let action_key = match action {
-        AbilityAction::Read => "authorization.actions.read",
-        AbilityAction::Create => "authorization.actions.create",
-        AbilityAction::Update => "authorization.actions.update",
-        AbilityAction::Delete => "authorization.actions.delete",
-        AbilityAction::Manage => "authorization.actions.manage",
-    };
-    let resource_key = match resource {
-        AbilityResource::All => "authorization.resources.all",
-        AbilityResource::AuditLogs => "authorization.resources.audit_logs",
-        AbilityResource::Permissions => "authorization.resources.permissions",
-        AbilityResource::Profiles => "authorization.resources.profiles",
-        AbilityResource::Roles => "authorization.resources.roles",
-        AbilityResource::Upload => "authorization.resources.upload",
-        AbilityResource::Users => "authorization.resources.users",
-    };
-    let action_label = t!(action_key);
-    let resource_label = t!(resource_key);
+    let action_label = t!(action.label_key());
+    let resource_label = t!(resource.label_key());
 
     AppError::Forbidden(
         t!(
