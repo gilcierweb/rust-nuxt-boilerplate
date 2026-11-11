@@ -34,7 +34,6 @@ actix-cors = "0.7.1"
 # handled at reverse proxy (nginx/traefik). See app.rs.
 actix-web = { version = "4.15.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
 actix-web-actors = "4.3"
-actix-web-grants = "4.1.2"
 actix-ws = "0.4.0"
 # security crypto
 argon2 = "0.5.3"
