@@ -87,6 +87,15 @@ impl CurrentAbility {
     pub fn permissions(&self) -> Permissions {
         self.ability.permissions()
     }
+
+    /// Checks whether the subject holds a class level allow over at least one
+    /// resource of the domain.
+    ///
+    /// The scoped rules never open a domain: they only answer the instance
+    /// checks of the handlers.
+    pub fn can_check_domain(&self, domain: &[AbilityResource]) -> bool {
+        self.ability.has_class_allow_in_domain(domain)
+    }
 }
 
 impl FromRequest for CurrentAbility {
@@ -113,6 +122,7 @@ mod tests {
     use uuid::Uuid;
 
     use super::CurrentAbility;
+    use crate::authz::ability::types::DOMAIN_RESOURCES;
     use crate::authz::ability::{Ability, AbilityAction, AbilityResource};
 
     #[actix_web::test]
@@ -157,5 +167,26 @@ mod tests {
                 .is_err()
         );
         assert!(current.permissions().can.contains("users:read"));
+    }
+
+    #[test]
+    fn a_class_level_grant_opens_the_domain() {
+        let mut ability = Ability::new(Uuid::new_v4());
+        ability.can(AbilityAction::Read, AbilityResource::Users);
+        let current = CurrentAbility::new(ability);
+
+        assert!(current.can_check_domain(&DOMAIN_RESOURCES));
+    }
+
+    #[test]
+    fn a_scoped_grant_never_opens_the_domain() {
+        let mut ability = Ability::new(Uuid::new_v4());
+        ability.can_self(AbilityAction::Read, AbilityResource::Profiles);
+        let current = CurrentAbility::new(ability);
+
+        assert!(
+            !current.can_check_domain(&DOMAIN_RESOURCES),
+            "a self scoped grant must not open the admin domain"
+        );
     }
 }

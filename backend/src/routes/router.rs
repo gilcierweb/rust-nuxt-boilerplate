@@ -10,7 +10,7 @@ pub use crate::controllers::{
 };
 use crate::middleware::csrf_protection::CsrfProtection;
 use crate::middleware::pix_webhook_verifier::PixWebhookVerifier;
-use crate::middleware::require_admin_middleware::RequireAdmin;
+use crate::middleware::require_admin_middleware::RequireAdminDomain;
 use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 
 /// Configure API routes with middleware chain.
@@ -19,9 +19,18 @@ use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 ///
 /// The middleware stack order is critical and follows this sequence:
 ///
-/// 1. **GrantsMiddleware (RBAC)** - Extracts user authorities for role-based access control
-///    - Runs first to populate request extensions with user roles
-///    - Used by `#[authorize("role:admin")]` guards on handlers
+/// 1. **JwtAuth (JWT Validation)** - Validates JWT tokens for protected routes
+///    - Applied to the `/auth` and `/admin` scopes
+///    - `/auth`: public paths come from `bearer_exempt_routes()` (credential
+///      and cookie-authenticated endpoints); everything else (me,
+///      change-password, 2FA) requires a valid Bearer token and passes the
+///      Redis-backed revocation checks (blacklist + credential epoch)
+///    - `/admin`: no public paths; always Bearer + revocation checks
+///    - Loads the grants of the subject, builds the ability and inserts it in
+///      the request extensions as `CurrentAbility`
+///    - Handler-level `AuthUser` extractor reads the Claims JwtAuth inserts
+///    - Handler-level `CurrentAbility` extractor reads the ability JwtAuth
+///      inserts
 ///
 /// 2. **RequireApiKey (API Key Auth)** - Validates API key for service-to-service communication
 ///    - Runs after RBAC to allow API key authentication
@@ -38,14 +47,11 @@ use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 ///    - Skips Bearer token requests (allows API-first apps)
 ///    - Uses signed cookies for CSRF token validation
 ///
-/// 5. **JwtAuth (JWT Validation)** - Validates JWT tokens for protected routes
-///    - Applied to the `/auth` and `/admin` scopes
-///    - `/auth`: public paths come from `bearer_exempt_routes()` (credential
-///      and cookie-authenticated endpoints); everything else (me,
-///      change-password, 2FA) requires a valid Bearer token and passes the
-///      Redis-backed revocation checks (blacklist + credential epoch)
-///    - `/admin`: no public paths; always Bearer + revocation checks
-///    - Handler-level `AuthUser` extractor reads the Claims JwtAuth inserts
+/// 5. **RequireAdminDomain (admin domain gate)** - Opens the `/admin` scope
+///    to the subjects holding a class level allow over a resource of the
+///    domain
+///    - Registered before JwtAuth so it runs after it (reverse order)
+///    - The scoped grants (the self scoped customer role) never open it
 ///
 /// # Design Decisions
 ///
@@ -227,23 +233,25 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             // request (actix-web `App::wrap`: `endpoint: apply(mw, self.endpoint)`).
             // Registration below is therefore bottom-up for execution order.
             // Execution order:
-            // 1. JwtAuth (outermost) - validates JWT, inserts Claims and
-            //    AuthDetails in extensions
-            // 2. RequireAdmin - enforces ROLE_ADMIN; reads Claims, so it MUST
-            //    run after JwtAuth (i.e. be registered BEFORE it)
+            // 1. JwtAuth (outermost) - validates JWT, loads the grants of the
+            //    subject, builds the ability and inserts it in the extensions
+            // 2. RequireAdminDomain - opens the admin domain to the subjects
+            //    holding a class level allow over a resource of the domain; it
+            //    reads the ability, so it MUST run after JwtAuth (i.e. be
+            //    registered BEFORE it)
             // 3. CsrfProtection (innermost) - checks CSRF for browser forms.
             //    Its Transform impl requires `BoxBody`, so it must wrap the
             //    routes directly. Order vs auth is irrelevant for security:
             //    cookie-auth paths always enforce CSRF (see CsrfProtection).
-            // 4. Admin handlers use AuthDetails from extensions for RBAC
-            // WARNING: registering RequireAdmin after JwtAuth makes it run
-            // BEFORE JwtAuth, so Claims are never present and EVERY admin
-            // request fails with 401 — do not reorder without updating the
-            // stack-order regression test.
+            // 4. Admin handlers authorize against the ability of the request
+            // WARNING: registering RequireAdminDomain after JwtAuth makes it
+            // run BEFORE JwtAuth, so the ability is never present in the
+            // request extensions and EVERY admin request fails with 401 - do
+            // not reorder without updating the stack-order regression test.
             .service(
                 web::scope("/admin")
                     .wrap(CsrfProtection::new(vec![]))
-                    .wrap(RequireAdmin::new())
+                    .wrap(RequireAdminDomain::new())
                     .wrap(crate::middleware::auth::JwtAuth::new(
                         crate::middleware::auth_middleware::JwtAuthConfig::new(vec![])
                             .with_token_blacklist(token_blacklist.clone()),

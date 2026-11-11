@@ -8,4 +8,6 @@ pub use authorizer::{authorize, authorize_subject};
 pub use builder::build_ability_from_grants;
 pub use engine::{Ability, authority_for};
 pub use extractor::CurrentAbility;
-pub use types::{AbilityAction, AbilityResource, PermissionEffect, Permissions, RoleScope};
+pub use types::{
+    AbilityAction, AbilityResource, DOMAIN_RESOURCES, PermissionEffect, Permissions, RoleScope,
+};

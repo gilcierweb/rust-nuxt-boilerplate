@@ -244,5 +244,6 @@
   "auth.validation.captcha_required": "Completa la verificación humana (captcha) para continuar",
   "auth.validation.captcha_invalid": "La verificación captcha falló. Inténtalo de nuevo",
   "auth.validation.disposable_email": "No se aceptan direcciones de correo temporales/descartables",
-  "auth.validation.email_no_mailbox": "Este dominio de correo no puede recibir mensajes"
+  "auth.validation.email_no_mailbox": "Este dominio de correo no puede recibir mensajes",
+  "middleware.admin_domain_required": "Se requieren permisos del dominio de administracion"
 }

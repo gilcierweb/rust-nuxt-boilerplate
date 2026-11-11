@@ -244,5 +244,6 @@
   "auth.validation.captcha_required": "Complete the human verification (captcha) to continue",
   "auth.validation.captcha_invalid": "Captcha verification failed. Please retry",
   "auth.validation.disposable_email": "Temporary/disposable email addresses are not accepted",
-  "auth.validation.email_no_mailbox": "This email domain cannot receive mail"
+  "auth.validation.email_no_mailbox": "This email domain cannot receive mail",
+  "middleware.admin_domain_required": "Admin domain permissions required"
 }
