@@ -443,7 +443,7 @@ async fn put_replaces_every_link_of_the_role() {
 }
 
 #[actix_web::test]
-async fn put_role_permissions_refuses_last_administrator_source() {
+async fn update_role_permissions_refuses_last_administrator_source() {
     seed_catalog();
     let db = TestDb::new().await;
     let subject = subject_with_roles(&db, &["admin"]).await;

@@ -510,7 +510,7 @@ impl IUserRepository for UsersRepository {
     }
 
     /// The roles assigned to a user, as the admin interface reads them back.
-    async fn get_user_role_assignments(&self, user_id: &Uuid) -> QueryResult<Vec<(Uuid, String)>> {
+    async fn find_user_role_assignments(&self, user_id: &Uuid) -> QueryResult<Vec<(Uuid, String)>> {
         let user_id = *user_id;
         self.base
             .run(move |conn| {
@@ -876,9 +876,16 @@ impl IUserRepository for UsersRepository {
                             p.first_name, \
                             p.last_name, \
                             p.full_name, \
-                            p.nickname \
+                            p.nickname, \
+                            COALESCE(roles.role_names, ARRAY[]::text[]) AS role_names \
                          FROM users u \
                          LEFT JOIN profiles p ON p.user_id = u.id \
+                         LEFT JOIN LATERAL ( \
+                            SELECT array_agg(r.name ORDER BY r.name) AS role_names \
+                              FROM users_roles ur \
+                              JOIN roles r ON r.id = ur.role_id \
+                             WHERE ur.user_id = u.id \
+                         ) roles ON TRUE \
                          ORDER BY {order_sql} \
                          LIMIT $1 OFFSET $2"
                     );
@@ -899,6 +906,8 @@ impl IUserRepository for UsersRepository {
                         full_name: Option<String>,
                         #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
                         nickname: Option<String>,
+                        #[diesel(sql_type = diesel::sql_types::Array<diesel::sql_types::Text>)]
+                        role_names: Vec<String>,
                     }
 
                     let rows: Vec<UserProfileRow> = diesel::sql_query(raw_sql)
@@ -928,6 +937,7 @@ impl IUserRepository for UsersRepository {
                             last_name: row.last_name,
                             full_name: row.full_name,
                             nickname: row.nickname,
+                            roles: row.role_names,
                         });
                     }
 

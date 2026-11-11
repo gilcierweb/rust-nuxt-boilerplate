@@ -126,7 +126,7 @@ fn unique_violation(error: &diesel::result::Error) -> AppError {
     security(("bearer_auth" = []))
 )]
 #[get("/permissions")]
-pub async fn list_permissions(
+pub async fn all_permissions(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
@@ -335,7 +335,7 @@ pub async fn update_permission(
     security(("bearer_auth" = []))
 )]
 #[delete("/permissions/{id}")]
-pub async fn delete_permission(
+pub async fn destroy_permission(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
@@ -382,10 +382,10 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     // The catalog route is registered before the identifier route: the path
     // segment of the identifier would otherwise swallow the word `catalog`.
     cfg.service(permission_catalog)
-        .service(list_permissions)
+        .service(all_permissions)
         .service(create_permission)
         .service(update_permission)
-        .service(delete_permission);
+        .service(destroy_permission);
 }
 
 #[cfg(test)]
@@ -412,7 +412,7 @@ mod tests {
     use crate::repositories::permissions_repository::MockIPermissionRepository;
 
     #[actix_web::test]
-    async fn list_permissions_returns_forbidden_without_authority() {
+    async fn all_permissions_returns_forbidden_without_authority() {
         let container = mock_container();
         let app = test::init_service(
             App::new()
@@ -431,7 +431,7 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn list_permissions_refuses_a_sort_field_outside_the_allowlist() {
+    async fn all_permissions_refuses_a_sort_field_outside_the_allowlist() {
         let container = mock_container();
         let app = test::init_service(
             App::new()

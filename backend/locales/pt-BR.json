@@ -21,6 +21,8 @@
   "admin.roles.validation.permissions_empty": "Um papel deve ter ao menos uma permissão",
   "admin.roles.validation.resource_type_invalid": "resource_type deve ter no máximo 255 caracteres",
   "admin.roles.validation.scope_invalid": "resource_type e resource_id devem ser fornecidos juntos",
+  "admin.users.guard.last_admin_role_assignment": "Este usuário detém a última atribuição do papel de administrador",
+  "admin.users.validation.role_unknown": "Papel desconhecido: o id não pertence ao catálogo",
   "api.deprecated_warning": "A API v%{version} está obsoleta. Migre para a versão mais recente.",
   "api.version_not_supported": "A versão v%{version} da API não é suportada. Versões suportadas: %{versions}",
   "app.name": "Boilerplate App",

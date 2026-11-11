@@ -67,7 +67,7 @@ fn normalize_role_payload(payload: &mut RoleWriteRequest) {
     security(("bearer_auth" = []))
 )]
 #[get("/roles")]
-pub async fn list_roles(
+pub async fn all_roles(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
@@ -102,7 +102,7 @@ pub async fn list_roles(
     security(("bearer_auth" = []))
 )]
 #[get("/roles/{id}")]
-pub async fn get_role(
+pub async fn find_role(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
@@ -306,7 +306,7 @@ fn administrator_sources_after(
     security(("bearer_auth" = []))
 )]
 #[get("/roles/{id}/permissions")]
-pub async fn get_role_permissions(
+pub async fn find_role_permissions(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
@@ -352,7 +352,7 @@ pub async fn get_role_permissions(
     security(("bearer_auth" = []))
 )]
 #[put("/roles/{id}/permissions")]
-pub async fn put_role_permissions(
+pub async fn update_role_permissions(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
@@ -412,7 +412,7 @@ pub async fn put_role_permissions(
     security(("bearer_auth" = []))
 )]
 #[get("/roles/{id}/members")]
-pub async fn get_role_members(
+pub async fn find_role_members(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
@@ -457,7 +457,7 @@ pub async fn get_role_members(
     security(("bearer_auth" = []))
 )]
 #[delete("/roles/{id}")]
-pub async fn delete_role(
+pub async fn destroy_role(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
@@ -530,14 +530,14 @@ pub async fn delete_role(
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(list_roles)
-        .service(get_role)
+    cfg.service(all_roles)
+        .service(find_role)
         .service(create_role)
         .service(update_role)
-        .service(delete_role)
-        .service(get_role_permissions)
-        .service(put_role_permissions)
-        .service(get_role_members);
+        .service(destroy_role)
+        .service(find_role_permissions)
+        .service(update_role_permissions)
+        .service(find_role_members);
 }
 
 /// The links of a role as the admin interface reads them back.
@@ -577,7 +577,7 @@ mod tests {
     use crate::repositories::roles_repository::MockIRoleRepository;
 
     #[actix_web::test]
-    async fn list_roles_returns_forbidden_without_authority() {
+    async fn all_roles_returns_forbidden_without_authority() {
         let container = mock_container();
         let app = test::init_service(
             App::new()
@@ -626,7 +626,7 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn list_roles_returns_ok_when_authority_is_present() {
+    async fn all_roles_returns_ok_when_authority_is_present() {
         use crate::utils::pagination::PaginatedResponse;
 
         let mut container = mock_container();

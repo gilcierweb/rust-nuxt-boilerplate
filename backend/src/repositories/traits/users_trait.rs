@@ -103,7 +103,7 @@ pub trait IUserRepository: Send + Sync {
     async fn user_ids_holding_all_codes(&self, codes: &[String]) -> QueryResult<Vec<Uuid>>;
 
     /// The roles assigned to a user, as the admin interface reads them back.
-    async fn get_user_role_assignments(&self, user_id: &Uuid) -> QueryResult<Vec<(Uuid, String)>>;
+    async fn find_user_role_assignments(&self, user_id: &Uuid) -> QueryResult<Vec<(Uuid, String)>>;
 
     /// Replaces every role assignment of a user in one transaction: the old
     /// links are deleted and the new ones inserted, so a refused insert leaves
@@ -166,6 +166,8 @@ pub struct AdminUserLookupItem {
     pub last_name: Option<String>,
     pub full_name: Option<String>,
     pub nickname: Option<String>,
+    /// The names of the roles assigned to the user, joined in the same query.
+    pub roles: Vec<String>,
 }
 
 /// DTO for single user detail (includes profile data)

@@ -212,6 +212,16 @@ async fn body_json(response: actix_web::dev::ServiceResponse) -> Value {
     serde_json::from_slice(&bytes).expect("valid json body")
 }
 
+/// The status and the body of a response, for the assertions that need both.
+async fn response_json(response: actix_web::dev::ServiceResponse) -> (StatusCode, Value) {
+    let status = response.status();
+    let bytes = to_bytes(response.into_body()).await.expect("body read");
+    let text = String::from_utf8_lossy(&bytes).to_string();
+    let json =
+        serde_json::from_str::<Value>(&text).unwrap_or_else(|_| serde_json::json!({ "raw": text }));
+    (status, json)
+}
+
 fn assigned_names(payload: &Value) -> Vec<String> {
     payload["roles"]
         .as_array()
@@ -240,8 +250,12 @@ async fn admin_assigns_manager_to_a_fresh_user() {
     )
     .to_request();
     let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(assigned_names(&body_json(resp).await), vec!["manager"]);
+    let (status, payload) = response_json(resp).await;
+    if status != StatusCode::OK {
+        println!("PUT BODY: {payload}");
+    }
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(assigned_names(&payload), vec!["manager"]);
 
     let req = authorized(
         test::TestRequest::get().uri(format!("/admin/users/{fresh}/roles").as_str()),
@@ -249,8 +263,12 @@ async fn admin_assigns_manager_to_a_fresh_user() {
     )
     .to_request();
     let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::OK);
-    assert_eq!(assigned_names(&body_json(resp).await), vec!["manager"]);
+    let (status, payload) = response_json(resp).await;
+    if status != StatusCode::OK {
+        println!("PUT BODY: {payload}");
+    }
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(assigned_names(&payload), vec!["manager"]);
 
     // The ability is rebuilt from the grants on every request, so the fresh
     // user reads users on the very next call.
@@ -280,9 +298,10 @@ async fn admin_assigns_manager_to_a_fresh_user() {
 async fn a_viewer_cannot_grant_a_role_beyond_its_own_authority() {
     seed_catalog();
     let db = TestDb::new().await;
-    // The principal holds only the read authorities of the viewer role, so it
-    // cannot grant the admin role: that would be an escalation.
-    let principal = create_user(&db, &[role_id(&db, "viewer").await]).await;
+    // The manager holds `users:update`, so it may edit the assignments of a
+    // user, but its authority never covers the admin role: granting it would be
+    // an escalation.
+    let principal = create_user(&db, &[role_id(&db, "manager").await]).await;
     let target = create_user(&db, &[]).await;
     let admin_role = role_id(&db, "admin").await;
     let app = admin_app!(&db);
@@ -319,9 +338,9 @@ async fn removing_last_admin_role_assignment_is_refused() {
     seed_catalog();
     let db = TestDb::new().await;
     let admin_role = role_id(&db, "admin").await;
-    // The only holder of the literal admin role in this database: the seed
-    // assigns none, so the test owns the whole set.
+    // The only holder of the literal admin role in this database.
     let sole_holder = create_user(&db, &[admin_role]).await;
+    leave_one_administrator_source(&db, sole_holder).await;
     let app = admin_app!(&db);
     let config = test_config();
     let token = bearer(&config, sole_holder);
@@ -353,6 +372,7 @@ async fn removing_the_only_administrator_holder_is_refused() {
     let db = TestDb::new().await;
     let admin_role = role_id(&db, "admin").await;
     let holder = create_user(&db, &[admin_role]).await;
+    leave_one_administrator_source(&db, holder).await;
     let app = admin_app!(&db);
     let config = test_config();
     let token = bearer(&config, holder);
@@ -381,6 +401,36 @@ async fn removing_the_only_administrator_holder_is_refused() {
         vec![holder],
         "a refused write leaves the holder in place"
     );
+}
+
+/// The administrator codes as owned strings, the shape a raw bind reads.
+fn administrator_codes() -> Vec<String> {
+    ["roles:read", "roles:update"]
+        .iter()
+        .map(|code| (*code).to_string())
+        .collect()
+}
+
+/// Leaves exactly one user holding the administrator codes: every other
+/// assignment of a role that holds both is removed, so the lockout guards of
+/// this file see a single source.
+async fn leave_one_administrator_source(db: &TestDb, holder: Uuid) {
+    let mut conn = db.pool().get().await.expect("Failed to get connection");
+    diesel::sql_query(
+        "DELETE FROM users_roles \
+         WHERE user_id <> $1 \
+           AND role_id IN ( \
+                SELECT rp.role_id FROM roles_permissions rp \
+                  JOIN permissions p ON p.id = rp.permission_id \
+                 WHERE rp.effect = 0 AND p.code = ANY($2) \
+                 GROUP BY rp.role_id \
+                HAVING count(DISTINCT p.code) = 2)",
+    )
+    .bind::<diesel::sql_types::Uuid, _>(holder)
+    .bind::<diesel::sql_types::Array<diesel::sql_types::Text>, _>(administrator_codes())
+    .execute(&mut *conn)
+    .await
+    .expect("administrator source isolation failed");
 }
 
 /// A role created by the test itself, holding the given links.
@@ -424,25 +474,31 @@ async fn the_user_list_carries_the_role_names() {
     seed_catalog();
     let db = TestDb::new().await;
     let editor = create_user(&db, &[role_id(&db, "admin").await]).await;
-    let member = create_user(&db, &[role_id(&db, "manager").await]).await;
-    let _ = member;
+    create_user(&db, &[role_id(&db, "manager").await]).await;
     let app = admin_app!(&db);
-    let config = test_config();
+    let token = bearer(&test_config(), editor);
 
-    let req = authorized(
-        test::TestRequest::get().uri("/admin/users?per_page=100"),
-        &bearer(&config, editor),
-    )
-    .to_request();
-    let resp = test::call_service(&app, req).await;
-    assert_eq!(resp.status(), StatusCode::OK);
+    // The test database holds the subjects of every other suite, so the editor
+    // is looked up page by page instead of assuming the first page.
+    let mut listed = None;
+    for page in 1..=5 {
+        let req = authorized(
+            test::TestRequest::get().uri(format!("/admin/users?per_page=100&page={page}").as_str()),
+            &token,
+        )
+        .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), StatusCode::OK);
 
-    let json = body_json(resp).await;
-    let items = json["data"].as_array().expect("the data array");
-    let listed = items
-        .iter()
-        .find(|item| item["id"] == editor.to_string())
-        .expect("the editor in the list");
+        let json = body_json(resp).await;
+        let items = json["data"].as_array().expect("the data array");
+        if let Some(item) = items.iter().find(|item| item["id"] == editor.to_string()) {
+            listed = Some(item.clone());
+            break;
+        }
+    }
+
+    let listed = listed.expect("the editor in the list");
     let roles = listed["roles"].as_array().expect("the roles column");
     assert_eq!(
         roles
