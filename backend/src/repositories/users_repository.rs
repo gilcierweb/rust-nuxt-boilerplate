@@ -826,103 +826,93 @@ impl IUserRepository for UsersRepository {
         params: &PaginationParams,
         security: Arc<SecurityService>,
     ) -> diesel::QueryResult<PaginatedResponse<AdminUserLookupItem>> {
+        use crate::db::schema::{profiles, roles, users_roles};
+        use diesel::expression_methods::NullableExpressionMethods;
+
         let params = params.validated();
         let limit = params.limit();
         let offset = params.offset();
-        let sort_by = params
-            .sort_by
-            .clone()
-            .unwrap_or_else(|| "email".to_string());
-        let sort_dir = params.sort_direction().to_string();
+        let descending = params.sort_dir.as_deref() == Some("desc");
 
         self.base
             .run(move |conn| {
                 let security = security.clone();
                 Box::pin(async move {
-                    // ── 1. Total count — single COUNT(*) query, no data fetched ──────────
+                    // ── 1. Total count, single COUNT(*) with no data fetched ──
                     let total: i64 = users_table::table.count().get_result(conn).await?;
 
-                    // ── 2. Page query — JOIN + ORDER + LIMIT + OFFSET in the database ────
-                    //
-                    // Column allow-list prevents SQL injection via `sort_by`.
-                    // Any unrecognised value falls back to `u.created_at DESC`.
-                    let order_sql = match sort_by.as_str() {
-                        "email" => "u.email_blind_index ASC",
-                        "email_desc" => "u.email_blind_index DESC",
-                        "first_name" => "p.first_name ASC NULLS LAST",
-                        "first_name_desc" => "p.first_name DESC NULLS LAST",
-                        "last_name" => "p.last_name ASC NULLS LAST",
-                        "last_name_desc" => "p.last_name DESC NULLS LAST",
-                        "id" => {
-                            if sort_dir == "desc" {
-                                "u.id DESC"
-                            } else {
-                                "u.id ASC"
-                            }
-                        },
-                        _ => "u.created_at DESC",
+                    // ── 2. Page query — one JOIN, ordered and paginated in the
+                    // database. The boxed query lets the ORDER BY column come
+                    // from an allowlist without any string interpolation.
+                    let mut query = users_table::table
+                        .left_join(profiles::table.on(profiles::user_id.eq(users_table::id)))
+                        .select((
+                            users_table::id,
+                            users_table::email_encrypted,
+                            users_table::encryption_key_version,
+                            // A left joined column is nullable, so the select
+                            // clause has to say so.
+                            profiles::first_name.nullable(),
+                            profiles::last_name.nullable(),
+                            profiles::full_name.nullable(),
+                            profiles::nickname.nullable(),
+                        ))
+                        .into_boxed();
+
+                    // The email is encrypted, so its order is the blind index
+                    // order: the same order the previous implementation had.
+                    query = match (params.sort_by.as_deref(), descending) {
+                        (Some("first_name"), false) => query.order_by(profiles::first_name.asc()),
+                        (Some("first_name"), true) => query.order_by(profiles::first_name.desc()),
+                        (Some("last_name"), false) => query.order_by(profiles::last_name.asc()),
+                        (Some("last_name"), true) => query.order_by(profiles::last_name.desc()),
+                        (Some("id"), true) => query.order_by(users_table::id.desc()),
+                        (Some("id"), false) => query.order_by(users_table::id.asc()),
+                        (_, true) => query.order_by(users_table::email_blind_index.desc()),
+                        (_, false) => query.order_by(users_table::email_blind_index.asc()),
                     };
 
-                    // diesel does not support dynamic ORDER BY via the query
-                    // builder for multi-table aliases, so we use sql_query here.
-                    // The query is parameterised for LIMIT/OFFSET; the ORDER BY
-                    // clause comes from the allow-list above and is never built
-                    // from user input directly.
-                    let raw_sql = format!(
-                        "SELECT \
-                            u.id            AS user_id, \
-                            u.email_encrypted, \
-                            u.encryption_key_version, \
-                            p.first_name, \
-                            p.last_name, \
-                            p.full_name, \
-                            p.nickname, \
-                            COALESCE(roles.role_names, ARRAY[]::text[]) AS role_names \
-                         FROM users u \
-                         LEFT JOIN profiles p ON p.user_id = u.id \
-                         LEFT JOIN LATERAL ( \
-                            SELECT array_agg(r.name ORDER BY r.name) AS role_names \
-                              FROM users_roles ur \
-                              JOIN roles r ON r.id = ur.role_id \
-                             WHERE ur.user_id = u.id \
-                         ) roles ON TRUE \
-                         ORDER BY {order_sql} \
-                         LIMIT $1 OFFSET $2"
+                    type PageRow = (
+                        uuid::Uuid,
+                        Vec<u8>,
+                        i32,
+                        Option<String>,
+                        Option<String>,
+                        Option<String>,
+                        Option<String>,
                     );
+                    let rows: Vec<PageRow> = query.limit(limit).offset(offset).load(conn).await?;
 
-                    #[derive(diesel::QueryableByName)]
-                    struct UserProfileRow {
-                        #[diesel(sql_type = diesel::sql_types::Uuid)]
-                        user_id: uuid::Uuid,
-                        #[diesel(sql_type = diesel::sql_types::Bytea)]
-                        email_encrypted: Vec<u8>,
-                        #[diesel(sql_type = diesel::sql_types::Integer)]
-                        encryption_key_version: i32,
-                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-                        first_name: Option<String>,
-                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-                        last_name: Option<String>,
-                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-                        full_name: Option<String>,
-                        #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
-                        nickname: Option<String>,
-                        #[diesel(sql_type = diesel::sql_types::Array<diesel::sql_types::Text>)]
-                        role_names: Vec<String>,
-                    }
+                    // ── 3. The role names of the page, one query for all of
+                    // them: the link table is keyed by user, so the ids of the
+                    // page answer with a single index scan.
+                    let page_ids: Vec<uuid::Uuid> = rows.iter().map(|(id, ..)| *id).collect();
+                    let role_rows: Vec<(uuid::Uuid, String)> = if page_ids.is_empty() {
+                        Vec::new()
+                    } else {
+                        users_roles::table
+                            .inner_join(roles::table)
+                            .filter(users_roles::user_id.eq_any(&page_ids))
+                            .select((users_roles::user_id, roles::name))
+                            .order_by(roles::name.asc())
+                            .load(conn)
+                            .await?
+                    };
 
-                    let rows: Vec<UserProfileRow> = diesel::sql_query(raw_sql)
-                        .bind::<diesel::sql_types::BigInt, _>(limit)
-                        .bind::<diesel::sql_types::BigInt, _>(offset)
-                        .load(conn)
-                        .await?;
-
-                    // ── 3. Decrypt only the page (≤100 rows) ──────────────────────────────
+                    // ── 4. Decrypt the page and group its role names ──────────
                     let mut items = Vec::with_capacity(rows.len());
-                    for row in rows {
-                        // Reconstruct a minimal User-like value for decrypt_user_email.
-                        // We only need the encrypted email fields + key version.
+                    for (
+                        id,
+                        email_encrypted,
+                        key_version,
+                        first_name,
+                        last_name,
+                        full_name,
+                        nickname,
+                    ) in rows
+                    {
                         let email = security
-                            .decrypt_email_fields(&row.email_encrypted, row.encryption_key_version)
+                            .decrypt_email_fields(&email_encrypted, key_version)
                             .map_err(|e| {
                                 diesel::result::Error::DatabaseError(
                                     diesel::result::DatabaseErrorKind::Unknown,
@@ -930,14 +920,20 @@ impl IUserRepository for UsersRepository {
                                 )
                             })?;
 
+                        let roles: Vec<String> = role_rows
+                            .iter()
+                            .filter(|(user_id, _)| *user_id == id)
+                            .map(|(_, name)| name.clone())
+                            .collect();
+
                         items.push(AdminUserLookupItem {
-                            id: row.user_id,
+                            id,
                             email,
-                            first_name: row.first_name,
-                            last_name: row.last_name,
-                            full_name: row.full_name,
-                            nickname: row.nickname,
-                            roles: row.role_names,
+                            first_name,
+                            last_name,
+                            full_name,
+                            nickname,
+                            roles,
                         });
                     }
 
