@@ -1,4 +1,6 @@
 pub mod ability;
-pub mod grants_extractor;
+pub mod grants;
 pub mod guards;
-pub mod scope;
+
+#[cfg(test)]
+pub mod test_helpers;

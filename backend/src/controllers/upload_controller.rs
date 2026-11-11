@@ -7,6 +7,7 @@ use serde::Serialize;
 use tempfile::NamedTempFile;
 use utoipa::ToSchema;
 
+use crate::authz::ability::{AbilityAction, AbilityResource, CurrentAbility};
 use crate::config::AppConfig;
 use crate::errors::{AppError, AppResult};
 use crate::middleware::auth::AuthUser;
@@ -94,9 +95,12 @@ fn file_validation_error_to_app(err: FileValidationError) -> AppError {
 #[post("/upload")]
 pub async fn upload_file(
     _user: AuthUser,
+    ability: CurrentAbility,
     mut payload: Multipart,
     container: web::Data<AppContainer>,
 ) -> AppResult<HttpResponse> {
+    ability.authorize(AbilityResource::Upload, AbilityAction::Create)?;
+
     let limits = limits_from_config(container.config.as_ref());
 
     while let Some(item) = payload.next().await {
@@ -176,8 +180,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 pub fn test_config(cfg: &mut web::ServiceConfig) {
-    use crate::middleware::test_authorities::TestAuthorities;
-    cfg.service(web::scope("/admin").wrap(TestAuthorities).configure(config));
+    cfg.service(web::scope("/admin").configure(config));
 }
 
 #[cfg(test)]
@@ -189,6 +192,7 @@ mod tests {
     use actix_web::{App, web};
 
     use super::*;
+    use crate::authz::test_helpers::ability_from_codes;
     use crate::middleware::auth::Claims;
 
     fn test_claims() -> Claims {
@@ -227,6 +231,8 @@ mod tests {
             .uri("/admin/upload")
             .to_request();
         req.extensions_mut().insert(test_claims());
+        req.extensions_mut()
+            .insert(ability_from_codes(uuid::Uuid::new_v4(), &["upload:create"]));
 
         let response = actix_web::test::call_service(&app, req).await;
         assert_eq!(response.status(), StatusCode::BAD_REQUEST);

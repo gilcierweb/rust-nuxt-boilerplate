@@ -134,6 +134,16 @@ impl PermissionEffect {
     }
 }
 
+/// The effective permissions of a subject: the class level authorities
+/// granted and the ones denied (the CanCanCan `permissions`).
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct Permissions {
+    /// The granted `resource:action` authorities.
+    pub can: std::collections::HashSet<String>,
+    /// The denied `resource:action` authorities.
+    pub cannot: std::collections::HashSet<String>,
+}
+
 /// Write time metadata of a scoped role: which resource type the role
 /// restricts to and which record id. `resource_id = None` means the role is
 /// scoped to the authenticated subject itself (self scope).

@@ -1,9 +1,8 @@
 use actix_web::{HttpResponse, get, post, web};
-use actix_web_grants::authorities::AuthDetails;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
+use crate::authz::ability::{AbilityAction, AbilityResource, CurrentAbility};
 use crate::errors::{AppError, AppResult};
 use crate::middleware::auth::AuthUser;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
@@ -34,11 +33,11 @@ use crate::utils::validation::first_validation_error_message;
 )]
 #[get("/audit-logs")]
 pub async fn list_audit_logs(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Read)?;
+    ability.authorize(AbilityResource::AuditLogs, AbilityAction::Read)?;
     let pagination = pagination.into_inner().validated();
     let response = container
         .domain_audit_logs
@@ -69,11 +68,11 @@ pub async fn list_audit_logs(
 )]
 #[get("/audit-logs/{id}")]
 pub async fn get_audit_log(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Read)?;
+    ability.authorize(AbilityResource::AuditLogs, AbilityAction::Read)?;
     let item = container
         .domain_audit_logs
         .find(&id.into_inner())
@@ -100,12 +99,12 @@ pub async fn get_audit_log(
 )]
 #[post("/audit-logs")]
 pub async fn create_audit_log(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     user: AuthUser,
     body: web::Json<NewAuditLog>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::AuditLogs, AbilityAction::Create)?;
+    ability.authorize(AbilityResource::AuditLogs, AbilityAction::Create)?;
     let mut payload = body.into_inner();
 
     // SECURITY: actor_user_id must come from authenticated user, not request body
@@ -142,19 +141,15 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 pub fn test_config(cfg: &mut web::ServiceConfig) {
-    use crate::middleware::test_authorities::TestAuthorities;
-
-    cfg.service(web::scope("/admin").wrap(TestAuthorities).configure(config));
+    cfg.service(web::scope("/admin").configure(config));
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
     use std::sync::Arc;
 
     use actix_web::HttpMessage;
     use actix_web::body::to_bytes;
-    use actix_web::dev::ServiceRequest;
     use actix_web::http::StatusCode;
     use actix_web::{App, test, web};
     use chrono::Utc;
@@ -162,31 +157,11 @@ mod tests {
     use uuid::Uuid;
 
     use super::test_config;
+    use crate::authz::test_helpers::ability_from_codes;
     use crate::middleware::auth::{Claims, create_token};
     use crate::models::audit_log::AuditLog;
     use crate::repositories::audit_logs_repository::MockIAuditLogRepository;
     use crate::repositories::mocks::mock_container;
-
-    #[allow(dead_code)]
-    async fn test_extract_authorities(
-        req: &ServiceRequest,
-    ) -> Result<HashSet<String>, actix_web::Error> {
-        let authorities = req
-            .headers()
-            .get("x-test-authorities")
-            .and_then(|value| value.to_str().ok())
-            .map(|value| {
-                value
-                    .split(',')
-                    .map(str::trim)
-                    .filter(|value| !value.is_empty())
-                    .map(str::to_owned)
-                    .collect::<HashSet<String>>()
-            })
-            .unwrap_or_default();
-
-        Ok(authorities)
-    }
 
     fn test_token() -> String {
         create_token(Uuid::new_v4(), Uuid::new_v4(), 1, "", 3600).unwrap()
@@ -221,8 +196,9 @@ mod tests {
                 actix_web::http::header::AUTHORIZATION,
                 format!("Bearer {}", test_token()),
             ))
-            .insert_header(("x-test-authorities", "ROLE_ADMIN"))
             .to_request();
+        req.extensions_mut()
+            .insert(ability_from_codes(Uuid::new_v4(), &[]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     }
@@ -271,8 +247,9 @@ mod tests {
                 actix_web::http::header::AUTHORIZATION,
                 format!("Bearer {}", test_token()),
             ))
-            .insert_header(("x-test-authorities", "ROLE_ADMIN,audit_logs:read"))
             .to_request();
+        req.extensions_mut()
+            .insert(ability_from_codes(Uuid::new_v4(), &["audit_logs:read"]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -338,7 +315,6 @@ mod tests {
                 actix_web::http::header::AUTHORIZATION,
                 format!("Bearer {}", test_token()),
             ))
-            .insert_header(("x-test-authorities", "ROLE_ADMIN,audit_logs:create"))
             .set_json(json!({
                 "actor_user_id": Uuid::new_v4(),
                 "actor_role_snapshot": "<img src=x onerror=alert(1)>admin",
@@ -351,6 +327,8 @@ mod tests {
             }))
             .to_request();
         req.extensions_mut().insert(test_claims());
+        req.extensions_mut()
+            .insert(ability_from_codes(Uuid::new_v4(), &["audit_logs:create"]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
     }

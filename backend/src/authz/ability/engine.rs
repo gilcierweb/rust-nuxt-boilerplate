@@ -2,7 +2,9 @@ use std::collections::HashSet;
 
 use uuid::Uuid;
 
-use super::types::{AbilityAction, AbilityResource, CRUD_ACTIONS, DOMAIN_RESOURCES, RoleScope};
+use super::types::{
+    AbilityAction, AbilityResource, CRUD_ACTIONS, DOMAIN_RESOURCES, Permissions, RoleScope,
+};
 
 /// A single authorization rule. `scope = None` grants or denies at class level
 /// (every target of the resource); `scope = Some` restricts the rule to
@@ -107,19 +109,41 @@ impl Ability {
     }
 
     /// Class level check: scoped rules are ignored, deny beats allow.
-    pub fn allows(&self, action: AbilityAction, resource: AbilityResource) -> bool {
+    pub fn can_check(&self, action: AbilityAction, resource: AbilityResource) -> bool {
         self.evaluate(action, resource, None)
+    }
+
+    /// The opposite of [`Ability::can_check`].
+    pub fn cannot_check(&self, action: AbilityAction, resource: AbilityResource) -> bool {
+        !self.can_check(action, resource)
     }
 
     /// Instance level check: scoped rules apply to the target and deny still
     /// beats allow.
-    pub fn allows_on(
+    pub fn can_check_subject(
         &self,
         action: AbilityAction,
         resource: AbilityResource,
-        target_id: Uuid,
+        subject_id: Uuid,
     ) -> bool {
-        self.evaluate(action, resource, Some(target_id))
+        self.evaluate(action, resource, Some(subject_id))
+    }
+
+    /// The opposite of [`Ability::can_check_subject`].
+    pub fn cannot_check_subject(
+        &self,
+        action: AbilityAction,
+        resource: AbilityResource,
+        subject_id: Uuid,
+    ) -> bool {
+        !self.can_check_subject(action, resource, subject_id)
+    }
+
+    /// The effective permissions of the subject: the class level authorities
+    /// granted and the ones denied (the CanCanCan `permissions`).
+    pub fn permissions(&self) -> Permissions {
+        let (can, cannot) = self.class_authorities();
+        Permissions { can, cannot }
     }
 
     /// Class level allow expansion into `resource:action` authority strings.
@@ -127,6 +151,11 @@ impl Ability {
     /// Deny rules produce nothing themselves and suppress every authority
     /// they match; scoped rules produce nothing.
     pub fn authorities(&self) -> HashSet<String> {
+        self.class_authorities().0
+    }
+
+    /// The granted and the denied class level authority sets.
+    fn class_authorities(&self) -> (HashSet<String>, HashSet<String>) {
         let denied = self.denied_class_authorities();
         let mut out = HashSet::new();
 
@@ -145,7 +174,7 @@ impl Ability {
             }
         }
 
-        out
+        (out, denied)
     }
 
     /// The `resource:action` set that class level deny rules match.
@@ -173,7 +202,9 @@ impl Ability {
     pub fn has_class_allow_in_domain(&self, domain: &[AbilityResource]) -> bool {
         for resource in domain {
             for action in CRUD_ACTIONS {
-                if self.allows(action, *resource) || self.allows(AbilityAction::Manage, *resource) {
+                if self.can_check(action, *resource)
+                    || self.can_check(AbilityAction::Manage, *resource)
+                {
                     return true;
                 }
             }
@@ -314,12 +345,12 @@ mod tests {
         let mut late = Ability::new(subject());
         late.can(Manage, All);
         late.cannot(Delete, Users);
-        assert!(!late.allows(Delete, Users) && late.allows(Read, Users));
+        assert!(!late.can_check(Delete, Users) && late.can_check(Read, Users));
 
         let mut early = Ability::new(subject());
         early.cannot(Delete, Users);
         early.can(Manage, All);
-        assert!(!early.allows(Delete, Users));
+        assert!(!early.can_check(Delete, Users));
     }
 
     #[test]
@@ -336,9 +367,9 @@ mod tests {
     fn scoped_rule_never_grants_class_access() {
         let mut ability = Ability::new(subject());
         ability.can_self(Read, Profiles);
-        assert!(!ability.allows(Read, Profiles));
-        assert!(ability.allows_on(Read, Profiles, subject()));
-        assert!(!ability.allows_on(Read, Profiles, other_uuid()));
+        assert!(!ability.can_check(Read, Profiles));
+        assert!(ability.can_check_subject(Read, Profiles, subject()));
+        assert!(!ability.can_check_subject(Read, Profiles, other_uuid()));
     }
 
     #[test]
@@ -353,9 +384,9 @@ mod tests {
                 resource_id: Some(target),
             },
         );
-        assert!(ability.allows_on(Read, Users, target));
-        assert!(!ability.allows_on(Read, Users, subject()));
-        assert!(!ability.allows(Read, Users));
+        assert!(ability.can_check_subject(Read, Users, target));
+        assert!(!ability.can_check_subject(Read, Users, subject()));
+        assert!(!ability.can_check(Read, Users));
     }
 
     #[test]
@@ -370,8 +401,8 @@ mod tests {
                 resource_id: Some(subject()),
             },
         );
-        assert!(ability.allows(Read, Users));
-        assert!(!ability.allows_on(Read, Users, subject()));
+        assert!(ability.can_check(Read, Users));
+        assert!(!ability.can_check_subject(Read, Users, subject()));
     }
 
     #[test]
@@ -396,10 +427,10 @@ mod tests {
         let mut ability = Ability::new(subject());
         ability.can(Manage, Users);
 
-        assert!(ability.allows(Read, Users));
-        assert!(ability.allows(Create, Users));
-        assert!(ability.allows(Update, Users));
-        assert!(ability.allows(Delete, Users));
+        assert!(ability.can_check(Read, Users));
+        assert!(ability.can_check(Create, Users));
+        assert!(ability.can_check(Update, Users));
+        assert!(ability.can_check(Delete, Users));
     }
 
     #[test]
@@ -407,10 +438,10 @@ mod tests {
         let mut ability = Ability::new(subject());
         ability.can(Read, All);
 
-        assert!(ability.allows(Read, Users));
-        assert!(ability.allows(Read, Roles));
-        assert!(ability.allows(Read, AuditLogs));
-        assert!(ability.allows(Read, Profiles));
+        assert!(ability.can_check(Read, Users));
+        assert!(ability.can_check(Read, Roles));
+        assert!(ability.can_check(Read, AuditLogs));
+        assert!(ability.can_check(Read, Profiles));
     }
 
     #[test]
@@ -456,5 +487,38 @@ mod tests {
         assert_eq!(parse_code("users:read"), Some((Users, Read)));
         assert!(parse_code("nocolon").is_none());
         assert!(parse_code("users:read:extra").is_none());
+    }
+
+    #[test]
+    fn cannot_check_is_the_opposite_of_can_check() {
+        let mut ability = Ability::new(subject());
+        ability.can(Read, Users);
+
+        assert!(ability.can_check(Read, Users));
+        assert!(!ability.cannot_check(Read, Users));
+        assert!(ability.cannot_check(Delete, Users));
+    }
+
+    #[test]
+    fn cannot_check_subject_respects_the_scope() {
+        let mut ability = Ability::new(subject());
+        ability.can_self(Read, Profiles);
+
+        assert!(ability.can_check_subject(Read, Profiles, subject()));
+        assert!(!ability.cannot_check_subject(Read, Profiles, subject()));
+        assert!(ability.cannot_check_subject(Read, Profiles, other_uuid()));
+    }
+
+    #[test]
+    fn permissions_separate_granted_and_denied() {
+        let mut ability = Ability::new(subject());
+        ability.can(Read, Users);
+        ability.cannot(Delete, Users);
+
+        let permissions = ability.permissions();
+
+        assert!(permissions.can.contains(&authority_for(Users, Read)));
+        assert!(!permissions.can.contains(&authority_for(Users, Delete)));
+        assert!(permissions.cannot.contains(&authority_for(Users, Delete)));
     }
 }

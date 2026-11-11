@@ -1,12 +1,9 @@
 use std::sync::Arc;
 
 use actix_web::{HttpResponse, get, web};
-use actix_web_grants::authorities::AuthDetails;
 
-use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
-use crate::authz::scope::{customer_scope_ids, ensure_customer_in_scope};
+use crate::authz::ability::{AbilityAction, AbilityResource, CurrentAbility};
 use crate::errors::{AppError, AppResult};
-use crate::middleware::auth::AuthUser;
 use crate::repositories::container::AppContainer;
 pub use crate::repositories::traits::users_trait::{AdminUserItem, AdminUserLookupItem};
 use crate::security::SecurityService;
@@ -41,11 +38,11 @@ fn map_repo_error(error: diesel::result::Error, entity: &str) -> AppError {
 )]
 #[get("/users")]
 pub async fn list_users(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
+    ability.authorize(AbilityResource::Users, AbilityAction::Read)?;
 
     let security = Arc::new(
         SecurityService::from_config(&container.config)
@@ -83,17 +80,16 @@ pub async fn list_users(
 )]
 #[get("/users/{id}")]
 pub async fn get_user(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
-    user: AuthUser,
     user_id: web::Path<uuid::Uuid>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::Users, AbilityAction::Read)?;
+    ability.authorize(AbilityResource::Users, AbilityAction::Read)?;
 
-    // Ownership/IDOR check: non-admin users can only access their own record
+    // Instance check: a scoped grant applies only inside its scope, so a
+    // subject restricted to itself can never read another record.
     let target_user_id = user_id.into_inner();
-    let scope = customer_scope_ids(&details, &user).await?;
-    ensure_customer_in_scope(scope.as_ref(), target_user_id)?;
+    ability.authorize_subject(AbilityResource::Users, AbilityAction::Read, target_user_id)?;
 
     let security = Arc::new(
         SecurityService::from_config(&container.config)
@@ -115,9 +111,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 pub fn test_config(cfg: &mut web::ServiceConfig) {
-    use crate::middleware::test_authorities::TestAuthorities;
-
-    cfg.service(web::scope("/admin").wrap(TestAuthorities).configure(config));
+    cfg.service(web::scope("/admin").configure(config));
 }
 
 #[cfg(test)]
@@ -129,7 +123,10 @@ mod tests {
     use actix_web::{App, test, web};
     use serde_json::Value;
 
+    use actix_web::HttpMessage;
+
     use super::test_config;
+    use crate::authz::test_helpers::ability_from_codes;
     use crate::repositories::mocks::mock_container;
     use crate::repositories::users_repository::MockIUserRepository;
 
@@ -143,10 +140,11 @@ mod tests {
         )
         .await;
 
-        let req = test::TestRequest::get()
-            .uri("/admin/users")
-            .insert_header(("x-test-authorities", "ROLE_CUSTOMER"))
-            .to_request();
+        let req = test::TestRequest::get().uri("/admin/users").to_request();
+        // An authenticated subject without grants: the request carries an
+        // empty ability, so the handler refuses with 403.
+        req.extensions_mut()
+            .insert(ability_from_codes(uuid::Uuid::new_v4(), &[]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     }
@@ -171,10 +169,9 @@ mod tests {
         )
         .await;
 
-        let req = test::TestRequest::get()
-            .uri("/admin/users")
-            .insert_header(("x-test-authorities", "ROLE_ADMIN,users:read"))
-            .to_request();
+        let req = test::TestRequest::get().uri("/admin/users").to_request();
+        req.extensions_mut()
+            .insert(ability_from_codes(uuid::Uuid::new_v4(), &["users:read"]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
 

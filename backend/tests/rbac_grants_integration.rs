@@ -78,13 +78,24 @@ async fn create_user(db: &TestDb, role_id: Option<Uuid>) -> Uuid {
         id: Uuid,
     }
 
-    let unique = Uuid::new_v4().to_string();
+    // The email is protected with the real security service: the admin user
+    // list decrypts every user of the database, so a fake payload would break
+    // the read of the other tests.
+    let config = backend::config::test_config::test_config();
+    let security = backend::security::SecurityService::from_config(&config)
+        .expect("failed to build the security service");
+    let email = format!("{}@example.com", Uuid::new_v4());
+    let protected_email = security
+        .protect_email(&email)
+        .expect("email protection failed");
+
     let user = diesel::sql_query(
-        "INSERT INTO users (email_blind_index, email_encrypted) \
-         VALUES (decode(md5($1), 'hex'), decode(md5($2), 'hex')) RETURNING id",
+        "INSERT INTO users (email_blind_index, email_encrypted, encryption_key_version) \
+         VALUES ($1, $2, $3) RETURNING id",
     )
-    .bind::<diesel::sql_types::Text, _>(&unique)
-    .bind::<diesel::sql_types::Text, _>(&format!("{unique}-encrypted"))
+    .bind::<diesel::sql_types::Bytea, _>(&protected_email.blind_index)
+    .bind::<diesel::sql_types::Bytea, _>(&protected_email.encrypted)
+    .bind::<diesel::sql_types::Integer, _>(protected_email.key_version)
     .get_result::<IdRow>(&mut *conn)
     .await
     .expect("user insert failed");

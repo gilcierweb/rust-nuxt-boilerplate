@@ -149,13 +149,19 @@ mod tests {
         ($db_times:expr) => {{
             let mut mock_users = MockIUserRepository::new();
             mock_users
-                .expect_get_user_roles()
+                .expect_get_user_grants()
                 .times($db_times)
-                .returning(|_| Ok(vec!["admin".to_string()]));
-            mock_users
-                .expect_get_user_permissions()
-                .times($db_times)
-                .returning(|_| Ok(Vec::new()));
+                .returning(|_| {
+                    Ok(vec![
+                        crate::repositories::traits::users_trait::RoleGrantRow {
+                            role_name: "admin".to_string(),
+                            resource_type: None,
+                            resource_id: None,
+                            permission_code: Some("roles:read".to_string()),
+                            effect: Some(0),
+                        },
+                    ])
+                });
             let mut container = mock_container();
             container.users = Arc::new(mock_users);
             test::init_service(

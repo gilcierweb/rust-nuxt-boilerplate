@@ -1,20 +1,40 @@
-use actix_web_grants::authorities::{AuthDetails, AuthoritiesCheck};
+//! Authorization checks over the ability of the authenticated subject.
 
-use super::engine::authority_for;
+use super::engine::Ability;
 use super::types::{AbilityAction, AbilityResource};
 use crate::errors::AppError;
 
+/// Checks a class level permission: the ability must carry an allow rule for
+/// the resource and the action.
 pub fn authorize(
-    details: &AuthDetails,
+    ability: &Ability,
     resource: AbilityResource,
     action: AbilityAction,
 ) -> Result<(), AppError> {
-    let authority = authority_for(resource, action);
-
-    if details.has_authority(authority.as_str()) {
+    if ability.can_check(action, resource) {
         return Ok(());
     }
 
+    Err(forbidden(resource, action))
+}
+
+/// Checks a permission on one target: class level rules apply to every
+/// target, scoped rules apply only inside their scope.
+pub fn authorize_subject(
+    ability: &Ability,
+    resource: AbilityResource,
+    action: AbilityAction,
+    target_id: uuid::Uuid,
+) -> Result<(), AppError> {
+    if ability.can_check_subject(action, resource, target_id) {
+        return Ok(());
+    }
+
+    Err(forbidden(resource, action))
+}
+
+/// The forbidden error of a refused check, with the localized labels.
+fn forbidden(resource: AbilityResource, action: AbilityAction) -> AppError {
     let action_key = match action {
         AbilityAction::Read => "authorization.actions.read",
         AbilityAction::Create => "authorization.actions.create",
@@ -34,12 +54,68 @@ pub fn authorize(
     let action_label = t!(action_key);
     let resource_label = t!(resource_key);
 
-    Err(AppError::Forbidden(
+    AppError::Forbidden(
         t!(
             "authorization.forbidden_action",
             action = action_label.as_ref(),
             resource = resource_label.as_ref()
         )
         .into_owned(),
-    ))
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    use uuid::Uuid;
+
+    use super::{authorize, authorize_subject};
+    use crate::authz::ability::{Ability, AbilityAction, AbilityResource};
+
+    fn subject() -> Uuid {
+        Uuid::nil()
+    }
+
+    fn other() -> Uuid {
+        Uuid::from_u128(42)
+    }
+
+    #[test]
+    fn authorize_allows_a_granted_permission() {
+        let mut ability = Ability::new(subject());
+        ability.can(AbilityAction::Read, AbilityResource::Users);
+
+        assert!(authorize(&ability, AbilityResource::Users, AbilityAction::Read).is_ok());
+    }
+
+    #[test]
+    fn authorize_refuses_a_missing_permission() {
+        let ability = Ability::new(subject());
+
+        assert!(authorize(&ability, AbilityResource::Users, AbilityAction::Read).is_err());
+    }
+
+    #[test]
+    fn authorize_on_respects_the_self_scope() {
+        let mut ability = Ability::new(subject());
+        ability.can_self(AbilityAction::Read, AbilityResource::Profiles);
+
+        assert!(
+            authorize_subject(
+                &ability,
+                AbilityResource::Profiles,
+                AbilityAction::Read,
+                subject()
+            )
+            .is_ok()
+        );
+        assert!(
+            authorize_subject(
+                &ability,
+                AbilityResource::Profiles,
+                AbilityAction::Read,
+                other()
+            )
+            .is_err()
+        );
+    }
 }

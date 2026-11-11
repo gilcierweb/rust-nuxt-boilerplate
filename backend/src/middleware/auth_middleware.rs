@@ -6,18 +6,19 @@ use std::sync::Arc;
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
 use actix_web::http::Method;
 use actix_web::{Error, HttpMessage};
-use actix_web_grants::authorities::AttachAuthorities;
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
 
 use crate::AppState;
-use crate::authz::grants_extractor::build_authorities_for_claims;
+use crate::authz::ability::{CurrentAbility, build_ability_from_grants};
+use crate::authz::grants::RoleGrant;
 use crate::middleware::auth::{
     ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, verify_token_with_secrets,
 };
 use crate::repositories::access_token_blacklist::{
     AccessTokenBlacklist, is_token_revoked_by_epoch,
 };
+use crate::repositories::container::AppContainer;
 
 #[derive(Clone)]
 pub struct JwtAuthConfig {
@@ -265,15 +266,10 @@ where
 
                             req.extensions_mut().insert(result.claims.clone());
 
-                            let authorities = build_authorities_for_claims(
-                                &result.claims,
-                                req.app_data::<actix_web::web::Data<
-                                    crate::repositories::container::AppContainer,
-                                >>(),
-                            )
-                            .await;
+                            let grants = load_grants(&req, &result.claims.sub).await;
+                            let ability = build_ability_from_grants(result.claims.sub, &grants);
+                            req.extensions_mut().insert(CurrentAbility::new(ability));
 
-                            req.attach(authorities);
                             svc.call(req).await.map(ServiceResponse::map_into_left_body)
                         },
                         Err(_) => {
@@ -306,6 +302,34 @@ pub fn extract_claims(req: &actix_web::HttpRequest) -> Result<Claims, crate::err
     req.extensions().get::<Claims>().cloned().ok_or_else(|| {
         crate::errors::AppError::Unauthorized(t!("middleware.not_authenticated").into_owned())
     })
+}
+
+/// Loads the grants of the subject from the database.
+///
+/// A missing container or a database failure yields an empty grant list, so
+/// the request is authorized with no permissions at all (fail closed).
+async fn load_grants(req: &ServiceRequest, subject: &uuid::Uuid) -> Vec<RoleGrant> {
+    let Some(container) = req.app_data::<actix_web::web::Data<AppContainer>>() else {
+        tracing::error!(
+            event = "authz.grants_load_failed",
+            user_id = %subject,
+            "Application container unavailable; failing closed"
+        );
+        return Vec::new();
+    };
+
+    match container.users.get_user_grants(subject).await {
+        Ok(rows) => rows.into_iter().map(RoleGrant::from).collect(),
+        Err(error) => {
+            tracing::error!(
+                event = "authz.grants_load_failed",
+                error = %error,
+                user_id = %subject,
+                "Failed to load the grants of the subject; failing closed"
+            );
+            Vec::new()
+        },
+    }
 }
 
 /// 401 response for tokens rejected by revocation checks (blacklist or

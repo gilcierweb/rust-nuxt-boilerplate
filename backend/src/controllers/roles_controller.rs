@@ -1,11 +1,10 @@
 use actix_web::{HttpResponse, delete, get, patch, post, web};
-use actix_web_grants::authorities::AuthDetails;
 use serde::Deserialize;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
-use crate::authz::ability::{AbilityAction, AbilityResource, authorize};
+use crate::authz::ability::{AbilityAction, AbilityResource, CurrentAbility};
 use crate::controllers::auth_controller::invalidate_role_cache;
 use crate::errors::{AppError, AppResult};
 use crate::models::role::{NewRole, Role};
@@ -64,11 +63,11 @@ fn normalize_role_payload(payload: &mut RoleWriteRequest) {
 )]
 #[get("/roles")]
 pub async fn list_roles(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::Roles, AbilityAction::Read)?;
+    ability.authorize(AbilityResource::Roles, AbilityAction::Read)?;
     let pagination = pagination.into_inner().validated();
     let response = container
         .roles
@@ -99,11 +98,11 @@ pub async fn list_roles(
 )]
 #[get("/roles/{id}")]
 pub async fn get_role(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::Roles, AbilityAction::Read)?;
+    ability.authorize(AbilityResource::Roles, AbilityAction::Read)?;
     let item = container
         .roles
         .find(&id.into_inner())
@@ -130,11 +129,11 @@ pub async fn get_role(
 )]
 #[post("/roles")]
 pub async fn create_role(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     body: web::Json<RoleWriteRequest>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::Roles, AbilityAction::Create)?;
+    ability.authorize(AbilityResource::Roles, AbilityAction::Create)?;
     let mut payload = body.into_inner();
     normalize_role_payload(&mut payload);
     payload
@@ -178,12 +177,12 @@ pub async fn create_role(
 )]
 #[patch("/roles/{id}")]
 pub async fn update_role(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
     body: web::Json<RoleWriteRequest>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::Roles, AbilityAction::Update)?;
+    ability.authorize(AbilityResource::Roles, AbilityAction::Update)?;
     let mut payload = body.into_inner();
     normalize_role_payload(&mut payload);
     payload
@@ -230,11 +229,11 @@ pub async fn update_role(
 )]
 #[delete("/roles/{id}")]
 pub async fn delete_role(
-    details: AuthDetails,
+    ability: CurrentAbility,
     container: web::Data<AppContainer>,
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
-    authorize(&details, AbilityResource::Roles, AbilityAction::Delete)?;
+    ability.authorize(AbilityResource::Roles, AbilityAction::Delete)?;
     let role_id = id.into_inner();
 
     // Get all users who have this role BEFORE deleting (for token revocation)
@@ -277,9 +276,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
 
 #[cfg(test)]
 pub fn test_config(cfg: &mut web::ServiceConfig) {
-    use crate::middleware::test_authorities::TestAuthorities;
-
-    cfg.service(web::scope("/admin").wrap(TestAuthorities).configure(config));
+    cfg.service(web::scope("/admin").configure(config));
 }
 
 #[cfg(test)]
@@ -293,7 +290,10 @@ mod tests {
     use serde_json::Value;
     use uuid::Uuid;
 
+    use actix_web::HttpMessage;
+
     use super::test_config;
+    use crate::authz::test_helpers::ability_from_codes;
     use crate::models::role::Role;
     use crate::repositories::mocks::mock_container;
     use crate::repositories::roles_repository::MockIRoleRepository;
@@ -309,6 +309,8 @@ mod tests {
         .await;
 
         let req = test::TestRequest::get().uri("/admin/roles").to_request();
+        req.extensions_mut()
+            .insert(ability_from_codes(uuid::Uuid::new_v4(), &[]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
@@ -329,13 +331,14 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/admin/roles")
-            .insert_header(("x-test-authorities", "ROLE_CUSTOMER"))
             .set_json(serde_json::json!({
                 "name": "customer",
                 "resource_type": null,
                 "resource_id": null
             }))
             .to_request();
+        req.extensions_mut()
+            .insert(ability_from_codes(uuid::Uuid::new_v4(), &[]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 
@@ -374,10 +377,9 @@ mod tests {
         )
         .await;
 
-        let req = test::TestRequest::get()
-            .uri("/admin/roles")
-            .insert_header(("x-test-authorities", "ROLE_ADMIN,roles:read"))
-            .to_request();
+        let req = test::TestRequest::get().uri("/admin/roles").to_request();
+        req.extensions_mut()
+            .insert(ability_from_codes(uuid::Uuid::new_v4(), &["roles:read"]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::OK);
 
@@ -411,13 +413,14 @@ mod tests {
 
         let req = test::TestRequest::post()
             .uri("/admin/roles")
-            .insert_header(("x-test-authorities", "ROLE_ADMIN,roles:create"))
             .set_json(serde_json::json!({
                 "name": "admin",
                 "resource_type": null,
                 "resource_id": null
             }))
             .to_request();
+        req.extensions_mut()
+            .insert(ability_from_codes(uuid::Uuid::new_v4(), &["roles:create"]));
         let resp = test::call_service(&app, req).await;
         assert_eq!(resp.status(), StatusCode::CREATED);
 
