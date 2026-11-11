@@ -25,7 +25,10 @@ pub fn authorize(
     let resource_key = match resource {
         AbilityResource::All => "authorization.resources.all",
         AbilityResource::AuditLogs => "authorization.resources.audit_logs",
+        AbilityResource::Permissions => "authorization.resources.permissions",
+        AbilityResource::Profiles => "authorization.resources.profiles",
         AbilityResource::Roles => "authorization.resources.roles",
+        AbilityResource::Upload => "authorization.resources.upload",
         AbilityResource::Users => "authorization.resources.users",
     };
     let action_label = t!(action_key);
