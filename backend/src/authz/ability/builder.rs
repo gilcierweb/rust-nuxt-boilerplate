@@ -2,7 +2,7 @@
 //!
 //! Every rule comes from a grant row: no code path contributes hardcoded role
 //! grants. Unknown permission codes are ignored (fail closed) and effect
-//! values outside the known set read as deny.
+//! values outside the known set read as cannot.
 
 use uuid::Uuid;
 
@@ -13,7 +13,7 @@ use crate::authz::grants::RoleGrant;
 /// Builds the ability of `subject` from its grants.
 ///
 /// Unscoped grants become class level rules, scoped grants become instance
-/// rules restricted to their scope. A deny link always wins over an allow
+/// rules restricted to their scope. A cannot link always wins over a can
 /// link, whatever the order of the grants.
 pub fn build_ability_from_grants(subject: Uuid, grants: &[RoleGrant]) -> Ability {
     let mut ability = Ability::new(subject);
@@ -35,10 +35,12 @@ pub fn build_ability_from_grants(subject: Uuid, grants: &[RoleGrant]) -> Ability
 
         let scope = scope_of(grant);
         match (effect_of(grant), scope) {
-            (PermissionEffect::Allow, None) => ability.can(action, resource),
-            (PermissionEffect::Allow, Some(scope)) => ability.can_scoped(action, resource, scope),
-            (PermissionEffect::Deny, None) => ability.cannot(action, resource),
-            (PermissionEffect::Deny, Some(scope)) => ability.cannot_scoped(action, resource, scope),
+            (PermissionEffect::Can, None) => ability.can(action, resource),
+            (PermissionEffect::Can, Some(scope)) => ability.can_scoped(action, resource, scope),
+            (PermissionEffect::Cannot, None) => ability.cannot(action, resource),
+            (PermissionEffect::Cannot, Some(scope)) => {
+                ability.cannot_scoped(action, resource, scope)
+            },
         }
     }
 
@@ -63,12 +65,12 @@ fn scope_of(grant: &RoleGrant) -> Option<RoleScope> {
     }
 }
 
-/// The effect of a grant. A missing effect reads as deny (fail closed).
+/// The effect of a grant. A missing effect reads as cannot (fail closed).
 fn effect_of(grant: &RoleGrant) -> PermissionEffect {
     grant
         .effect
         .map(PermissionEffect::from_i16)
-        .unwrap_or(PermissionEffect::Deny)
+        .unwrap_or(PermissionEffect::Cannot)
 }
 
 #[cfg(test)]

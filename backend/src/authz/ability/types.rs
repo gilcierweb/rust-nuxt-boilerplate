@@ -111,13 +111,13 @@ pub const DOMAIN_RESOURCES: [AbilityResource; 6] = [
 /// Effect stored on the `roles_permissions` link as a SMALLINT.
 /// The Rust model is the single source of truth: Postgres stores the integer
 /// and does not validate the value list (no CHECK constraint, AGENTS.md
-/// database conventions). Unknown values read from the database map to deny
-/// so a future enum value never silently widens access.
+/// database conventions). Unknown values read from the database map to
+/// `Cannot` so a future enum value never silently widens access.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(i16)]
 pub enum PermissionEffect {
-    Allow = 0,
-    Deny = 1,
+    Can = 0,
+    Cannot = 1,
 }
 
 impl PermissionEffect {
@@ -125,11 +125,11 @@ impl PermissionEffect {
         self as i16
     }
 
-    /// Fail closed: any value the model does not define reads as deny.
+    /// Fail closed: any value the model does not define reads as cannot.
     pub fn from_i16(value: i16) -> Self {
         match value {
-            0 => PermissionEffect::Allow,
-            _ => PermissionEffect::Deny,
+            0 => PermissionEffect::Can,
+            _ => PermissionEffect::Cannot,
         }
     }
 }
@@ -158,15 +158,15 @@ mod tests {
     use super::{ALL_ACTIONS, AbilityAction, AbilityResource, DOMAIN_RESOURCES, PermissionEffect};
 
     #[test]
-    fn from_i16_maps_allow_and_deny() {
-        assert_eq!(PermissionEffect::from_i16(0), PermissionEffect::Allow);
-        assert_eq!(PermissionEffect::from_i16(1), PermissionEffect::Deny);
+    fn from_i16_maps_can_and_cannot() {
+        assert_eq!(PermissionEffect::from_i16(0), PermissionEffect::Can);
+        assert_eq!(PermissionEffect::from_i16(1), PermissionEffect::Cannot);
     }
 
     #[test]
-    fn from_i16_unknown_value_is_deny() {
+    fn from_i16_unknown_value_is_cannot() {
         for value in [-1, 2, 7, 999] {
-            assert_eq!(PermissionEffect::from_i16(value), PermissionEffect::Deny);
+            assert_eq!(PermissionEffect::from_i16(value), PermissionEffect::Cannot);
         }
     }
 
