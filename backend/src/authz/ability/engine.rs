@@ -146,14 +146,6 @@ impl Ability {
         Permissions { can, cannot }
     }
 
-    /// Class level allow expansion into `resource:action` authority strings.
-    /// Iterates the enum consts, so a new variant is covered automatically.
-    /// Deny rules produce nothing themselves and suppress every authority
-    /// they match; scoped rules produce nothing.
-    pub fn authorities(&self) -> HashSet<String> {
-        self.class_authorities().0
-    }
-
     /// The granted and the denied class level authority sets.
     fn class_authorities(&self) -> (HashSet<String>, HashSet<String>) {
         let denied = self.denied_class_authorities();
@@ -354,11 +346,23 @@ mod tests {
     }
 
     #[test]
+    fn permissions_expose_the_granted_and_the_denied_authorities() {
+        let mut ability = Ability::new(subject());
+        ability.can(Manage, All);
+        ability.cannot(Delete, Users);
+
+        let permissions = ability.permissions();
+        assert!(!permissions.can.contains(&authority_for(Users, Delete)));
+        assert!(permissions.can.contains(&authority_for(Users, Read)));
+        assert!(permissions.cannot.contains(&authority_for(Users, Delete)));
+    }
+
+    #[test]
     fn deny_users_delete_under_manage_all() {
         let mut ability = Ability::new(subject());
         ability.can(Manage, All);
         ability.cannot(Delete, Users);
-        let authorities = ability.authorities();
+        let authorities = ability.permissions().can;
         assert!(!authorities.contains(&authority_for(Users, Delete)));
         assert!(authorities.contains(&authority_for(Users, Read)));
     }
@@ -409,7 +413,7 @@ mod tests {
     fn manage_all_expansion_is_enum_driven() {
         let mut ability = Ability::new(subject());
         ability.can(Manage, All);
-        let authorities = ability.authorities();
+        let authorities = ability.permissions().can;
         for resource in DOMAIN_RESOURCES {
             for action in CRUD_ACTIONS {
                 assert!(
@@ -456,9 +460,9 @@ mod tests {
     }
 
     #[test]
-    fn empty_ability_produces_no_authorities() {
+    fn empty_ability_produces_no_permissions() {
         let ability = Ability::new(subject());
-        assert!(ability.authorities().is_empty());
+        assert!(ability.permissions().can.is_empty());
     }
 
     #[test]

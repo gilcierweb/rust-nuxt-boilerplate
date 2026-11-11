@@ -153,7 +153,7 @@ mod tests {
 
         let ability = build_ability_from_grants(subject(), &grants);
 
-        let authorities = ability.authorities();
+        let authorities = ability.permissions().can;
         assert_eq!(authorities.len(), 24, "the full catalog must be granted");
         assert!(authorities.contains(&authority_for(
             AbilityResource::Users,
@@ -212,7 +212,7 @@ mod tests {
 
         let ability = build_ability_from_grants(subject(), &grants);
 
-        assert!(ability.authorities().is_empty());
+        assert!(ability.permissions().can.is_empty());
     }
 
     #[test]
@@ -222,7 +222,7 @@ mod tests {
         let ability = build_ability_from_grants(subject(), &grants);
 
         assert!(!ability.can_check(AbilityAction::Read, AbilityResource::Users));
-        assert!(ability.authorities().is_empty());
+        assert!(ability.permissions().can.is_empty());
     }
 
     #[test]
