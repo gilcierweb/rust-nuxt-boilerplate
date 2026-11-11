@@ -5,6 +5,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use chrono::NaiveDateTime;
 use diesel::QueryResult;
+use diesel::QueryableByName;
 use diesel_async::AsyncPgConnection;
 use futures::future::BoxFuture;
 use ipnet::IpNet;
@@ -15,6 +16,23 @@ use uuid::Uuid;
 use crate::models::user::{NewUser, User};
 use crate::security::SecurityService;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
+
+/// Raw grant row produced by `get_user_grants`: one entry per role permission
+/// link of the user, with the role scope carried along. `permission_code` and
+/// `effect` are nullable because roles without links still surface as rows.
+#[derive(Debug, Clone, QueryableByName)]
+pub struct RoleGrantRow {
+    #[diesel(sql_type = diesel::sql_types::Text)]
+    pub role_name: String,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+    pub resource_type: Option<String>,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Uuid>)]
+    pub resource_id: Option<Uuid>,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Text>)]
+    pub permission_code: Option<String>,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::SmallInt>)]
+    pub effect: Option<i16>,
+}
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -71,6 +89,11 @@ pub trait IUserRepository: Send + Sync {
     ) -> QueryResult<usize>;
     async fn get_user_roles(&self, user_id: &Uuid) -> QueryResult<Vec<String>>;
     async fn get_user_permissions(&self, user_id: &Uuid) -> QueryResult<Vec<String>>;
+    async fn get_user_grants(
+        &self,
+        user_id: &Uuid,
+    ) -> QueryResult<Vec<crate::repositories::traits::users_trait::RoleGrantRow>>;
+    async fn user_ids_holding_all_codes(&self, codes: &[String]) -> QueryResult<Vec<Uuid>>;
     async fn create_password_reset_token(
         &self,
         user_id: &Uuid,

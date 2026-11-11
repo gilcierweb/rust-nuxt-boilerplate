@@ -21,6 +21,13 @@ pub struct UsersRepository {
     base: BaseRepo,
 }
 
+/// Projection of the user id returned by the grants holder query.
+#[derive(diesel::QueryableByName)]
+struct UserIdRow {
+    #[diesel(sql_type = diesel::sql_types::Uuid)]
+    user_id: Uuid,
+}
+
 impl UsersRepository {
     pub fn new(pool: DBPool) -> Self {
         Self {
@@ -412,6 +419,59 @@ impl IUserRepository for UsersRepository {
                         ))
                         .execute(conn)
                         .await
+                })
+            })
+            .await
+    }
+
+    async fn get_user_grants(
+        &self,
+        user_id: &Uuid,
+    ) -> diesel::QueryResult<Vec<crate::repositories::traits::users_trait::RoleGrantRow>> {
+        let user_id = *user_id;
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    diesel::sql_query(
+                        "SELECT r.name::text AS role_name, \
+                                r.resource_type::text AS resource_type, \
+                                r.resource_id AS resource_id, \
+                                p.code::text AS permission_code, \
+                                rp.effect AS effect \
+                         FROM users_roles ur \
+                         JOIN roles r ON r.id = ur.role_id \
+                         LEFT JOIN roles_permissions rp ON rp.role_id = r.id \
+                         LEFT JOIN permissions p ON p.id = rp.permission_id \
+                         WHERE ur.user_id = $1 \
+                         ORDER BY r.name ASC, p.code ASC NULLS LAST",
+                    )
+                    .bind::<diesel::sql_types::Uuid, _>(user_id)
+                    .load::<crate::repositories::traits::users_trait::RoleGrantRow>(conn)
+                    .await
+                })
+            })
+            .await
+    }
+
+    async fn user_ids_holding_all_codes(&self, codes: &[String]) -> diesel::QueryResult<Vec<Uuid>> {
+        let codes = codes.to_vec();
+        let expected = codes.len() as i64;
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    diesel::sql_query(
+                        "SELECT ur.user_id FROM users_roles ur \
+                         JOIN roles_permissions rp ON rp.role_id = ur.role_id \
+                         JOIN permissions p ON p.id = rp.permission_id \
+                         WHERE rp.effect = 0 AND p.code = ANY($1) \
+                         GROUP BY ur.user_id \
+                         HAVING count(DISTINCT p.code) = $2",
+                    )
+                    .bind::<diesel::sql_types::Array<diesel::sql_types::Text>, _>(&codes)
+                    .bind::<diesel::sql_types::BigInt, _>(expected)
+                    .load::<UserIdRow>(conn)
+                    .await
+                    .map(|rows| rows.into_iter().map(|row| row.user_id).collect())
                 })
             })
             .await
