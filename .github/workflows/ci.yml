@@ -255,8 +255,11 @@ jobs:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
-      - name: Run integration tests (sequential, with DB)
-        run: cargo test --test auth_integration -- --test-threads=1
+      - name: Run handler authorization tests (same database, same keys)
+        # Runs after auth_integration on purpose: both suites write subjects to
+        # the same database, so this pins the shared encryption keys (a row
+        # registered by the first suite has to be readable by the second).
+        run: cargo test --test handler_authorization_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379

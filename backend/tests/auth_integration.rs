@@ -99,14 +99,13 @@ fn test_config() -> backend::config::AppConfig {
             .collect::<String>()
     });
     let csrf_key = jwt_secret.clone();
-    let master_key = std::env::var("MASTER_KEY").unwrap_or_else(|_| {
-        use base64::Engine;
-        base64::engine::general_purpose::STANDARD.encode([0xABu8; 32])
-    });
-    let blind_index_key = std::env::var("BLIND_INDEX_KEY").unwrap_or_else(|_| {
-        use base64::Engine;
-        base64::engine::general_purpose::STANDARD.encode([0xCDu8; 32])
-    });
+    // The encryption keys come from the shared helper: every integration suite
+    // writes to the same test database, so a subject registered here must stay
+    // readable by the handlers of the other suites (the admin user list
+    // decrypts the whole page it returns). A local fallback made those rows
+    // undecryptable and turned the list into a 500.
+    let shared = backend::config::test_config::test_config();
+    let (master_key, blind_index_key) = (shared.master_key, shared.blind_index_key);
 
     backend::config::AppConfig {
         host: "127.0.0.1".to_string(),
@@ -213,6 +212,27 @@ fn extract_cookie(
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+/// Every integration suite writes its subjects to the same test database, so
+/// the suites must encrypt with the same keys: a row written by one suite has
+/// to be readable by the handlers of another (the admin list decrypts every
+/// email of the page it returns). This test failed when this file carried its
+/// own key fallback, which made `handler_authorization_integration` return
+/// 500 `DB_ERROR` on the rows registered here.
+#[actix_web::test]
+async fn the_test_config_shares_the_encryption_keys_with_the_shared_helper() {
+    let auth = test_config();
+    let shared = backend::config::test_config::test_config();
+
+    assert_eq!(
+        auth.master_key, shared.master_key,
+        "the master key must be the shared one"
+    );
+    assert_eq!(
+        auth.blind_index_key, shared.blind_index_key,
+        "the blind index key must be the shared one"
+    );
+}
 
 #[actix_web::test]
 async fn test_full_auth_cycle() {
