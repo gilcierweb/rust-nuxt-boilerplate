@@ -56,6 +56,16 @@ pub struct NewPermission {
     pub description: Option<String>,
 }
 
+/// The link between a role and a permission as the admin interface writes it.
+/// `created_at` is left to its database default.
+#[derive(Insertable)]
+#[diesel(table_name = roles_permissions)]
+pub struct NewRolePermissionLink {
+    pub role_id: Uuid,
+    pub permission_id: Uuid,
+    pub effect: i16,
+}
+
 /// The link of a role and a permission as the admin interface writes and reads
 /// it: the machine code and the stored effect.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, ToSchema)]

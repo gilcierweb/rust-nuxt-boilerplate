@@ -1,6 +1,10 @@
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use chrono::NaiveDateTime;
+use diesel::BoolExpressionMethods;
+use diesel::JoinOnDsl;
+use diesel::result::QueryResult;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use ipnet::IpNet;
@@ -12,6 +16,7 @@ use crate::db::schema::users as users_table;
 use crate::models::profile::Profile;
 use crate::models::role::Role;
 use crate::models::user::{NewUser, User};
+use crate::models::user_role::NewUserRole;
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::users_trait::{
     AdminUserItem, AdminUserLookupItem, IUserRepository, IUserRepositoryTransaction,
@@ -21,13 +26,6 @@ use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 
 pub struct UsersRepository {
     base: BaseRepo,
-}
-
-/// Projection of the user id returned by the grants holder query.
-#[derive(diesel::QueryableByName)]
-struct UserIdRow {
-    #[diesel(sql_type = diesel::sql_types::Uuid)]
-    user_id: Uuid,
 }
 
 impl UsersRepository {
@@ -430,50 +428,174 @@ impl IUserRepository for UsersRepository {
         &self,
         user_id: &Uuid,
     ) -> diesel::QueryResult<Vec<crate::repositories::traits::users_trait::RoleGrantRow>> {
+        use crate::db::schema::{permissions, roles, roles_permissions, users_roles};
+        use diesel::expression_methods::NullableExpressionMethods;
+
         let user_id = *user_id;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    diesel::sql_query(
-                        "SELECT r.name::text AS role_name, \
-                                r.resource_type::text AS resource_type, \
-                                r.resource_id AS resource_id, \
-                                p.code::text AS permission_code, \
-                                rp.effect AS effect \
-                         FROM users_roles ur \
-                         JOIN roles r ON r.id = ur.role_id \
-                         LEFT JOIN roles_permissions rp ON rp.role_id = r.id \
-                         LEFT JOIN permissions p ON p.id = rp.permission_id \
-                         WHERE ur.user_id = $1 \
-                         ORDER BY r.name ASC, p.code ASC NULLS LAST",
-                    )
-                    .bind::<diesel::sql_types::Uuid, _>(user_id)
-                    .load::<crate::repositories::traits::users_trait::RoleGrantRow>(conn)
-                    .await
+                    // A role without links still answers with NULL fields, so
+                    // the two outer joins name their ON clause and the order
+                    // keeps the linked codes first.
+                    users_roles::table
+                        .inner_join(roles::table)
+                        .left_join(
+                            roles_permissions::table.on(roles_permissions::role_id.eq(roles::id)),
+                        )
+                        .left_join(
+                            permissions::table
+                                .on(permissions::id.eq(roles_permissions::permission_id)),
+                        )
+                        .filter(users_roles::user_id.eq(user_id))
+                        .select((
+                            roles::name,
+                            roles::resource_type,
+                            roles::resource_id,
+                            permissions::code.nullable(),
+                            roles_permissions::effect.nullable(),
+                        ))
+                        .load::<(
+                            String,
+                            Option<String>,
+                            Option<Uuid>,
+                            Option<String>,
+                            Option<i16>,
+                        )>(conn)
+                        .await
+                        .map(|rows: Vec<_>| {
+                            // A role without links comes first, then its linked
+                            // codes in order: the set is one user's grants, so
+                            // the comparison happens in Rust.
+                            let mut grants: Vec<
+                                crate::repositories::traits::users_trait::RoleGrantRow,
+                            > = rows
+                                .into_iter()
+                                .map(
+                                    |(
+                                        role_name,
+                                        resource_type,
+                                        resource_id,
+                                        permission_code,
+                                        effect,
+                                    )| {
+                                        crate::repositories::traits::users_trait::RoleGrantRow {
+                                            role_name,
+                                            resource_type,
+                                            resource_id,
+                                            permission_code,
+                                            effect,
+                                        }
+                                    },
+                                )
+                                .collect();
+
+                            grants.sort_by(|left, right| {
+                                left.role_name.cmp(&right.role_name).then_with(|| {
+                                    match (&left.permission_code, &right.permission_code) {
+                                        (None, None) => std::cmp::Ordering::Equal,
+                                        (None, Some(_)) => std::cmp::Ordering::Less,
+                                        (Some(_), None) => std::cmp::Ordering::Greater,
+                                        (Some(left_code), Some(right_code)) => {
+                                            left_code.cmp(right_code)
+                                        },
+                                    }
+                                })
+                            });
+                            grants
+                        })
+                })
+            })
+            .await
+    }
+
+    /// The roles assigned to a user, as the admin interface reads them back.
+    async fn get_user_role_assignments(&self, user_id: &Uuid) -> QueryResult<Vec<(Uuid, String)>> {
+        let user_id = *user_id;
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    use crate::db::schema::{roles, users_roles};
+                    users_roles::table
+                        .filter(users_roles::dsl::user_id.eq(user_id))
+                        .inner_join(roles::table)
+                        .select((roles::dsl::id, roles::dsl::name))
+                        .load::<(Uuid, String)>(conn)
+                        .await
+                })
+            })
+            .await
+    }
+
+    /// Replaces every role assignment of a user in one transaction: the old
+    /// links are deleted and the new ones inserted, so a refused insert leaves
+    /// the user with the previous roles instead of none.
+    async fn set_user_roles(&self, user_id: &Uuid, role_ids: &[Uuid]) -> QueryResult<usize> {
+        use crate::db::schema::users_roles;
+
+        let user_id = *user_id;
+        let role_ids = role_ids.to_vec();
+
+        self.base
+            .run_transaction(move |conn| {
+                let role_ids = role_ids.clone();
+                Box::pin(async move {
+                    diesel::delete(users_roles::table)
+                        .filter(users_roles::user_id.eq(user_id))
+                        .execute(conn)
+                        .await?;
+
+                    if role_ids.is_empty() {
+                        return Ok(0);
+                    }
+
+                    let links: Vec<NewUserRole> = role_ids
+                        .into_iter()
+                        .map(|role_id| NewUserRole { user_id, role_id })
+                        .collect();
+                    diesel::insert_into(users_roles::table)
+                        .values(&links)
+                        .execute(conn)
+                        .await?;
+
+                    Ok(links.len())
                 })
             })
             .await
     }
 
     async fn user_ids_holding_all_codes(&self, codes: &[String]) -> diesel::QueryResult<Vec<Uuid>> {
+        use crate::db::schema::{permissions, roles_permissions, users_roles};
+        use diesel::AggregateExpressionMethods;
+
         let codes = codes.to_vec();
-        let expected = codes.len() as i64;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    diesel::sql_query(
-                        "SELECT ur.user_id FROM users_roles ur \
-                         JOIN roles_permissions rp ON rp.role_id = ur.role_id \
-                         JOIN permissions p ON p.id = rp.permission_id \
-                         WHERE rp.effect = 0 AND p.code = ANY($1) \
-                         GROUP BY ur.user_id \
-                         HAVING count(DISTINCT p.code) = $2",
-                    )
-                    .bind::<diesel::sql_types::Array<diesel::sql_types::Text>, _>(&codes)
-                    .bind::<diesel::sql_types::BigInt, _>(expected)
-                    .load::<UserIdRow>(conn)
-                    .await
-                    .map(|rows| rows.into_iter().map(|row| row.user_id).collect())
+                    users_roles::table
+                        // The link between a user and a grant runs through the
+                        // role id, so the join names its own ON clause.
+                        .inner_join(
+                            roles_permissions::table.on(roles_permissions::role_id
+                                .eq(users_roles::role_id)),
+                        )
+                        .inner_join(
+                            permissions::table.on(permissions::id
+                                .eq(roles_permissions::permission_id)),
+                        )
+                        .filter(
+                            roles_permissions::effect
+                                .eq(0)
+                                .and(permissions::code.eq_any(&codes)),
+                        )
+                        .group_by(users_roles::user_id)
+                        .select(users_roles::user_id)
+                        .having(
+                            diesel::dsl::count(permissions::code).aggregate_distinct()
+                                .eq(codes.len() as i64),
+                        )
+                        .load(conn)
+                        .await
                 })
             })
             .await
@@ -513,13 +635,36 @@ impl IUserRepository for UsersRepository {
             .await
     }
 
+    /// The effective allow codes of a role, expanded over the wildcards.
+    async fn role_allow_codes(&self, role_id: &Uuid) -> QueryResult<HashSet<String>> {
+        use crate::db::schema::{permissions, roles_permissions};
+
+        let role_id = *role_id;
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    let codes: Vec<String> = roles_permissions::table
+                        .inner_join(permissions::table)
+                        .filter(
+                            roles_permissions::role_id
+                                .eq(role_id)
+                                .and(roles_permissions::effect.eq(0)),
+                        )
+                        .select(permissions::code)
+                        .load(conn)
+                        .await?;
+
+                    Ok(crate::authz::ability::expand_allow_codes(&codes))
+                })
+            })
+            .await
+    }
+
     async fn get_user_permissions(&self, user_id: &Uuid) -> diesel::QueryResult<Vec<String>> {
         let user_id = *user_id;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    use diesel::JoinOnDsl;
-
                     use crate::db::schema::{permissions, roles_permissions, users_roles};
                     users_roles::table
                         .filter(users_roles::dsl::user_id.eq(user_id))

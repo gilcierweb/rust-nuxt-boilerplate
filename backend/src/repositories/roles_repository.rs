@@ -1,14 +1,16 @@
 use std::sync::Arc;
 
-use diesel::sql_query;
-use diesel::sql_types::{Array, Nullable, Text, Uuid as DieselUuid};
+use diesel::AggregateExpressionMethods;
+use diesel::BoolExpressionMethods;
+use diesel::JoinOnDsl;
+use diesel::expression_methods::NullableExpressionMethods;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::DBPool;
 use crate::db::schema::roles as roles_table;
-use crate::models::permission::RolePermissionItem;
+use crate::models::permission::{NewRolePermissionLink, RolePermissionItem};
 use crate::models::role::{NewRole, Role};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::roles_trait::{IRoleRepository, RoleMemberItem};
@@ -29,38 +31,6 @@ impl RolesRepository {
 
 #[cfg(test)]
 pub use crate::repositories::traits::roles_trait::MockIRoleRepository;
-
-#[derive(diesel::QueryableByName)]
-struct PermissionLinkRow {
-    #[diesel(sql_type = Text)]
-    code: String,
-    #[diesel(sql_type = diesel::sql_types::Int2)]
-    effect: i16,
-}
-
-#[derive(diesel::QueryableByName)]
-struct RoleIdRow {
-    #[diesel(sql_type = DieselUuid)]
-    id: Uuid,
-}
-
-/// One row of the member query: the user, the encrypted email and the profile
-/// fields the display name is built from.
-#[derive(diesel::QueryableByName)]
-struct MemberRow {
-    #[diesel(sql_type = DieselUuid)]
-    id: Uuid,
-    #[diesel(sql_type = diesel::sql_types::Bytea)]
-    email_encrypted: Vec<u8>,
-    #[diesel(sql_type = diesel::sql_types::Integer)]
-    encryption_key_version: i32,
-    #[diesel(sql_type = Nullable<Text>)]
-    first_name: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    last_name: Option<String>,
-    #[diesel(sql_type = Nullable<Text>)]
-    full_name: Option<String>,
-}
 
 /// The display name of a member: the full name, else first and last joined.
 fn display_name(
@@ -180,7 +150,8 @@ impl IRoleRepository for RolesRepository {
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    // Load all data then sort in memory
+                    // The catalog is small: load the rows, sort in memory and
+                    // paginate, so the sort stays a plain allowlist comparison.
                     let mut data = roles_table::table.load::<Role>(conn).await?;
 
                     if let Some(sort_by) = list_params.sort_by.as_deref() {
@@ -221,27 +192,23 @@ impl IRoleRepository for RolesRepository {
         &self,
         role_id: &Uuid,
     ) -> diesel::QueryResult<Vec<RolePermissionItem>> {
+        use crate::db::schema::{permissions, roles_permissions};
+
         let role_id = *role_id;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    let rows: Vec<PermissionLinkRow> = sql_query(
-                        "SELECT p.code, rp.effect \
-                         FROM roles_permissions rp \
-                         JOIN permissions p ON p.id = rp.permission_id \
-                         WHERE rp.role_id = $1 \
-                         ORDER BY p.code",
-                    )
-                    .bind::<DieselUuid, _>(role_id)
-                    .load(conn)
-                    .await?;
+                    let rows: Vec<(String, i16)> = roles_permissions::table
+                        .inner_join(permissions::table)
+                        .filter(roles_permissions::role_id.eq(role_id))
+                        .select((permissions::code, roles_permissions::effect))
+                        .order_by(permissions::code.asc())
+                        .load(conn)
+                        .await?;
 
                     Ok(rows
                         .into_iter()
-                        .map(|row| RolePermissionItem {
-                            code: row.code,
-                            effect: row.effect,
-                        })
+                        .map(|(code, effect)| RolePermissionItem { code, effect })
                         .collect())
                 })
             })
@@ -253,28 +220,45 @@ impl IRoleRepository for RolesRepository {
         role_id: &Uuid,
         security: Arc<SecurityService>,
     ) -> diesel::QueryResult<Vec<RoleMemberItem>> {
+        use crate::db::schema::{profiles, users, users_roles};
+
         let role_id = *role_id;
         self.base
             .run(move |conn| {
                 let security = security.clone();
                 Box::pin(async move {
-                    let rows: Vec<MemberRow> = sql_query(
-                        "SELECT u.id, u.email_encrypted, u.encryption_key_version, \
-                                p.first_name, p.last_name, p.full_name, p.nickname \
-                         FROM users_roles ur \
-                         JOIN users u ON u.id = ur.user_id \
-                         LEFT JOIN profiles p ON p.user_id = u.id \
-                         WHERE ur.role_id = $1 \
-                         ORDER BY u.created_at",
-                    )
-                    .bind::<DieselUuid, _>(role_id)
-                    .load(conn)
-                    .await?;
+                    let rows: Vec<(
+                        Uuid,
+                        Vec<u8>,
+                        i32,
+                        Option<String>,
+                        Option<String>,
+                        Option<String>,
+                    )> = users_roles::table
+                        .inner_join(users::table)
+                        // A profile is optional, so the join names its own ON
+                        // clause: the link table carries no relation to it.
+                        .left_join(profiles::table.on(profiles::user_id.eq(users::id)))
+                        .filter(users_roles::role_id.eq(role_id))
+                        .select((
+                            users::id,
+                            users::email_encrypted,
+                            users::encryption_key_version,
+                            // A left joined column is nullable, so the
+                            // select clause has to say so.
+                            profiles::first_name.nullable(),
+                            profiles::last_name.nullable(),
+                            profiles::full_name.nullable(),
+                        ))
+                        .order_by(users::created_at.asc())
+                        .load(conn)
+                        .await?;
 
                     let mut members = Vec::with_capacity(rows.len());
-                    for row in rows {
+                    for (id, email_encrypted, key_version, first_name, last_name, full_name) in rows
+                    {
                         let email = security
-                            .decrypt_email_fields(&row.email_encrypted, row.encryption_key_version)
+                            .decrypt_email_fields(&email_encrypted, key_version)
                             .map_err(|error| {
                                 diesel::result::Error::DatabaseError(
                                     diesel::result::DatabaseErrorKind::Unknown,
@@ -283,12 +267,12 @@ impl IRoleRepository for RolesRepository {
                             })?;
 
                         members.push(RoleMemberItem {
-                            id: row.id,
+                            id,
                             email,
                             display_name: display_name(
-                                row.first_name.as_deref(),
-                                row.last_name.as_deref(),
-                                row.full_name.as_deref(),
+                                first_name.as_deref(),
+                                last_name.as_deref(),
+                                full_name.as_deref(),
                             ),
                         });
                     }
@@ -300,26 +284,30 @@ impl IRoleRepository for RolesRepository {
     }
 
     async fn role_ids_holding_all_codes(&self, codes: &[String]) -> diesel::QueryResult<Vec<Uuid>> {
+        use crate::db::schema::{permissions, roles, roles_permissions};
+
         let codes = codes.to_vec();
-        let expected = codes.len() as i64;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    let rows: Vec<RoleIdRow> = sql_query(
-                        "SELECT rp.role_id AS id \
-                         FROM roles_permissions rp \
-                         JOIN permissions p ON p.id = rp.permission_id \
-                         JOIN roles r ON r.id = rp.role_id \
-                         WHERE rp.effect = 0 AND p.code = ANY($1) AND r.resource_id IS NULL \
-                         GROUP BY rp.role_id \
-                         HAVING count(DISTINCT p.code) = $2",
-                    )
-                    .bind::<Array<Text>, _>(&codes)
-                    .bind::<diesel::sql_types::BigInt, _>(expected)
-                    .load(conn)
-                    .await?;
-
-                    Ok(rows.into_iter().map(|row| row.id).collect())
+                    roles_permissions::table
+                        .inner_join(permissions::table)
+                        .inner_join(roles::table)
+                        .filter(
+                            roles_permissions::effect
+                                .eq(0)
+                                .and(permissions::code.eq_any(&codes))
+                                .and(roles::resource_id.is_null()),
+                        )
+                        .group_by(roles_permissions::role_id)
+                        .select(roles_permissions::role_id)
+                        .having(
+                            diesel::dsl::count(permissions::code)
+                                .aggregate_distinct()
+                                .eq(codes.len() as i64),
+                        )
+                        .load(conn)
+                        .await
                 })
             })
             .await
@@ -330,40 +318,59 @@ impl IRoleRepository for RolesRepository {
         role_id: &Uuid,
         items: &[RolePermissionItem],
     ) -> diesel::QueryResult<usize> {
+        use crate::db::schema::{permissions, roles_permissions};
+
         let role_id = *role_id;
         let items = items.to_vec();
+        // An unmapped effect never reaches the database: the handler refuses it
+        // before calling here, and the fail closed model keeps it impossible.
+        if items.iter().any(|item| item.effect().is_none()) {
+            return Err(diesel::result::Error::QueryBuilderError(
+                "unknown permission effect".into(),
+            ));
+        }
 
         self.base
             .run_transaction(move |conn| {
                 let items = items.clone();
                 Box::pin(async move {
-                    diesel::sql_query("DELETE FROM roles_permissions WHERE role_id = $1")
-                        .bind::<DieselUuid, _>(role_id)
+                    diesel::delete(roles_permissions::table)
+                        .filter(roles_permissions::role_id.eq(role_id))
                         .execute(conn)
                         .await?;
 
-                    for item in &items {
-                        let effect = item.effect();
-                        // An unmapped effect never reaches the database: the
-                        // handler refuses it before calling here.
-                        if effect.is_none() {
-                            return Err(diesel::result::Error::QueryBuilderError(
-                                "unknown permission effect".into(),
-                            ));
-                        }
-
-                        diesel::sql_query(
-                            "INSERT INTO roles_permissions (role_id, permission_id, effect, created_at) \
-                             SELECT $1, p.id, $3, NOW() FROM permissions p WHERE p.code = $2",
-                        )
-                        .bind::<DieselUuid, _>(role_id)
-                        .bind::<Text, _>(item.code.clone())
-                        .bind::<diesel::sql_types::Int2, _>(item.effect)
-                        .execute(conn)
-                        .await?;
+                    if items.is_empty() {
+                        return Ok(0);
                     }
 
-                    Ok(items.len())
+                    // One query resolves the id of every code, so the insert
+                    // itself is a single batch statement.
+                    let codes: Vec<String> = items.iter().map(|item| item.code.clone()).collect();
+                    let resolved: Vec<(Uuid, String)> = permissions::table
+                        .filter(permissions::code.eq_any(&codes))
+                        .select((permissions::id, permissions::code))
+                        .load(conn)
+                        .await?;
+
+                    let links: Vec<NewRolePermissionLink> = resolved
+                        .iter()
+                        .filter_map(|(permission_id, code)| {
+                            items.iter().find(|item| &item.code == code).map(|item| {
+                                NewRolePermissionLink {
+                                    role_id,
+                                    permission_id: *permission_id,
+                                    effect: item.effect,
+                                }
+                            })
+                        })
+                        .collect();
+
+                    diesel::insert_into(roles_permissions::table)
+                        .values(&links)
+                        .execute(conn)
+                        .await?;
+
+                    Ok(links.len())
                 })
             })
             .await

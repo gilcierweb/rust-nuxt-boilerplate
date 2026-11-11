@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use std::collections::HashSet;
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -100,6 +101,18 @@ pub trait IUserRepository: Send + Sync {
         user_id: &Uuid,
     ) -> QueryResult<Vec<crate::repositories::traits::users_trait::RoleGrantRow>>;
     async fn user_ids_holding_all_codes(&self, codes: &[String]) -> QueryResult<Vec<Uuid>>;
+
+    /// The roles assigned to a user, as the admin interface reads them back.
+    async fn get_user_role_assignments(&self, user_id: &Uuid) -> QueryResult<Vec<(Uuid, String)>>;
+
+    /// Replaces every role assignment of a user in one transaction: the old
+    /// links are deleted and the new ones inserted, so a refused insert leaves
+    /// the user with the previous roles instead of none.
+    async fn set_user_roles(&self, user_id: &Uuid, role_ids: &[Uuid]) -> QueryResult<usize>;
+
+    /// The effective allow codes of a role, expanded over the wildcards
+    /// (`Manage` and `All` expand to the catalog).
+    async fn role_allow_codes(&self, role_id: &Uuid) -> QueryResult<HashSet<String>>;
     async fn create_password_reset_token(
         &self,
         user_id: &Uuid,

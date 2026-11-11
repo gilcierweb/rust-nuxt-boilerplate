@@ -1,6 +1,6 @@
-use diesel::sql_query;
-use diesel::sql_types::{BigInt, Nullable, Text, Uuid as DieselUuid};
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel::BoolExpressionMethods;
+use diesel::expression_methods::{NullableExpressionMethods, TextExpressionMethods};
+use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
@@ -30,25 +30,17 @@ impl PermissionsRepository {
 #[cfg(test)]
 pub use crate::repositories::traits::permissions_trait::MockIPermissionRepository;
 
-/// A row of the catalog query: one permission and one of its role links (the
+/// One row of the catalog query: a permission and one of its role links (the
 /// links are grouped in Rust after the join).
-#[derive(diesel::QueryableByName)]
-struct PermissionLinkRow {
-    #[diesel(sql_type = diesel::sql_types::Uuid)]
-    permission_id: Uuid,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    code: String,
-    #[diesel(sql_type = diesel::sql_types::Text)]
-    name: String,
-    #[diesel(sql_type = Nullable<diesel::sql_types::Text>)]
-    description: Option<String>,
-    #[diesel(sql_type = Nullable<diesel::sql_types::Uuid>)]
-    role_id: Option<Uuid>,
-    #[diesel(sql_type = Nullable<diesel::sql_types::Text>)]
-    role_name: Option<String>,
-    #[diesel(sql_type = Nullable<diesel::sql_types::Int2>)]
-    effect: Option<i16>,
-}
+type PermissionLinkRow = (
+    Uuid,
+    String,
+    String,
+    Option<String>,
+    Option<Uuid>,
+    Option<String>,
+    Option<i16>,
+);
 
 /// Splits a code into its resource and action parts. A code the enums do not
 /// name cannot appear (the repository only writes codes built from them), but
@@ -58,48 +50,6 @@ fn code_parts(code: &str) -> (String, String) {
         Some((resource, action)) => (resource.to_string(), action.to_string()),
         None => (code.to_string(), String::new()),
     }
-}
-
-/// Groups the joined rows of one permission into the enriched item.
-fn item_from_rows(rows: Vec<PermissionLinkRow>) -> Option<PermissionWithRoles> {
-    let (first, rest) = rows.split_first()?;
-    let (resource, action) = code_parts(&first.code);
-    let mut item = PermissionWithRoles {
-        id: first.permission_id,
-        code: first.code.clone(),
-        name: first.name.clone(),
-        description: first.description.clone(),
-        resource,
-        action,
-        roles: Vec::new(),
-    };
-
-    // The first row carries the first link, when there is one.
-    for row in std::iter::once(first).chain(rest) {
-        if let (Some(role_id), Some(role_name), Some(effect)) =
-            (row.role_id, &row.role_name, row.effect)
-        {
-            item.roles.push(PermissionRole {
-                role_id,
-                role_name: role_name.clone(),
-                effect,
-            });
-        }
-    }
-
-    Some(item)
-}
-
-/// The ORDER BY clause of the catalog query, built from the sort allowlist.
-/// An unknown field falls back to the name order so the statement stays valid;
-/// the handler refuses it before the query runs.
-fn order_clause(sort_by: Option<&str>, direction: &str) -> String {
-    let column = match sort_by {
-        Some("code") => "p.code",
-        Some("updated_at") => "p.updated_at",
-        _ => "p.name",
-    };
-    format!("{column} {direction}")
 }
 
 #[async_trait::async_trait]
@@ -193,46 +143,84 @@ impl IPermissionRepository for PermissionsRepository {
     }
 
     async fn linked_role_count(&self, id: &Uuid) -> diesel::QueryResult<i64> {
+        use crate::db::schema::roles_permissions;
+
         let permission_id = *id;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    #[derive(diesel::QueryableByName)]
-                    struct CountRow {
-                        #[diesel(sql_type = diesel::sql_types::BigInt)]
-                        total: i64,
-                    }
-
-                    diesel::sql_query(
-                        "SELECT COUNT(*) AS total FROM roles_permissions WHERE permission_id = $1",
-                    )
-                    .bind::<DieselUuid, _>(permission_id)
-                    .get_result::<CountRow>(conn)
-                    .await
-                    .map(|row| row.total)
+                    roles_permissions::table
+                        .filter(roles_permissions::permission_id.eq(permission_id))
+                        .count()
+                        .get_result(conn)
+                        .await
                 })
             })
             .await
     }
 
     async fn find_with_roles(&self, id: &Uuid) -> diesel::QueryResult<PermissionWithRoles> {
+        use crate::db::schema::{permissions, roles, roles_permissions};
+
         let permission_id = *id;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    let rows: Vec<PermissionLinkRow> = sql_query(
-                        "SELECT p.id AS permission_id, p.code, p.name, p.description, \
-                                rp.role_id, r.name AS role_name, rp.effect \
-                         FROM permissions p \
-                         LEFT JOIN roles_permissions rp ON rp.permission_id = p.id \
-                         LEFT JOIN roles r ON r.id = rp.role_id \
-                         WHERE p.id = $1",
-                    )
-                    .bind::<DieselUuid, _>(permission_id)
-                    .load(conn)
-                    .await?;
+                    // Left joins: a permission nobody links yet still answers
+                    // with an empty role list, which is the case of a just
+                    // created permission.
+                    let rows: Vec<(
+                        Uuid,
+                        String,
+                        String,
+                        Option<String>,
+                        Option<Uuid>,
+                        Option<String>,
+                        Option<i16>,
+                    )> = permissions::table
+                        .left_join(
+                            roles_permissions::table
+                                .on(roles_permissions::permission_id.eq(permissions::id)),
+                        )
+                        .left_join(roles::table.on(roles::id.eq(roles_permissions::role_id)))
+                        .filter(permissions::id.eq(permission_id))
+                        .select((
+                            permissions::id,
+                            permissions::code,
+                            permissions::name,
+                            permissions::description,
+                            roles_permissions::role_id.nullable(),
+                            roles::name.nullable(),
+                            roles_permissions::effect.nullable(),
+                        ))
+                        .load(conn)
+                        .await?;
 
-                    item_from_rows(rows).ok_or(diesel::result::Error::NotFound)
+                    if rows.is_empty() {
+                        return Err(diesel::result::Error::NotFound);
+                    }
+                    let (_, code, name, description, _, _, _) = rows[0].clone();
+                    let roles: Vec<PermissionRole> = rows
+                        .iter()
+                        .filter_map(|(_, _, _, _, role_id, role_name, effect)| {
+                            Some(PermissionRole {
+                                role_id: (*role_id)?,
+                                role_name: role_name.clone()?,
+                                effect: (*effect)?,
+                            })
+                        })
+                        .collect();
+                    let (resource, action) = code_parts(&code);
+
+                    Ok(PermissionWithRoles {
+                        id: permission_id,
+                        code,
+                        name,
+                        description,
+                        resource,
+                        action,
+                        roles,
+                    })
                 })
             })
             .await
@@ -243,67 +231,100 @@ impl IPermissionRepository for PermissionsRepository {
         params: &PaginationParams,
         search: Option<String>,
     ) -> diesel::QueryResult<PaginatedResponse<PermissionWithRoles>> {
+        use crate::db::schema::{permissions, roles, roles_permissions};
+
         let list_params = ListParams::from(params.clone());
+        let search = search
+            .map(|value| value.trim().to_lowercase())
+            .filter(|value| !value.is_empty());
 
         self.base
             .run(move |conn| {
                 let search = search.clone();
                 Box::pin(async move {
-                    let order_sql =
-                        order_clause(list_params.sort_by.as_deref(), list_params.sort_direction());
-                    let limit = list_params.limit();
-                    let offset = list_params.offset();
+                    // The catalog is small (tens of rows), so the page is loaded
+                    // with one join and sorted in memory: a dynamic ORDER BY
+                    // would need raw SQL for no gain at this size.
+                    let mut query = permissions::table
+                        .left_join(
+                            roles_permissions::table
+                                .on(roles_permissions::permission_id.eq(permissions::id)),
+                        )
+                        .left_join(roles::table.on(roles::id.eq(roles_permissions::role_id)))
+                        .select((
+                            permissions::id,
+                            permissions::code,
+                            permissions::name,
+                            permissions::description,
+                            roles_permissions::role_id.nullable(),
+                            roles::name.nullable(),
+                            roles_permissions::effect.nullable(),
+                        ))
+                        .into_boxed();
 
-                    #[derive(diesel::QueryableByName)]
-                    struct CountRow {
-                        #[diesel(sql_type = diesel::sql_types::BigInt)]
-                        total: i64,
+                    if let Some(term) = search {
+                        let pattern = format!("%{term}%");
+                        query = query.filter(
+                            permissions::code
+                                .like(pattern.clone())
+                                .or(permissions::name.like(pattern)),
+                        );
                     }
 
-                    // The count measures the permissions, never the joined rows.
-                    let total: i64 = sql_query(
-                        "SELECT COUNT(DISTINCT p.id) AS total FROM permissions p \
-                         WHERE $1::text IS NULL \
-                            OR p.code ILIKE '%' || $1 || '%' \
-                            OR p.name ILIKE '%' || $1 || '%'",
-                    )
-                    .bind::<Nullable<Text>, _>(search.clone())
-                    .get_result::<CountRow>(conn)
-                    .await?
-                    .total;
+                    let rows: Vec<PermissionLinkRow> = query.load(conn).await?;
 
-                    let rows: Vec<PermissionLinkRow> = sql_query(format!(
-                        "SELECT p.id AS permission_id, p.code, p.name, p.description, \
-                                rp.role_id, r.name AS role_name, rp.effect \
-                         FROM permissions p \
-                         LEFT JOIN roles_permissions rp ON rp.permission_id = p.id \
-                         LEFT JOIN roles r ON r.id = rp.role_id \
-                         WHERE $1::text IS NULL \
-                            OR p.code ILIKE '%' || $1 || '%' \
-                            OR p.name ILIKE '%' || $1 || '%' \
-                         ORDER BY {order_sql} \
-                         LIMIT $2 OFFSET $3"
-                    ))
-                    .bind::<Nullable<Text>, _>(search)
-                    .bind::<BigInt, _>(limit)
-                    .bind::<BigInt, _>(offset)
-                    .load(conn)
-                    .await?;
-
-                    // Group the joined rows back into one item per permission,
-                    // keeping the order the query produced.
-                    let mut grouped: Vec<Vec<PermissionLinkRow>> = Vec::new();
-                    let mut positions: std::collections::HashMap<Uuid, usize> =
-                        std::collections::HashMap::new();
-                    for row in rows {
-                        let position = *positions.entry(row.permission_id).or_insert_with(|| {
-                            grouped.push(Vec::new());
-                            grouped.len() - 1
-                        });
-                        grouped[position].push(row);
+                    let mut items: Vec<PermissionWithRoles> = Vec::new();
+                    for (permission_id, code, name, description, role_id, role_name, effect) in rows
+                    {
+                        match items.iter_mut().find(|item| item.id == permission_id) {
+                            Some(item) => {
+                                if let (Some(role_id), Some(role_name), Some(effect)) =
+                                    (role_id, role_name, effect)
+                                {
+                                    item.roles.push(PermissionRole {
+                                        role_id,
+                                        role_name,
+                                        effect,
+                                    });
+                                }
+                            },
+                            None => {
+                                let (resource, action) = code_parts(&code);
+                                items.push(PermissionWithRoles {
+                                    id: permission_id,
+                                    code,
+                                    name,
+                                    description,
+                                    resource,
+                                    action,
+                                    roles: role_id
+                                        .map(|role_id| {
+                                            vec![PermissionRole {
+                                                role_id,
+                                                role_name: role_name.unwrap_or_default(),
+                                                effect: effect.unwrap_or_default(),
+                                            }]
+                                        })
+                                        .unwrap_or_default(),
+                                });
+                            },
+                        }
                     }
-                    let items: Vec<PermissionWithRoles> =
-                        grouped.into_iter().filter_map(item_from_rows).collect();
+
+                    // Sort in memory: the allowlist keeps the comparison explicit
+                    // and the handler already refused anything outside it.
+                    match list_params.sort_by.as_deref() {
+                        Some("code") => items.sort_by(|a, b| a.code.cmp(&b.code)),
+                        _ => items.sort_by(|a, b| a.name.cmp(&b.name)),
+                    }
+                    if list_params.sort_direction() == "desc" {
+                        items.reverse();
+                    }
+
+                    let total = items.len() as i64;
+                    let offset = list_params.offset() as usize;
+                    let limit = list_params.limit() as usize;
+                    let items: Vec<_> = items.into_iter().skip(offset).take(limit).collect();
 
                     Ok(PaginatedResponse::new(
                         items,
