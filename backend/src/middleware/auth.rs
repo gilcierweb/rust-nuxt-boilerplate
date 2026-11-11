@@ -13,6 +13,10 @@ use crate::models::role::ROLE_ADMIN;
 pub struct Claims {
     pub sub: uuid::Uuid,
     pub profile_id: uuid::Uuid,
+    /// Presentation tier of the subject (1 administrator, 2 operator, 3
+    /// viewer). It is derived from the effective permissions of the subject
+    /// and never takes part in an authorization decision: only the grants read
+    /// from the database decide what the subject may do.
     pub role: i32,
     #[serde(default = "default_token_use")]
     pub token_use: String,
@@ -42,8 +46,12 @@ impl Claims {
         self.role == ROLE_ADMIN.as_i32()
     }
 
+    /// True when the claim carries the operator tier or the administrator one.
+    ///
+    /// The tier numbers grow downwards (1 administrator, 2 operator, 3
+    /// viewer), so the comparison is reversed.
     pub fn is_operator_or_higher(&self) -> bool {
-        self.role >= crate::models::role::ROLE_OPERATOR.as_i32()
+        self.role <= crate::models::role::ROLE_OPERATOR.as_i32()
     }
 
     pub fn profile_id(&self) -> Result<uuid::Uuid, AppError> {
@@ -527,20 +535,42 @@ pub fn rate_limit_category(method: &actix_web::http::Method, path: &str) -> Rate
 mod tests {
     use super::*;
 
-    #[test]
-    fn test_claims_has_role() {
-        let claims = Claims {
+    fn claims_with_role(role: i32) -> Claims {
+        Claims {
             sub: uuid::Uuid::new_v4(),
             profile_id: uuid::Uuid::new_v4(),
-            role: 1,
+            role,
             token_use: "access".to_string(),
             exp: 0,
             iat: 0,
             nbf: 0,
             jti: None,
-        };
+        }
+    }
+
+    #[test]
+    fn test_claims_has_role() {
+        let claims = claims_with_role(1);
         assert!(claims.is_admin());
         assert!(!claims.has_role("operator"));
+    }
+
+    #[test]
+    fn is_operator_or_higher_is_admin_and_operator() {
+        use crate::models::role::{ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER};
+
+        assert!(
+            claims_with_role(ROLE_ADMIN.as_i32()).is_operator_or_higher(),
+            "the administrator is operator or higher"
+        );
+        assert!(
+            claims_with_role(ROLE_OPERATOR.as_i32()).is_operator_or_higher(),
+            "the operator is operator or higher"
+        );
+        assert!(
+            !claims_with_role(ROLE_VIEWER.as_i32()).is_operator_or_higher(),
+            "the viewer is below the operator tier"
+        );
     }
 
     #[test]

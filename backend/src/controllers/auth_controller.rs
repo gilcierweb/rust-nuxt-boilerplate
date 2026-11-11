@@ -10,6 +10,9 @@ use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
+use crate::authz::ability::{CurrentAbility, build_ability_from_grants};
+use crate::authz::grants::RoleGrant;
+use crate::authz::tier::presentation_tier;
 use crate::config::AppConfig;
 use crate::db::schema::users as users_table;
 use crate::errors::{AppError, AppResult};
@@ -17,7 +20,6 @@ use crate::middleware::auth::{AuthUser, create_token_with_kid};
 use crate::models::magic_link_token::NewMagicLinkToken;
 use crate::models::profile::NewProfile;
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
-use crate::models::role::{ROLE_ADMIN, ROLE_OPERATOR, ROLE_VIEWER};
 use crate::models::user::{NewUser, User};
 use crate::repositories::container::AppContainer;
 use crate::repositories::traits::users_trait::IUserRepositoryTransaction;
@@ -475,6 +477,23 @@ async fn get_cached_user_roles(container: &AppContainer, user_id: &Uuid) -> AppR
     Ok(roles)
 }
 
+/// Loads the grants of the user and builds the ability they describe.
+///
+/// The ability is the only source of truth for the tier carried by the
+/// issued token, so the tier always mirrors the effective permissions.
+async fn user_ability(container: &AppContainer, user_id: Uuid) -> AppResult<CurrentAbility> {
+    let rows = container
+        .users
+        .get_user_grants(&user_id)
+        .await
+        .map_err(AppError::Database)?;
+    let grants: Vec<RoleGrant> = rows.into_iter().map(RoleGrant::from).collect();
+
+    Ok(CurrentAbility::new(build_ability_from_grants(
+        user_id, &grants,
+    )))
+}
+
 /// Invalidate cached user roles (call when roles change for a specific user)
 pub async fn invalidate_user_roles_cache(container: &AppContainer, user_id: &Uuid) {
     let cache_key = format!("user_roles:{}", user_id);
@@ -684,14 +703,13 @@ pub async fn login(
         .ok_or(AppError::Internal(
             t!("users.profile_not_found").into_owned(),
         ))?;
-    // Fetch user roles BEFORE generating the token.
-    // This is NOT redundant — the `role_claim` (primary role as i32) is embedded
-    // into the JWT and used by `Claims::has_role()` + `build_ability` for fine-grained
-    // authorization on every authenticated request. Without this call, the issued
-    // token would have a default/zero `role` and downstream authorization would fail.
-    // Cached for 10 min (see P3); explicit invalidation on role changes.
+    // Fetch the user roles for the response payload. Cached for 10 min (see
+    // P3); explicit invalidation on role changes.
     let roles = get_cached_user_roles(&container, &user.id).await?;
-    let role_claim = primary_role_claim(&roles);
+    // The tier carried by the token is derived from the effective permissions
+    // of the subject, never from the role names.
+    let ability = user_ability(container.as_ref(), user.id).await?;
+    let role_claim = primary_role_claim(&ability);
 
     // Generate tokens
     #[allow(clippy::get_first)]
@@ -959,9 +977,10 @@ pub async fn refresh(
         .ok_or(AppError::Internal(
             t!("users.profile_not_found").into_owned(),
         ))?;
-    // Required for the new access token's role_claim (see login note above).
-    let roles = get_cached_user_roles(&container, &user.id).await?;
-    let role_claim = primary_role_claim(&roles);
+    // The tier of the new access token follows the effective permissions of
+    // the subject (see login note above).
+    let ability = user_ability(container.as_ref(), user.id).await?;
+    let role_claim = primary_role_claim(&ability);
 
     // Generate new access token
     #[allow(clippy::get_first)]
@@ -1029,9 +1048,11 @@ async fn session_impl(
             t!("users.profile_not_found").into_owned(),
         ))?;
 
-    // Required for the new access token's role_claim (see login note above).
+    // The roles feed the response payload, the tier of the issued token
+    // follows the effective permissions (see login note above).
     let roles = get_cached_user_roles(&container, &user.id).await?;
-    let role_claim = primary_role_claim(&roles);
+    let ability = user_ability(container.as_ref(), user.id).await?;
+    let role_claim = primary_role_claim(&ability);
     #[allow(clippy::get_first)]
     let active_kid = container.config.jwt_secrets.get(0).map(|k| k.kid.as_str());
     let access_token = create_token_with_kid(
@@ -1777,22 +1798,13 @@ fn build_user_info(
     })
 }
 
-fn primary_role_claim(roles: &[String]) -> i32 {
-    if roles.iter().any(|role| role.eq_ignore_ascii_case("admin")) {
-        return ROLE_ADMIN.as_i32();
-    }
-
-    if roles.iter().any(|role| {
-        role.eq_ignore_ascii_case("operator")
-            || role.eq_ignore_ascii_case("moderator")
-            || role.eq_ignore_ascii_case("support")
-            || role.eq_ignore_ascii_case("creator")
-            || role.eq_ignore_ascii_case("agency")
-    }) {
-        return ROLE_OPERATOR.as_i32();
-    }
-
-    ROLE_VIEWER.as_i32()
+/// The numeric tier carried by the access token.
+///
+/// The claim is a presentation value derived from the effective permissions
+/// of the subject: it mirrors what the subject can do and never takes part in
+/// an authorization decision.
+fn primary_role_claim(current: &CurrentAbility) -> i32 {
+    presentation_tier(current).as_i32()
 }
 
 fn verify_totp(secret_base32: &str, code: &str) -> AppResult<()> {
@@ -2273,9 +2285,11 @@ pub async fn verify_magic_link(
             t!("users.profile_not_found").into_owned(),
         ))?;
 
-    // Fetch roles
+    // The roles feed the response payload, the tier of the issued token
+    // follows the effective permissions (see login note above).
     let roles = get_cached_user_roles(&container, &user.id).await?;
-    let role_claim = primary_role_claim(&roles);
+    let ability = user_ability(container.as_ref(), user.id).await?;
+    let role_claim = primary_role_claim(&ability);
 
     // Generate tokens (same as login)
     #[allow(clippy::get_first)]
@@ -2394,10 +2408,12 @@ mod tests {
     use super::*;
     use crate::models::profile::Profile;
     use crate::models::refresh_token::RefreshToken;
+    use crate::models::role::ROLE_VIEWER;
     use crate::models::user::User;
     use crate::repositories::mocks::{mock_app_config, mock_container};
     use crate::repositories::profiles_repository::MockIProfileRepository;
     use crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository;
+    use crate::repositories::traits::users_trait::RoleGrantRow;
     use crate::repositories::users_repository::MockIUserRepository;
     use crate::security::SecurityService;
 
@@ -2596,6 +2612,10 @@ mod tests {
             .expect_get_user_roles()
             .times(1)
             .returning(|_| Ok(vec!["fan".to_string()]));
+        mock_users
+            .expect_get_user_grants()
+            .times(1)
+            .returning(|_| Ok(Vec::new()));
 
         let mut mock_profiles = MockIProfileRepository::new();
         mock_profiles
@@ -2658,6 +2678,95 @@ mod tests {
     }
 
     #[actix_web::test]
+    async fn login_derives_the_role_claim_from_the_effective_permissions() {
+        let user = test_user("user@example.com");
+        let profile = test_profile(user.id);
+        let jwt_secret = mock_app_config().jwt_secret.clone();
+
+        let mut mock_users = MockIUserRepository::new();
+        mock_users
+            .expect_find_by_email()
+            .times(1)
+            .returning(move |_| Ok(Some(user.clone())));
+        mock_users
+            .expect_record_successful_login()
+            .times(1)
+            .returning(|_, _| Ok(1));
+        mock_users
+            .expect_get_user_roles()
+            .times(1)
+            .returning(|_| Ok(vec!["admin".to_string()]));
+        mock_users.expect_get_user_grants().times(1).returning(|_| {
+            Ok(vec![RoleGrantRow {
+                role_name: "admin".to_string(),
+                resource_type: None,
+                resource_id: None,
+                permission_code: Some("users:read".to_string()),
+                effect: Some(0),
+            }])
+        });
+
+        let mut mock_profiles = MockIProfileRepository::new();
+        mock_profiles
+            .expect_find_by_user_id()
+            .times(1)
+            .returning(move |_| Ok(Some(profile.clone())));
+
+        let mut mock_refresh_tokens = MockIRefreshTokenRepository::new();
+        mock_refresh_tokens.expect_create().times(1).returning(|_| {
+            Ok(RefreshToken {
+                id: Uuid::new_v4(),
+                user_id: Uuid::new_v4(),
+                token_hash: "hash".to_string(),
+                device_info: None,
+                ip_address: None,
+                expires_at: chrono::Utc::now(),
+                revoked_at: None,
+                created_at: chrono::Utc::now(),
+                updated_at: chrono::Utc::now(),
+            })
+        });
+
+        let mut container = mock_container();
+        container.users = Arc::new(mock_users);
+        container.profiles = Arc::new(mock_profiles);
+        container.refresh_tokens = Arc::new(mock_refresh_tokens);
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .service(login),
+        )
+        .await;
+
+        let req = test::TestRequest::post()
+            .uri("/login")
+            .insert_header(("User-Agent", "test-agent"))
+            .set_json(json!({
+                "email": "user@example.com",
+                "password": "CorrectPassword1"
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(resp.status(), actix_web::http::StatusCode::OK);
+
+        let body: serde_json::Value = test::read_body_json(resp).await;
+        let access_token = body
+            .get("access_token")
+            .and_then(|value| value.as_str())
+            .expect("access token");
+        let claims = crate::middleware::auth::verify_token(access_token, &jwt_secret)
+            .expect("valid access token");
+
+        assert_eq!(
+            claims.role,
+            ROLE_VIEWER.as_i32(),
+            "the role name must not raise the tier: the grants only allow reading"
+        );
+    }
+
+    #[actix_web::test]
     async fn refresh_rejects_requests_without_refresh_cookie() {
         let container = mock_container();
 
@@ -2708,6 +2817,10 @@ mod tests {
             .expect_get_user_roles()
             .times(1)
             .returning(|_| Ok(vec!["fan".to_string()]));
+        mock_users
+            .expect_get_user_grants()
+            .times(1)
+            .returning(|_| Ok(Vec::new()));
 
         let mut mock_profiles = MockIProfileRepository::new();
         mock_profiles
@@ -2789,9 +2902,9 @@ mod tests {
             .times(1)
             .returning(move |_| Ok(user_for_find.clone()));
         mock_users
-            .expect_get_user_roles()
+            .expect_get_user_grants()
             .times(1)
-            .returning(|_| Ok(vec!["fan".to_string()]));
+            .returning(|_| Ok(Vec::new()));
 
         let mut mock_profiles = MockIProfileRepository::new();
         mock_profiles
