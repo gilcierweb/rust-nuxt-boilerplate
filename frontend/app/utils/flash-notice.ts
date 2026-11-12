@@ -38,3 +38,22 @@ export function noticeKeyFromQuery(query: Record<string, unknown>): string | nul
   if (!(notice in NOTICE_KEYS)) return null
   return NOTICE_KEYS[notice as NoticeKind]
 }
+
+/**
+ * The query a forwarding redirect must carry to keep a notice alive.
+ *
+ * A redirect that builds its target from a path drops the query, so a
+ * notice that already travelled one hop dies on the next one: the portal
+ * index forwards to its dashboard, and the operator again landed with no
+ * word about why. This answers the notice part of the query alone, or
+ * undefined when there is none to keep, so a redirect forwards the flash
+ * without forwarding the rest of the query it was given.
+ */
+export function noticeQuery(
+  query: Record<string, unknown>,
+): { notice: NoticeKind } | undefined {
+  const notice = query.notice
+  if (typeof notice !== 'string') return undefined
+  if (!(notice in NOTICE_KEYS)) return undefined
+  return { notice: notice as NoticeKind }
+}

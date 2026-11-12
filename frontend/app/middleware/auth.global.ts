@@ -107,7 +107,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
   if (isLoggedIn && isAdminRoute && !isAdmin) {
     // The operator asked for a screen their authority does not open. The
     // redirect carries the notice so the portal can say so: a silent bounce
-    // reads as a broken link.
-    return navigateTo(noticeTarget('forbidden', localePath('/portal')))
+    // reads as a broken link. The target is the dashboard the portal index
+    // forwards to, not the index itself, so the notice crosses one hop
+    // instead of dying on the second one.
+    return navigateTo(noticeTarget('forbidden', localePath('/portal/dashboard')))
   }
 });

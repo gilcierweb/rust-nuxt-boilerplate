@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest'
 import {
   NOTICE_KEYS,
   noticeKeyFromQuery,
+  noticeQuery,
   noticeTarget,
 } from '../../../app/utils/flash-notice'
 
@@ -22,6 +23,25 @@ describe('noticeKeyFromQuery', () => {
   it('answers null when the query carries no notice', () => {
     expect(noticeKeyFromQuery({})).toBeNull()
     expect(noticeKeyFromQuery({ notice: undefined })).toBeNull()
+  })
+})
+
+describe('noticeQuery', () => {
+  it('carries a known notice so a forwarding redirect keeps it alive', () => {
+    expect(noticeQuery({ notice: 'forbidden' })).toEqual({ notice: 'forbidden' })
+  })
+
+  it('answers undefined for a query with no notice', () => {
+    expect(noticeQuery({})).toBeUndefined()
+  })
+
+  it('drops a notice it does not know instead of forwarding it', () => {
+    expect(noticeQuery({ notice: 'something-else' })).toBeUndefined()
+  })
+
+  it('forwards the notice alone, never the rest of the query', () => {
+    // A paginated link must not hand its page to the target of a redirect.
+    expect(noticeQuery({ notice: 'forbidden', page: '2' })).toEqual({ notice: 'forbidden' })
   })
 })
 
