@@ -32,7 +32,10 @@ actix-cors = "0.7.1"
 # h2 0.3 is EOL, patched only in >=0.4.16, but actix-http 3.13.3 still pins 0.3.
 # Disabling http2 removes h2 0.3 from Cargo.lock; TLS termination must be
 # handled at reverse proxy (nginx/traefik). See app.rs.
-actix-web = { version = "4.15.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
+# The floor is the patched release of RUSTSEC-2026-0447 (compressed request
+# bodies can exhaust memory before the extractor limits apply): a resolve
+# against a fixed index must not land below it.
+actix-web = { version = "4.19.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
 actix-web-actors = "4.3"
 actix-ws = "0.4.0"
 # security crypto
@@ -75,7 +78,9 @@ validator = { version = "0.20", features = ["derive"] }
 subtle = "2.5"
 thiserror = "1.0"
 
-tokio = { version = "1.50.1", features = ["macros", "rt-multi-thread"] }
+# The floor is the patched release of RUSTSEC-2026-0386 (AsyncFd::new and its
+# relatives violate I/O safety).
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 futures = "0.3"
 
 uuid = { version = "1.16", features = ["v4", "serde"] }
