@@ -713,6 +713,127 @@ async fn locked_account_cannot_use_session_refresh_or_login() {
 }
 
 #[actix_web::test]
+async fn repeated_wrong_passwords_lock_the_account() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let config = Arc::new(test_config());
+    let r_pool = redis_pool();
+
+    let state = web::Data::new(backend::AppState {
+        db: db.pool().clone(),
+        redis: r_pool.clone(),
+        config: config.clone(),
+        metrics: Arc::new(backend::services::metrics_service::MetricsRegistry::new()),
+        ws: backend::ws::WsRedisState::new(r_pool.clone(), backend::ws::WsLimits::default()),
+        jwt_secrets: Arc::new(config.jwt_secrets.clone()),
+        otel_provider: None,
+    });
+
+    let container = web::Data::new(backend::repositories::AppContainer::new(
+        db.pool().clone(),
+        r_pool.clone(),
+        (*config).clone(),
+    ));
+
+    let email = format!("brute-{}@example.com", uuid::Uuid::new_v4());
+    let password = "StrongPass123!@#";
+
+    let app = test::init_service(
+        App::new()
+            .app_data(state)
+            .app_data(container)
+            .service(
+                web::scope("/api/v1").service(
+                    web::scope("/auth")
+                        .wrap(backend::middleware::auth::JwtAuth::new(
+                            backend::middleware::auth_middleware::JwtAuthConfig::bearer_exempt()
+                                .with_token_blacklist(Arc::new(
+                                    backend::repositories::access_token_blacklist::AccessTokenBlacklist::new(r_pool.clone()),
+                                )),
+                        ))
+                        .service(backend::controllers::auth_controller::register)
+                        .service(backend::controllers::auth_controller::login),
+                ),
+            ),
+    )
+    .await;
+
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/register")
+            .set_json(serde_json::json!({
+                "email": email,
+                "password": password,
+                "password_confirmation": password
+            }))
+            .to_request(),
+    )
+    .await;
+    let register_body: Value = test::read_body_json(resp).await;
+    let user_id = register_body["user_id"]
+        .as_str()
+        .expect("the registered user id")
+        .to_string();
+
+    {
+        let mut conn = db.pool().get().await.expect("Failed to get connection");
+        diesel::sql_query("UPDATE users SET confirmed_at = NOW() WHERE id = $1")
+            .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(&user_id).unwrap())
+            .execute(&mut *conn)
+            .await
+            .expect("Failed to confirm user email");
+    }
+
+    // The login handler locks on the tenth failed attempt: the counter and the
+    // lock are one statement, so the whole statement has to stay correct.
+    for _ in 0..10 {
+        let resp = test::call_service(
+            &app,
+            test::TestRequest::post()
+                .uri("/api/v1/auth/login")
+                .set_json(serde_json::json!({ "email": email, "password": "WrongPass123!@#" }))
+                .to_request(),
+        )
+        .await;
+        assert_eq!(resp.status(), 401, "a wrong password stays unauthorized");
+    }
+
+    {
+        let mut conn = db.pool().get().await.expect("Failed to get connection");
+
+        #[derive(diesel::QueryableByName)]
+        struct LockRow {
+            #[diesel(sql_type = diesel::sql_types::Bool)]
+            locked: bool,
+        }
+
+        let row =
+            diesel::sql_query("SELECT locked_at IS NOT NULL AS locked FROM users WHERE id = $1")
+                .bind::<diesel::sql_types::Uuid, _>(UuidType::parse_str(&user_id).unwrap())
+                .get_result::<LockRow>(&mut *conn)
+                .await
+                .expect("the lock read failed");
+        assert!(row.locked, "the tenth failed attempt locks the account");
+    }
+
+    // And the correct password no longer opens the session.
+    let resp = test::call_service(
+        &app,
+        test::TestRequest::post()
+            .uri("/api/v1/auth/login")
+            .set_json(serde_json::json!({ "email": email, "password": password }))
+            .to_request(),
+    )
+    .await;
+    assert_eq!(
+        resp.status(),
+        401,
+        "a locked account refuses the correct password"
+    );
+}
+
+#[actix_web::test]
 async fn password_change_revokes_existing_access_tokens() {
     seed_catalog();
     let db = TestDb::new().await;

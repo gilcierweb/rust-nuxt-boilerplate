@@ -387,27 +387,35 @@ impl IUserRepository for UsersRepository {
                 Box::pin(async move {
                     // Generate unlock token digest when account gets locked
                     let unlock_token = Uuid::new_v4().to_string();
-                    let new_unlock_token_digest = crate::services::token_service::hash_token(
-                        &unlock_token,
-                        &salt,
-                    );
+                    let new_unlock_token_digest =
+                        crate::services::token_service::hash_token(&unlock_token, &salt);
 
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             failed_attempts.eq(diesel::dsl::sql::<diesel::sql_types::Integer>(
                                 "failed_attempts + 1",
                             )),
-                            locked_at.eq(diesel::dsl::sql::<diesel::sql_types::Nullable<
-                                diesel::sql_types::Timestamptz,
-                            >>(&format!(
-                                "CASE WHEN failed_attempts + 1 >= {max_attempts} THEN NOW() ELSE locked_at END"
-                            ))),
-                            unlock_token_digest.eq(diesel::dsl::sql::<diesel::sql_types::Nullable<
-                                diesel::sql_types::Varchar,
-                            >>(&format!(
-                                "CASE WHEN failed_attempts + 1 >= {max_attempts} THEN '{}' ELSE unlock_token_digest END",
-                                new_unlock_token_digest
-                            ))),
+                            // Both cases bind their values instead of
+                            // interpolating them into the statement text: the
+                            // comparison limit comes from the config and the
+                            // digest from the token service, and neither is
+                            // allowed to reach the SQL as a literal.
+                            locked_at.eq(diesel::dsl::sql::<
+                                diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,
+                            >(
+                                "CASE WHEN failed_attempts + 1 >= "
+                            )
+                            .bind::<diesel::sql_types::Integer, _>(max_attempts)
+                            .sql(" THEN NOW() ELSE locked_at END")),
+                            unlock_token_digest.eq(diesel::dsl::sql::<
+                                diesel::sql_types::Nullable<diesel::sql_types::Varchar>,
+                            >(
+                                "CASE WHEN failed_attempts + 1 >= "
+                            )
+                            .bind::<diesel::sql_types::Integer, _>(max_attempts)
+                            .sql(" THEN ")
+                            .bind::<diesel::sql_types::Text, _>(&new_unlock_token_digest)
+                            .sql(" ELSE unlock_token_digest END")),
                             updated_at.eq(chrono::Utc::now().naive_utc()),
                         ))
                         .execute(conn)
