@@ -23,6 +23,11 @@
   - [Upload](#upload)
   - [WebSocket](#websocket)
   - [Webhooks](#webhooks)
+- [RBAC and the Seed](#-rbac-and-the-seed)
+  - [Canonical catalog](#canonical-catalog)
+  - [Seed behavior](#seed-behavior)
+  - [Auditing and converging manually](#auditing-and-converging-manually)
+  - [Register default role](#register-default-role)
 - [Frontend Routes](#-frontend-routes)
   - [Public Pages](#public-pages)
   - [Authentication Pages](#authentication-pages)
@@ -87,19 +92,16 @@ https://rust-nuxt-boilerplate.gilcierweb.workers.dev/admin/
 ## Portal App
 https://rust-nuxt-boilerplate.gilcierweb.workers.dev/portal/
 
-admin: admin@example.com
+admin: user01@example.com
 
-Test users:
-- admin@example.com | password123 | role=admin
-- user02@example.com | password123 | role=user
-- user03@example.com | password123 | role=user
-- user04@example.com | password123 | role=user
-- user05@example.com | password123 | role=user
-- user06@example.com | password123 | role=user
-- user07@example.com | password123 | role=user
-- user08@example.com | password123 | role=user
-- user09@example.com | password123 | role=user
-- user10@example.com | password123 | role=user
+Test users (password `password123`):
+- user01@example.com | role=admin (the only administrator)
+- user02@example.com | role=manager
+- user03@example.com | role=editor
+- user04@example.com | role=viewer
+- user05@example.com | role=support
+- user06@example.com | role=customer
+- user07 to user100 | the rotation above repeats (manager, editor, viewer, support, customer)
 
 Everyone's password: password123
 
@@ -253,7 +255,7 @@ cd backend
 # Run migrations
 diesel migration run
 
-# Seed demo data (admin user, roles, permissions)
+# Seed demo data (roles, permissions, and the convergent demo subjects)
 cargo run --bin seed
 ```
 
@@ -312,8 +314,8 @@ pnpm dev
 | **Portainer** | http://localhost:9000 | - |
 
 **Default Admin** (after seeding):
-- Email: `admin@example.com`
-- Password: `changeme123` ⚠️ **Change immediately!**
+- Email: `user01@example.com`
+- Password: `password123` (the seed uses this for every demo subject, so change it before any real use)
 
 ---
 
@@ -390,6 +392,40 @@ Interactive API documentation is available at:
 - **Swagger UI**: http://localhost:8080/swagger-ui
 - **Scalar**: http://localhost:8080/scalar
 - **OpenAPI JSON**: http://localhost:8080/api-docs/openapi.json
+
+---
+
+## 🔐 RBAC and the Seed
+
+### Canonical catalog
+
+The migration creates the canonical catalog: the roles `admin`, `manager`, `editor`, `viewer`, `support` and `customer`, the permission codes (`resource:action`, for example `users:read`), and the allow links between them. The catalog is additive: a later migration only adds new rows and never rewrites the links you edited in the admin screens.
+
+### Seed behavior
+
+`cargo run --bin seed` reuses that catalog and converges the demo subjects to it:
+
+- `user01@example.com` is the only `admin`.
+- `userNN@example.com` (NN from 02 to 100) rotate over `manager`, `editor`, `viewer`, `support`, `customer`.
+- Every run removes the links the desired state does not name and inserts the missing ones, so running the seed twice leaves the same database.
+
+### Auditing and converging manually
+
+The seed output lists the roles each subject really holds, read back from the link table. To audit the distribution without the seed, count the holders per role:
+
+```sql
+SELECT r.name, count(*) AS holders
+FROM users_roles ur
+JOIN roles r ON r.id = ur.role_id
+GROUP BY r.name
+ORDER BY r.name;
+```
+
+The addresses themselves are encrypted, so the per subject truth comes from `GET /api/v1/admin/users` (which decrypts) or from the seed output. Running the seed again is the documented way to converge a database that drifted.
+
+### Register default role
+
+`REGISTER_DEFAULT_ROLE` (in `.env.example`, default `customer`) names the role a new registration receives. The role is resolved by name and must exist in the canonical catalog, so run the migrations before opening the registration endpoint.
 
 ---
 

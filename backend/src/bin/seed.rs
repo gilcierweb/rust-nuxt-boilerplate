@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::env;
 
 use argon2::Argon2;
@@ -51,9 +52,22 @@ fn sanitize_seed_text(input: &str, fallback: &str, max_chars: usize) -> String {
 
 fn test_user_email(user_index: usize) -> String {
     if user_index == 1 {
-        "admin@example.com".to_string()
+        "user01@example.com".to_string()
     } else {
         format!("user{user_index:02}@example.com")
+    }
+}
+
+/// The canonical rotation of the non admin seed users: every subject outside
+/// the first holds one of these roles, taken from the catalog the migration
+/// seeds. The seed never invents a role of its own.
+const NON_ADMIN_ROTATION: [&str; 5] = ["manager", "editor", "viewer", "support", "customer"];
+
+fn role_for(user_index: usize) -> &'static str {
+    if user_index == 1 {
+        "admin"
+    } else {
+        NON_ADMIN_ROTATION[(user_index - 2) % NON_ADMIN_ROTATION.len()]
     }
 }
 
@@ -316,17 +330,36 @@ fn ensure_profile(
         .get_result(conn)?)
 }
 
-fn ensure_user_role(conn: &mut PgConnection, user_uuid: Uuid, role_uuid: Uuid) -> SeedResult<()> {
+/// Converges the links of a seed user to the desired set.
+///
+/// The old seed only inserted, so a second run accumulated links: the broken
+/// catalog of a previous run stayed in place and nobody could tell which roles
+/// a subject really held. The link table has no second owner, so the links the
+/// desired state does not name are removed and the missing ones inserted.
+fn ensure_user_roles(conn: &mut PgConnection, user_uuid: Uuid, desired: &[Uuid]) -> SeedResult<()> {
     use schema::users_roles::dsl::*;
 
-    let exists = users_roles
-        .filter(user_id.eq(user_uuid).and(role_id.eq(role_uuid)))
-        .select(user_id)
-        .first::<Uuid>(conn)
-        .optional()?
-        .is_some();
+    let stored: Vec<Uuid> = users_roles
+        .filter(user_id.eq(user_uuid))
+        .select(role_id)
+        .load::<Uuid>(conn)?;
 
-    if !exists {
+    let stale: Vec<Uuid> = stored
+        .iter()
+        .copied()
+        .filter(|stored_role| !desired.contains(stored_role))
+        .collect();
+    if !stale.is_empty() {
+        diesel::delete(users_roles.filter(user_id.eq(user_uuid).and(role_id.eq_any(stale))))
+            .execute(conn)?;
+    }
+
+    let missing: Vec<Uuid> = desired
+        .iter()
+        .copied()
+        .filter(|desired_role| !stored.contains(desired_role))
+        .collect();
+    for role_uuid in missing {
         diesel::insert_into(users_roles)
             .values((user_id.eq(user_uuid), role_id.eq(role_uuid)))
             .execute(conn)?;
@@ -402,12 +435,49 @@ fn print_counts(conn: &mut PgConnection) -> SeedResult<()> {
     Ok(())
 }
 
-fn print_test_users() {
-    println!("\nTest users:");
-    for index in 1..=10 {
-        let role = if index == 1 { "admin" } else { "user" };
-        println!("- {} | password123 | role={}", test_user_email(index), role);
+/// Prints the role names each seed user really holds, read back from the link
+/// table. The old output printed a fixed `role=user`, which was false for every
+/// subject the rotation had given another role.
+fn print_seed_subjects(conn: &mut PgConnection, security: &SecurityService) -> SeedResult<()> {
+    let mut blind_indexes: Vec<Vec<u8>> = Vec::with_capacity(100);
+    for index in 1..=100 {
+        blind_indexes.push(
+            security
+                .email_blind_index(&test_user_email(index))
+                .map_err(|e| format!("failed to index the seed email: {e}"))?,
+        );
     }
+
+    let rows: Vec<(Vec<u8>, String)> = schema::users::table
+        .inner_join(
+            schema::users_roles::table.on(schema::users_roles::user_id.eq(schema::users::id)),
+        )
+        .inner_join(schema::roles::table.on(schema::roles::id.eq(schema::users_roles::role_id)))
+        .select((schema::users::email_blind_index, schema::roles::name))
+        .filter(schema::users::email_blind_index.eq_any(&blind_indexes))
+        .load(conn)?;
+
+    let mut roles_by_index: HashMap<usize, Vec<String>> = HashMap::new();
+    for (blind_index, role_name) in rows {
+        if let Some(index) = (1..=100).find(|index| {
+            security
+                .email_blind_index(&test_user_email(*index))
+                .is_ok_and(|value| value == blind_index)
+        }) {
+            roles_by_index.entry(index).or_default().push(role_name);
+        }
+    }
+
+    println!("\nTest users (password123):");
+    for index in 1..=100 {
+        let roles = roles_by_index
+            .get(&index)
+            .cloned()
+            .unwrap_or_else(|| vec!["none".to_string()]);
+        println!("- {} | role={}", test_user_email(index), roles.join(", "));
+    }
+
+    Ok(())
 }
 
 fn main() -> SeedResult<()> {
@@ -425,32 +495,17 @@ fn main() -> SeedResult<()> {
     let security = build_security_service()?;
 
     conn.transaction(|conn| {
-        // Canonical RBAC catalog: roles, permissions, and allow links.
+        // Canonical RBAC catalog: roles, permissions, and allow links. The
+        // seed reuses it and never invents a role of its own, so the catalog
+        // the admin screens edit is the one the subjects carry.
         let canonical_roles = rbac_catalog_service::ensure_canonical_catalog(conn)?;
-        let finance_role_id = rbac_catalog_service::ensure_role(conn, "finance", None, None)?;
-
-        let admin_role_id = canonical_roles["admin"];
-
-        // Non admin users rotate over these roles (unchanged distribution).
-        let role_ids: Vec<Uuid> = vec![
-            canonical_roles["admin"],
-            canonical_roles["manager"],
-            canonical_roles["editor"],
-            canonical_roles["viewer"],
-            canonical_roles["support"],
-            finance_role_id,
-        ];
 
         for index in 1..=100 {
             let user_data = generate_user_data(index);
             let user_id = ensure_user(conn, &security, index)?;
             let _profile_id = ensure_profile(conn, user_id, index, &user_data)?;
-            let role_id = if index == 1 {
-                admin_role_id
-            } else {
-                role_ids[(index - 1) % role_ids.len()]
-            };
-            ensure_user_role(conn, user_id, role_id)?;
+            let role_id = canonical_roles[role_for(index)];
+            ensure_user_roles(conn, user_id, &[role_id])?;
             let _refresh_token_id = ensure_refresh_token(conn, user_id, index)?;
             let _audit_log_id = ensure_audit_log(conn, user_id, index)?;
         }
@@ -459,9 +514,9 @@ fn main() -> SeedResult<()> {
     })?;
 
     println!("Seed completed successfully");
-    println!("Admin email: admin@example.com");
+    println!("Admin email: user01@example.com");
     println!("Default password: password123");
-    print_test_users();
+    print_seed_subjects(&mut conn, &security)?;
     print_counts(&mut conn)?;
 
     Ok(())
