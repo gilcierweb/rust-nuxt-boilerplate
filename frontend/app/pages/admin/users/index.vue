@@ -109,7 +109,7 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     id: 'display_name',
     accessorKey: 'full_name',
     header: () => t('admin.users.table.displayName'),
-    cell: (info) => info.getValue() || '—',
+    cell: (info) => info.getValue() || t('admin.common.emptyValue'),
     meta: { align: 'left' },
   },
   {
@@ -137,7 +137,7 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     accessorKey: 'first_name',
     header: () => t('admin.users.table.firstName'),
     enableSorting: false,
-    cell: (info) => info.getValue() || '—',
+    cell: (info) => info.getValue() || t('admin.common.emptyValue'),
     meta: { align: 'left' },
   },
   {
@@ -145,7 +145,7 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     accessorKey: 'last_name',
     header: () => t('admin.users.table.lastName'),
     enableSorting: false,
-    cell: (info) => info.getValue() || '—',
+    cell: (info) => info.getValue() || t('admin.common.emptyValue'),
     meta: { align: 'left' },
   },
   {

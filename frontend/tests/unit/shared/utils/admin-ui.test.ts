@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createApp } from 'vue'
 
-import { adminDeleteButton } from '@/app/utils/admin-ui'
+import { adminDeleteButton, formatCurrency, formatDate, formatDateTime } from '@/app/utils/admin-ui'
 
 describe('adminDeleteButton', () => {
   it('uses ARRAY children on the native button (array children contract)', () => {
@@ -72,5 +72,28 @@ describe('adminDeleteButton', () => {
     expect(container.querySelector('.icon-\\[tabler--trash\\]')).not.toBeNull()
 
     container.remove()
+  })
+})
+
+describe('the date and currency formatters', () => {
+  // A missing value renders as the empty placeholder of the caller: a
+  // decorative character is banned by the project rules, so the formatters
+  // answer an empty string and the cell names the empty state.
+  it('answers an empty string for a missing value', () => {
+    expect(formatDateTime(undefined)).toBe('')
+    expect(formatDateTime(null)).toBe('')
+    expect(formatDate(undefined)).toBe('')
+    expect(formatCurrency(undefined)).toBe('')
+  })
+
+  it('formats a readable instant in the locale of the caller', () => {
+    const formatted = formatDateTime('2026-01-02T03:04:05Z', 'en-US')
+
+    expect(formatted).toContain('2026')
+    expect(formatted).not.toBe('2026-01-02T03:04:05Z')
+  })
+
+  it('hands back a value it cannot read unchanged', () => {
+    expect(formatDateTime('not a date')).toBe('not a date')
   })
 })

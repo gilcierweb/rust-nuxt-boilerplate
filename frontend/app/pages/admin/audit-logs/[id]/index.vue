@@ -47,7 +47,7 @@
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.auditLogs.fields.actorRoleSnapshot') }}</p>
-          <p class="mt-1 text-base-content">{{ item.actor_role_snapshot || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.actor_role_snapshot || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.auditLogs.fields.action') }}</p>
@@ -59,19 +59,19 @@
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.auditLogs.fields.resourceId') }}</p>
-          <p class="mt-1 text-base-content">{{ item.resource_id || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.resource_id || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.auditLogs.fields.requestId') }}</p>
-          <p class="mt-1 text-base-content">{{ item.request_id || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.request_id || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.auditLogs.fields.ipAddress') }}</p>
-          <p class="mt-1 text-base-content">{{ item.ip_address || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.ip_address || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.auditLogs.fields.userAgent') }}</p>
-          <p class="mt-1 text-base-content">{{ item.user_agent || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.user_agent || $t('admin.common.emptyValue') }}</p>
         </div>
         <div class="md:col-span-2">
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.auditLogs.fields.changes') }}</p>

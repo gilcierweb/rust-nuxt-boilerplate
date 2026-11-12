@@ -56,6 +56,7 @@
       "noRecords": "No records found for this resource.",
       "filterPlaceholder": "Filter records...",
       "search": "Search",
+      "emptyValue": "No value",
       "viewDetails": "View record details",
       "yes": "Yes",
       "no": "No",

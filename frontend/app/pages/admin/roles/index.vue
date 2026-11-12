@@ -123,14 +123,14 @@ const columns = computed<DataTableColumn<Role>[]>(() => [
     id: 'resource_type',
     accessorKey: 'resource_type',
     header: () => t('admin.roles.table.resourceType'),
-    cell: (info) => info.getValue() || '—',
+    cell: (info) => info.getValue() || t('admin.common.emptyValue'),
     meta: { align: 'left' },
   },
   {
     id: 'resource_id',
     accessorKey: 'resource_id',
     header: () => t('admin.roles.form.resource_id'),
-    cell: (info) => info.getValue() || '—',
+    cell: (info) => info.getValue() || t('admin.common.emptyValue'),
     meta: { align: 'left', truncate: true },
   },
   {

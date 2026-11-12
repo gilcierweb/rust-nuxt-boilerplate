@@ -38,6 +38,7 @@ export function useFormatters() {
   /** Format ISO date to relative time using i18n keys */
   function timeAgo(dateStr: string): string {
     const { t } = useI18n()
+    if (!dateStr) return t('admin.common.emptyValue')
     const diff = Date.now() - new Date(dateStr).getTime()
     const mins = Math.floor(diff / 60_000)
     if (mins < 1) return t('timeAgo.now')

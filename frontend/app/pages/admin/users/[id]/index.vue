@@ -52,27 +52,27 @@
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.email') }}</p>
-          <p class="mt-1 text-base-content">{{ item.email || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.email || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.displayName') }}</p>
-          <p class="mt-1 text-base-content">{{ item.display_name || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.display_name || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.fullName') }}</p>
-          <p class="mt-1 text-base-content">{{ item.full_name || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.full_name || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.firstName') }}</p>
-          <p class="mt-1 text-base-content">{{ item.first_name || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.first_name || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.lastName') }}</p>
-          <p class="mt-1 text-base-content">{{ item.last_name || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.last_name || $t('admin.common.emptyValue') }}</p>
         </div>
         <div>
           <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.users.fields.nickname') }}</p>
-          <p class="mt-1 text-base-content">{{ item.nickname || '—' }}</p>
+          <p class="mt-1 text-base-content">{{ item.nickname || $t('admin.common.emptyValue') }}</p>
         </div>
       </div>
 

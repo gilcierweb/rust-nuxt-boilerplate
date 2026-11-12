@@ -14,9 +14,11 @@ function resolveLocale(): string {
   }
 }
 
-// Format ISO datetime to the locale of the app
+// Format ISO datetime to the locale of the app. A missing value answers an
+// empty string: the caller names the empty state through its own key, so no
+// decorative character reaches the screen.
 export function formatDateTime(value?: string | null, locale: string = resolveLocale()): string {
-  if (!value) return '—'
+  if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleString(locale, {
@@ -29,7 +31,7 @@ export function formatDateTime(value?: string | null, locale: string = resolveLo
 }
 
 export function formatDate(value?: string | null, locale: string = resolveLocale()): string {
-  if (!value) return '—'
+  if (!value) return ''
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
   return date.toLocaleDateString(locale, {
@@ -80,7 +82,7 @@ export function formatCurrency(
   value?: string | number | null,
   currencyCode: string = 'BRL',
 ): string {
-  if (value === undefined || value === null || value === '') return '—'
+  if (value === undefined || value === null || value === '') return ''
 
   const amount = typeof value === 'number' ? value : Number(String(value).replace(',', '.'))
   if (Number.isNaN(amount)) return String(value)

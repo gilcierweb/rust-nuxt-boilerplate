@@ -24,7 +24,7 @@
 
       <div class="space-y-1">
         <p class="text-4xl font-bold text-white font-display tracking-tight group-hover:text-brand-400 transition-colors">
-          {{ stat?.value ?? '—' }}
+          {{ stat?.value ?? t('admin.common.emptyValue') }}
         </p>
         <p class="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
           {{ stat?.label }}
@@ -49,6 +49,8 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
+
 defineProps<{
   stat?: {
     label: string
