@@ -740,9 +740,14 @@ backend/migrations/
 cd backend
 cargo test
 
+# The integration suites share one database, so they run one thread at a time
+cargo test -- --test-threads=1
+
 # Frontend tests
 cd frontend
 pnpm test          # vitest
+pnpm typecheck     # the app project, not the solution file
+pnpm lint
 pnpm test:e2e      # playwright
 
 # Integration tests (requires Docker)
