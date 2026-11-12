@@ -474,6 +474,9 @@ Complete frontend route structure organized by section.
 | `/admin/roles/new` | `app/pages/admin/roles/new.vue` | Create new role |
 | `/admin/roles/:id` | `app/pages/admin/roles/[id]/index.vue` | View role details |
 | `/admin/roles/:id/edit` | `app/pages/admin/roles/[id]/edit.vue` | Edit role |
+| `/admin/permissions` | `app/pages/admin/permissions/index.vue` | Permission catalog and matrix |
+| `/admin/permissions/new` | `app/pages/admin/permissions/new.vue` | Create permission |
+| `/admin/permissions/:id/edit` | `app/pages/admin/permissions/[id]/edit.vue` | Edit permission |
 | `/admin/audit-logs` | `app/pages/admin/audit-logs/index.vue` | Audit logs list |
 | `/admin/audit-logs/:id` | `app/pages/admin/audit-logs/[id]/index.vue` | View audit log details |
 | `/admin/audit-logs/:id/edit` | `app/pages/admin/audit-logs/[id]/edit.vue` | Edit audit log |
