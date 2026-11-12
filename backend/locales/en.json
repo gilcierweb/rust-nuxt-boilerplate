@@ -9,7 +9,6 @@
   "admin.permissions.validation.name_invalid": "Permission name is required and must be at most 255 characters",
   "admin.permissions.validation.name_taken": "Another permission already uses this name",
   "admin.permissions.validation.resource_invalid": "Unknown resource: the code must name a resource of the catalog",
-  "admin.permissions.validation.sort_invalid": "Unknown sort field: use name or code",
   "admin.roles.guard.administrator_role": "The administrator role cannot be deleted",
   "admin.roles.guard.administrator_source": "The change would leave no role holding roles:read and roles:update",
   "admin.roles.guard.default_role": "This role is the default of the registration and cannot be deleted",

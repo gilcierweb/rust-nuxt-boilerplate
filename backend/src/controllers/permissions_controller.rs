@@ -114,7 +114,7 @@ fn unique_violation(error: &diesel::result::Error) -> AppError {
         ("q" = Option<String>, Query, description = "Search over the code and the name"),
         ("page" = Option<i64>, Query, description = "Page number (1-based)"),
         ("per_page" = Option<i64>, Query, description = "Items per page (max 100)"),
-        ("sort_by" = Option<String>, Query, description = "Sort field: `name`, `code` or `updated_at`"),
+        ("sort_by" = Option<String>, Query, description = "Sort field: `name` or `code`"),
         ("sort_dir" = Option<String>, Query, description = "Sort direction: `asc` or `desc`")
     ),
     responses(
@@ -135,13 +135,10 @@ pub async fn all_permissions(
     ability.authorize(AbilityAction::Read, AbilityResource::Permissions)?;
 
     let params = pagination.into_inner().validated();
-    if let Some(sort_by) = params.sort_by.as_deref()
-        && !PERMISSION_SORT_FIELDS.contains(&sort_by)
-    {
-        return Err(AppError::Validation(
-            t!("admin.permissions.validation.sort_invalid").into_owned(),
-        ));
-    }
+    // The shared validator: a valueless key means no ordering was chosen, the
+    // same way an absent key does, and only a field outside the allowlist is
+    // refused. The list has no reason to answer differently from its siblings.
+    params.validate_sort_field(&PERMISSION_SORT_FIELDS)?;
 
     let search = search
         .into_inner()

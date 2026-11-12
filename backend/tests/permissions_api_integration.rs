@@ -264,6 +264,59 @@ async fn the_list_search_matches_the_code() {
     }));
 }
 
+// A query string such as `?sort_by` (a key with no value) reads as an empty
+// string, and a client that omits the value asks for the same default order as
+// a client that omits the key. This list is the last one of the admin domain
+// validating its sort field on its own, so a valueless key was the one place
+// the tables still answered 422 on the first render.
+#[actix_web::test]
+async fn the_list_answers_a_valueless_sort_key_with_the_default_order() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let subject = subject_with_roles(&db, &["admin"]).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+
+    let req = authorized(
+        test::TestRequest::get().uri("/admin/permissions?page=1&per_page=10&sort_by&sort_dir"),
+        &bearer(&config, subject),
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "a valueless sort key means no ordering, not a validation error"
+    );
+
+    let json = body_json(resp).await;
+    assert!(
+        json["data"].as_array().is_some(),
+        "the list answers a data array"
+    );
+}
+
+#[actix_web::test]
+async fn the_list_refuses_a_sort_field_outside_the_allowlist() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let subject = subject_with_roles(&db, &["admin"]).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+
+    // The names are translated, so their alphabetical order is not the one the
+    // reader expects: a silent fallback would hide the mistake of the client.
+    let req = authorized(
+        test::TestRequest::get().uri("/admin/permissions?sort_by=description"),
+        &bearer(&config, subject),
+    )
+    .to_request();
+    assert_eq!(
+        test::call_service(&app, req).await.status(),
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+}
+
 #[actix_web::test]
 async fn the_list_search_folds_the_case_of_the_human_name() {
     seed_catalog();
