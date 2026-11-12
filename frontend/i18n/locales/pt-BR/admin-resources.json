@@ -98,7 +98,9 @@
         "displayName": "Nome de exibição",
         "email": "Email",
         "firstName": "Nome",
-        "lastName": "Sobrenome"
+        "lastName": "Sobrenome",
+        "roles": "Cargos",
+        "noRoles": "Nenhum cargo"
       },
       "fields": {
         "displayName": "Nome de exibição",
@@ -108,7 +110,16 @@
         "fullName": "Nome completo",
         "nickname": "Apelido"
       },
-      "empty": "Nenhum usuário encontrado."
+      "empty": "Nenhum usuário encontrado.",
+      "roles": {
+        "card_title": "Cargos do usuário",
+        "card_description": "Marque os cargos que o usuário passa a ter. A gravação substitui todos os vínculos.",
+        "unsaved": "Há alterações não salvas.",
+        "saving": "Salvando...",
+        "save": "Salvar cargos",
+        "updated": "Cargos do usuário atualizados.",
+        "updateError": "Falha ao atualizar os cargos."
+      }
     },
     "auditLogs": {
       "title": "Auditoria",

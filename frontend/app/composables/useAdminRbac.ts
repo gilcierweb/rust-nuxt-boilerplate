@@ -2,6 +2,7 @@ import type {
   Permission,
   PermissionAssignment,
   PermissionCatalog,
+  Role,
   RoleMember,
 } from '~/types/rbac'
 
@@ -63,6 +64,11 @@ function dropEmptyValues(query: AdminListQuery): Record<string, string | number>
 export function useAdminRbac() {
   const api = useApi()
 
+  const roles = {
+    list: (query: AdminListQuery = {}) =>
+      api.get<Paginated<Role>>('/admin/roles', { query: dropEmptyValues(query) }),
+  }
+
   const permissions = {
     list: (query: AdminListQuery = {}) =>
       api.get<Paginated<Permission>>('/admin/permissions', {
@@ -107,5 +113,5 @@ export function useAdminRbac() {
       }),
   }
 
-  return { permissions, rolePermissions, roleMembers, userRoles }
+  return { roles, permissions, rolePermissions, roleMembers, userRoles }
 }

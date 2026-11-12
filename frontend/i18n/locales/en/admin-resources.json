@@ -99,7 +99,9 @@
         "email": "Email",
         "firstName": "First Name",
         "lastName": "Last Name",
-        "nickname": "Nickname"
+        "nickname": "Nickname",
+        "roles": "Roles",
+        "noRoles": "No roles"
       },
       "fields": {
         "displayName": "Display Name",
@@ -109,7 +111,16 @@
         "fullName": "Full Name",
         "nickname": "Nickname"
       },
-      "empty": "No users found."
+      "empty": "No users found.",
+      "roles": {
+        "card_title": "User roles",
+        "card_description": "Check the roles the user will hold. The save replaces every assignment.",
+        "unsaved": "There are unsaved changes.",
+        "saving": "Saving...",
+        "save": "Save roles",
+        "updated": "User roles updated.",
+        "updateError": "Failed to update the roles."
+      }
     },
     "auditLogs": {
       "title": "Audit Logs",

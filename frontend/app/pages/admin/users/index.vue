@@ -115,6 +115,16 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     meta: { align: 'left' },
   },
   {
+    id: 'roles',
+    header: () => t('admin.users.table.roles'),
+    enableSorting: false,
+    cell: (info) => {
+      const roles = (info.row.original as UserRow & { roles?: string[] }).roles ?? []
+      return roles.length > 0 ? roles.join(', ') : t('admin.users.table.noRoles')
+    },
+    meta: { align: 'left', truncate: true },
+  },
+  {
     id: 'first_name',
     accessorKey: 'first_name',
     header: () => t('admin.users.table.firstName'),

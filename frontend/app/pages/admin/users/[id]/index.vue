@@ -75,11 +75,41 @@
           <p class="mt-1 text-base-content">{{ item.nickname || '—' }}</p>
         </div>
       </div>
+
+      <div class="rounded-box border border-base-content/10 bg-base-100 p-6 shadow-md shadow-base-content/5">
+        <h2 class="text-lg font-semibold text-base-content">
+          {{ $t('admin.users.roles.card_title') }}
+        </h2>
+        <p class="mt-1 text-sm text-base-content/60">
+          {{ $t('admin.users.roles.card_description') }}
+        </p>
+
+        <div v-if="rolesPending" class="flex items-center justify-center gap-3 py-12 text-base-content/55">
+          <span class="icon-[tabler--loader-2] size-8 animate-spin"></span>
+          <p>{{ $t('admin.common.loadingData') }}</p>
+        </div>
+
+        <AdminRoleSelector
+          v-else
+          class="mt-4"
+          :roles="availableRoles"
+          :selected-ids="assignedIds"
+          :error-message="rolesError"
+          :saving="saving"
+          @save="handleSave"
+        />
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
+import { useAdminRbac } from '~/composables/useAdminRbac'
+import { normalizeResourceResponse } from '~/utils/admin-resources'
+import { extractErrorMessage } from '~/utils/admin-ui'
+import AdminRoleSelector from '~/components/admin/AdminRoleSelector.vue'
+import type { Role } from '~/types/rbac'
+
 definePageMeta({
   layout: 'admin',
 })
@@ -96,6 +126,8 @@ type UserRow = {
 
 const { t } = useI18n()
 const localePath = useLocalePath()
+const toast = useToast()
+const { userRoles, roles } = useAdminRbac()
 
 const breadcrumbItems = computed(() => [
   { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
@@ -106,4 +138,43 @@ const breadcrumbItems = computed(() => [
 const { itemId, item, pending, error, refresh } = useAdminResourceItem<UserRow>('users', {
   keyPrefix: 'admin-users-show',
 })
+
+// The roles of the subject and the catalog the selector offers load beside the
+// user: the assignment card cannot render without either of them.
+const { data, pending: rolesPending, refresh: refreshRoles } = await useApiAsyncData(
+  () => `admin-users-roles-${itemId.value ?? 'none'}`,
+  async () => {
+    if (!itemId.value) return { assigned: [], catalog: [] as Role[] }
+    const [assignedResponse, catalogResponse] = await Promise.all([
+      userRoles.get(itemId.value),
+      roles.list({ per_page: 100 }),
+    ])
+    return {
+      assigned: assignedResponse,
+      catalog: normalizeResourceResponse(catalogResponse) as Role[],
+    }
+  },
+)
+
+const assignedIds = computed(() => (data.value?.assigned ?? []).map((role) => role.id))
+const availableRoles = computed<Role[]>(() => data.value?.catalog ?? [])
+const rolesError = ref('')
+const saving = ref(false)
+
+async function handleSave(roleIds: string[]) {
+  if (!itemId.value) return
+  saving.value = true
+  rolesError.value = ''
+  try {
+    await userRoles.set(itemId.value, roleIds)
+    toast.success(t('admin.users.roles.updated'))
+    await Promise.all([refreshRoles(), refresh()])
+  } catch (saveError: any) {
+    // A refusal (escalation, lockout, unknown role) answers 422 with the
+    // reason: the message travels to the selector instead of a toast alone.
+    rolesError.value = saveError?.message || t('admin.users.roles.updateError')
+  } finally {
+    saving.value = false
+  }
+}
 </script>

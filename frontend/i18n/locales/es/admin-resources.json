@@ -98,7 +98,9 @@
         "displayName": "Nombre para mostrar",
         "email": "Correo",
         "firstName": "Nombre",
-        "lastName": "Apellido"
+        "lastName": "Apellido",
+        "roles": "Roles",
+        "noRoles": "Ningún rol"
       },
       "fields": {
         "displayName": "Nombre para mostrar",
@@ -108,7 +110,16 @@
         "fullName": "Nombre completo",
         "nickname": "Apodo"
       },
-      "empty": "No se encontraron usuarios."
+      "empty": "No se encontraron usuarios.",
+      "roles": {
+        "card_title": "Roles del usuario",
+        "card_description": "Marca los roles que tendrá el usuario. El guardado reemplaza todas las asignaciones.",
+        "unsaved": "Hay cambios sin guardar.",
+        "saving": "Guardando...",
+        "save": "Guardar roles",
+        "updated": "Roles del usuario actualizados.",
+        "updateError": "Fallo al actualizar los roles."
+      }
     },
     "auditLogs": {
       "title": "Auditoría",
