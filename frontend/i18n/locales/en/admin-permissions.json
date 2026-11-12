@@ -25,6 +25,40 @@
       "empty": {
         "title": "No permission found",
         "description": "Adjust the search or clear the filter to see the full catalog."
+      },
+      "newTitle": "New permission",
+      "newDescription": "Create a catalog permission: the code is the resource:action pair chosen below.",
+      "editTitle": "Edit permission",
+      "editDescription": "The code of a permission is fixed: adjust the name and the description.",
+      "form": {
+        "name": "Name",
+        "name_required": "The name is required",
+        "name_too_long": "The name must hold at most 255 characters",
+        "name_hint": "A readable label for the interface.",
+        "name_placeholder": "Read users",
+        "resource": "Resource",
+        "resource_required": "Choose a resource",
+        "action": "Action",
+        "action_required": "Choose an action",
+        "select_resource": "Select the resource",
+        "select_action": "Select the action",
+        "code": "Code",
+        "preview_empty": "Select a resource and an action",
+        "description": "Description",
+        "description_placeholder": "Optional: what the permission allows.",
+        "duplicate_title": "Code already exists",
+        "duplicate": "That resource and action pair is already in use. Choose another one.",
+        "create_submit": "Create permission",
+        "cancel": "Cancel",
+        "saving": "Saving...",
+        "save_changes": "Save changes",
+        "loadError": "Failed to load the catalog."
+      },
+      "messages": {
+        "createSuccess": "Permission created.",
+        "createError": "Failed to create the permission.",
+        "updateSuccess": "Permission updated.",
+        "updateError": "Failed to update the permission."
       }
     }
   }

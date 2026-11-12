@@ -6,7 +6,10 @@ export default defineConfig({
   plugins: [vue()],
   resolve: {
     alias: {
-      '~': resolve(__dirname),
+      // `~` maps to the source directory, the same mapping Nuxt uses at build
+      // time, so a component that imports `~/components/AppAlert.vue`
+      // resolves in the tests exactly as it resolves in the app.
+      '~': resolve(__dirname, 'app'),
       '@': resolve(__dirname),
       '~~': resolve(__dirname),
       '#imports': resolve(__dirname, 'tests/mocks/imports.ts'),

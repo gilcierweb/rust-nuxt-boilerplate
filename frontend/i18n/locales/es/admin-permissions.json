@@ -25,6 +25,40 @@
       "empty": {
         "title": "Ningún permiso encontrado",
         "description": "Ajusta la búsqueda o limpia el filtro para ver el catálogo completo."
+      },
+      "newTitle": "Nuevo permiso",
+      "newDescription": "Crea un permiso del catálogo: el código es el par recurso:acción elegido abajo.",
+      "editTitle": "Editar permiso",
+      "editDescription": "El código de un permiso es fijo: ajusta el nombre y la descripción.",
+      "form": {
+        "name": "Nombre",
+        "name_required": "El nombre es obligatorio",
+        "name_too_long": "El nombre debe tener como máximo 255 caracteres",
+        "name_hint": "Una etiqueta legible para la interfaz.",
+        "name_placeholder": "Leer usuarios",
+        "resource": "Recurso",
+        "resource_required": "Elige un recurso",
+        "action": "Acción",
+        "action_required": "Elige una acción",
+        "select_resource": "Selecciona el recurso",
+        "select_action": "Selecciona la acción",
+        "code": "Código",
+        "preview_empty": "Selecciona un recurso y una acción",
+        "description": "Descripción",
+        "description_placeholder": "Opcional: qué permite el permiso.",
+        "duplicate_title": "El código ya existe",
+        "duplicate": "Ese par de recurso y acción ya está en uso. Elige otro.",
+        "create_submit": "Crear permiso",
+        "cancel": "Cancelar",
+        "saving": "Guardando...",
+        "save_changes": "Guardar cambios",
+        "loadError": "Fallo al cargar el catálogo."
+      },
+      "messages": {
+        "createSuccess": "Permiso creado.",
+        "createError": "Fallo al crear el permiso.",
+        "updateSuccess": "Permiso actualizado.",
+        "updateError": "Fallo al actualizar el permiso."
       }
     }
   }

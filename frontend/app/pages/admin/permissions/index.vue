@@ -18,6 +18,10 @@
         </div>
 
         <div class="flex flex-wrap gap-2">
+          <NuxtLink :to="localePath('/admin/permissions/new')" class="btn btn-primary">
+            <span class="icon-[tabler--plus] size-4.5"></span>
+            {{ $t('admin.permissions.newTitle') }}
+          </NuxtLink>
           <button type="button" class="btn btn-soft" :disabled="pending" @click="refresh()">
             <span class="icon-[tabler--refresh] size-4.5"></span>
             {{ $t('admin.common.refresh') }}

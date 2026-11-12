@@ -7,9 +7,15 @@ import '@testing-library/jest-dom/vitest'
 const globalScope = globalThis as any
 globalScope.useI18n = () => ({ t: (key: string) => key })
 globalScope.useLocalePath = () => (path: string) => path
+// The Vue APIs a template compiler emits for slots and attributes.
+globalScope.useSlots = (...args: any[]) => (globalThis as any).__vueUseSlots?.(...args)
+globalScope.useAttrs = (...args: any[]) => (globalThis as any).__vueUseAttrs?.(...args)
 
 import { vi } from 'vitest'
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, useSlots, useAttrs } from 'vue'
+
+globalScope.__vueUseSlots = useSlots
+globalScope.__vueUseAttrs = useAttrs
 
 Object.defineProperty(window, 'matchMedia', {
   writable: true,

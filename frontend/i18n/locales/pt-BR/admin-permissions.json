@@ -25,6 +25,40 @@
       "empty": {
         "title": "Nenhuma permissão encontrada",
         "description": "Ajuste a busca ou limpe o filtro para ver o catálogo completo."
+      },
+      "newTitle": "Nova permissão",
+      "newDescription": "Crie uma permissão do catálogo: o código é o par resource:action escolhido abaixo.",
+      "editTitle": "Editar permissão",
+      "editDescription": "O código de uma permissão é fixo: ajuste o nome e a descrição.",
+      "form": {
+        "name": "Nome",
+        "name_required": "O nome é obrigatório",
+        "name_too_long": "O nome deve ter no máximo 255 caracteres",
+        "name_hint": "Um rótulo legível para a interface.",
+        "name_placeholder": "Ler usuários",
+        "resource": "Recurso",
+        "resource_required": "Escolha um recurso",
+        "action": "Ação",
+        "action_required": "Escolha uma ação",
+        "select_resource": "Selecione o recurso",
+        "select_action": "Selecione a ação",
+        "code": "Código",
+        "preview_empty": "Selecione um recurso e uma ação",
+        "description": "Descrição",
+        "description_placeholder": "Opcional: o que a permissão autoriza.",
+        "duplicate_title": "Código já existe",
+        "duplicate": "Esse par de recurso e ação já está em uso. Escolha outro.",
+        "create_submit": "Criar permissão",
+        "cancel": "Cancelar",
+        "saving": "Salvando...",
+        "save_changes": "Salvar alterações",
+        "loadError": "Falha ao carregar o catálogo."
+      },
+      "messages": {
+        "createSuccess": "Permissão criada.",
+        "createError": "Falha ao criar a permissão.",
+        "updateSuccess": "Permissão atualizada.",
+        "updateError": "Falha ao atualizar a permissão."
       }
     }
   }
