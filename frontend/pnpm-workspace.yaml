@@ -3,15 +3,21 @@ allowBuilds:
   '@parcel/watcher': true
   esbuild: true
   workerd: true
-# Accepted advisories — no patched version exists upstream (checked 2026-10-15).
-# Both are dev/build-time toolchain only; verified absent from the production
-# build output (.output/server). Remove the entry once a patched version is
-# released and pulled in via `pnpm update`:
-# - GHSA-86w9-cpqp-85rv (node-forge, dev-server self-signed certs via listhen):
-#   fix pending upstream — digitalbazaar/forge#1152 (tracked in #1149).
-# - GHSA-vfj7-8cjw-p6xm (braces, build-time glob via nitropack/i18n unplugin/vitest):
-#   fix pending upstream — micromatch/braces#70.
-auditConfig:
-  ignoreGhsas:
-    - GHSA-86w9-cpqp-85rv
-    - GHSA-vfj7-8cjw-p6xm
+# Accepted advisories: none. The two former entries were removed on
+# 2026-11-12 once the fixes landed and the tree was updated:
+# - GHSA-86w9-cpqp-85rv (node-forge <=1.4.0, no upstream patch): now unmatched
+#   because listhen pulls node-forge ^1.4.0 and pnpm resolved 1.4.3.
+# - GHSA-vfj7-8cjw-p6xm (braces stack exhaustion): advisory withdrawn from the
+#   GitHub Advisory Database on 2026-10-23 as not practically exploitable.
+# The remaining advisory (deepmerge, GHSA-gcqx-w48m-w2h4, low, no patched
+# version) is build-time only and below the moderate audit gate.
+
+# Force transitive victims onto patched releases their parent ranges cannot
+# reach (checked 2026-11-12): glob advisory GHSA-3g3m-2fjr-6pw4 flags
+# >=9.0.0 <=14.0.1 with the fix in >=14.0.2, while archiver-utils wants glob
+# ^10, workbox-build wants glob ^11 and @vercel/nft wants glob ^13; minimatch
+# advisory GHSA-g3hv-75wg-m249 flags >=7.0.0 <11.0.1 while glob@10 pins
+# minimatch ^9. Drop these overrides once the parents widen their ranges.
+overrides:
+  glob: ^14.0.2
+  minimatch: ^11.0.1
