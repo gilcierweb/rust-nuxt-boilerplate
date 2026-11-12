@@ -69,6 +69,7 @@ pub fn test_config() -> AppConfig {
             }]
         },
         jwt_public_key: None,
+        jwt_audience: crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
         jwt_access_expiry_secs: 3600,
         jwt_refresh_expiry_secs: 3600,
         master_key: generate_deterministic_base64_key(32, 0xBEEF),

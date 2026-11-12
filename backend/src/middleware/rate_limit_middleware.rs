@@ -828,6 +828,7 @@ mod tests {
             exp: 0,
             iat: 0,
             nbf: 0,
+            aud: crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
             jti: None,
         };
 

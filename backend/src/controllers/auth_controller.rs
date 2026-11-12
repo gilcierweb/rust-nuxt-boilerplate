@@ -800,6 +800,7 @@ pub async fn login(
         container.config.jwt_access_expiry_secs,
         "access",
         active_kid,
+        &container.config.jwt_audience,
     )?;
 
     let refresh_token_plain = generate_random_token(48);
@@ -1071,6 +1072,7 @@ pub async fn refresh(
         container.config.jwt_access_expiry_secs,
         "access",
         active_kid,
+        &container.config.jwt_audience,
     )?;
 
     tracing::info!(
@@ -1141,6 +1143,7 @@ async fn session_impl(
         container.config.jwt_access_expiry_secs,
         "access",
         active_kid,
+        &container.config.jwt_audience,
     )?;
 
     Ok(HttpResponse::Ok()
@@ -2398,6 +2401,7 @@ pub async fn verify_magic_link(
         container.config.jwt_access_expiry_secs,
         "access",
         active_kid,
+        &container.config.jwt_audience,
     )?;
 
     let refresh_token_plain = generate_random_token(48);
@@ -2852,8 +2856,12 @@ mod tests {
             .get("access_token")
             .and_then(|value| value.as_str())
             .expect("access token");
-        let claims = crate::middleware::auth::verify_token(access_token, &jwt_secret)
-            .expect("valid access token");
+        let claims = crate::middleware::auth::verify_token(
+            access_token,
+            &jwt_secret,
+            crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE,
+        )
+        .expect("valid access token");
 
         assert_eq!(
             claims.role,

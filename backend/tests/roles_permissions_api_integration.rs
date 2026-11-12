@@ -169,8 +169,15 @@ macro_rules! admin_app {
 
 /// A bearer token for the subject.
 fn bearer(config: &backend::config::AppConfig, subject: Uuid) -> String {
-    create_token(subject, Uuid::new_v4(), 1, &config.jwt_secret, 3600)
-        .expect("failed to mint the test token")
+    create_token(
+        subject,
+        Uuid::new_v4(),
+        1,
+        &config.jwt_secret,
+        3600,
+        &config.jwt_audience,
+    )
+    .expect("failed to mint the test token")
 }
 
 fn authorized(request: actix_web::test::TestRequest, token: &str) -> actix_web::test::TestRequest {
@@ -467,7 +474,7 @@ async fn update_role_permissions_refuses_last_administrator_source() {
     let resp = test::call_service(&app, req).await;
     assert_eq!(
         resp.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "the last administrator source must survive"
     );
 
@@ -708,7 +715,7 @@ async fn delete_refuses_the_admin_and_the_default_role_and_accepts_a_scratch_one
     .to_request();
     assert_eq!(
         test::call_service(&app, req).await.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "the administrator role is not deletable"
     );
 
@@ -720,7 +727,7 @@ async fn delete_refuses_the_admin_and_the_default_role_and_accepts_a_scratch_one
     .to_request();
     assert_eq!(
         test::call_service(&app, req).await.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "the registration default role is not deletable"
     );
 
@@ -795,7 +802,7 @@ async fn update_refuses_to_scope_the_administrator_role() {
     let resp = test::call_service(&app, req).await;
     assert_eq!(
         resp.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "the administrator role keeps its class level scope"
     );
 
@@ -845,7 +852,7 @@ async fn update_refuses_to_rename_the_protected_role_names() {
         let resp = test::call_service(&app, req).await;
         assert_eq!(
             resp.status(),
-            StatusCode::UNPROCESSABLE_ENTITY,
+            StatusCode::FORBIDDEN,
             "the {protected} role name is protected"
         );
     }
@@ -927,7 +934,7 @@ async fn put_refuses_to_grant_an_authority_the_actor_does_not_hold() {
     let resp = test::call_service(&app, req).await;
     assert_eq!(
         resp.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "the actor may not grant an authority it does not hold"
     );
 

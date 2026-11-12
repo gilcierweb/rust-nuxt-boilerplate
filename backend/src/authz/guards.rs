@@ -23,9 +23,13 @@ pub const ADMINISTRATOR_CODES: [&str; 2] = ["roles:read", "roles:update"];
 pub const ADMINISTRATOR_ROLE_NAME: &str = "admin";
 
 /// Refuses when no role would hold the administrator codes anymore.
+///
+/// Answers FORBIDDEN, not VALIDATION: the request is well formed, the policy
+/// refuses it, so the client must read the answer as a denial and not as a
+/// field error of its form.
 pub fn ensure_role_administration_survives(roles_holding_after: &[Uuid]) -> Result<(), AppError> {
     if roles_holding_after.is_empty() {
-        return Err(AppError::Validation(
+        return Err(AppError::Forbidden(
             t!("admin.roles.guard.administrator_source").into_owned(),
         ));
     }
@@ -40,7 +44,7 @@ pub fn ensure_assignment_keeps_administrator(
     holders_after: &[Uuid],
 ) -> Result<(), AppError> {
     if holders_before.len() == 1 && holders_after.is_empty() {
-        return Err(AppError::Validation(
+        return Err(AppError::Forbidden(
             t!("admin.roles.guard.last_administrator_source").into_owned(),
         ));
     }
@@ -56,7 +60,7 @@ pub fn ensure_no_escalation(
     role_allow: &HashSet<String>,
 ) -> Result<(), AppError> {
     if !role_allow.is_subset(actor_allow) {
-        return Err(AppError::Validation(
+        return Err(AppError::Forbidden(
             t!("admin.roles.guard.escalation").into_owned(),
         ));
     }
@@ -75,7 +79,7 @@ pub fn ensure_role_name_is_not_protected(
     new_name: &str,
 ) -> Result<(), AppError> {
     if current_name != new_name && PROTECTED_ROLE_NAMES.contains(&current_name) {
-        return Err(AppError::Validation(
+        return Err(AppError::Forbidden(
             t!("admin.roles.guard.protected_name").into_owned(),
         ));
     }
@@ -123,8 +127,10 @@ mod tests {
 
     use uuid::Uuid;
 
+    use crate::errors::AppError;
+
     use super::{
-        ensure_assignment_keeps_administrator, ensure_no_escalation,
+        ADMINISTRATOR_CODES, ensure_assignment_keeps_administrator, ensure_no_escalation,
         ensure_role_administration_survives, ensure_role_name_is_free,
         ensure_role_name_is_not_protected,
     };
@@ -175,5 +181,48 @@ mod tests {
         assert!(ensure_role_name_is_free(None, role).is_ok());
         assert!(ensure_role_name_is_free(Some(role), role).is_ok());
         assert!(ensure_role_name_is_free(Some(Uuid::new_v4()), role).is_err());
+    }
+
+    #[test]
+    fn administrator_source_refusal_is_forbidden_not_validation() {
+        let error = ensure_role_administration_survives(&[]).expect_err("must refuse");
+        assert!(
+            matches!(error, AppError::Forbidden(_)),
+            "a policy refusal answers 403 FORBIDDEN, got {error:?}"
+        );
+    }
+
+    #[test]
+    fn assignment_removal_refusal_is_forbidden_not_validation() {
+        let error =
+            ensure_assignment_keeps_administrator(&[Uuid::new_v4()], &[]).expect_err("must refuse");
+        assert!(
+            matches!(error, AppError::Forbidden(_)),
+            "a policy refusal answers 403 FORBIDDEN, got {error:?}"
+        );
+    }
+
+    #[test]
+    fn escalation_refusal_is_forbidden_not_validation() {
+        let error = ensure_no_escalation(&codes(&["users:read"]), &codes(&["roles:read"]))
+            .expect_err("must refuse");
+        assert!(
+            matches!(error, AppError::Forbidden(_)),
+            "a policy refusal answers 403 FORBIDDEN, got {error:?}"
+        );
+    }
+
+    #[test]
+    fn protected_name_refusal_is_forbidden_not_validation() {
+        let error = ensure_role_name_is_not_protected("admin", "boss").expect_err("must refuse");
+        assert!(
+            matches!(error, AppError::Forbidden(_)),
+            "a policy refusal answers 403 FORBIDDEN, got {error:?}"
+        );
+    }
+
+    #[test]
+    fn administrator_codes_are_the_role_administration_pair() {
+        assert_eq!(ADMINISTRATOR_CODES, ["roles:read", "roles:update"]);
     }
 }

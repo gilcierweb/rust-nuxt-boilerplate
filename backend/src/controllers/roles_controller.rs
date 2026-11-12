@@ -405,9 +405,9 @@ pub async fn find_role_permissions(
         (status = 200, description = "Links replaced", body = UpdatedCountResponse),
         (status = 400, description = "Validation error"),
         (status = 401, description = "Authentication required"),
-        (status = 403, description = "Missing `roles:update` authority"),
+        (status = 403, description = "Missing `roles:update` authority, or a policy refusal (last administrator source, escalation, protected role)"),
         (status = 404, description = "Role not found"),
-        (status = 422, description = "Unknown code or effect, or the last administrator source")
+        (status = 422, description = "Unknown code or effect")
     ),
     security(("bearer_auth" = []))
 )]
@@ -576,7 +576,7 @@ pub async fn destroy_role(
     // The administrator role is the one every deployment keeps: deleting it
     // would take the whole catalog of links with it.
     if role.name == "admin" {
-        return Err(AppError::Validation(
+        return Err(AppError::Forbidden(
             t!("admin.roles.guard.administrator_role").into_owned(),
         ));
     }
@@ -584,7 +584,7 @@ pub async fn destroy_role(
     // The registration resolves its default role by name, so the row cannot
     // disappear while REGISTER_DEFAULT_ROLE points at it.
     if role.name == container.config.register_default_role {
-        return Err(AppError::Validation(
+        return Err(AppError::Forbidden(
             t!("admin.roles.guard.default_role").into_owned(),
         ));
     }

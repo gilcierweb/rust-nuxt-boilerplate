@@ -9,6 +9,17 @@ use serde::{Deserialize, Serialize};
 use crate::errors::{AppError, AppResult};
 use crate::models::role::ROLE_ADMIN;
 
+/// The canonical audience of this deployment, used when `JWT_AUDIENCE` names
+/// nothing: the same service name that `frontend/wrangler.jsonc` deploys.
+///
+/// A token is minted for exactly one consumer, this API, so the `aud` claim
+/// ties it to this application: without it a token signed by any active secret
+/// of `jwt_secrets` would be accepted on every scope, and a second consumer
+/// that ever shared a secret could replay its tokens against the admin routes.
+/// A deployment may name a different audience through `JWT_AUDIENCE`; an empty
+/// value falls back here and never disables the check.
+pub const DEFAULT_TOKEN_AUDIENCE: &str = "rust-nuxt-boilerplate";
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Claims {
     pub sub: uuid::Uuid,
@@ -26,6 +37,9 @@ pub struct Claims {
     /// Required so that `validate_nbf = true` actually enforces the check
     /// instead of silently passing because the claim is absent.
     pub nbf: usize,
+    /// The consumer the token was minted for: this application. Required, so
+    /// a token without it is refused instead of silently accepted.
+    pub aud: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub jti: Option<String>,
 }
@@ -231,6 +245,7 @@ pub fn create_token(
     role: i32,
     jwt_secret: &str,
     expiry_secs: i64,
+    audience: &str,
 ) -> AppResult<String> {
     create_token_for_use(
         user_id,
@@ -239,6 +254,7 @@ pub fn create_token(
         jwt_secret,
         expiry_secs,
         ACCESS_TOKEN_USE,
+        audience,
     )
 }
 
@@ -249,6 +265,7 @@ pub fn create_ws_token(
     role: i32,
     jwt_secret: &str,
     expiry_secs: i64,
+    audience: &str,
 ) -> AppResult<String> {
     create_token_for_use(
         user_id,
@@ -257,6 +274,7 @@ pub fn create_ws_token(
         jwt_secret,
         expiry_secs,
         WEBSOCKET_TOKEN_USE,
+        audience,
     )
 }
 
@@ -267,6 +285,7 @@ fn create_token_for_use(
     jwt_secret: &str,
     expiry_secs: i64,
     token_use: &str,
+    audience: &str,
 ) -> AppResult<String> {
     create_token_with_kid(
         user_id,
@@ -276,9 +295,17 @@ fn create_token_for_use(
         expiry_secs,
         token_use,
         None,
+        audience,
     )
 }
 
+/// Mints a token, optionally stamping the key id in the header.
+///
+/// Eight explicit parameters, one per claim the token carries plus the key id:
+/// the minting call sites live in the auth handlers and in tests, none of them
+/// has a claims object to hand, and grouping the identity into a struct would
+/// hide at a glance which claims this application actually issues.
+#[allow(clippy::too_many_arguments)]
 pub fn create_token_with_kid(
     user_id: uuid::Uuid,
     profile_id: uuid::Uuid,
@@ -287,6 +314,7 @@ pub fn create_token_with_kid(
     expiry_secs: i64,
     token_use: &str,
     kid: Option<&str>,
+    audience: &str,
 ) -> AppResult<String> {
     use chrono::Utc;
     use jsonwebtoken::encode;
@@ -308,6 +336,7 @@ pub fn create_token_with_kid(
         // validator actually enforces the check rather than silently passing
         // because the claim is absent.
         nbf: iat,
+        aud: audience.to_string(),
         jti: Some(jti),
     };
 
@@ -324,18 +353,19 @@ pub fn create_token_with_kid(
     .map_err(|e| AppError::Internal(format!("Token creation failed: {}", e)))
 }
 
-pub fn verify_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
-    verify_token_for_use(token, jwt_secret, ACCESS_TOKEN_USE)
+pub fn verify_token(token: &str, jwt_secret: &str, audience: &str) -> AppResult<Claims> {
+    verify_token_for_use(token, jwt_secret, ACCESS_TOKEN_USE, audience)
 }
 
-pub fn verify_ws_token(token: &str, jwt_secret: &str) -> AppResult<Claims> {
-    verify_token_for_use(token, jwt_secret, WEBSOCKET_TOKEN_USE)
+pub fn verify_ws_token(token: &str, jwt_secret: &str, audience: &str) -> AppResult<Claims> {
+    verify_token_for_use(token, jwt_secret, WEBSOCKET_TOKEN_USE, audience)
 }
 
 pub fn verify_token_with_secrets(
     token: &str,
     secrets: &[crate::config::app_config::JwtSecretKey],
     expected_use: &str,
+    audience: &str,
 ) -> AppResult<JwtVerifyResult> {
     let token_header = {
         let parts: Vec<&str> = token.split('.').collect();
@@ -358,7 +388,7 @@ pub fn verify_token_with_secrets(
     // If kid is present, try to find matching secret first
     if let Some(k) = kid {
         if let Some(secret_key) = secrets.iter().find(|s| s.kid == k && s.is_active()) {
-            match verify_token_for_use(token, &secret_key.secret, expected_use) {
+            match verify_token_for_use(token, &secret_key.secret, expected_use, audience) {
                 Ok(claims) => {
                     tracing::debug!(
                         event = "auth.jwt_verify",
@@ -409,7 +439,8 @@ pub fn verify_token_with_secrets(
 
     // Fallback: try all active secrets
     for secret_key in secrets.iter().filter(|s| s.is_active()) {
-        if let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use) {
+        if let Ok(claims) = verify_token_for_use(token, &secret_key.secret, expected_use, audience)
+        {
             if kid.is_some() {
                 tracing::warn!(
                     event = "auth.jwt_fallback_match",
@@ -447,7 +478,12 @@ pub fn verify_token_with_secrets(
     ))
 }
 
-fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> AppResult<Claims> {
+fn verify_token_for_use(
+    token: &str,
+    jwt_secret: &str,
+    expected_use: &str,
+    audience: &str,
+) -> AppResult<Claims> {
     use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
     // Explicitly pin the algorithm to HS256.
@@ -460,12 +496,14 @@ fn verify_token_for_use(token: &str, jwt_secret: &str, expected_use: &str) -> Ap
     let mut validation = Validation::new(Algorithm::HS256);
     validation.validate_exp = true;
     validation.validate_nbf = true;
+    validation.set_audience(&[audience]);
     validation.required_spec_claims = HashSet::from([
         "exp".to_string(),
         "iat".to_string(),
         "nbf".to_string(),
         "sub".to_string(),
         "token_use".to_string(),
+        "aud".to_string(),
     ]);
 
     let claims = decode::<Claims>(
@@ -544,6 +582,7 @@ mod tests {
             exp: 0,
             iat: 0,
             nbf: 0,
+            aud: DEFAULT_TOKEN_AUDIENCE.to_string(),
             jti: None,
         }
     }
@@ -626,6 +665,7 @@ mod tests {
             3600,
             "access",
             Some(&secret.kid),
+            DEFAULT_TOKEN_AUDIENCE,
         )
         .unwrap();
 
@@ -638,6 +678,121 @@ mod tests {
             .unwrap();
         let header: jsonwebtoken::Header = serde_json::from_slice(&header_bytes).unwrap();
         assert_eq!(header.kid.as_deref(), Some("key-2026-01"));
+    }
+
+    /// Mints a token by hand so the payload can carry a claim the production
+    /// minting does not emit (a missing audience, a foreign audience). Every
+    /// other required claim is present, so the only reason to refuse the
+    /// token is the audience check under test.
+    fn hand_minted_token(secret: &str, kid: &str, aud: Option<&str>) -> String {
+        use chrono::Utc;
+        use jsonwebtoken::{EncodingKey, Header, encode};
+
+        let now = Utc::now().timestamp();
+        let mut payload = serde_json::json!({
+            "sub": uuid::Uuid::new_v4().to_string(),
+            "profile_id": uuid::Uuid::new_v4().to_string(),
+            "role": 1,
+            "token_use": "access",
+            "exp": now + 3600,
+            "iat": now,
+            "nbf": now,
+        });
+        if let Some(audience) = aud {
+            payload["aud"] = serde_json::json!(audience);
+        }
+        let header = Header {
+            kid: Some(kid.to_string()),
+            ..Default::default()
+        };
+        encode(
+            &header,
+            &payload,
+            &EncodingKey::from_secret(secret.as_bytes()),
+        )
+        .expect("failed to mint the hand made token")
+    }
+
+    fn payload_of(token: &str) -> serde_json::Value {
+        use base64::Engine;
+
+        let payload = token.split('.').nth(1).expect("three parts");
+        let bytes = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(payload)
+            .expect("url safe payload");
+        serde_json::from_slice(&bytes).expect("json payload")
+    }
+
+    #[test]
+    fn a_token_without_an_audience_claim_is_rejected() {
+        use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
+
+        let secret = JwtSecretKey {
+            kid: "aud-key".to_string(),
+            secret: "audience-secret-value".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+        let token = hand_minted_token(&secret.secret, &secret.kid, None);
+
+        assert!(
+            verify_token_with_secrets(&token, &[secret], "access", DEFAULT_TOKEN_AUDIENCE).is_err(),
+            "a token minted without an audience must not be accepted"
+        );
+    }
+
+    #[test]
+    fn a_token_minted_for_another_audience_is_rejected() {
+        use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
+
+        let secret = JwtSecretKey {
+            kid: "aud-key".to_string(),
+            secret: "audience-secret-value".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+        let token = hand_minted_token(&secret.secret, &secret.kid, Some("another-service"));
+
+        assert!(
+            verify_token_with_secrets(&token, &[secret], "access", DEFAULT_TOKEN_AUDIENCE).is_err(),
+            "a token minted for another audience must not be accepted here"
+        );
+    }
+
+    #[test]
+    fn a_minted_token_carries_the_application_audience() {
+        use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
+
+        let secret = JwtSecretKey {
+            kid: "aud-key".to_string(),
+            secret: "audience-secret-value".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+        let token = create_token_with_kid(
+            uuid::Uuid::new_v4(),
+            uuid::Uuid::new_v4(),
+            0,
+            &secret.secret,
+            3600,
+            "access",
+            Some(&secret.kid),
+            DEFAULT_TOKEN_AUDIENCE,
+        )
+        .unwrap();
+
+        assert_eq!(
+            payload_of(&token).get("aud").and_then(|v| v.as_str()),
+            Some("rust-nuxt-boilerplate"),
+            "the minted token must name this application as its audience"
+        );
+        assert_eq!(DEFAULT_TOKEN_AUDIENCE, "rust-nuxt-boilerplate");
     }
 
     #[test]
@@ -672,9 +827,11 @@ mod tests {
             3600,
             "access",
             Some(&secret_active.kid),
+            DEFAULT_TOKEN_AUDIENCE,
         )
         .unwrap();
-        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        let result =
+            verify_token_with_secrets(&token, &secrets, "access", DEFAULT_TOKEN_AUDIENCE).unwrap();
         assert_eq!(result.claims.sub, sub);
         assert_eq!(result.claims.profile_id, profile_id);
         assert_eq!(result.outcome, JwtVerifyOutcome::DirectMatch);
@@ -712,9 +869,11 @@ mod tests {
             3600,
             "access",
             Some(&secret1.kid),
+            DEFAULT_TOKEN_AUDIENCE,
         )
         .unwrap();
-        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        let result =
+            verify_token_with_secrets(&token, &secrets, "access", DEFAULT_TOKEN_AUDIENCE).unwrap();
         assert_eq!(result.claims.sub, sub);
         assert_eq!(result.outcome, JwtVerifyOutcome::DirectMatch);
     }
@@ -744,9 +903,10 @@ mod tests {
             3600,
             "access",
             Some(&expired.kid),
+            DEFAULT_TOKEN_AUDIENCE,
         )
         .unwrap();
-        let result = verify_token_with_secrets(&token, &secrets, "access");
+        let result = verify_token_with_secrets(&token, &secrets, "access", DEFAULT_TOKEN_AUDIENCE);
         assert!(result.is_err());
     }
 
@@ -775,9 +935,11 @@ mod tests {
             3600,
             "access",
             Some(&secret.kid),
+            DEFAULT_TOKEN_AUDIENCE,
         )
         .unwrap();
-        let result = verify_token_with_secrets(&token, &secrets, "websocket");
+        let result =
+            verify_token_with_secrets(&token, &secrets, "websocket", DEFAULT_TOKEN_AUDIENCE);
         assert!(result.is_err());
     }
 
@@ -808,9 +970,11 @@ mod tests {
             3600,
             "access",
             Some("unknown-kid"),
+            DEFAULT_TOKEN_AUDIENCE,
         )
         .unwrap();
-        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        let result =
+            verify_token_with_secrets(&token, &secrets, "access", DEFAULT_TOKEN_AUDIENCE).unwrap();
         assert_eq!(result.claims.sub, sub);
         assert_eq!(result.outcome, JwtVerifyOutcome::FallbackMatch);
     }
@@ -834,9 +998,19 @@ mod tests {
         let secrets = vec![secret.clone()];
 
         // Token with no kid in header
-        let token = create_token_with_kid(sub, profile_id, 0, &secret.secret, 3600, "access", None)
-            .unwrap();
-        let result = verify_token_with_secrets(&token, &secrets, "access").unwrap();
+        let token = create_token_with_kid(
+            sub,
+            profile_id,
+            0,
+            &secret.secret,
+            3600,
+            "access",
+            None,
+            DEFAULT_TOKEN_AUDIENCE,
+        )
+        .unwrap();
+        let result =
+            verify_token_with_secrets(&token, &secrets, "access", DEFAULT_TOKEN_AUDIENCE).unwrap();
         assert_eq!(result.claims.sub, sub);
         assert_eq!(result.outcome, JwtVerifyOutcome::FallbackMatch);
     }

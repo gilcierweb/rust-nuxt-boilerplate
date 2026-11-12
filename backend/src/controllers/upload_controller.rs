@@ -204,6 +204,7 @@ mod tests {
             exp: 0,
             iat: 0,
             nbf: 0,
+            aud: crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
             jti: None,
         }
     }
@@ -261,6 +262,7 @@ mod tests {
             redis_pool_size: 10,
             jwt_secret: "test-secret-key-for-unit-tests-32b!".to_string(),
             jwt_public_key: None,
+            jwt_audience: crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
             jwt_access_expiry_secs: 3600,
             jwt_refresh_expiry_secs: 3600,
             master_key: "dGVzdC1tYXN0ZXIta2V5LWZvci11bml0LXRlc3Rz".to_string(),

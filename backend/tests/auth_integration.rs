@@ -127,6 +127,7 @@ fn test_config() -> backend::config::AppConfig {
         redis_pool_size: 5,
         jwt_secret: jwt_secret.clone(),
         jwt_public_key: None,
+        jwt_audience: backend::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
         jwt_access_expiry_secs: 3600,
         jwt_refresh_expiry_secs: 3600,
         master_key,

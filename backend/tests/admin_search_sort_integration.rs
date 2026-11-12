@@ -156,8 +156,15 @@ macro_rules! admin_app {
 }
 
 fn bearer(config: &backend::config::AppConfig, subject: Uuid) -> String {
-    create_token(subject, Uuid::new_v4(), 1, &config.jwt_secret, 3600)
-        .expect("failed to mint the test token")
+    create_token(
+        subject,
+        Uuid::new_v4(),
+        1,
+        &config.jwt_secret,
+        3600,
+        &config.jwt_audience,
+    )
+    .expect("failed to mint the test token")
 }
 
 fn authorized(request: actix_web::test::TestRequest, token: &str) -> actix_web::test::TestRequest {

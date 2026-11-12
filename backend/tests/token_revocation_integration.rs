@@ -97,8 +97,15 @@ fn bearer_request(token: &str) -> actix_web::test::TestRequest {
 async fn make_token(config: &backend::config::AppConfig) -> (uuid::Uuid, String) {
     let user_id = uuid::Uuid::new_v4();
     let profile_id = uuid::Uuid::new_v4();
-    let token = create_token(user_id, profile_id, 0, &config.jwt_secret, 3600)
-        .expect("failed to create token");
+    let token = create_token(
+        user_id,
+        profile_id,
+        0,
+        &config.jwt_secret,
+        3600,
+        &config.jwt_audience,
+    )
+    .expect("failed to create token");
     (user_id, token)
 }
 

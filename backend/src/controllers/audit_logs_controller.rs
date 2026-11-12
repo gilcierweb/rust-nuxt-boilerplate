@@ -181,7 +181,15 @@ mod tests {
     use crate::repositories::mocks::mock_container;
 
     fn test_token() -> String {
-        create_token(Uuid::new_v4(), Uuid::new_v4(), 1, "", 3600).unwrap()
+        create_token(
+            Uuid::new_v4(),
+            Uuid::new_v4(),
+            1,
+            "",
+            3600,
+            crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE,
+        )
+        .unwrap()
     }
 
     fn test_claims() -> Claims {
@@ -193,6 +201,7 @@ mod tests {
             exp: 0,
             iat: 0,
             nbf: 0,
+            aud: crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
             jti: None,
         }
     }

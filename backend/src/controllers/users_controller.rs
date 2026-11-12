@@ -228,9 +228,9 @@ pub async fn find_user_roles(
         (status = 200, description = "Roles replaced", body = UserRolesResponse),
         (status = 400, description = "Validation error"),
         (status = 401, description = "Authentication required"),
-        (status = 403, description = "Missing `users:update` authority"),
+        (status = 403, description = "Missing `users:update` authority, or a policy refusal (escalation, administrator lockout)"),
         (status = 404, description = "User not found"),
-        (status = 422, description = "Unknown role, escalation, or an administrator lockout")
+        (status = 422, description = "Unknown role")
     ),
     security(("bearer_auth" = []))
 )]
@@ -323,7 +323,7 @@ pub async fn update_user_roles(
         let held_admin_before = assignments.iter().any(|(role_id, _)| *role_id == admin);
         let holds_admin_after = payload.role_ids.contains(&admin);
         if held_admin_before && !holds_admin_after && assignments.len() <= 1 {
-            return Err(AppError::Validation(
+            return Err(AppError::Forbidden(
                 t!("admin.users.guard.last_admin_role_assignment").into_owned(),
             ));
         }

@@ -51,6 +51,7 @@ pub fn test_config() -> AppConfig {
         redis_pool_size: 10,
         jwt_secret: generate_deterministic_string(32, 0x9E3779B97F4A7C15),
         jwt_public_key: None,
+        jwt_audience: crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
         jwt_access_expiry_secs: 3600,
         jwt_refresh_expiry_secs: 3600,
         master_key: generate_deterministic_base64_key(32, 0xC0FFEE),

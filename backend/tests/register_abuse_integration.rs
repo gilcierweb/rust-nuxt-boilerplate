@@ -88,6 +88,7 @@ fn limiter_config(register_daily_limit: u64) -> backend::config::AppConfig {
         redis_pool_size: 5,
         jwt_secret: jwt_secret.clone(),
         jwt_public_key: None,
+        jwt_audience: backend::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string(),
         jwt_access_expiry_secs: 3600,
         jwt_refresh_expiry_secs: 3600,
         master_key: "q0J4u1cHcVtvRUFORlJ5WmpOMkF3WmFYc0xHRnVI=".to_string(),

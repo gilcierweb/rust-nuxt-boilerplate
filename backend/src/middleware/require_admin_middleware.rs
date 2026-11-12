@@ -186,6 +186,7 @@ mod tests {
             1,
             &config.jwt_secret,
             3600,
+            crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE,
         )
         .expect("failed to mint the test token")
     }

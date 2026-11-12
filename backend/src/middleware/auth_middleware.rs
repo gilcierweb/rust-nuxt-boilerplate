@@ -206,7 +206,20 @@ where
                             actix_web::error::ErrorInternalServerError(t!("errors.internal").into_owned())
                         })?;
 
-                    match verify_token_with_secrets(&token, &secrets, ACCESS_TOKEN_USE) {
+                    match verify_token_with_secrets(
+                        &token,
+                        &secrets,
+                        ACCESS_TOKEN_USE,
+                        &req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>()
+                            .map(|c| c.config.jwt_audience.clone())
+                            .or_else(|| {
+                                req.app_data::<actix_web::web::Data<AppState>>()
+                                    .map(|s| s.config.jwt_audience.clone())
+                            })
+                            .unwrap_or_else(|| {
+                                crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string()
+                            }),
+                    ) {
                         Ok(result) => {
                             let metrics = req
                                 .app_data::<actix_web::web::Data<AppState>>()

@@ -196,8 +196,15 @@ macro_rules! admin_app {
 
 /// A bearer token for the subject.
 fn bearer(config: &backend::config::AppConfig, subject: Uuid) -> String {
-    create_token(subject, Uuid::new_v4(), 1, &config.jwt_secret, 3600)
-        .expect("failed to mint the test token")
+    create_token(
+        subject,
+        Uuid::new_v4(),
+        1,
+        &config.jwt_secret,
+        3600,
+        &config.jwt_audience,
+    )
+    .expect("failed to mint the test token")
 }
 
 fn authorized(request: actix_web::test::TestRequest, token: &str) -> actix_web::test::TestRequest {
@@ -316,7 +323,7 @@ async fn a_viewer_cannot_grant_a_role_beyond_its_own_authority() {
     .to_request();
     assert_eq!(
         test::call_service(&app, req).await.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "granting authorities beyond the actor's own is refused"
     );
 
@@ -416,7 +423,7 @@ async fn removing_last_admin_role_assignment_is_refused() {
     .to_request();
     assert_eq!(
         test::call_service(&app, req).await.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "the last assignment of the admin role cannot be removed"
     );
 
@@ -455,7 +462,7 @@ async fn removing_the_only_administrator_holder_is_refused() {
     .to_request();
     assert_eq!(
         test::call_service(&app, req).await.status(),
-        StatusCode::UNPROCESSABLE_ENTITY,
+        StatusCode::FORBIDDEN,
         "the last administrator source must survive"
     );
 

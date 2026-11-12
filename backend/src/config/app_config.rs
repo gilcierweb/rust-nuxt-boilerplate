@@ -214,6 +214,9 @@ pub struct AppConfig {
     pub jwt_secret: String,
     pub jwt_secrets: Vec<JwtSecretKey>,
     pub jwt_public_key: Option<String>,
+    /// Recipient every minted token names. Empty never disables the check: the
+    /// default is the canonical service name of this deployment.
+    pub jwt_audience: String,
     pub jwt_access_expiry_secs: i64,  // 15 minutes
     pub jwt_refresh_expiry_secs: i64, // 30 days
 
@@ -499,6 +502,11 @@ impl AppConfig {
                 secrets
             },
             jwt_public_key: env::var("JWT_PUBLIC_KEY").ok(),
+            jwt_audience: env::var("JWT_AUDIENCE")
+                .ok()
+                .map(|value| value.trim().to_string())
+                .filter(|value| !value.is_empty())
+                .unwrap_or_else(|| crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string()),
             jwt_access_expiry_secs: 15 * 60, // 15 minutes
             jwt_refresh_expiry_secs: 30 * 24 * 3600,
 
@@ -1277,6 +1285,37 @@ mod placeholder_tests {
         let config = AppConfig::from_env().expect("config builds");
         assert_eq!(config.captcha_provider, CaptchaProvider::Turnstile);
         assert!(config.captcha_enabled());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn jwt_audience_defaults_to_the_canonical_service_name() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::remove_var("JWT_AUDIENCE") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(config.jwt_audience, "rust-nuxt-boilerplate");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn jwt_audience_follows_the_environment_and_an_empty_value_never_disables_it() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+
+        unsafe { std::env::set_var("JWT_AUDIENCE", "custom-api") };
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(config.jwt_audience, "custom-api");
+
+        unsafe { std::env::set_var("JWT_AUDIENCE", "   ") };
+        let config = AppConfig::from_env().expect("config builds");
+        assert_eq!(
+            config.jwt_audience, "rust-nuxt-boilerplate",
+            "a blank value falls back to the default instead of disabling the check"
+        );
     }
 
     #[test]

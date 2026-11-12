@@ -607,6 +607,10 @@ pub async fn ws_handler(
                 &t,
                 &secrets,
                 crate::middleware::auth::WEBSOCKET_TOKEN_USE,
+                &state
+                    .as_ref()
+                    .map(|s| s.config.jwt_audience.clone())
+                    .unwrap_or_else(|| crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string()),
             ) {
                 Ok(result) => {
                     if let Some(m) = state.as_ref().map(|s| s.metrics.clone()) {
