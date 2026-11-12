@@ -95,6 +95,8 @@ import { normalizeResourceResponse } from '~/utils/admin-resources'
 import { formatDateTime } from '~/utils/admin-ui'
 import { splitCode } from '~/utils/rbac'
 import { toPermissionTableRow } from '~/utils/permissions-map'
+import AppEmptyState from '~/components/admin/AppEmptyState.vue'
+import AdminPermissionMatrix from '~/components/admin/permissions/AdminPermissionMatrix.vue'
 import type { DataTableColumn } from '~/types/data-table'
 import type { Permission, Role } from '~/types/rbac'
 

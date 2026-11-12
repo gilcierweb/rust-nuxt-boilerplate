@@ -1,4 +1,3 @@
-import type { Component } from 'vue'
 import type { ColumnDef, ColumnDefBase } from '@tanstack/vue-table'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
 
@@ -115,4 +114,4 @@ export function renderActionLink(action: DataTableRowAction, row: Record<string,
   return {}
 }
 
-export type { ColumnDef, Component }
+export type { ColumnDef }

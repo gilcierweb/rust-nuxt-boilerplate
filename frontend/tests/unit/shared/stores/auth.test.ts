@@ -13,7 +13,7 @@ const meCalls: string[] = []
 // capabilities and the presentation role code. There is no nested user key.
 const mePayload = {
   id: 'user-1',
-  email: 'user01@example.com',
+  email: 'admin@example.com',
   roles: ['ADMIN'],
   permissions: ['users:read', 'roles:update'],
   role: 1,
@@ -55,7 +55,7 @@ describe('auth store capabilities', () => {
     await store.fetchMe()
 
     expect(store.user?.id).toBe('user-1')
-    expect(store.user?.email).toBe('user01@example.com')
+    expect(store.user?.email).toBe('admin@example.com')
     expect(store.user?.roles).toEqual(['ADMIN'])
     expect(store.user?.permissions).toEqual(['users:read', 'roles:update'])
     expect(store.user?.role).toBe(1)
@@ -66,7 +66,7 @@ describe('auth store capabilities', () => {
 
     store.user = {
       id: 'user-1',
-      email: 'user01@example.com',
+      email: 'admin@example.com',
       profile_id: 'profile-1',
       roles: ['ADMIN'],
       is_otp_enabled: false,
@@ -75,7 +75,7 @@ describe('auth store capabilities', () => {
 
     store.user = {
       id: 'user-1',
-      email: 'user01@example.com',
+      email: 'admin@example.com',
       profile_id: 'profile-1',
       roles: ['admin'],
       is_otp_enabled: false,
@@ -84,7 +84,7 @@ describe('auth store capabilities', () => {
 
     store.user = {
       id: 'user-1',
-      email: 'user01@example.com',
+      email: 'admin@example.com',
       profile_id: 'profile-1',
       roles: ['manager'],
       is_otp_enabled: false,

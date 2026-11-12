@@ -39,14 +39,19 @@ pub struct PaginationParams {
     /// Sort direction: "asc" or "desc"
     pub sort_dir: Option<String>,
 }
-
 impl PaginationParams {
     /// Refuses a sort field outside the allowlist of the resource.
     ///
     /// A silent fallback hides a client mistake and makes the order of the page
     /// unpredictable, so the caller answers 422 instead.
+    ///
+    /// A field with no value is not a mistake: a query string such as
+    /// `?sort_by` reads as an empty string, and an empty string means no
+    /// ordering was chosen. The repository already answers that case with its
+    /// default order, so the empty value normalizes to `None`.
     pub fn validate_sort_field(&self, allowlist: &[&str]) -> Result<(), crate::errors::AppError> {
         if let Some(sort_by) = self.sort_by.as_deref()
+            && !sort_by.is_empty()
             && !allowlist.contains(&sort_by)
         {
             return Err(crate::errors::AppError::Validation(
@@ -104,6 +109,51 @@ impl PaginationParams {
             Some("desc") => "desc",
             _ => "asc",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::PaginationParams;
+
+    fn params(sort_by: Option<&str>) -> PaginationParams {
+        PaginationParams {
+            page: 1,
+            per_page: 20,
+            sort_by: sort_by.map(str::to_string),
+            sort_dir: None,
+        }
+    }
+
+    #[test]
+    fn an_absent_sort_field_is_allowed() {
+        assert!(params(None).validate_sort_field(&["name"]).is_ok());
+    }
+
+    // A query string such as `?sort_by` reads as an empty string, and a bare
+    // key means the client chose no column. The list answers its default
+    // order, so the empty value is not a client mistake.
+    #[test]
+    fn a_valueless_sort_field_is_allowed() {
+        assert!(params(Some("")).validate_sort_field(&["name"]).is_ok());
+    }
+
+    #[test]
+    fn a_known_sort_field_is_allowed() {
+        assert!(
+            params(Some("name"))
+                .validate_sort_field(&["name", "code"])
+                .is_ok()
+        );
+    }
+
+    #[test]
+    fn an_unknown_sort_field_is_refused() {
+        assert!(
+            params(Some("description"))
+                .validate_sort_field(&["name", "code"])
+                .is_err()
+        );
     }
 }
 

@@ -209,6 +209,39 @@ async fn the_user_list_searches_by_name_fragment() {
     );
 }
 
+// A query string such as `?sort_by` (a key with no value) reads as an empty
+// string, and a client that omits the value asks for the same default order as
+// a client that omits the key. Refusing it would break every list whose table
+// sends the two keys on the first render, before a column is chosen.
+#[actix_web::test]
+async fn the_lists_answer_a_valueless_sort_key_with_the_default_order() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let editor = user_with_profile(&db, "admin", "Zaphod Beeblebrox").await;
+    let app = admin_app!(&db);
+    let token = bearer(&test_config(), editor.0);
+
+    // The permissions list is not part of this suite's stack: its app configures
+    // the users, roles and audit logs scopes only.
+    for url in [
+        "/admin/users?sort_by&sort_dir",
+        "/admin/roles?sort_by&sort_dir",
+        "/admin/audit-logs?sort_by&sort_dir",
+    ] {
+        let req = authorized(test::TestRequest::get().uri(url), &token).to_request();
+        let (status, json) = response_json(test::call_service(&app, req).await).await;
+        assert_eq!(
+            status,
+            StatusCode::OK,
+            "{url} must answer the default order, not a validation error"
+        );
+        assert!(
+            json["data"].as_array().is_some(),
+            "{url} must answer a data array"
+        );
+    }
+}
+
 #[actix_web::test]
 async fn the_user_list_rejects_a_sort_field_outside_the_allowlist() {
     seed_catalog();

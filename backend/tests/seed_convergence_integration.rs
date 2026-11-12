@@ -35,8 +35,15 @@ fn database_url() -> String {
         .unwrap_or_else(|_| "postgres://postgres:postgres@localhost:5432/test_db".to_string())
 }
 
+/// The email of a seed subject. The first one is the administrator and names
+/// itself after that, because it is the address every developer logs in with;
+/// the rest are numbered from 02.
 fn seed_email(user_index: usize) -> String {
-    format!("user{user_index:02}@example.com")
+    if user_index == 1 {
+        "admin@example.com".to_string()
+    } else {
+        format!("user{user_index:02}@example.com")
+    }
 }
 
 /// The expected role names of each seed user: only the first one is an admin,

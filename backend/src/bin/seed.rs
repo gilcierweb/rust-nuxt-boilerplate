@@ -52,7 +52,7 @@ fn sanitize_seed_text(input: &str, fallback: &str, max_chars: usize) -> String {
 
 fn test_user_email(user_index: usize) -> String {
     if user_index == 1 {
-        "user01@example.com".to_string()
+        "admin@example.com".to_string()
     } else {
         format!("user{user_index:02}@example.com")
     }
@@ -515,7 +515,7 @@ fn main() -> SeedResult<()> {
     })?;
 
     println!("Seed completed successfully");
-    println!("Admin email: user01@example.com");
+    println!("Admin email: admin@example.com");
     println!("Default password: password123");
     print_seed_subjects(&mut conn, &security)?;
     print_counts(&mut conn)?;

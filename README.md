@@ -92,10 +92,10 @@ https://rust-nuxt-boilerplate.gilcierweb.workers.dev/admin/
 ## Portal App
 https://rust-nuxt-boilerplate.gilcierweb.workers.dev/portal/
 
-admin: user01@example.com
+admin: admin@example.com
 
 Test users (password `password123`):
-- user01@example.com | role=admin (the only administrator)
+- admin@example.com | role=admin (the only administrator)
 - user02@example.com | role=manager
 - user03@example.com | role=editor
 - user04@example.com | role=viewer
@@ -314,7 +314,7 @@ pnpm dev
 | **Portainer** | http://localhost:9000 | - |
 
 **Default Admin** (after seeding):
-- Email: `user01@example.com`
+- Email: `admin@example.com`
 - Password: `password123` (the seed uses this for every demo subject, so change it before any real use)
 
 ---
@@ -405,7 +405,7 @@ The migration creates the canonical catalog: the roles `admin`, `manager`, `edit
 
 `cargo run --bin seed` reuses that catalog and converges the demo subjects to it:
 
-- `user01@example.com` is the only `admin`.
+- `admin@example.com` is the only `admin`.
 - `userNN@example.com` (NN from 02 to 100) rotate over `manager`, `editor`, `viewer`, `support`, `customer`.
 - Every run removes the links the desired state does not name and inserts the missing ones, so running the seed twice leaves the same database.
 

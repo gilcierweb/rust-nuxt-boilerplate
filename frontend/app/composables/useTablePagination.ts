@@ -84,8 +84,13 @@ export function useTablePagination<T extends Record<string, any>>(
     const url = resolvedFetcher.url.startsWith('/api/')
       ? resolvedFetcher.url
       : `${apiBase}${resolvedFetcher.url.startsWith('/') ? '' : '/'}${resolvedFetcher.url}`
-      ? resolvedFetcher.url 
-      : `${apiBase}${resolvedFetcher.url.startsWith('/') ? '' : '/'}${resolvedFetcher.url}`
+
+    // A sort key with no value answers a bare `?sort_by`, which the backend
+    // reads as an empty string: an empty string is not part of the sort
+    // allowlist, so the list answers 422 until a column is chosen. The keys
+    // travel only when a column is chosen, the same way the search term does.
+    const sortBy = sortByQuery.value
+    const sortDir = sortDirQuery.value
 
     const response = await $api<any>(url, {
       method: 'GET',
@@ -93,8 +98,8 @@ export function useTablePagination<T extends Record<string, any>>(
       query: {
         page: pageQuery.value,
         per_page: perPageQuery.value,
-        sort_by: sortByQuery.value,
-        sort_dir: sortDirQuery.value,
+        ...(sortBy ? { sort_by: sortBy } : {}),
+        ...(sortDir ? { sort_dir: sortDir } : {}),
         ...(search.value ? { q: search.value } : {}),
       },
     })
