@@ -8,7 +8,6 @@
 use std::rc::Rc;
 
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
-use actix_web::http::Method;
 use actix_web::{Error, HttpMessage};
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
@@ -64,10 +63,12 @@ where
         let svc = self.service.clone();
 
         Box::pin(async move {
-            if req.method() == Method::OPTIONS {
-                return svc.call(req).await.map(ServiceResponse::map_into_left_body);
-            }
-
+            // No OPTIONS short-circuit: real preflights are answered by the
+            // CORS middleware, which wraps this scope from the outside, so
+            // this gate only ever sees methods that already passed CORS. A
+            // bare OPTIONS is just another method here and faces the same
+            // identity and domain checks as any other, which closes the
+            // unauthenticated route fingerprinting it used to allow.
             let Some(ability) = req.extensions().get::<CurrentAbility>().cloned() else {
                 let response = unauthorized_response().map_into_right_body();
                 return Ok(req.into_response(response));
@@ -272,15 +273,81 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn preflight_passes_without_a_token() {
+    async fn a_raw_options_without_identity_is_refused_like_any_other_method() {
+        // The CORS middleware answers real preflights (the ones carrying
+        // Origin and Access-Control-Request-Method) before any of these
+        // middlewares runs, so a bare OPTIONS with no identity at all is
+        // just another method on a protected route and must be refused:
+        // letting it through told an anonymous caller which admin routes
+        // exist, by the 405 versus 404 difference.
         let app = admin_stack_app!(Vec::new(), 0);
         let req = test::TestRequest::default()
             .method(actix_web::http::Method::OPTIONS)
             .uri("/admin/ping")
             .to_request();
+        // JwtAuth rejects as an actix error, the Err path call_service
+        // panics on: the refusal itself is the 401 inside it.
+        let err = test::try_call_service(&app, req)
+            .await
+            .expect_err("a bare OPTIONS carries no credentials, so it is refused");
+
+        assert_eq!(
+            err.error_response().status(),
+            actix_web::http::StatusCode::UNAUTHORIZED,
+            "a bare OPTIONS is refused like any other method"
+        );
+    }
+
+    #[actix_web::test]
+    async fn a_real_preflight_is_answered_before_the_auth_boundaries() {
+        // The same stack as production, Cors outermost: a browser preflight
+        // (Origin plus Access-Control-Request-Method) must be answered by the
+        // CORS layer and never reach JwtAuth, so it needs no token. This is
+        // the regression guard for the contract that lets the fix above
+        // remove the OPTIONS short-circuits.
+        let grants: Vec<RoleGrantRow> = Vec::new();
+        let mut mock_users = MockIUserRepository::new();
+        mock_users
+            .expect_get_user_grants()
+            .times(0)
+            .returning(move |_| Ok(grants.clone()));
+        let mut container = mock_container();
+        container.users = Arc::new(mock_users);
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .wrap(crate::middleware::cors::build_cors(&[
+                    "http://localhost:4000".to_string(),
+                ]))
+                .service(
+                    web::scope("/admin")
+                        .wrap(CsrfProtection::new(vec![]))
+                        .wrap(RequireAdminDomain::new())
+                        .wrap(JwtAuth::new(JwtAuthConfig::new(vec![])))
+                        .route(
+                            "/ping",
+                            web::route().to(|| async { HttpResponse::Ok().finish() }),
+                        ),
+                ),
+        )
+        .await;
+
+        let req = test::TestRequest::default()
+            .method(actix_web::http::Method::OPTIONS)
+            .uri("/admin/ping")
+            .insert_header((actix_web::http::header::ORIGIN, "http://localhost:4000"))
+            .insert_header((
+                actix_web::http::header::ACCESS_CONTROL_REQUEST_METHOD,
+                "GET",
+            ))
+            .to_request();
         let resp = test::call_service(&app, req).await;
 
-        assert_eq!(resp.status(), actix_web::http::StatusCode::OK);
+        assert_eq!(
+            resp.status(),
+            actix_web::http::StatusCode::OK,
+            "the browser preflight is answered by the CORS layer without a token"
+        );
     }
 
     #[actix_web::test]

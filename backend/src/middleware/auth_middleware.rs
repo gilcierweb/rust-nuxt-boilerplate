@@ -4,7 +4,6 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use actix_web::dev::{Service, ServiceRequest, ServiceResponse, Transform, forward_ready};
-use actix_web::http::Method;
 use actix_web::{Error, HttpMessage};
 use futures::future::{LocalBoxFuture, Ready, ready};
 use serde_json::json;
@@ -130,12 +129,11 @@ where
 
         Box::pin(async move {
             let path = req.uri().path().to_string();
-            let method = req.method().clone();
 
-            if method == Method::OPTIONS {
-                return svc.call(req).await.map(ServiceResponse::map_into_left_body);
-            }
-
+            // No OPTIONS short-circuit: the CORS middleware answers real
+            // preflights before this one runs, so a bare OPTIONS reaching
+            // here is just another method on a protected route and faces the
+            // same identity check as any other.
             if config.is_public_path(&path) {
                 return svc.call(req).await.map(ServiceResponse::map_into_left_body);
             }
