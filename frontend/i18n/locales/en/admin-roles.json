@@ -15,10 +15,31 @@
         "cancel": "Cancel",
         "saving": "Saving...",
         "create_role": "Create role",
-        "save_changes": "Save changes"
+        "save_changes": "Save changes",
+        "class_level": "Class level"
       },
       "validation": {
         "name_required": "Name is required"
+      },
+      "not_found": {
+        "title": "Role not found",
+        "description": "The identifier does not match any role of the catalog."
+      },
+      "permissions": {
+        "card_title": "Role permissions",
+        "card_description": "Each catalog permission can allow, deny or stay unlinked for this role.",
+        "loadError": "Failed to load the permission catalog.",
+        "saving": "Saving...",
+        "save": "Save permissions",
+        "updated": "Role permissions updated.",
+        "updateError": "Failed to update the permissions.",
+        "unsaved": "There are unsaved changes.",
+        "locked_title": "Blocked change",
+        "locked_warning": "Without roles:read and roles:update no role could administer the system, so the backend refuses the save."
+      },
+      "members": {
+        "card_title": "Role members",
+        "empty": "No user holds this role."
       }
     },
     "memberships": {

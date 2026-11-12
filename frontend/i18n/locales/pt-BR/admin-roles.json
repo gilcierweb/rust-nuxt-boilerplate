@@ -15,10 +15,31 @@
         "cancel": "Cancelar",
         "saving": "Salvando...",
         "create_role": "Criar cargo",
-        "save_changes": "Salvar alterações"
+        "save_changes": "Salvar alterações",
+        "class_level": "Nível de classe"
       },
       "validation": {
         "name_required": "O nome é obrigatório"
+      },
+      "not_found": {
+        "title": "Cargo não encontrado",
+        "description": "O identificador não corresponde a nenhum cargo do catálogo."
+      },
+      "permissions": {
+        "card_title": "Permissões do cargo",
+        "card_description": "Cada permissão do catálogo pode permitir, negar ou permanecer sem vínculo para este cargo.",
+        "loadError": "Falha ao carregar o catálogo de permissões.",
+        "saving": "Salvando...",
+        "save": "Salvar permissões",
+        "updated": "Permissões do cargo atualizadas.",
+        "updateError": "Falha ao atualizar as permissões.",
+        "unsaved": "Há alterações não salvas.",
+        "locked_title": "Alteração bloqueada",
+        "locked_warning": "Sem roles:read e roles:update nenhum cargo conseguiria administrar o sistema, então o backend recusa a gravação."
+      },
+      "members": {
+        "card_title": "Membros do cargo",
+        "empty": "Nenhum usuário possui este cargo."
       }
     },
     "memberships": {

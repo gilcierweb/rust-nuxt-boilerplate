@@ -122,6 +122,48 @@
           "saving": "@:common.actions.saving"
         }
       }
+    },
+    "roles": {
+      "messages": {
+        "loadError": "Error al cargar roles."
+      },
+      "form": {
+        "error_title": "Error",
+        "id": "ID",
+        "name": "Nombre",
+        "resource_type": "Tipo de recurso",
+        "resource_id": "ID del recurso",
+        "created_at": "Creado el",
+        "updated_at": "Actualizado el",
+        "cancel": "Cancelar",
+        "saving": "Guardando...",
+        "create_role": "Crear rol",
+        "save_changes": "Guardar cambios",
+        "class_level": "Nivel de clase"
+      },
+      "validation": {
+        "name_required": "El nombre es obligatorio"
+      },
+      "not_found": {
+        "title": "Rol no encontrado",
+        "description": "El identificador no corresponde a ningún rol del catálogo."
+      },
+      "permissions": {
+        "card_title": "Permisos del rol",
+        "card_description": "Cada permiso del catálogo puede permitir, negar o quedar sin vínculo para este rol.",
+        "loadError": "Fallo al cargar el catálogo de permisos.",
+        "saving": "Guardando...",
+        "save": "Guardar permisos",
+        "updated": "Permisos del rol actualizados.",
+        "updateError": "Fallo al actualizar los permisos.",
+        "unsaved": "Hay cambios sin guardar.",
+        "locked_title": "Cambio bloqueado",
+        "locked_warning": "Sin roles:read y roles:update ningún rol podría administrar el sistema, así que el backend rechaza el guardado."
+      },
+      "members": {
+        "card_title": "Miembros del rol",
+        "empty": "Ningún usuario tiene este rol."
+      }
     }
   }
 }
