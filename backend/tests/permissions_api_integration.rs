@@ -451,6 +451,19 @@ async fn admin_creates_updates_and_deletes_a_permission() {
     );
     assert_eq!(updated["resource"], "audit_logs");
     assert_eq!(updated["action"], "update");
+
+    // The cycle ends by removing the row it created: the catalog seed is
+    // additive, so the canonical permission comes back with its canonical
+    // name on the next run. Leaving the renamed row behind would break the
+    // naming assertion of the catalog migration suite, which shares this
+    // database and runs after this one.
+    let req = authorized(
+        test::TestRequest::delete().uri(format!("/admin/permissions/{created_id}").as_str()),
+        &token,
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
 }
 
 #[actix_web::test]
