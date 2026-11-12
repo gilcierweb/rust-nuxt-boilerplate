@@ -618,3 +618,249 @@ async fn get_members_lists_the_decrypted_emails() {
         "the subject has no profile, so the display name is null"
     );
 }
+
+#[actix_web::test]
+async fn update_refuses_to_scope_the_administrator_role() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let subject = subject_with_roles(&db, &["admin"]).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+    let token = bearer(&config, subject);
+    let admin_role = role_id(&db, "admin").await;
+
+    // A scoped rule grants nothing at the class level, so scoping the
+    // administrator role would empty the class level administrator sources
+    // and no request to the roles endpoints would ever be authorized again.
+    let req = authorized(
+        test::TestRequest::patch()
+            .uri(format!("/admin/roles/{admin_role}").as_str())
+            .set_json(serde_json::json!({
+                "name": "admin",
+                "resource_type": "company",
+                "resource_id": Uuid::new_v4().to_string()
+            })),
+        &token,
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "the administrator role keeps its class level scope"
+    );
+
+    let req = authorized(
+        test::TestRequest::get().uri("/admin/roles?per_page=100"),
+        &token,
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    let listed = body_json(resp).await;
+    let entry = listed["data"]
+        .as_array()
+        .expect("the roles array")
+        .iter()
+        .find(|role| role["id"] == admin_role.to_string())
+        .expect("the admin role in the list");
+    assert!(
+        entry["resource_type"].is_null(),
+        "the refused write leaves the administrator role class level"
+    );
+}
+
+#[actix_web::test]
+async fn update_refuses_to_rename_the_protected_role_names() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let subject = subject_with_roles(&db, &["admin"]).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+    let token = bearer(&config, subject);
+
+    // The rules of the catalog name these roles, so a rename would break the
+    // ability builder that maps a role name to its codes.
+    for protected in ["admin", "customer"] {
+        let protected_role = role_id(&db, protected).await;
+        let req = authorized(
+            test::TestRequest::patch()
+                .uri(format!("/admin/roles/{protected_role}").as_str())
+                .set_json(serde_json::json!({
+                    "name": format!("renamed-{protected}"),
+                    "resource_type": null,
+                    "resource_id": null
+                })),
+            &token,
+        )
+        .to_request();
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(
+            resp.status(),
+            StatusCode::UNPROCESSABLE_ENTITY,
+            "the {protected} role name is protected"
+        );
+    }
+
+    // A role the test created carries no contract, so it renames freely. The
+    // name stays under the fifty characters the validator allows.
+    let scratch = scratch_role(&db).await;
+    let tag = &Uuid::new_v4().to_string()[..8];
+    let req = authorized(
+        test::TestRequest::patch()
+            .uri(format!("/admin/roles/{scratch}").as_str())
+            .set_json(serde_json::json!({
+                "name": format!("renamed-{tag}"),
+                "resource_type": null,
+                "resource_id": null
+            })),
+        &token,
+    )
+    .to_request();
+    assert_eq!(test::call_service(&app, req).await.status(), StatusCode::OK);
+}
+
+#[actix_web::test]
+async fn update_refuses_a_name_another_role_already_holds() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let subject = subject_with_roles(&db, &["admin"]).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+    let token = bearer(&config, subject);
+
+    // The name is the contract the ability builder reads, so two roles may
+    // never share one: the repository would then answer two ids for one name.
+    let scratch = scratch_role(&db).await;
+    let req = authorized(
+        test::TestRequest::patch()
+            .uri(format!("/admin/roles/{scratch}").as_str())
+            .set_json(serde_json::json!({
+                "name": "editor",
+                "resource_type": null,
+                "resource_id": null
+            })),
+        &token,
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(
+        resp.status(),
+        StatusCode::CONFLICT,
+        "a role name is unique across the catalog"
+    );
+}
+
+#[actix_web::test]
+async fn put_refuses_to_grant_an_authority_the_actor_does_not_hold() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    // The actor may edit the links of a role, and holds nothing beyond the
+    // two administrator codes: the role read and the role update.
+    let actor_role = probe_role_with_links(&db, &["roles:read", "roles:update"]).await;
+    let actor = subject_with_role_id(&db, actor_role).await;
+    // The target is a plain role with no links at all.
+    let target = scratch_role(&db).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+    let token = bearer(&config, actor);
+
+    // Granting the user delete would hand every holder of the target an
+    // authority the actor does not hold: the write is an escalation.
+    let req = authorized(
+        test::TestRequest::put()
+            .uri(format!("/admin/roles/{target}/permissions").as_str())
+            .set_json(serde_json::json!({
+                "permissions": [{ "code": "users:delete", "effect": 0 }]
+            })),
+        &token,
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(
+        resp.status(),
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "the actor may not grant an authority it does not hold"
+    );
+
+    // The codes the actor holds travel freely.
+    let req = authorized(
+        test::TestRequest::put()
+            .uri(format!("/admin/roles/{target}/permissions").as_str())
+            .set_json(serde_json::json!({
+                "permissions": [{ "code": "roles:read", "effect": 0 }]
+            })),
+        &token,
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "an authority the actor holds may be granted"
+    );
+
+    // The actor role is a second class level holder of the administrator
+    // codes: the guard removes the two roles the test created when the scope
+    // ends, so a panicking assertion cannot leave the source behind and answer
+    // the lockout guard of the sibling tests.
+    let _cleanup = ScratchRoles::new(vec![actor_role, target]);
+}
+
+/// Removes the roles a test created, with their links and assignments: the
+/// suites share one database, so a leftover role answers the guards of the
+/// tests that run after this one.
+fn remove_scratch_roles(database_url: &str, role_ids: &[Uuid]) {
+    use backend::db::schema::{roles as roles_table, roles_permissions, users_roles};
+    use diesel::{Connection, ExpressionMethods, QueryDsl};
+
+    let mut conn = diesel::PgConnection::establish(database_url)
+        .expect("Failed to connect for the scratch cleanup");
+    let ids = role_ids.to_vec();
+
+    // The file also pulls the async trait of the same name into scope, so the
+    // calls name their trait explicitly instead of relying on the method
+    // resolution.
+    diesel::RunQueryDsl::execute(
+        diesel::delete(users_roles::table.filter(users_roles::role_id.eq_any(&ids))),
+        &mut conn,
+    )
+    .expect("user role cleanup failed");
+
+    diesel::RunQueryDsl::execute(
+        diesel::delete(roles_permissions::table.filter(roles_permissions::role_id.eq_any(&ids))),
+        &mut conn,
+    )
+    .expect("role permission cleanup failed");
+
+    diesel::RunQueryDsl::execute(
+        diesel::delete(roles_table::table.filter(roles_table::id.eq_any(&ids))),
+        &mut conn,
+    )
+    .expect("role cleanup failed");
+}
+
+/// The scratch roles of a test, removed when the test scope ends.
+///
+/// The removal rides on [`Drop`] so a panicking assertion cleans up too: the
+/// suites share one database, and a leftover class level holder of the
+/// administrator codes would answer the lockout guard of the tests that run
+/// after this one.
+struct ScratchRoles {
+    database_url: String,
+    ids: Vec<Uuid>,
+}
+
+impl ScratchRoles {
+    fn new(ids: Vec<Uuid>) -> Self {
+        Self {
+            database_url: database_url(),
+            ids,
+        }
+    }
+}
+
+impl Drop for ScratchRoles {
+    fn drop(&mut self) {
+        remove_scratch_roles(&self.database_url, &self.ids);
+    }
+}

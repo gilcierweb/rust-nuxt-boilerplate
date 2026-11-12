@@ -106,9 +106,88 @@ const CANONICAL_ROLE_LINKS: &[(&str, &[&str])] = &[
 /// Role id map returned by [`ensure_canonical_catalog`], keyed by role name.
 pub type RoleIds = HashMap<String, Uuid>;
 
+/// Converges the two protected role rows to their canonical shape.
+///
+/// The catalog is additive everywhere else, on purpose: an operator may rename
+/// a permission through the admin and the seed never rewrites a name. The two
+/// protected roles are different, because the system itself reads their names:
+/// the ability builder expands `admin` into the full catalog and the
+/// registration assigns `customer`.
+///
+/// Two shapes break the system and are repaired here, before the seed reuses
+/// the rows. A scope on the administrator row first: a scoped rule grants
+/// nothing at the class level, so every holder would lose the roles read and
+/// the roles update at once. A rename of the administrator second: it leaves
+/// the assignments on the renamed row, so the seed would otherwise create a
+/// second administrator row and split the holders between the two.
+pub fn converge_protected_roles(conn: &mut PgConnection) -> diesel::QueryResult<()> {
+    use crate::db::schema::{permissions, roles, roles_permissions};
+    use diesel::AggregateExpressionMethods;
+
+    // The canonical shape of the two protected roles: a class level admin and
+    // a self scoped customer, so the two scope columns travel together.
+    for (name, resource_type) in [("admin", None), ("customer", Some("user"))] {
+        diesel::update(roles::table.filter(roles::name.eq(name)))
+            .set((
+                roles::resource_type.eq(resource_type),
+                roles::resource_id.eq(None::<Uuid>),
+            ))
+            .execute(conn)?;
+    }
+
+    // A rename of the administrator row: the row is recognized by what it
+    // grants, not by its name. A class level role holding every canonical code
+    // is the administrator, and when no row carries the canonical name it takes
+    // it back.
+    let canonical_admin = roles::table
+        .filter(roles::name.eq("admin"))
+        .select(roles::id)
+        .first::<Uuid>(conn)
+        .optional()?;
+    if canonical_admin.is_none() {
+        let codes: Vec<String> = CANONICAL_PERMISSIONS
+            .iter()
+            .map(|(code, _)| (*code).to_string())
+            .collect();
+        let holders: Vec<Uuid> = roles_permissions::table
+            .inner_join(permissions::table)
+            .inner_join(roles::table)
+            .filter(
+                roles_permissions::effect
+                    .eq(0)
+                    .and(permissions::code.eq_any(&codes))
+                    .and(roles::resource_id.is_null()),
+            )
+            .group_by(roles_permissions::role_id)
+            .select(roles_permissions::role_id)
+            .having(
+                diesel::dsl::count(permissions::code)
+                    .aggregate_distinct()
+                    .eq(codes.len() as i64),
+            )
+            .load(conn)?;
+
+        // Exactly one holder: anything else is ambiguous, and guessing would
+        // promote the wrong row.
+        if let [holder] = holders.as_slice() {
+            diesel::update(roles::table.find(holder))
+                .set(roles::name.eq("admin"))
+                .execute(conn)?;
+        }
+    }
+
+    Ok(())
+}
+
 /// Seeds the canonical roles, permissions, and allow links. Idempotent and
 /// additive: running it twice changes nothing, existing grants are kept.
+///
+/// The two protected role rows are the exception: they converge first, because
+/// a scope on the administrator row or a rename of either one breaks the system
+/// in a way no other row can.
 pub fn ensure_canonical_catalog(conn: &mut PgConnection) -> diesel::QueryResult<RoleIds> {
+    converge_protected_roles(conn)?;
+
     conn.transaction(|tx| {
         let mut permission_ids: HashMap<&str, Uuid> = HashMap::new();
         for (code, name) in CANONICAL_PERMISSIONS {

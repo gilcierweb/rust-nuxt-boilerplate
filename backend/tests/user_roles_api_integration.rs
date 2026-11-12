@@ -338,9 +338,12 @@ async fn removing_last_admin_role_assignment_is_refused() {
     seed_catalog();
     let db = TestDb::new().await;
     let admin_role = role_id(&db, "admin").await;
-    // The only holder of the literal admin role in this database.
+    // The only holder of the literal admin role in this database. The
+    // isolation borrows the administrator assignments of every other subject
+    // and the guard returns them when the test ends.
     let sole_holder = create_user(&db, &[admin_role]).await;
-    leave_one_administrator_source(&db, sole_holder).await;
+    let borrowed = leave_one_administrator_source(&db, sole_holder).await;
+    let _restore = BorrowedAssignments::new(database_url(), borrowed);
     let app = admin_app!(&db);
     let config = test_config();
     let token = bearer(&config, sole_holder);
@@ -372,7 +375,8 @@ async fn removing_the_only_administrator_holder_is_refused() {
     let db = TestDb::new().await;
     let admin_role = role_id(&db, "admin").await;
     let holder = create_user(&db, &[admin_role]).await;
-    leave_one_administrator_source(&db, holder).await;
+    let borrowed = leave_one_administrator_source(&db, holder).await;
+    let _restore = BorrowedAssignments::new(database_url(), borrowed);
     let app = admin_app!(&db);
     let config = test_config();
     let token = bearer(&config, holder);
@@ -414,8 +418,34 @@ fn administrator_codes() -> Vec<String> {
 /// Leaves exactly one user holding the administrator codes: every other
 /// assignment of a role that holds both is removed, so the lockout guards of
 /// this file see a single source.
-async fn leave_one_administrator_source(db: &TestDb, holder: Uuid) {
+async fn leave_one_administrator_source(db: &TestDb, holder: Uuid) -> Vec<(Uuid, Uuid)> {
     let mut conn = db.pool().get().await.expect("Failed to get connection");
+
+    #[derive(diesel::QueryableByName)]
+    struct AssignmentRow {
+        #[diesel(sql_type = diesel::sql_types::Uuid)]
+        user_id: Uuid,
+        #[diesel(sql_type = diesel::sql_types::Uuid)]
+        role_id: Uuid,
+    }
+
+    let source_selector = "role_id IN ( \
+                 SELECT rp.role_id FROM roles_permissions rp \
+                   JOIN permissions p ON p.id = rp.permission_id \
+                  WHERE rp.effect = 0 AND p.code = ANY($2) \
+                  GROUP BY rp.role_id \
+                 HAVING count(DISTINCT p.code) = 2)";
+
+    let removed: Vec<AssignmentRow> = diesel::sql_query(format!(
+        "SELECT user_id, role_id FROM users_roles \
+         WHERE user_id <> $1 AND {source_selector}"
+    ))
+    .bind::<diesel::sql_types::Uuid, _>(holder)
+    .bind::<diesel::sql_types::Array<diesel::sql_types::Text>, _>(administrator_codes())
+    .load(&mut *conn)
+    .await
+    .expect("administrator source lookup failed");
+
     diesel::sql_query(
         "DELETE FROM users_roles \
          WHERE user_id <> $1 \
@@ -431,6 +461,59 @@ async fn leave_one_administrator_source(db: &TestDb, holder: Uuid) {
     .execute(&mut *conn)
     .await
     .expect("administrator source isolation failed");
+
+    removed
+        .into_iter()
+        .map(|row| (row.user_id, row.role_id))
+        .collect()
+}
+
+/// The assignments an isolation borrowed, restored when the guard drops.
+///
+/// The isolation of the lockout tests has to empty the administrator sources
+/// of the whole database, and the seed users are subjects of the suites that
+/// run after this one: the borrow lasts the test, never longer. The restore
+/// rides on [`Drop`] so a panicking assertion returns them too.
+struct BorrowedAssignments {
+    database_url: String,
+    rows: Vec<(Uuid, Uuid)>,
+}
+
+impl BorrowedAssignments {
+    fn new(database_url: String, rows: Vec<(Uuid, Uuid)>) -> Self {
+        Self { database_url, rows }
+    }
+}
+
+impl Drop for BorrowedAssignments {
+    fn drop(&mut self) {
+        if self.rows.is_empty() {
+            return;
+        }
+
+        use backend::db::schema::users_roles;
+        use diesel::{Connection, ExpressionMethods};
+
+        let mut conn = diesel::PgConnection::establish(&self.database_url)
+            .expect("Failed to connect for the restore");
+        let rows = self.rows.clone();
+
+        diesel::RunQueryDsl::execute(
+            diesel::insert_into(users_roles::table).values(
+                &rows
+                    .into_iter()
+                    .map(|(user_id, role_id)| {
+                        (
+                            users_roles::user_id.eq(user_id),
+                            users_roles::role_id.eq(role_id),
+                        )
+                    })
+                    .collect::<Vec<_>>(),
+            ),
+            &mut conn,
+        )
+        .expect("the borrowed assignment restore failed");
+    }
 }
 
 /// A role created by the test itself, holding the given links.

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use chrono::NaiveDateTime;
 use diesel::BoolExpressionMethods;
 use diesel::JoinOnDsl;
+use diesel::helper_types::Or;
 use diesel::result::QueryResult;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
@@ -11,7 +12,8 @@ use ipnet::IpNet;
 use uuid::Uuid;
 
 use crate::db::database::DBPool;
-use crate::db::functions::matches_fragment;
+use crate::db::functions::{FragmentMatch, matches_fragment};
+use crate::db::schema::profiles;
 use crate::db::schema::roles as roles_table;
 use crate::db::schema::users as users_table;
 use crate::models::profile::Profile;
@@ -24,6 +26,28 @@ pub use crate::repositories::traits::users_trait::{
 };
 use crate::security::SecurityService;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
+
+/// The fragment predicate of the admin user search: the four profile name
+/// columns, case insensitively. The address itself is encrypted, so a fragment
+/// of it never matches and the term reaches here as a name fragment.
+///
+/// The count and the page of the admin list are two statements of the same
+/// result set, so the predicate is written once and both carry it.
+type ProfileFragmentPredicate = Or<
+    Or<
+        Or<FragmentMatch<profiles::full_name>, FragmentMatch<profiles::first_name>>,
+        FragmentMatch<profiles::last_name>,
+    >,
+    FragmentMatch<profiles::nickname>,
+>;
+
+fn profile_fragment_predicate(term: &str) -> ProfileFragmentPredicate {
+    let pattern = format!("%{}%", term.to_lowercase());
+    matches_fragment(profiles::full_name, &pattern)
+        .or(matches_fragment(profiles::first_name, &pattern))
+        .or(matches_fragment(profiles::last_name, &pattern))
+        .or(matches_fragment(profiles::nickname, &pattern))
+}
 
 pub struct UsersRepository {
     base: BaseRepo,
@@ -829,7 +853,6 @@ impl IUserRepository for UsersRepository {
         security: Arc<SecurityService>,
     ) -> diesel::QueryResult<PaginatedResponse<AdminUserLookupItem>> {
         use crate::db::schema::{profiles, roles, users_roles};
-        use diesel::BoolExpressionMethods;
         use diesel::expression_methods::NullableExpressionMethods;
 
         let params = params.validated();
@@ -841,45 +864,60 @@ impl IUserRepository for UsersRepository {
             .run(move |conn| {
                 let security = security.clone();
                 Box::pin(async move {
-                    // ── 1. Total count, single COUNT(*) with no data fetched ──
-                    let total: i64 = users_table::table.count().get_result(conn).await?;
+                    // The shape of the admin user list: one row per user with
+                    // its optional profile. The count and the page read the
+                    // same result set, so the metadata describes what the
+                    // client sees and not the whole table.
+                    let filtered = || {
+                        users_table::table
+                            .left_join(profiles::table.on(profiles::user_id.eq(users_table::id)))
+                            .select((
+                                users_table::id,
+                                users_table::email_encrypted,
+                                users_table::encryption_key_version,
+                                // A left joined column is nullable, so the
+                                // select clause has to say so.
+                                profiles::first_name.nullable(),
+                                profiles::last_name.nullable(),
+                                profiles::full_name.nullable(),
+                                profiles::nickname.nullable(),
+                            ))
+                            .into_boxed()
+                    };
+
+                    // ── 1. Total count, single COUNT(*) with no data fetched,
+                    // over the very filter the page carries.
+                    let mut counting = filtered();
+                    if let Some(term) = search
+                        .as_deref()
+                        .map(str::trim)
+                        .filter(|value| !value.is_empty())
+                    {
+                        match security.email_blind_index(term) {
+                            Ok(index) => {
+                                counting =
+                                    counting.filter(users_table::email_blind_index.eq(index));
+                            },
+                            Err(_) => {
+                                counting = counting.filter(profile_fragment_predicate(term));
+                            },
+                        }
+                    }
+                    let total: i64 = counting.count().get_result(conn).await?;
 
                     // ── 2. Page query — one JOIN, ordered and paginated in the
                     // database. The boxed query lets the ORDER BY column come
                     // from an allowlist without any string interpolation.
-                    let mut query = users_table::table
-                        .left_join(profiles::table.on(profiles::user_id.eq(users_table::id)))
-                        .select((
-                            users_table::id,
-                            users_table::email_encrypted,
-                            users_table::encryption_key_version,
-                            // A left joined column is nullable, so the select
-                            // clause has to say so.
-                            profiles::first_name.nullable(),
-                            profiles::last_name.nullable(),
-                            profiles::full_name.nullable(),
-                            profiles::nickname.nullable(),
-                        ))
-                        .into_boxed();
+                    let mut query = filtered();
 
-                    // Server side search: the profile name fields with a
-                    // fragment, or the exact email through its blind index (the
-                    // address is encrypted, so a fragment of it cannot match).
                     let search = search.as_deref();
                     if let Some(term) = search.map(str::trim).filter(|value| !value.is_empty()) {
-                        let term = term.to_lowercase();
-                        match security.email_blind_index(&term) {
+                        match security.email_blind_index(term) {
                             Ok(index) => {
                                 query = query.filter(users_table::email_blind_index.eq(index));
                             },
                             Err(_) => {
-                                let pattern = format!("%{term}%");
-                                query = query.filter(
-                                    matches_fragment(profiles::full_name, &pattern)
-                                        .or(matches_fragment(profiles::first_name, &pattern))
-                                        .or(matches_fragment(profiles::last_name, &pattern))
-                                        .or(matches_fragment(profiles::nickname, &pattern)),
-                                );
+                                query = query.filter(profile_fragment_predicate(term));
                             },
                         }
                     }

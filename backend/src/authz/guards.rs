@@ -60,6 +60,40 @@ pub fn ensure_no_escalation(
     Ok(())
 }
 
+/// The role names the system itself depends on: the administrator role the
+/// ability builder expands into the full catalog, and the default role the
+/// registration assigns. A rename of either breaks the code that reads it.
+pub const PROTECTED_ROLE_NAMES: [&str; 2] = ["admin", "customer"];
+
+/// Refuses a rename of a role whose name the system depends on.
+pub fn ensure_role_name_is_not_protected(
+    current_name: &str,
+    new_name: &str,
+) -> Result<(), AppError> {
+    if current_name != new_name && PROTECTED_ROLE_NAMES.contains(&current_name) {
+        return Err(AppError::Validation(
+            t!("admin.roles.guard.protected_name").into_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
+/// Refuses a rename onto a name another role already holds. The ability
+/// builder resolves a role by its name, so a shared name would answer two
+/// different roles for one lookup.
+pub fn ensure_role_name_is_free(name_holder: Option<Uuid>, role_id: Uuid) -> Result<(), AppError> {
+    if let Some(holder) = name_holder
+        && holder != role_id
+    {
+        return Err(AppError::Conflict(
+            t!("admin.roles.guard.name_taken").into_owned(),
+        ));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;
@@ -68,7 +102,8 @@ mod tests {
 
     use super::{
         ensure_assignment_keeps_administrator, ensure_no_escalation,
-        ensure_role_administration_survives,
+        ensure_role_administration_survives, ensure_role_name_is_free,
+        ensure_role_name_is_not_protected,
     };
 
     fn codes(values: &[&str]) -> HashSet<String> {
@@ -101,5 +136,21 @@ mod tests {
         let actor = codes(&[]);
         let role = codes(&[]);
         assert!(ensure_no_escalation(&actor, &role).is_ok());
+    }
+
+    #[test]
+    fn a_protected_role_name_is_not_renamable() {
+        assert!(ensure_role_name_is_not_protected("admin", "admin").is_ok());
+        assert!(ensure_role_name_is_not_protected("admin", "boss").is_err());
+        assert!(ensure_role_name_is_not_protected("customer", "client").is_err());
+        assert!(ensure_role_name_is_not_protected("editor", "writer").is_ok());
+    }
+
+    #[test]
+    fn a_name_another_role_holds_is_refused() {
+        let role = Uuid::new_v4();
+        assert!(ensure_role_name_is_free(None, role).is_ok());
+        assert!(ensure_role_name_is_free(Some(role), role).is_ok());
+        assert!(ensure_role_name_is_free(Some(Uuid::new_v4()), role).is_err());
     }
 }

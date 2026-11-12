@@ -199,6 +199,14 @@ async fn the_user_list_searches_by_name_fragment() {
     assert_eq!(items.len(), 1, "the fragment matches one display name");
     assert_eq!(items[0]["id"], editor.0.to_string());
     assert_eq!(items[0]["full_name"], full_name);
+
+    // The total is the metadata of the same query the page came from, so it
+    // counts the filtered set. A count of the whole table would tell the
+    // pagination that many pages of results exist where none are left.
+    assert_eq!(
+        json["pagination"]["total"], 1,
+        "the total counts the rows the search matched, not the whole table"
+    );
 }
 
 #[actix_web::test]

@@ -15,6 +15,8 @@
   "admin.roles.guard.default_role": "Este rol es el predeterminado del registro y no puede eliminarse",
   "admin.roles.guard.escalation": "No se puede asignar un rol con permisos más allá de los tuyos",
   "admin.roles.guard.last_administrator_source": "El cambio quitaría el último rol con roles:read y roles:update",
+  "admin.roles.guard.name_taken": "Otro rol ya usa este nombre",
+  "admin.roles.guard.protected_name": "El sistema depende de este nombre de rol, así que no puede renombrarse",
   "admin.roles.validation.code_unknown": "Código de permiso desconocido",
   "admin.roles.validation.effect_invalid": "El efecto debe ser 0 (puede) o 1 (no puede)",
   "admin.roles.validation.name_invalid": "El nombre del rol es obligatorio y debe tener como máximo 50 caracteres",

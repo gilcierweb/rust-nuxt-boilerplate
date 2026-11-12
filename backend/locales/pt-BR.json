@@ -15,6 +15,8 @@
   "admin.roles.guard.default_role": "Este papel é o padrão do registro e não pode ser excluído",
   "admin.roles.guard.escalation": "Não é possível atribuir um papel com permissões além das suas",
   "admin.roles.guard.last_administrator_source": "A alteração removeria o último papel com roles:read e roles:update",
+  "admin.roles.guard.name_taken": "Outro papel já usa este nome",
+  "admin.roles.guard.protected_name": "O sistema depende deste nome de papel, então ele não pode ser renomeado",
   "admin.roles.validation.code_unknown": "Código de permissão desconhecido",
   "admin.roles.validation.effect_invalid": "O efeito deve ser 0 (pode) ou 1 (não pode)",
   "admin.roles.validation.name_invalid": "Nome do papel é obrigatório e deve ter no máximo 50 caracteres",

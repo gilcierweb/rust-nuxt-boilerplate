@@ -15,6 +15,8 @@
   "admin.roles.guard.default_role": "This role is the default of the registration and cannot be deleted",
   "admin.roles.guard.escalation": "Cannot assign a role granting authorities beyond your own",
   "admin.roles.guard.last_administrator_source": "The change would remove the last role holding roles:read and roles:update",
+  "admin.roles.guard.name_taken": "Another role already uses this name",
+  "admin.roles.guard.protected_name": "The system depends on this role name, so it cannot be renamed",
   "admin.roles.validation.code_unknown": "Unknown permission code",
   "admin.roles.validation.effect_invalid": "The effect must be 0 (can) or 1 (cannot)",
   "admin.roles.validation.name_invalid": "Role name is required and must be at most 50 characters",

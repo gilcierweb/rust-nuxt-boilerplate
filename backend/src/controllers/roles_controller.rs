@@ -203,6 +203,39 @@ pub async fn update_role(
         .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
 
     let role_id = id.into_inner();
+    let current = container
+        .roles
+        .find(&role_id)
+        .await
+        .map_err(|error| AppError::from_diesel(error, "Role"))?;
+
+    // The two write time guards of the role catalog: the system depends on the
+    // protected names, and a role name answers exactly one role.
+    crate::authz::guards::ensure_role_name_is_not_protected(&current.name, &payload.name)?;
+    let name_holder = container
+        .roles
+        .find_by_name(&payload.name)
+        .await
+        .map_err(AppError::Database)?
+        .map(|role| role.id);
+    crate::authz::guards::ensure_role_name_is_free(name_holder, role_id)?;
+
+    // A scoped rule grants nothing at the class level, so scoping a role that
+    // is an administrator source today would empty the class level sources at
+    // once: every holder would lose the roles read and the roles update.
+    if current.resource_id.is_none() && payload.resource_id.is_some() {
+        let holders = container
+            .roles
+            .role_ids_holding_all_codes(&administrator_codes())
+            .await
+            .map_err(AppError::Database)?;
+        let holders_after: Vec<Uuid> = holders
+            .into_iter()
+            .filter(|holder| *holder != role_id)
+            .collect();
+        crate::authz::guards::ensure_role_administration_survives(&holders_after)?;
+    }
+
     let new_role = NewRole {
         name: payload.name,
         resource_type: payload.resource_type,
@@ -393,6 +426,18 @@ pub async fn update_role_permissions(
         .map_err(AppError::Database)?;
     let holders_after = administrator_sources_after(&holders_before, role_id, &payload.permissions);
     crate::authz::guards::ensure_role_administration_survives(&holders_after)?;
+
+    // The actor may only grant what they hold: without this check one holder
+    // of the two administrator codes could hand every customer the user
+    // delete, an authority nobody gave them.
+    let actor_allow = ability.permissions().can;
+    let role_allow: std::collections::HashSet<String> = payload
+        .permissions
+        .iter()
+        .filter(|item| item.effect() == Some(PermissionEffect::Can))
+        .map(|item| item.code.clone())
+        .collect();
+    crate::authz::guards::ensure_no_escalation(&actor_allow, &role_allow)?;
 
     let updated = container
         .roles
