@@ -36,6 +36,12 @@ pub struct RoleGrantRow {
     pub effect: Option<i16>,
 }
 
+/// The sort fields the user list accepts. The email is encrypted, so the order
+/// by blind index is not the alphabetical order of the address: the caller
+/// sorts by the display name or by the creation date. Anything outside the list
+/// is a client mistake and the handler answers 422.
+pub const USER_SORT_FIELDS: [&str; 2] = ["display_name", "created_at"];
+
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait IUserRepository: Send + Sync {
@@ -132,9 +138,14 @@ pub trait IUserRepository: Send + Sync {
         user_id: &Uuid,
         backup_codes: &[Option<String>],
     ) -> QueryResult<usize>;
+    /// The sort fields the user list accepts. The email is encrypted, so the order
+    /// by blind index is not the alphabetical order of the address: the caller
+    /// sorts by the display name or by the creation date. Anything outside the list
+    /// is a client mistake and the handler answers 422.
     async fn list_paginated(
         &self,
         params: &PaginationParams,
+        search: Option<String>,
         security: Arc<SecurityService>,
     ) -> QueryResult<PaginatedResponse<AdminUserLookupItem>>;
 

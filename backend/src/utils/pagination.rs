@@ -41,6 +41,22 @@ pub struct PaginationParams {
 }
 
 impl PaginationParams {
+    /// Refuses a sort field outside the allowlist of the resource.
+    ///
+    /// A silent fallback hides a client mistake and makes the order of the page
+    /// unpredictable, so the caller answers 422 instead.
+    pub fn validate_sort_field(&self, allowlist: &[&str]) -> Result<(), crate::errors::AppError> {
+        if let Some(sort_by) = self.sort_by.as_deref()
+            && !allowlist.contains(&sort_by)
+        {
+            return Err(crate::errors::AppError::Validation(
+                t!("admin.validation.sort_invalid").into_owned(),
+            ));
+        }
+
+        Ok(())
+    }
+
     /// Returns offset for database queries
     #[allow(dead_code)]
     pub fn offset(&self) -> i64 {

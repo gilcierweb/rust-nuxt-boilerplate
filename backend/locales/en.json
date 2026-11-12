@@ -23,6 +23,7 @@
   "admin.roles.validation.scope_invalid": "resource_type and resource_id must be provided together",
   "admin.users.guard.last_admin_role_assignment": "This user holds the last assignment of the administrator role",
   "admin.users.validation.role_unknown": "Unknown role: the id does not belong to the catalog",
+  "admin.validation.sort_invalid": "Unknown sort field",
   "api.deprecated_warning": "API v%{version} is deprecated. Migrate to latest version.",
   "api.version_not_supported": "API version v%{version} is not supported. Supported versions: %{versions}",
   "app.name": "Boilerplate App",

@@ -1,4 +1,6 @@
 use actix_web::{HttpResponse, get, post, web};
+use serde::Deserialize;
+use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
 
@@ -7,6 +9,7 @@ use crate::errors::{AppError, AppResult};
 use crate::middleware::auth::AuthUser;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::container::AppContainer;
+use crate::repositories::traits::audit_logs_trait::AUDIT_LOG_SORT_FIELDS;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 use crate::utils::sanitize::{sanitize_input, strip_html};
 use crate::utils::validation::first_validation_error_message;
@@ -36,16 +39,30 @@ pub async fn list_audit_logs(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
+    search: web::Query<ListSearch>,
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Read, AbilityResource::AuditLogs)?;
-    let pagination = pagination.into_inner().validated();
+    let params = pagination.into_inner().validated();
+    params.validate_sort_field(&AUDIT_LOG_SORT_FIELDS)?;
+    let search = search
+        .into_inner()
+        .q
+        .map(|value| sanitize_input(&strip_html(&value)))
+        .filter(|value| !value.trim().is_empty());
+
     let response = container
         .domain_audit_logs
-        .list_paginated(&pagination)
+        .list_paginated(&params, search)
         .await
         .map_err(AppError::Database)?;
 
     Ok(HttpResponse::Ok().json(response))
+}
+
+/// The search box of a list, resolved server side.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ListSearch {
+    q: Option<String>,
 }
 
 /// Fetch a single audit log entry by its UUID.
@@ -209,7 +226,7 @@ mod tests {
 
         let mut container = mock_container();
         let mut repo = MockIAuditLogRepository::new();
-        repo.expect_list_paginated().times(1).returning(|_| {
+        repo.expect_list_paginated().times(1).returning(|_, _| {
             Ok(PaginatedResponse::new(
                 vec![AuditLog {
                     id: Uuid::new_v4(),

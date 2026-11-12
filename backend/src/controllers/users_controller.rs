@@ -9,9 +9,11 @@ use validator::Validate;
 use crate::authz::ability::{AbilityAction, AbilityResource, CurrentAbility};
 use crate::errors::{AppError, AppResult};
 use crate::repositories::container::AppContainer;
+use crate::repositories::traits::users_trait::USER_SORT_FIELDS;
 pub use crate::repositories::traits::users_trait::{AdminUserItem, AdminUserLookupItem};
 use crate::security::SecurityService;
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
+use crate::utils::sanitize::{sanitize_input, strip_html};
 use crate::utils::validation::first_validation_error_message;
 
 fn map_repo_error(error: diesel::result::Error, entity: &str) -> AppError {
@@ -46,6 +48,7 @@ pub async fn all_users(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
+    search: web::Query<ListSearch>,
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Read, AbilityResource::Users)?;
 
@@ -54,10 +57,17 @@ pub async fn all_users(
             .map_err(|e| AppError::Internal(e.to_string()))?,
     );
 
-    let pagination = pagination.into_inner().validated();
+    let params = pagination.into_inner().validated();
+    params.validate_sort_field(&USER_SORT_FIELDS)?;
+    let search = search
+        .into_inner()
+        .q
+        .map(|value| sanitize_input(&strip_html(&value)))
+        .filter(|value| !value.trim().is_empty());
+
     let response = container
         .users
-        .list_paginated(&pagination, security)
+        .list_paginated(&params, search, security)
         .await
         .map_err(AppError::Database)?;
 
@@ -108,6 +118,12 @@ pub async fn find_user(
         .map_err(|error| map_repo_error(error, "User"))?;
 
     Ok(HttpResponse::Ok().json(item))
+}
+
+/// The search box of a list, resolved server side.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ListSearch {
+    q: Option<String>,
 }
 
 /// The replacement of every role assignment of a user.
@@ -397,7 +413,7 @@ mod tests {
         users_repo
             .expect_list_paginated()
             .times(1)
-            .returning(|_, _| Ok(PaginatedResponse::new(Vec::new(), 0, 1, 20)));
+            .returning(|_, _, _| Ok(PaginatedResponse::new(Vec::new(), 0, 1, 20)));
         container.users = Arc::new(users_repo);
 
         let app = test::init_service(

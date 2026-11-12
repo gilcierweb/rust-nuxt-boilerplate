@@ -97,6 +97,17 @@ impl SecurityService {
             .map_err(|_| AppError::Internal("decrypted field is not valid UTF-8".to_string()))
     }
 
+    /// The blind index of an email, the same value the register flow stores.
+    ///
+    /// The search of an email is exact by design: the value is encrypted and
+    /// only the HMAC index exists, so a fragment cannot be matched.
+    pub fn email_blind_index(&self, email: &str) -> AppResult<Vec<u8>> {
+        let normalized = crate::utils::email::normalize_email(email)
+            .ok_or_else(|| AppError::Validation("invalid email".to_string()))?;
+
+        blind_index(&normalized, self.key_manager.blind_index_key())
+    }
+
     fn protect_normalized_value(&self, normalized: &str) -> AppResult<ProtectedValue> {
         let blind_index = blind_index(normalized, self.key_manager.blind_index_key())?;
         let encryption_key = self

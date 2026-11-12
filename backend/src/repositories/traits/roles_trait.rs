@@ -22,6 +22,10 @@ pub struct RoleMemberItem {
     pub display_name: Option<String>,
 }
 
+/// The sort fields the role list accepts. Anything outside the list is a client
+/// mistake and the handler answers 422 instead of silently falling back.
+pub const ROLE_SORT_FIELDS: [&str; 4] = ["name", "resource_type", "created_at", "updated_at"];
+
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait IRoleRepository: Send + Sync {
@@ -34,6 +38,7 @@ pub trait IRoleRepository: Send + Sync {
     async fn list_paginated(
         &self,
         params: &PaginationParams,
+        search: Option<String>,
     ) -> QueryResult<PaginatedResponse<Role>>;
 
     /// The links of a role, as the admin interface reads them back.

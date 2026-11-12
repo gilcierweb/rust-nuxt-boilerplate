@@ -3,6 +3,7 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::db::functions::matches_fragment;
 use crate::db::schema::audit_logs as audit_logs_table;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
 use crate::repositories::base::BaseRepo;
@@ -125,40 +126,76 @@ impl IAuditLogRepository for AuditLogsRepository {
     async fn list_paginated(
         &self,
         params: &PaginationParams,
+        search: Option<String>,
     ) -> diesel::QueryResult<PaginatedResponse<AuditLog>> {
+        use diesel::BoolExpressionMethods;
+        use diesel::expression_methods::NullableExpressionMethods;
+
         let list_params = ListParams::from(params.clone());
+        let search = search
+            .map(|value| value.trim().to_lowercase())
+            .filter(|value| !value.is_empty());
 
         self.base
             .run(move |conn| {
+                let search = search.clone();
                 Box::pin(async move {
-                    // Load all data then sort in memory
-                    let mut data = audit_logs_table::table.load::<AuditLog>(conn).await?;
+                    // The log is append only and grows without bound, so the
+                    // filter and the order run in the database: the count and
+                    // the page are two statements.
+                    let pattern = search.map(|term| format!("%{term}%"));
+                    let matches = |pattern: &Option<String>| {
+                        pattern.as_ref().map(|pattern| {
+                            matches_fragment(audit_logs_table::action.nullable(), pattern).or(
+                                matches_fragment(
+                                    audit_logs_table::resource_type.nullable(),
+                                    pattern,
+                                ),
+                            )
+                        })
+                    };
 
-                    if let Some(sort_by) = list_params.sort_by.as_deref() {
-                        let desc = list_params.sort_dir.as_deref() == Some("desc");
-                        data.sort_by(|a, b| {
-                            let ord = match sort_by {
-                                "action" => a.action.cmp(&b.action),
-                                "resource_type" => a.resource_type.cmp(&b.resource_type),
-                                "created_at" => a.created_at.cmp(&b.created_at),
-                                "id" => a.id.cmp(&b.id),
-                                _ => a.created_at.cmp(&b.created_at),
-                            };
-                            if desc { ord.reverse() } else { ord }
-                        });
-                    } else {
-                        data.sort_by_key(|a| a.created_at);
+                    let total: i64 = {
+                        let mut query = audit_logs_table::table.into_boxed();
+                        if let Some(predicate) = matches(&pattern) {
+                            query = query.filter(predicate);
+                        }
+                        query.count().get_result(conn).await?
+                    };
+
+                    let mut query = audit_logs_table::table.into_boxed();
+                    if let Some(predicate) = matches(&pattern) {
+                        query = query.filter(predicate);
                     }
 
-                    // Apply pagination
-                    let total_count = data.len() as i64;
-                    let offset = list_params.offset() as usize;
-                    let limit = list_params.limit() as usize;
-                    let data: Vec<_> = data.into_iter().skip(offset).take(limit).collect();
+                    // The allowlist of the handler already refused anything
+                    // outside the list, so this branch only picks the column.
+                    let descending = list_params.sort_dir.as_deref() == Some("desc");
+                    query = match list_params.sort_by.as_deref() {
+                        Some("action") if descending => {
+                            query.order_by(audit_logs_table::action.desc())
+                        },
+                        Some("action") => query.order_by(audit_logs_table::action.asc()),
+                        Some("resource_type") if descending => {
+                            query.order_by(audit_logs_table::resource_type.desc())
+                        },
+                        Some("resource_type") => {
+                            query.order_by(audit_logs_table::resource_type.asc())
+                        },
+                        _ if descending => query.order_by(audit_logs_table::created_at.desc()),
+                        _ => query.order_by(audit_logs_table::created_at.asc()),
+                    };
+
+                    let data = query
+                        .select(AuditLog::as_select())
+                        .limit(list_params.limit())
+                        .offset(list_params.offset())
+                        .load::<AuditLog>(conn)
+                        .await?;
 
                     Ok(PaginatedResponse::new(
                         data,
-                        total_count,
+                        total,
                         list_params.page,
                         list_params.per_page,
                     ))

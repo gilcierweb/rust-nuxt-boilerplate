@@ -11,6 +11,7 @@ use ipnet::IpNet;
 use uuid::Uuid;
 
 use crate::db::database::DBPool;
+use crate::db::functions::matches_fragment;
 use crate::db::schema::roles as roles_table;
 use crate::db::schema::users as users_table;
 use crate::models::profile::Profile;
@@ -824,9 +825,11 @@ impl IUserRepository for UsersRepository {
     async fn list_paginated(
         &self,
         params: &PaginationParams,
+        search: Option<String>,
         security: Arc<SecurityService>,
     ) -> diesel::QueryResult<PaginatedResponse<AdminUserLookupItem>> {
         use crate::db::schema::{profiles, roles, users_roles};
+        use diesel::BoolExpressionMethods;
         use diesel::expression_methods::NullableExpressionMethods;
 
         let params = params.validated();
@@ -859,17 +862,43 @@ impl IUserRepository for UsersRepository {
                         ))
                         .into_boxed();
 
-                    // The email is encrypted, so its order is the blind index
-                    // order: the same order the previous implementation had.
+                    // Server side search: the profile name fields with a
+                    // fragment, or the exact email through its blind index (the
+                    // address is encrypted, so a fragment of it cannot match).
+                    let search = search.as_deref();
+                    if let Some(term) = search.map(str::trim).filter(|value| !value.is_empty()) {
+                        let term = term.to_lowercase();
+                        match security.email_blind_index(&term) {
+                            Ok(index) => {
+                                query = query.filter(users_table::email_blind_index.eq(index));
+                            },
+                            Err(_) => {
+                                let pattern = format!("%{term}%");
+                                query = query.filter(
+                                    matches_fragment(profiles::full_name, &pattern)
+                                        .or(matches_fragment(profiles::first_name, &pattern))
+                                        .or(matches_fragment(profiles::last_name, &pattern))
+                                        .or(matches_fragment(profiles::nickname, &pattern)),
+                                );
+                            },
+                        }
+                    }
+
+                    // The handler already refused a sort field outside its
+                    // allowlist, so this branch only picks the column. The email
+                    // is encrypted: its blind index order is not the alphabetical
+                    // order of the address, which is why the field is absent.
                     query = match (params.sort_by.as_deref(), descending) {
-                        (Some("first_name"), false) => query.order_by(profiles::first_name.asc()),
-                        (Some("first_name"), true) => query.order_by(profiles::first_name.desc()),
-                        (Some("last_name"), false) => query.order_by(profiles::last_name.asc()),
-                        (Some("last_name"), true) => query.order_by(profiles::last_name.desc()),
-                        (Some("id"), true) => query.order_by(users_table::id.desc()),
-                        (Some("id"), false) => query.order_by(users_table::id.asc()),
-                        (_, true) => query.order_by(users_table::email_blind_index.desc()),
-                        (_, false) => query.order_by(users_table::email_blind_index.asc()),
+                        (Some("display_name"), false) => query.order_by(profiles::full_name.asc()),
+                        (Some("display_name"), true) => query.order_by(profiles::full_name.desc()),
+                        (Some("created_at"), true) => {
+                            query.order_by(users_table::created_at.desc())
+                        },
+                        (Some("created_at"), false) => {
+                            query.order_by(users_table::created_at.asc())
+                        },
+                        (_, true) => query.order_by(users_table::created_at.desc()),
+                        (_, false) => query.order_by(users_table::created_at.asc()),
                     };
 
                     type PageRow = (

@@ -13,7 +13,7 @@ use crate::errors::{AppError, AppResult};
 use crate::models::permission::RolePermissionItem;
 use crate::models::role::{NewRole, Role};
 use crate::repositories::container::AppContainer;
-use crate::repositories::traits::roles_trait::RoleMemberItem;
+use crate::repositories::traits::roles_trait::{ROLE_SORT_FIELDS, RoleMemberItem};
 use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 use crate::utils::sanitize::{sanitize_input, strip_html};
 use crate::utils::validation::first_validation_error_message;
@@ -71,12 +71,20 @@ pub async fn all_roles(
     ability: CurrentAbility,
     container: web::Data<AppContainer>,
     pagination: web::Query<PaginationParams>,
+    search: web::Query<ListSearch>,
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Read, AbilityResource::Roles)?;
-    let pagination = pagination.into_inner().validated();
+    let params = pagination.into_inner().validated();
+    params.validate_sort_field(&ROLE_SORT_FIELDS)?;
+    let search = search
+        .into_inner()
+        .q
+        .map(|value| sanitize_input(&strip_html(&value)))
+        .filter(|value| !value.trim().is_empty());
+
     let response = container
         .roles
-        .list_paginated(&pagination)
+        .list_paginated(&params, search)
         .await
         .map_err(AppError::Database)?;
 
@@ -211,6 +219,12 @@ pub async fn update_role(
     invalidate_role_cache(&container, &role_id).await;
 
     Ok(HttpResponse::Ok().json(updated))
+}
+
+/// The search box of a list, resolved server side.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct ListSearch {
+    q: Option<String>,
 }
 
 /// The replacement of every link of a role.
@@ -631,21 +645,24 @@ mod tests {
 
         let mut container = mock_container();
         let mut roles_repo = MockIRoleRepository::new();
-        roles_repo.expect_list_paginated().times(1).returning(|_| {
-            Ok(PaginatedResponse::new(
-                vec![Role {
-                    id: Uuid::new_v4(),
-                    name: "admin".to_string(),
-                    resource_type: None,
-                    resource_id: None,
-                    created_at: Utc::now(),
-                    updated_at: Utc::now(),
-                }],
-                1,
-                1,
-                20,
-            ))
-        });
+        roles_repo
+            .expect_list_paginated()
+            .times(1)
+            .returning(|_, _| {
+                Ok(PaginatedResponse::new(
+                    vec![Role {
+                        id: Uuid::new_v4(),
+                        name: "admin".to_string(),
+                        resource_type: None,
+                        resource_id: None,
+                        created_at: Utc::now(),
+                        updated_at: Utc::now(),
+                    }],
+                    1,
+                    1,
+                    20,
+                ))
+            });
         container.roles = Arc::new(roles_repo);
 
         let app = test::init_service(

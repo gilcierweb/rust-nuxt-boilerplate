@@ -479,11 +479,13 @@ async fn the_user_list_carries_the_role_names() {
     let token = bearer(&test_config(), editor);
 
     // The test database holds the subjects of every other suite, so the editor
-    // is looked up page by page instead of assuming the first page.
+    // is looked up page by page instead of assuming the first page. The
+    // newest first order puts the subject of this test on the first page.
     let mut listed = None;
     for page in 1..=5 {
         let req = authorized(
-            test::TestRequest::get().uri(format!("/admin/users?per_page=100&page={page}").as_str()),
+            test::TestRequest::get()
+                .uri(format!("/admin/users?per_page=100&page={page}&sort_dir=desc").as_str()),
             &token,
         )
         .to_request();

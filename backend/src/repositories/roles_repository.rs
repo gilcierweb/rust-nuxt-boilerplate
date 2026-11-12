@@ -9,6 +9,7 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::db::functions::matches_fragment;
 use crate::db::schema::roles as roles_table;
 use crate::models::permission::{NewRolePermissionLink, RolePermissionItem};
 use crate::models::role::{NewRole, Role};
@@ -144,15 +145,28 @@ impl IRoleRepository for RolesRepository {
     async fn list_paginated(
         &self,
         params: &PaginationParams,
+        search: Option<String>,
     ) -> diesel::QueryResult<PaginatedResponse<Role>> {
         let list_params = ListParams::from(params.clone());
+        let search = search
+            .map(|value| value.trim().to_lowercase())
+            .filter(|value| !value.is_empty());
 
         self.base
             .run(move |conn| {
+                let search = search.clone();
                 Box::pin(async move {
-                    // The catalog is small: load the rows, sort in memory and
-                    // paginate, so the sort stays a plain allowlist comparison.
-                    let mut data = roles_table::table.load::<Role>(conn).await?;
+                    // The catalog is small: load the rows, filter and sort in
+                    // memory, then paginate. The handler already refused a sort
+                    // field outside its allowlist, so the branch below only
+                    // decides the comparison.
+                    let mut query = roles_table::table.into_boxed();
+                    if let Some(term) = search {
+                        let pattern = format!("%{term}%");
+                        query =
+                            query.filter(matches_fragment(roles_table::name.nullable(), &pattern));
+                    }
+                    let mut data = query.select(Role::as_select()).load::<Role>(conn).await?;
 
                     if let Some(sort_by) = list_params.sort_by.as_deref() {
                         let desc = list_params.sort_dir.as_deref() == Some("desc");
