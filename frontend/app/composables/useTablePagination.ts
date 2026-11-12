@@ -40,6 +40,11 @@ export interface TablePaginationFetcherArgs {
 
 const DEFAULT_PAGE_SIZES: number[] = [10, 20, 30, 50]
 
+/// The quiet time before a typed term reaches the server. A keystroke is
+/// faster than a request, so the term is read once the typing pauses instead
+/// of once per character.
+const SEARCH_DEBOUNCE_MS = 300
+
 export function useTablePagination<T extends Record<string, any>>(
   fetcher: TablePaginationFetcherArgs | (() => TablePaginationFetcherArgs),
   options: UseTablePaginationOptions = {},
@@ -128,11 +133,19 @@ export function useTablePagination<T extends Record<string, any>>(
     execute()
   }
 
+  // The search travels as a query parameter, so every keystroke would fire a
+  // request: the term is debounced and the request runs on the quiet term.
+  let searchTimer: ReturnType<typeof setTimeout> | null = null
+
   function setSearch(term: string) {
     if (term === search.value) return
-    pagination.value = { ...pagination.value, page: 1 }
-    search.value = term
-    execute()
+    if (searchTimer) clearTimeout(searchTimer)
+    searchTimer = setTimeout(() => {
+      searchTimer = null
+      pagination.value = { ...pagination.value, page: 1 }
+      search.value = term
+      execute()
+    }, SEARCH_DEBOUNCE_MS)
   }
 
   return {

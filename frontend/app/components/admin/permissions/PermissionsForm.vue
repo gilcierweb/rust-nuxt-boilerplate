@@ -124,6 +124,9 @@ function submit() {
             class="select w-full"
             :class="{ 'is-invalid': errors.resource }"
             :disabled="mode === 'edit'"
+            :aria-required="true"
+            :aria-invalid="errors.resource ? 'true' : 'false'"
+            :aria-describedby="errors.resource ? 'permissionResourceError' : undefined"
           >
             <option value="">{{ t('admin.permissions.form.select_resource') }}</option>
             <option v-for="item in catalog.resources" :key="item.code" :value="item.code">
@@ -151,6 +154,9 @@ function submit() {
             class="select w-full"
             :class="{ 'is-invalid': errors.action }"
             :disabled="mode === 'edit'"
+            :aria-required="true"
+            :aria-invalid="errors.action ? 'true' : 'false'"
+            :aria-describedby="errors.action ? 'permissionActionError' : undefined"
           >
             <option value="">{{ t('admin.permissions.form.select_action') }}</option>
             <option v-for="item in catalog.actions" :key="item.code" :value="item.code">

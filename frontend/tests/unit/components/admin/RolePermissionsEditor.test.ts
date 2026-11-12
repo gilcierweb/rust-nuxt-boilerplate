@@ -110,4 +110,19 @@ describe('RolePermissionsEditor', () => {
 
     expect(wrapper.find('[data-testid="lockout-warning"]').exists()).toBe(true)
   })
+
+  // A deny link takes the authority away as surely as a removed one: deny beats
+  // allow in the engine, so the warning has to read the effect, not the
+  // presence of the code in the payload.
+  it('warns when the edit would deny an administrator code', async () => {
+    const wrapper = mountEditor()
+
+    expect(wrapper.find('[data-testid="lockout-warning"]').exists()).toBe(false)
+
+    await wrapper
+      .find('[data-testid="cell-roles:read"] [data-testid="option-deny"]')
+      .trigger('click')
+
+    expect(wrapper.find('[data-testid="lockout-warning"]').exists()).toBe(true)
+  })
 })

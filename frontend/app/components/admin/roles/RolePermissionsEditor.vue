@@ -72,7 +72,9 @@ const dirty = computed(() => {
 const wouldLockOut = computed(
   () =>
     ADMINISTRATOR_CODES.every((code) => loadedCodes.value.includes(code)) &&
-    !ADMINISTRATOR_CODES.every((code) => selected.value[code] !== undefined),
+    // A deny link takes the authority away as surely as a removed one: the
+    // engine lets deny beat allow, so only the allow effect keeps the code.
+    !ADMINISTRATOR_CODES.every((code) => selected.value[code] === 0),
 )
 
 function valueOf(code: string): Option['value'] {
