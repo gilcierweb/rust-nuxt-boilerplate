@@ -38,6 +38,7 @@
         "card_title": "Role permissions",
         "card_description": "Each catalog permission can allow, deny or stay unlinked for this role.",
         "loadError": "Failed to load the permission catalog.",
+        "catalog_truncated": "The catalog was loaded as one page of one hundred items: there may be permissions beyond it, and saving replaces every link of the role.",
         "saving": "Saving...",
         "save": "Save permissions",
         "updated": "Role permissions updated.",

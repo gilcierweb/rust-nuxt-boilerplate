@@ -161,6 +161,7 @@
         "card_title": "Permisos del rol",
         "card_description": "Cada permiso del catálogo puede permitir, negar o quedar sin vínculo para este rol.",
         "loadError": "Fallo al cargar el catálogo de permisos.",
+        "catalog_truncated": "El catálogo se cargó como una página de cien elementos: puede haber permisos más allá, y guardar reemplaza todos los vínculos del rol.",
         "saving": "Guardando...",
         "save": "Guardar permisos",
         "updated": "Permisos del rol actualizados.",

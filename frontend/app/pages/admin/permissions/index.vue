@@ -127,13 +127,17 @@ const {
 }))
 
 // The matrix columns are the roles of the catalog, loaded once beside the page.
+// The column is keyed by role id: the unique index of the catalog is
+// (name, scope), so two scoped roles may share a name.
 const rolesFetch = await useApiFetch<{ data: Role[] }>('/admin/roles', {
   key: 'admin-permissions-roles',
   server: true,
   default: () => ({ data: [], pagination: null }),
 })
 const matrixRoles = computed(() =>
-  normalizeResourceResponse(rolesFetch.data.value).map((role) => String(role.name ?? '')),
+  normalizeResourceResponse(rolesFetch.data.value)
+    .filter((role) => role.id && role.name)
+    .map((role) => ({ id: String(role.id), name: String(role.name) })),
 )
 
 const columns = computed<DataTableColumn<Permission>[]>(() => [

@@ -125,4 +125,18 @@ describe('RolePermissionsEditor', () => {
 
     expect(wrapper.find('[data-testid="lockout-warning"]').exists()).toBe(true)
   })
+
+  // A save replaces every link, so an incomplete catalog would drop the links
+  // the admin never saw: the editor names the risk instead of hiding it.
+  it('warns when the loaded catalog fills a whole page', () => {
+    const fullPage = Array.from({ length: 100 }, (_, index) =>
+      permission(`users:code${index}`, `Code ${index}`),
+    )
+
+    const truncated = mountEditor({ permissions: fullPage })
+    expect(truncated.find('[data-testid="catalog-truncated-warning"]').exists()).toBe(true)
+
+    const complete = mountEditor()
+    expect(complete.find('[data-testid="catalog-truncated-warning"]').exists()).toBe(false)
+  })
 })

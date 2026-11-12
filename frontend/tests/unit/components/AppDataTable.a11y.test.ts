@@ -49,12 +49,18 @@ function mountTable(props: Record<string, unknown> = {}) {
 }
 
 describe('AppDataTable accessibility', () => {
-  it('renders the sortable header as a button that reports its state', async () => {
+  // The header cell carries the sort state: ARIA scopes aria-sort to the
+  // columnheader, and the button inside only triggers the change.
+  it('reports the sort state on the header cell, not on the button', async () => {
     const wrapper = mountTable({ enableSorting: true })
+
+    const cell = wrapper.find('thead th')
+    expect(cell.attributes('scope')).toBe('col')
+    expect(cell.attributes('aria-sort')).toBe('none')
 
     const header = wrapper.find('thead button')
     expect(header.exists()).toBe(true)
-    expect(header.attributes('aria-sort')).toBe('none')
+    expect(header.attributes('aria-sort')).toBeUndefined()
 
     await header.trigger('click')
 

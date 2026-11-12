@@ -38,6 +38,7 @@
         "card_title": "Permissões do cargo",
         "card_description": "Cada permissão do catálogo pode permitir, negar ou permanecer sem vínculo para este cargo.",
         "loadError": "Falha ao carregar o catálogo de permissões.",
+        "catalog_truncated": "O catálogo foi carregado em uma página de cem itens: pode haver permissões além dela, e salvar substitui todos os vínculos do cargo.",
         "saving": "Salvando...",
         "save": "Salvar permissões",
         "updated": "Permissões do cargo atualizadas.",

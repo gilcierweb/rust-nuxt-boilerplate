@@ -105,8 +105,8 @@ export function extractErrorMessage(error: any): string {
 // Row delete button for admin index pages (shared by every admin table).
 // Native-element children MUST be an ARRAY of vnodes: a slot object
 // ({ default: () => vnode }) returning a single VNode is silently discarded
-// for native elements — it is never normalized by the runtime (the vnode keeps
-// the slot object with no ARRAY_CHILDREN flag and no dev warning), so the
+// for native elements, because it is never normalized by the runtime (the vnode
+// keeps the slot object with no ARRAY_CHILDREN flag and no dev warning), so the
 // button renders empty and the icon line disappears.
 export function adminDeleteButton(options: {
   pending: boolean

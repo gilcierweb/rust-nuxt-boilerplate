@@ -33,6 +33,7 @@
             <th
               v-for="col in table.getFlatHeaders()"
               :key="col.id"
+              scope="col"
               :class="headerClass(col.column.columnDef.meta)"
               :aria-sort="headerSortState(col)"
             >
@@ -42,7 +43,6 @@
                   type="button"
                   class="inline-flex items-center gap-1"
                   style="cursor: pointer; user-select: none;"
-                  :aria-sort="headerSortState(col)"
                   @click="onHeaderClick(col, $event)"
                 >
                   <FlexRender :render="col.column.columnDef.header" :props="col.getContext()" />

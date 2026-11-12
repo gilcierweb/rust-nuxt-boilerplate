@@ -38,8 +38,8 @@ function markInitialized() {
 }
 
 export function waitForAuthInit(timeout = 5000): Promise<void> {
-  // Server: each SSR request initializes its own store instance — never
-  // wait on module-level (cross-request) init state.
+  // Server: each SSR request initializes its own store instance, never the
+  // module level (cross-request) init state.
   if (import.meta.server) return Promise.resolve()
   return Promise.race([
     getInitPromise(),
@@ -197,9 +197,6 @@ export const useAuthStore = defineStore('auth', {
           this.isInitialized = true
           return data
         } catch (err: any) {
-          if (import.meta.dev) {
-            console.log('[AuthStore] refreshTokens - error:', err?.statusCode || err?.response?.status, err?.message)
-          }
           this._clear()
           this.isInitialized = true
           // Preserve the original error with status code

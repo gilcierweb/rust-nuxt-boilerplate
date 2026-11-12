@@ -34,7 +34,13 @@ export interface UseTablePaginationReturn<T extends Record<string, any>> {
 }
 
 export interface TablePaginationFetcherArgs {
+  /** The list endpoint, relative to the api base. */
   url: string
+  /**
+   * The key of the fetch, one per screen: two lists of the same endpoint read
+   * different data, so they cannot share a key.
+   */
+  key?: string
   options?: Record<string, any>
 }
 
@@ -70,9 +76,14 @@ export function useTablePagination<T extends Record<string, any>>(
 
   const fetchData = async () => {
     const { $api } = useNuxtApp()
+    // The same base the rest of the app reads, so a configured direct API base
+    // routes the tables the same way it routes the imperative client.
     const config = useRuntimeConfig()
-    const apiBase = config.public.apiBase || '/api/v1'
-    const url = resolvedFetcher.url.startsWith('/api/') 
+    const directBase = config.public.apiDirectBase?.replace(/\/+$/, '')
+    const apiBase = directBase || config.public.apiBase || '/api/v1'
+    const url = resolvedFetcher.url.startsWith('/api/')
+      ? resolvedFetcher.url
+      : `${apiBase}${resolvedFetcher.url.startsWith('/') ? '' : '/'}${resolvedFetcher.url}`
       ? resolvedFetcher.url 
       : `${apiBase}${resolvedFetcher.url.startsWith('/') ? '' : '/'}${resolvedFetcher.url}`
 
@@ -91,7 +102,7 @@ export function useTablePagination<T extends Record<string, any>>(
   }
 
   const { data, pending, error, refresh, execute } = useAsyncData(
-    () => resolvedFetcher.url,
+    () => resolvedFetcher.key ?? resolvedFetcher.url,
     fetchData,
     {
       ...baseOptions,

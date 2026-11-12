@@ -77,6 +77,14 @@ const wouldLockOut = computed(
     !ADMINISTRATOR_CODES.every((code) => selected.value[code] === 0),
 )
 
+/**
+ * The catalog is asked one page at a time and the backend clamps the page at
+ * one hundred rows. A save replaces every link of the role, so an incomplete
+ * set would silently drop the links the admin never saw: the editor says so
+ * instead of hiding it.
+ */
+const catalogTruncated = computed(() => props.permissions.length >= 100)
+
 function valueOf(code: string): Option['value'] {
   const effect = selected.value[code]
   if (effect === 0) return 'allow'
@@ -105,6 +113,16 @@ function save() {
 
 <template>
   <form class="space-y-6" @submit.prevent="save">
+    <div
+      v-if="catalogTruncated"
+      data-testid="catalog-truncated-warning"
+      role="alert"
+      class="alert alert-warning"
+    >
+      <span class="icon-[tabler--alert-triangle] size-5"></span>
+      <span>{{ t('admin.roles.permissions.catalog_truncated') }}</span>
+    </div>
+
     <div
       v-for="group in groups"
       :key="group.resource"
