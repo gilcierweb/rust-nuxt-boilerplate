@@ -92,6 +92,25 @@ impl IRoleRepository for RolesRepository {
             .await
     }
 
+    async fn find_administrator_role(&self) -> diesel::QueryResult<Option<Role>> {
+        use crate::authz::guards::ADMINISTRATOR_ROLE_NAME;
+
+        self.base
+            .run(move |conn| {
+                Box::pin(async move {
+                    roles_table::table
+                        .filter(roles_table::dsl::name.eq(ADMINISTRATOR_ROLE_NAME))
+                        .filter(roles_table::dsl::resource_id.is_null())
+                        .order_by(roles_table::dsl::created_at.asc())
+                        .select(Role::as_select())
+                        .first::<Role>(conn)
+                        .await
+                        .optional()
+                })
+            })
+            .await
+    }
+
     async fn create(&self, item: &NewRole) -> diesel::QueryResult<Role> {
         let item = item.clone();
         self.base

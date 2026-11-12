@@ -104,6 +104,25 @@ async fn count(db: &TestDb, sql: &str) -> i64 {
         .count
 }
 
+/// The same count with the role name and the scope bound, so no value is
+/// interpolated into the statement text. `IS NOT DISTINCT FROM` treats the
+/// absent scope as a value, which is how a class level role is stored.
+async fn count_role_links(db: &TestDb, role_name: &str, resource_type: Option<&str>) -> i64 {
+    let mut conn = db.pool().get().await.expect("Failed to get connection");
+    diesel::sql_query(
+        "SELECT count(*) AS count FROM roles r \
+         JOIN roles_permissions rp ON rp.role_id = r.id \
+         WHERE r.name = $1 AND r.resource_type IS NOT DISTINCT FROM $2 AND rp.effect = 0",
+    )
+    .bind::<diesel::sql_types::Text, _>(role_name)
+    .bind::<diesel::sql_types::Nullable<diesel::sql_types::Text>, _>(resource_type)
+    .load::<CountRow>(&mut *conn)
+    .await
+    .expect("count query failed")
+    .remove(0)
+    .count
+}
+
 /// Serializes the shared catalog seed across parallel tests: concurrent
 /// select-then-insert runs race into a unique violation otherwise.
 static CATALOG_SEED_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -252,16 +271,7 @@ async fn catalog_seed_creates_canonical_links() {
     ];
 
     for (role_name, resource_type, expected_count) in expected {
-        let sql = format!(
-            "SELECT count(*) AS count FROM roles r \
-             JOIN roles_permissions rp ON rp.role_id = r.id \
-             WHERE r.name = '{}' AND r.resource_type {} AND rp.effect = 0",
-            role_name,
-            resource_type
-                .map(|t| format!("= '{t}'"))
-                .unwrap_or_else(|| "IS NULL".to_string()),
-        );
-        let found = count(&db, &sql).await;
+        let found = count_role_links(&db, role_name, resource_type).await;
         assert_eq!(
             found, expected_count,
             "role {role_name} must hold {expected_count} allow links"

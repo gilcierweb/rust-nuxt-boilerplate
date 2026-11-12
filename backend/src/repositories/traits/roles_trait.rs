@@ -32,6 +32,12 @@ pub trait IRoleRepository: Send + Sync {
     async fn all(&self) -> QueryResult<Vec<Role>>;
     async fn find(&self, id: &Uuid) -> QueryResult<Role>;
     async fn find_by_name(&self, name: &str) -> QueryResult<Option<Role>>;
+
+    /// The class level role the ability builder reads as the administrator: the
+    /// canonical name with no scope, ordered deterministically. The unique index
+    /// is (name, scope), so a scoped row of the same name is legal and the
+    /// lockout guards must not answer with whichever row comes first.
+    async fn find_administrator_role(&self) -> QueryResult<Option<Role>>;
     async fn create(&self, item: &NewRole) -> QueryResult<Role>;
     async fn update(&self, id: &Uuid, item: &NewRole) -> QueryResult<Role>;
     async fn destroy(&self, id: &Uuid) -> QueryResult<usize>;

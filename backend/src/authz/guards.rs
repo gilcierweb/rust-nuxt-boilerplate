@@ -18,6 +18,10 @@ use crate::errors::AppError;
 /// change, otherwise no one can ever repair the system.
 pub const ADMINISTRATOR_CODES: [&str; 2] = ["roles:read", "roles:update"];
 
+/// The name of the administrator role: the ability builder expands it into the
+/// full catalog and the lockout guards resolve it by this name.
+pub const ADMINISTRATOR_ROLE_NAME: &str = "admin";
+
 /// Refuses when no role would hold the administrator codes anymore.
 pub fn ensure_role_administration_survives(roles_holding_after: &[Uuid]) -> Result<(), AppError> {
     if roles_holding_after.is_empty() {

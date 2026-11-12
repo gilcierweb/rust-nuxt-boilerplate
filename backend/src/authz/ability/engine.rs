@@ -274,8 +274,9 @@ pub fn authority_for(resource: AbilityResource, action: AbilityAction) -> String
 
 /// Parses a `resource:action` permission code. Splits once on `:` and both
 /// halves must be known enum codes; anything else is None (fail closed).
-// Consumed by the grants data access and the guards module within this plan.
-#[allow(dead_code)]
+///
+/// Read by the grants data access (the builder) and by the guards module: a
+/// grant is a set of these codes.
 pub fn parse_code(code: &str) -> Option<(AbilityResource, AbilityAction)> {
     let (resource_part, action_part) = code.split_once(':')?;
     let resource = AbilityResource::from_code(resource_part)?;
@@ -286,8 +287,9 @@ pub fn parse_code(code: &str) -> Option<(AbilityResource, AbilityAction)> {
 /// Parses permission codes into the class level authority set they grant.
 /// Unknown codes are skipped with a debug log (fail closed, never fail open)
 /// and wildcards expand through the enums.
-// Consumed by the guards module within this plan.
-#[allow(dead_code)]
+///
+/// Read by the builder and by the repositories that resolve the allow set of a
+/// role.
 pub fn expand_allow_codes(codes: &[String]) -> HashSet<String> {
     let mut out = HashSet::new();
 

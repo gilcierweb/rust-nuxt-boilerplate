@@ -103,8 +103,8 @@ pub async fn find_user(
 
     // Instance check: a scoped grant applies only inside its scope, so a
     // subject restricted to itself can never read another record.
-    let tarfind_user_id = user_id.into_inner();
-    ability.authorize_subject(AbilityAction::Read, AbilityResource::Users, tarfind_user_id)?;
+    let target_user_id = user_id.into_inner();
+    ability.authorize_subject(AbilityAction::Read, AbilityResource::Users, target_user_id)?;
 
     let security = Arc::new(
         SecurityService::from_config(&container.config)
@@ -113,7 +113,7 @@ pub async fn find_user(
 
     let item = container
         .users
-        .find_by_id_with_profile(&tarfind_user_id, security)
+        .find_by_id_with_profile(&target_user_id, security)
         .await
         .map_err(|error| map_repo_error(error, "User"))?;
 
@@ -138,18 +138,28 @@ pub struct UserRolesRequest {
 /// An unknown id is a client mistake, not a missing record: the answer is the
 /// same 422 the validation errors use.
 async fn validate_role_ids(container: &AppContainer, role_ids: &[Uuid]) -> AppResult<()> {
-    for role_id in role_ids {
-        let found = container
-            .roles
-            .find(role_id)
-            .await
-            .map_err(|error| match error {
-                diesel::result::Error::NotFound => {
-                    AppError::Validation(t!("admin.users.validation.role_unknown").into_owned())
-                },
-                other => AppError::Database(other),
-            })?;
-        let _ = found;
+    if role_ids.is_empty() {
+        return Ok(());
+    }
+
+    // One read answers for every requested id: the repository loads the whole
+    // catalog (a handful of rows) and the diff keeps the per id message.
+    let existing: std::collections::HashSet<Uuid> = container
+        .roles
+        .all()
+        .await
+        .map_err(AppError::Database)?
+        .into_iter()
+        .map(|role| role.id)
+        .collect();
+    if let Some(unknown) = role_ids.iter().find(|role_id| !existing.contains(role_id)) {
+        return Err(AppError::Validation(
+            t!(
+                "admin.users.validation.role_unknown",
+                unknown = unknown.to_string()
+            )
+            .into_owned(),
+        ));
     }
 
     Ok(())
@@ -261,10 +271,13 @@ pub async fn update_user_roles(
         crate::authz::guards::ensure_no_escalation(&actor_allow, &role_allow)?;
     }
 
-    // Lockout guards, computed on the state after the change.
+    // Lockout guards, computed on the state after the change. The administrator
+    // role is the class level row with the canonical name: the unique index is
+    // (name, scope), so a scoped row of the same name is legal and the lookup
+    // has to say which one it means.
     let admin_role_id = container
         .roles
-        .find_by_name("admin")
+        .find_administrator_role()
         .await
         .map_err(AppError::Database)?
         .map(|role| role.id);
@@ -299,28 +312,20 @@ pub async fn update_user_roles(
     };
     crate::authz::guards::ensure_assignment_keeps_administrator(&holders_before, &holders_after)?;
 
-    // The literal admin role cannot lose its last assignment.
+    // The literal admin role cannot lose its last assignment: one read answers
+    // both the held before state and the remaining count.
     if let Some(admin) = admin_role_id {
-        let held_admin_before = container
+        let assignments = container
             .users
             .find_user_role_assignments(&user_id)
             .await
-            .map_err(AppError::Database)?
-            .iter()
-            .any(|(role_id, _)| *role_id == admin);
+            .map_err(AppError::Database)?;
+        let held_admin_before = assignments.iter().any(|(role_id, _)| *role_id == admin);
         let holds_admin_after = payload.role_ids.contains(&admin);
-        if held_admin_before && !holds_admin_after {
-            let remaining = container
-                .users
-                .find_user_role_assignments(&user_id)
-                .await
-                .map_err(AppError::Database)?
-                .len();
-            if remaining <= 1 {
-                return Err(AppError::Validation(
-                    t!("admin.users.guard.last_admin_role_assignment").into_owned(),
-                ));
-            }
+        if held_admin_before && !holds_admin_after && assignments.len() <= 1 {
+            return Err(AppError::Validation(
+                t!("admin.users.guard.last_admin_role_assignment").into_owned(),
+            ));
         }
     }
 
