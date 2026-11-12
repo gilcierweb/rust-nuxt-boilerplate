@@ -76,7 +76,8 @@ export const useAuthStore = defineStore('auth', {
     isAuthenticated: (state) => !!state.accessToken && !!state.user,
     hasActiveSession: (state) => state.hasSession && !!state.user,
     isCreator: (state) => state.user?.roles?.includes('creator') ?? false,
-    isAdmin: (state) => state.user?.roles?.includes('admin') ?? false,
+    isAdmin: (state) =>
+      state.user?.roles?.some((role) => role.toLowerCase() === 'admin') ?? false,
     isAgency: (state) => state.user?.roles?.includes('agency') ?? false,
     profileId: (state) => state.user?.profile_id ?? null,
     hasOtp: (state) => state.user?.is_otp_enabled ?? false,
@@ -313,12 +314,23 @@ export const useAuthStore = defineStore('auth', {
 
     async fetchMe() {
       const { $api } = useNuxtApp()
-      const data = await $api<{ user: User; profile: any; roles: string[] }>('/users/me')
-      if (this.user) {
-        this.user = { ...this.user, ...data.user, roles: data.roles }
-      } else {
-        this.user = { ...data.user, roles: data.roles }
+      // The subject, its roles and its capabilities come from one place: the
+      // auth me endpoint answers the effective grants, so the store never
+      // rebuilds them from the token.
+      const data = await $api<{
+        user: User
+        profile: any
+        roles: string[]
+        permissions: string[]
+        role: string | null
+      }>('/auth/me')
+      const user: User = {
+        ...data.user,
+        roles: data.roles,
+        permissions: data.permissions ?? [],
+        role: data.role ?? null,
       }
+      this.user = this.user ? { ...this.user, ...user } : user
       this.hasSession = true
       this.isInitialized = true
       markInitialized()

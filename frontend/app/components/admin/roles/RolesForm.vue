@@ -19,20 +19,23 @@
           <label class="label-text font-semibold" for="roleName">
             {{ $t('admin.roles.form.name', 'Nome') }} <span class="text-error">*</span>
           </label>
-          <input id="roleName" v-model="name" type="text" placeholder="admin" class="input w-full" :class="{ 'is-invalid': errors.name }" />
-          <span v-if="errors.name" class="text-error text-xs mt-1 block">{{ errors.name }}</span>
+          <input id="roleName" v-model="name" type="text" placeholder="admin" class="input w-full" :class="{ 'is-invalid': errors.name }" :aria-required="true" :aria-invalid="errors.name ? 'true' : 'false'" :aria-describedby="errors.name ? 'roleNameError' : 'roleNameHint'" />
+          <span v-if="errors.name" id="roleNameError" role="alert" class="text-error text-xs mt-1 block">{{ errors.name }}</span>
+          <span v-else id="roleNameHint" class="text-base-content/60 text-xs mt-1 block">{{ $t('admin.roles.validation.name_hint') }}</span>
         </div>
 
         <div>
           <label class="label-text font-semibold" for="roleResourceType">{{ $t('admin.roles.form.resource_type', 'Tipo de recurso') }}</label>
-          <input id="roleResourceType" v-model="resourceType" type="text" placeholder="company" class="input w-full" :class="{ 'is-invalid': errors.resource_type }" />
-          <span v-if="errors.resource_type" class="text-error text-xs mt-1 block">{{ errors.resource_type }}</span>
+          <input id="roleResourceType" v-model="resourceType" type="text" placeholder="company" class="input w-full" :class="{ 'is-invalid': errors.resource_type }" :aria-invalid="errors.resource_type ? 'true' : 'false'" :aria-describedby="errors.resource_type ? 'roleResourceTypeError' : 'roleResourceTypeHint'" />
+          <span v-if="errors.resource_type" id="roleResourceTypeError" role="alert" class="text-error text-xs mt-1 block">{{ errors.resource_type }}</span>
+          <span v-else id="roleResourceTypeHint" class="text-base-content/60 text-xs mt-1 block">{{ $t('admin.roles.form.scope_hint') }}</span>
         </div>
 
         <div>
           <label class="label-text font-semibold" for="roleResourceId">{{ $t('admin.roles.form.resource_id', 'ID do recurso') }}</label>
-          <input id="roleResourceId" v-model="resourceId" type="text" class="input w-full" :class="{ 'is-invalid': errors.resource_id }" />
-          <span v-if="errors.resource_id" class="text-error text-xs mt-1 block">{{ errors.resource_id }}</span>
+          <input id="roleResourceId" v-model="resourceId" type="text" class="input w-full" :class="{ 'is-invalid': errors.resource_id }" :aria-invalid="errors.resource_id ? 'true' : 'false'" :aria-describedby="errors.resource_id ? 'roleResourceIdError' : 'roleResourceIdHint'" />
+          <span v-if="errors.resource_id" id="roleResourceIdError" role="alert" class="text-error text-xs mt-1 block">{{ errors.resource_id }}</span>
+          <span v-else id="roleResourceIdHint" class="text-base-content/60 text-xs mt-1 block">{{ $t('admin.roles.form.scope_hint') }}</span>
         </div>
       </div>
 
@@ -86,14 +89,49 @@ const emit = defineEmits<{
   submit: [values: typeof props.initialValues]
 }>()
 
-const schema = computed(() => toTypedSchema(
-  v.object({
-    id: v.optional(v.string()),
-    name: v.pipe(v.string(), v.nonEmpty(t('admin.roles.validation.name_required', 'O nome é obrigatório'))),
-    resource_type: v.optional(v.string()),
-    resource_id: v.optional(v.string()),
-  })
-))
+// The rules mirror the backend validator: name from 1 to 50 characters,
+// resource_type up to 255, resource_id a UUID, and the two scope fields
+// paired, because a role is either class level or scoped to one record.
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+const schema = computed(() =>
+  toTypedSchema(
+    v.pipe(
+      v.object({
+        id: v.optional(v.string()),
+        name: v.pipe(
+          v.string(),
+          v.nonEmpty(t('admin.roles.validation.name_required', 'O nome é obrigatório')),
+          v.maxLength(50, t('admin.roles.validation.name_invalid')),
+        ),
+        resource_type: v.optional(
+          v.pipe(
+            v.string(),
+            v.maxLength(255, t('admin.roles.validation.resource_type_invalid')),
+          ),
+        ),
+        resource_id: v.optional(
+          v.pipe(
+            v.string(),
+            v.check(
+              (value) => value.trim() === '' || uuidPattern.test(value.trim()),
+              t('admin.roles.validation.resource_id_invalid'),
+            ),
+          ),
+        ),
+      }),
+      v.forward(
+        v.partialCheck(
+          [['resource_type'], ['resource_id']],
+          (input) =>
+            Boolean(input.resource_type?.trim()) === Boolean(input.resource_id?.trim()),
+          t('admin.roles.validation.scope_invalid'),
+        ),
+        ['resource_type', 'resource_id'],
+      ),
+    ),
+  ),
+)
 
 const { handleSubmit, errors, resetForm, defineField } = useForm({
   validationSchema: schema,

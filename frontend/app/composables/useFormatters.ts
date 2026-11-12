@@ -3,9 +3,11 @@
  * All functions are pure (no side effects).
  */
 export function useFormatters() {
-  /** Format cents to BRL display string, e.g. 1990 → "19,90" */
+  const { locale } = useI18n()
+
+  /** Format cents to the locale of the app, e.g. 1990 → "19,90" */
   function formatCents(cents: number, currency = false): string {
-    const val = (cents / 100).toLocaleString('pt-BR', {
+    const val = (cents / 100).toLocaleString(locale.value, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     })

@@ -150,7 +150,16 @@
       }
     },
     "users": {
-      "notFound": "Usuário não encontrado."
+      "notFound": "Usuário não encontrado.",
+      "messages": {
+        "createSuccess": "Usuário criado com sucesso",
+        "createError": "Falha ao criar usuário",
+        "updateSuccess": "Usuário atualizado com sucesso",
+        "updateError": "Falha ao atualizar usuário",
+        "deleteSuccess": "Usuário excluído com sucesso",
+        "deleteError": "Falha ao excluir usuário",
+        "confirmDelete": "Tem certeza que deseja excluir este usuário?"
+      }
     },
     "companyDomains": {
       "title": "Domínios",

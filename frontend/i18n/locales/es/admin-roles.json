@@ -139,14 +139,23 @@
         "saving": "Guardando...",
         "create_role": "Crear rol",
         "save_changes": "Guardar cambios",
-        "class_level": "Nivel de clase"
+        "class_level": "Nivel de clase",
+        "scope_hint": "Deja ambos vacíos para un rol de nivel de clase."
       },
       "validation": {
-        "name_required": "El nombre es obligatorio"
+        "name_required": "El nombre es obligatorio",
+        "name_invalid": "El nombre debe tener entre 1 y 50 caracteres",
+        "resource_type_invalid": "El tipo de recurso debe tener como máximo 255 caracteres",
+        "resource_id_invalid": "El ID del recurso debe ser un UUID válido",
+        "scope_invalid": "Los dos campos de ámbito van juntos: completa ambos o ninguno",
+        "name_hint": "Un nombre corto y estable, usado por las reglas de acceso."
       },
       "not_found": {
         "title": "Rol no encontrado",
         "description": "El identificador no corresponde a ningún rol del catálogo."
+      },
+      "dialog": {
+        "deleteTitle": "Eliminar rol"
       },
       "permissions": {
         "card_title": "Permisos del rol",

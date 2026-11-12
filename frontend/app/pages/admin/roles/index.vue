@@ -61,6 +61,17 @@
         </div>
       </template>
     </AppDataTable>
+
+    <ConfirmDialog
+      v-if="removal"
+      :open="true"
+      :title="removal.title"
+      :message="removal.message"
+      :confirm-label="removal.confirmLabel"
+      :cancel-label="removal.cancelLabel"
+      @confirm="onRemovalConfirmed"
+      @cancel="cancelRemoval"
+    />
   </section>
 </template>
 
@@ -68,16 +79,14 @@
 import { computed, h, resolveComponent } from 'vue'
 import { useAdminResource } from '~/utils/admin-resource-helpers'
 import { adminDeleteButton, formatDateTime } from '~/utils/admin-ui'
+import ConfirmDialog from '~/components/admin/ConfirmDialog.vue'
 import type { DataTableColumn } from '~/types/data-table'
+import type { Role } from '~/types/rbac'
 
 definePageMeta({ layout: 'admin', keepalive: true })
 
-import type { Role } from '~/types/rbac'
-
 const { t } = useI18n()
 const localePath = useLocalePath()
-
-const deletePendingId = ref<string | null>(null)
 
 const breadcrumbItems = computed(() => [
   { label: t('admin.common.dashboard'), to: localePath('/admin/dashboard') },
@@ -163,7 +172,7 @@ const columns = computed<DataTableColumn<Role>[]>(() => [
           { default: () => h('span', { class: 'icon-[tabler--pencil] size-5' }) },
         ),
         adminDeleteButton({
-          pending: deletePendingId.value === rowId,
+          pending: removalPending.value && removal.value?.item?.id === rowId,
           onClick: () => removeRole(row),
         }),
       ])
@@ -172,22 +181,28 @@ const columns = computed<DataTableColumn<Role>[]>(() => [
   },
 ])
 
-const { removeItem } = useAdminResource('roles')
+const {
+  requestRemoval,
+  confirmRemoval,
+  cancelRemoval,
+  removal,
+  removalPending,
+} = useAdminResource('roles')
 
-async function removeRole(item: Role) {
+function removeRole(item: Role) {
   if (!item.id) return
-  deletePendingId.value = item.id
-  try {
-    const success = await removeItem(item, {
-      confirmMessage: t('admin.roles.messages.confirmDelete'),
-      successMessage: t('admin.roles.messages.deleteSuccess'),
-      errorMessage: t('admin.roles.messages.deleteError'),
-      deleteEndpoint: `/admin/roles/${item.id}`,
-    })
-    if (success) await refresh()
-  } finally {
-    deletePendingId.value = null
-  }
+  requestRemoval(item, {
+    title: t('admin.roles.dialog.deleteTitle'),
+    message: t('admin.roles.messages.confirmDelete'),
+    successMessage: t('admin.roles.messages.deleteSuccess'),
+    errorMessage: t('admin.roles.messages.deleteError'),
+    deleteEndpoint: `/admin/roles/${item.id}`,
+  })
+}
+
+async function onRemovalConfirmed() {
+  const removed = await confirmRemoval()
+  if (removed) await refresh()
 }
 
 function onRowClick(row: Role) {

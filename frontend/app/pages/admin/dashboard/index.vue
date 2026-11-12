@@ -106,7 +106,7 @@
 
 <script setup lang="ts">
 import { formatDateTime } from '~/utils/admin-ui'
-import { normalizeResourceResponse } from '~/utils/admin-resources'
+import { extractPaginationMeta, normalizeResourceResponse } from '~/utils/admin-resources'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -138,9 +138,11 @@ function parseDate(value?: string): number {
 }
 
 const stats = computed(() => {
-  const totalUsers = users.value.length
-  const totalRoles = roles.value.length
-  const totalAuditLogs = auditLogs.value.length
+  // The totals come from the pagination metadata of each endpoint, not from
+  // the loaded page: a page holds at most per_page rows.
+  const totalUsers = extractPaginationMeta(usersFetch.data.value).total
+  const totalRoles = extractPaginationMeta(rolesFetch.data.value).total
+  const totalAuditLogs = extractPaginationMeta(auditLogsFetch.data.value).total
 
   return {
     totalUsers,

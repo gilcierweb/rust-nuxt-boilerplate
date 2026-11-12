@@ -16,14 +16,23 @@
         "saving": "Salvando...",
         "create_role": "Criar cargo",
         "save_changes": "Salvar alterações",
-        "class_level": "Nível de classe"
+        "class_level": "Nível de classe",
+        "scope_hint": "Deixe os dois vazios para um cargo de nível de classe."
       },
       "validation": {
-        "name_required": "O nome é obrigatório"
+        "name_required": "O nome é obrigatório",
+        "name_invalid": "O nome deve ter entre 1 e 50 caracteres",
+        "resource_type_invalid": "O tipo de recurso deve ter no máximo 255 caracteres",
+        "resource_id_invalid": "O ID do recurso deve ser um UUID válido",
+        "scope_invalid": "Os dois campos de escopo caminham juntos: preencha os dois ou nenhum",
+        "name_hint": "Um nome curto e estável, usado pelas regras de acesso."
       },
       "not_found": {
         "title": "Cargo não encontrado",
         "description": "O identificador não corresponde a nenhum cargo do catálogo."
+      },
+      "dialog": {
+        "deleteTitle": "Excluir cargo"
       },
       "permissions": {
         "card_title": "Permissões do cargo",

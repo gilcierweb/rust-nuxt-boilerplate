@@ -57,7 +57,20 @@
       "filterPlaceholder": "Filtrar registros...",
       "viewDetails": "Ver detalles del registro",
       "yes": "Sí",
-      "no": "No"
+      "no": "No",
+      "table": {
+        "pageSize": "Elementos por página",
+        "page": "página",
+        "pagination": "Paginación",
+        "firstPage": "Primera página",
+        "previousPage": "Página anterior",
+        "nextPage": "Página siguiente",
+        "lastPage": "Última página"
+      },
+      "dialog": {
+        "confirm": "Confirmar",
+        "cancel": "Cancelar"
+      }
     },
     "roles": {
       "title": "Roles",
@@ -100,7 +113,8 @@
         "firstName": "Nombre",
         "lastName": "Apellido",
         "roles": "Roles",
-        "noRoles": "Ningún rol"
+        "noRoles": "Ningún rol",
+        "nickname": "Apodo"
       },
       "fields": {
         "displayName": "Nombre para mostrar",

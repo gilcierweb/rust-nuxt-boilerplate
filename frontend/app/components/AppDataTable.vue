@@ -7,7 +7,7 @@
       :total-label="totalLabel"
       :total="totalLabelCount"
       :show-total="showTotal"
-      :enable-global-filter="enableGlobalFilter && mode === 'client'"
+      :enable-global-filter="enableGlobalFilter"
       :show-refresh="showRefresh"
       :refresh-label="refreshLabel"
       :loading="loading"
@@ -33,15 +33,18 @@
               v-for="col in table.getFlatHeaders()"
               :key="col.id"
               :class="headerClass(col.column.columnDef.meta)"
-              @click="onHeaderClick(col, $event)"
+              :aria-sort="headerSortState(col)"
             >
-              <span
-                class="inline-flex items-center gap-1"
-                :class="headerAlignClass(col.column.columnDef.meta)"
-                :style="enableSorting && col.column.getCanSort() ? 'cursor: pointer; user-select: none;' : ''"
-              >
-                <FlexRender :render="col.column.columnDef.header" :props="col.getContext()" />
-                <template v-if="enableSorting && col.column.getCanSort()">
+              <span :class="headerAlignClass(col.column.columnDef.meta)">
+                <button
+                  v-if="enableSorting && col.column.getCanSort()"
+                  type="button"
+                  class="inline-flex items-center gap-1"
+                  style="cursor: pointer; user-select: none;"
+                  :aria-sort="headerSortState(col)"
+                  @click="onHeaderClick(col, $event)"
+                >
+                  <FlexRender :render="col.column.columnDef.header" :props="col.getContext()" />
                   <span
                     v-if="col.column.getIsSorted() === 'asc'"
                     class="icon-[tabler--chevron-up] size-3.5 text-primary"
@@ -51,7 +54,12 @@
                     class="icon-[tabler--chevron-down] size-3.5 text-primary"
                   ></span>
                   <span v-else class="icon-[tabler--arrows-vertical] size-3.5 text-base-content/30"></span>
-                </template>
+                </button>
+                <FlexRender
+                  v-else
+                  :render="col.column.columnDef.header"
+                  :props="col.getContext()"
+                />
               </span>
             </th>
           </tr>
@@ -97,9 +105,13 @@
     >
       <div class="flex items-center gap-2 text-sm text-base-content/60">
         <span v-if="totalLabelCount !== null">
-          {{ totalLabelCount }} {{ totalLabelCount === 1 ? 'registro' : 'registros' }}
+          {{ $t('admin.common.total') }}: {{ totalLabelCount }}
         </span>
-<select
+<label for="page-size-select" class="label-text">
+          {{ $t('admin.common.table.pageSize') }}
+        </label>
+        <select
+          id="page-size-select"
           :value="currentPageSize"
           class="select select-sm select-bordered bg-base-100 transition-none"
           @change="onPageSizeChange"
@@ -109,15 +121,16 @@
             :key="size"
             :value="size"
           >
-            {{ size }} / página
+            {{ size }} / {{ $t('admin.common.table.page') }}
           </option>
         </select>
       </div>
 
-      <nav class="flex items-center gap-x-1">
+      <nav class="flex items-center gap-x-1" :aria-label="$t('admin.common.table.pagination')">
         <button
           type="button"
           class="btn btn-soft btn-sm transition-none"
+          :aria-label="$t('admin.common.table.firstPage')"
           @click="goToPage(1)"
         >
           <span class="icon-[tabler--chevrons-left] size-4"></span>
@@ -125,6 +138,7 @@
         <button
           type="button"
           class="btn btn-soft btn-sm transition-none"
+          :aria-label="$t('admin.common.table.previousPage')"
           @click="goToPage(currentPage - 1)"
         >
           <span class="icon-[tabler--chevron-left] size-4 rtl:rotate-180"></span>
@@ -153,6 +167,7 @@
         <button
           type="button"
           class="btn btn-soft btn-sm transition-none"
+          :aria-label="$t('admin.common.table.nextPage')"
           @click="goToPage(currentPage + 1)"
         >
           <span class="icon-[tabler--chevron-right] size-5 rtl:rotate-180"></span>
@@ -160,6 +175,7 @@
         <button
           type="button"
           class="btn btn-soft btn-sm transition-none"
+          :aria-label="$t('admin.common.table.lastPage')"
           @click="goToPage(totalPages)"
         >
           <span class="icon-[tabler--chevrons-right] size-4"></span>
@@ -256,6 +272,14 @@ const sorting = ref<SortingState>(props.sorting ?? [])
 
 const isServer = computed(() => props.mode === 'server')
 
+/** The ARIA sort state of a header, read from the table state. */
+function headerSortState(col: Header<TData, unknown>): 'ascending' | 'descending' | 'none' {
+  const sorted = col.column.getIsSorted()
+  if (sorted === 'asc') return 'ascending'
+  if (sorted === 'desc') return 'descending'
+  return 'none'
+}
+
 function resolveRowId(row: TData): string | null {
   const raw = row?.[props.rowIdKey as keyof TData]
   if (raw === undefined || raw === null || raw === '') return null
@@ -272,7 +296,9 @@ watch(
 )
 
 watch(searchModel, (value) => {
-  if (!isServer.value) emit('update:search', value)
+  // The term travels to the parent in both modes: in server mode the list
+  // endpoint resolves it, in client mode the table filters it beside.
+  emit('update:search', value)
 })
 
 watch(sorting, (value) => {

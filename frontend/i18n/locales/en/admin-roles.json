@@ -16,14 +16,23 @@
         "saving": "Saving...",
         "create_role": "Create role",
         "save_changes": "Save changes",
-        "class_level": "Class level"
+        "class_level": "Class level",
+        "scope_hint": "Leave both empty for a class level role."
       },
       "validation": {
-        "name_required": "Name is required"
+        "name_required": "Name is required",
+        "name_invalid": "The name must hold between 1 and 50 characters",
+        "resource_type_invalid": "The resource type must hold at most 255 characters",
+        "resource_id_invalid": "The resource id must be a valid UUID",
+        "scope_invalid": "The two scope fields travel together: fill both or none",
+        "name_hint": "A short, stable name the access rules read."
       },
       "not_found": {
         "title": "Role not found",
         "description": "The identifier does not match any role of the catalog."
+      },
+      "dialog": {
+        "deleteTitle": "Delete role"
       },
       "permissions": {
         "card_title": "Role permissions",

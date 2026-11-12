@@ -1,11 +1,25 @@
 import { h, type VNode } from 'vue'
 
-// Format ISO datetime to pt-BR locale string
-export function formatDateTime(value?: string | null): string {
+/**
+ * The locale of the app, read from the i18n composer when the call happens
+ * inside a component and from the browser otherwise. A fixed locale printed a
+ * date in Portuguese while the interface was in English or Spanish.
+ */
+function resolveLocale(): string {
+  try {
+    const { locale } = useI18n()
+    return locale.value ?? 'pt-BR'
+  } catch {
+    return 'pt-BR'
+  }
+}
+
+// Format ISO datetime to the locale of the app
+export function formatDateTime(value?: string | null, locale: string = resolveLocale()): string {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleString('pt-BR', {
+  return date.toLocaleString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -14,11 +28,11 @@ export function formatDateTime(value?: string | null): string {
   })
 }
 
-export function formatDate(value?: string | null): string {
+export function formatDate(value?: string | null, locale: string = resolveLocale()): string {
   if (!value) return '—'
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return String(value)
-  return date.toLocaleDateString('pt-BR', {
+  return date.toLocaleDateString(locale, {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -71,7 +85,7 @@ export function formatCurrency(
   const amount = typeof value === 'number' ? value : Number(String(value).replace(',', '.'))
   if (Number.isNaN(amount)) return String(value)
 
-  return new Intl.NumberFormat('pt-BR', {
+  return new Intl.NumberFormat(resolveLocale(), {
     style: 'currency',
     currency: currencyCode || 'BRL',
   }).format(amount)

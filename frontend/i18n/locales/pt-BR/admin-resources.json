@@ -57,7 +57,20 @@
       "filterPlaceholder": "Filtrar registros...",
       "viewDetails": "Visualizar detalhes do registro",
       "yes": "Sim",
-      "no": "Não"
+      "no": "Não",
+      "table": {
+        "pageSize": "Itens por página",
+        "page": "página",
+        "pagination": "Paginação",
+        "firstPage": "Primeira página",
+        "previousPage": "Página anterior",
+        "nextPage": "Próxima página",
+        "lastPage": "Última página"
+      },
+      "dialog": {
+        "confirm": "Confirmar",
+        "cancel": "Cancelar"
+      }
     },
     "roles": {
       "title": "Cargos",
@@ -100,7 +113,8 @@
         "firstName": "Nome",
         "lastName": "Sobrenome",
         "roles": "Cargos",
-        "noRoles": "Nenhum cargo"
+        "noRoles": "Nenhum cargo",
+        "nickname": "Apelido"
       },
       "fields": {
         "displayName": "Nome de exibição",

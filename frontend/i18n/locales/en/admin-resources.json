@@ -57,7 +57,20 @@
       "filterPlaceholder": "Filter records...",
       "viewDetails": "View record details",
       "yes": "Yes",
-      "no": "No"
+      "no": "No",
+      "table": {
+        "pageSize": "Items per page",
+        "page": "page",
+        "pagination": "Pagination",
+        "firstPage": "First page",
+        "previousPage": "Previous page",
+        "nextPage": "Next page",
+        "lastPage": "Last page"
+      },
+      "dialog": {
+        "confirm": "Confirm",
+        "cancel": "Cancel"
+      }
     },
     "roles": {
       "title": "Roles",

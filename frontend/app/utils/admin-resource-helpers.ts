@@ -51,43 +51,80 @@ export function useAdminResource(resource: string, options?: {
     return navigateTo(localePath(useEditPath(resource, id)))
   }
 
+  // The confirmation is a dialog, not a native confirm: the native one blocks
+  // the thread, cannot name the target and hides the consequence. The page
+  // renders the dialog with these props and calls the handlers back.
+  const removal = ref<{
+    item: Record<string, any>
+    title: string
+    message: string
+    confirmLabel: string
+    cancelLabel: string
+    successMessage: string
+    errorMessage: string
+    deleteEndpoint: string
+  } | null>(null)
+  const removalPending = ref(false)
+
   /**
-   * Remove item with confirmation
-   * @param item - Item to remove
-   * @param config - Confirmation and API config
+   * Open the confirmation dialog of a removal.
    */
-  async function removeItem(
+  function requestRemoval(
     item: Record<string, any>,
     config: {
-      confirmMessage?: string
-      successMessage?: string
-      errorMessage?: string
+      title: string
+      message: string
+      confirmLabel?: string
+      cancelLabel?: string
+      successMessage: string
+      errorMessage: string
       deleteEndpoint?: string
-    } = {}
+    },
   ) {
-    const {
-      confirmMessage = `Tem certeza que deseja excluir este item?`,
-      successMessage = 'Item excluído com sucesso',
-      errorMessage = 'Erro ao excluir item',
-      deleteEndpoint = `${basePath}/${item.id}`
-    } = config
+    removal.value = {
+      item,
+      title: config.title,
+      message: config.message,
+      confirmLabel: config.confirmLabel ?? 'Excluir',
+      cancelLabel: config.cancelLabel ?? 'Cancelar',
+      successMessage: config.successMessage,
+      errorMessage: config.errorMessage,
+      deleteEndpoint: config.deleteEndpoint ?? `${basePath}/${item.id}`,
+    }
+  }
 
-    if (!confirm(confirmMessage)) return
+  function cancelRemoval() {
+    removal.value = null
+  }
 
+  /**
+   * Perform the confirmed removal and close the dialog.
+   */
+  async function confirmRemoval() {
+    const target = removal.value
+    if (!target) return false
+    removalPending.value = true
     try {
-      await api.delete(deleteEndpoint)
-      toast.success(successMessage)
+      await api.delete(target.deleteEndpoint)
+      toast.success(target.successMessage)
+      removal.value = null
       return true
     } catch (error: any) {
-      toast.error(error?.message || errorMessage)
+      toast.error(error?.message || target.errorMessage)
       return false
+    } finally {
+      removalPending.value = false
     }
   }
 
   return {
     navigateToShow,
     navigateToEdit,
-    removeItem,
+    requestRemoval,
+    confirmRemoval,
+    cancelRemoval,
+    removal,
+    removalPending,
     showPath: (id: string) => localePath(useShowPath(resource, id)),
     editPath: (id: string) => localePath(useEditPath(resource, id)),
   }

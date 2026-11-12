@@ -6,6 +6,10 @@ export interface User {
   profile_id: string
   roles: string[]
   is_otp_enabled: boolean
+  /** The capability codes the subject holds at the class level. */
+  permissions?: string[]
+  /** The presentation role derived from the grants, never a claim of the token. */
+  role?: string | null
 }
 
 export interface AuthResponse {
