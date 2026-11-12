@@ -1,4 +1,5 @@
 import { isAuthPage, isPublicRoute } from "~/utils/auth-routes";
+import { noticeTarget } from "~/utils/flash-notice";
 
 function isAssetLikePath(path: string) {
   return /\.[a-zA-Z0-9]+$/.test(path);
@@ -104,6 +105,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   if (isLoggedIn && isAdminRoute && !isAdmin) {
-    return navigateTo(localePath("/portal"));
+    // The operator asked for a screen their authority does not open. The
+    // redirect carries the notice so the portal can say so: a silent bounce
+    // reads as a broken link.
+    return navigateTo(noticeTarget('forbidden', localePath('/portal')))
   }
 });
