@@ -1,0 +1,20 @@
+{
+  "authorization": {
+    "resources": {
+      "all": "Todo",
+      "audit_logs": "Registros de auditoría",
+      "permissions": "Permisos",
+      "profiles": "Perfiles",
+      "roles": "Roles",
+      "upload": "Subidas",
+      "users": "Usuarios"
+    },
+    "actions": {
+      "read": "Leer",
+      "create": "Crear",
+      "update": "Actualizar",
+      "delete": "Eliminar",
+      "manage": "Administrar"
+    }
+  }
+}

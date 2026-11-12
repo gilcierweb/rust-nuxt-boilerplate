@@ -26,6 +26,8 @@ type EntityItem = {
   customer_id?: string
   invoice_number?: string
   object_key?: string
+  action?: string
+  resource_type?: string
 }
 
 const ENDPOINTS: Record<LookupEntity, string> = {

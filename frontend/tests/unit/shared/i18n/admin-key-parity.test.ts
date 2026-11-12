@@ -8,6 +8,7 @@ const ADMIN_FILES = [
   'admin-permissions.json',
   'admin-roles.json',
   'admin-resources.json',
+  'authorization.json',
 ]
 
 // The namespaces the admin RBAC screens resolve. Every key of a screen must
@@ -22,6 +23,7 @@ const RBAC_NAMESPACES = [
   'admin.sidebar',
   'admin.common',
   'admin.statusLabels',
+  'authorization',
 ]
 
 function flatKeys(node: unknown, prefix = ''): string[] {

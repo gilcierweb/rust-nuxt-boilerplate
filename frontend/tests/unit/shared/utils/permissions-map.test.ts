@@ -14,7 +14,6 @@ const permission: Permission = {
     { role_id: 'role-admin', role_name: 'admin', effect: 0 },
     { role_id: 'role-manager', role_name: 'manager', effect: 1 },
   ],
-  updated_at: '2026-01-02T03:04:05Z',
 }
 
 describe('toPermissionTableRow', () => {
@@ -30,7 +29,12 @@ describe('toPermissionTableRow', () => {
     expect(row.description).toBe('Allows reading the user list.')
     expect(row.resource).toBe('users')
     expect(row.action).toBe('read')
-    expect(row.updated_at).toBe('2026-01-02T03:04:05Z')
+  })
+
+  // The catalog list carries no timestamp, so the table row carries none: a
+  // column that reads one would render an empty cell on every row.
+  it('carries no timestamp the catalog list does not answer', () => {
+    expect('updated_at' in toPermissionTableRow(permission)).toBe(false)
   })
 
   it('answers an empty role list for a permission nobody carries', () => {

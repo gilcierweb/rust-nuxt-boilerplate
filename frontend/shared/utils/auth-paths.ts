@@ -53,7 +53,9 @@ function toPathString(input: unknown): string {
  * — to a comparable lowercase `/auth/...` path.
  */
 export function normalizeAuthPath(input: unknown): string {
-  let path = toPathString(input).split('?')[0].split('#')[0].trim()
+  const withoutQuery = toPathString(input).split('?')[0] ?? ''
+  const withoutFragment = withoutQuery.split('#')[0] ?? ''
+  let path = withoutFragment.trim()
   if (!path) return ''
   const schemeIndex = path.indexOf('://')
   if (schemeIndex >= 0) {

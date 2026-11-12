@@ -254,7 +254,11 @@ export const useAuthStore = defineStore('auth', {
     },
 
     // SSR version that receives pre-extracted context to avoid Nuxt context issues
-    async fetchSessionSSR(event: any, requestFetch: any, cookieHeader: string | undefined) {
+    async fetchSessionSSR(
+      event: { context?: Record<string, unknown> } | undefined,
+      requestFetch: <T>(path: string, options?: Record<string, any>) => Promise<T>,
+      cookieHeader: string | undefined,
+    ) {
       const data = await requestFetch<SessionResponse>('/api/v1/auth/session', {
         method: 'GET',
         headers: {
@@ -263,7 +267,7 @@ export const useAuthStore = defineStore('auth', {
         },
       })
 
-      if (event) {
+      if (event?.context) {
         event.context.authAccessToken = data.access_token
       }
 
@@ -315,22 +319,24 @@ export const useAuthStore = defineStore('auth', {
     async fetchMe() {
       const { $api } = useNuxtApp()
       // The subject, its roles and its capabilities come from one place: the
-      // auth me endpoint answers the effective grants, so the store never
-      // rebuilds them from the token.
+      // auth me endpoint answers the effective grants in a flat payload, so
+      // the store never rebuilds them from the token.
       const data = await $api<{
-        user: User
-        profile: any
+        id: string
+        email: string
         roles: string[]
         permissions: string[]
-        role: string | null
+        role: number
       }>('/auth/me')
       const user: User = {
-        ...data.user,
-        roles: data.roles,
+        ...(this.user ?? {}),
+        id: data.id,
+        email: data.email,
+        roles: data.roles ?? [],
         permissions: data.permissions ?? [],
         role: data.role ?? null,
-      }
-      this.user = this.user ? { ...this.user, ...user } : user
+      } as User
+      this.user = user
       this.hasSession = true
       this.isInitialized = true
       markInitialized()

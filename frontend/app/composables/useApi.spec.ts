@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useApi } from '@/app/composables/useApi'
+import { useApi } from '@/composables/useApi'
 
 describe('useApi composable', () => {
   let mockNuxtApp: any
@@ -36,11 +36,11 @@ describe('useApi composable', () => {
   it('makes POST request with body', async () => {
     const { post } = useApi()
     const requestBody = { name: 'test' }
-    await post('/test-endpoint', requestBody)
+    await post('/test-endpoint', { body: requestBody })
     
     expect(mockNuxtApp.$api).toHaveBeenCalledWith('/test-endpoint', {
       method: 'POST',
-      body: JSON.stringify(requestBody)
+      body: requestBody
     })
   })
 

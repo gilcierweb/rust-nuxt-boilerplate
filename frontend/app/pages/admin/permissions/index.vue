@@ -35,6 +35,7 @@
       :columns="columns"
       row-id-key="id"
       :search-placeholder="$t('admin.permissions.searchPlaceholder')"
+      :search-label="$t('admin.common.search')"
       :total-label="$t('admin.common.total')"
       :total="paginationMeta.total"
       :page="pagination.page"
@@ -162,6 +163,9 @@ const columns = computed<DataTableColumn<Permission>[]>(() => [
     id: 'description',
     accessorKey: 'description',
     header: () => t('admin.permissions.table.description'),
+    // The backend answers a sort field outside its allowlist with a 422, and
+    // the description is not part of it: the header stays a plain label.
+    enableSorting: false,
     cell: (info) => info.getValue() || t('admin.permissions.table.noDescription'),
     meta: { align: 'left', truncate: true },
   },
@@ -174,13 +178,6 @@ const columns = computed<DataTableColumn<Permission>[]>(() => [
       return row.roles.length > 0 ? row.roles.join(', ') : t('admin.permissions.table.noRoles')
     },
     meta: { align: 'left', truncate: true },
-  },
-  {
-    id: 'updated_at',
-    accessorKey: 'updated_at',
-    header: () => t('admin.permissions.table.updated'),
-    cell: (info) => formatDateTime(info.getValue() as string | undefined),
-    meta: { align: 'right' },
   },
 ])
 </script>

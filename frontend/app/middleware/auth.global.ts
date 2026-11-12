@@ -18,7 +18,9 @@ function hasUndefinedSegment(path: string): string | null {
 
 export default defineNuxtRouteMiddleware(async (to) => {
   const nuxtApp = useNuxtApp();
-  const authStore = useAuthStore(nuxtApp.$pinia);
+  // The type generation of this project does not resolve the @pinia/nuxt
+  // augmentation, so the instance is read through a narrow cast.
+  const authStore = useAuthStore((nuxtApp as unknown as { $pinia?: Parameters<typeof useAuthStore>[0] }).$pinia);
   const localePath = useLocalePath();
   const isPublic = isPublicRoute(to.path);
   const authPage = isAuthPage(to.path);

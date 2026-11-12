@@ -54,7 +54,7 @@ export default defineEventHandler(async (event) => {
       credentials: 'include',
     })
 
-    return applyProxyResponse(event, response)
+    return applyProxyResponse(event, response as unknown as Parameters<typeof applyProxyResponse>[1])
   } catch (error: any) {
     const response = error?.response
     if (!response) {

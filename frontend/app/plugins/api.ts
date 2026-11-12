@@ -39,8 +39,18 @@ export default defineNuxtPlugin((nuxtApp) => {
     ? "/api/v1"
     : String(publicConfig.apiBase || "/api/v1").replace(/\/+$/, "");
 
-  function buildHeaders(inputHeaders?: HeadersInit) {
-    const authStore = useAuthStore(nuxtApp.$pinia);
+// The pinia instance the app carries.
+//
+// The type generation of this project does not resolve the @pinia/nuxt
+// augmentation, so `$pinia` reads as unknown. The instance is read through a
+// narrow cast: the store needs it outside a component setup, where the active
+// pinia is not set yet.
+function appPinia(nuxtApp: unknown) {
+  return (nuxtApp as { $pinia?: Parameters<typeof useAuthStore>[0] }).$pinia;
+}
+
+function buildHeaders(inputHeaders?: HeadersInit) {
+  const authStore = useAuthStore(appPinia(nuxtApp));
     const headers = new Headers(inputHeaders ?? {});
 
     if (!headers.has("accept")) {
@@ -164,7 +174,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
       return await rawApi<T>(request, options);
     } catch (error: any) {
-      const authStore = useAuthStore(nuxtApp.$pinia);
+      const authStore = useAuthStore(appPinia(nuxtApp));
       const isUnauthorized =
         error?.response?.status === 401 || error?.statusCode === 401;
 

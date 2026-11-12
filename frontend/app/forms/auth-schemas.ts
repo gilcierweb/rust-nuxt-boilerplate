@@ -103,14 +103,12 @@ export const registerSchema = (t: (key: string) => string) =>
         const confirm = (obj as Record<string, unknown>).password_confirmation
         if (typeof confirm === 'string' && typeof pw === 'string' && confirm && pw !== confirm) {
           addIssue({
-            validation: 'password_mismatch',
             path: [{
-              input: obj,
-              origin: obj,
+              type: 'object',
+              origin: 'value',
+              input: obj as Record<string, unknown>,
               key: 'password_confirmation',
               value: confirm,
-              type: 'object',
-              schema: v.string(),
             }],
             message: t('auth.validation.passwordMismatch'),
           })
@@ -174,14 +172,12 @@ export const resetPasswordSchema = (t: (key: string) => string) =>
         const confirm = (obj as Record<string, unknown>).password_confirmation
         if (typeof confirm === 'string' && typeof pw === 'string' && confirm && pw !== confirm) {
           addIssue({
-            validation: 'password_mismatch',
             path: [{
-              input: obj,
-              origin: obj,
+              type: 'object',
+              origin: 'value',
+              input: obj as Record<string, unknown>,
               key: 'password_confirmation',
               value: confirm,
-              type: 'object',
-              schema: v.string(),
             }],
             message: t('auth.validation.passwordMismatch'),
           })

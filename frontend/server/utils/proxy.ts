@@ -189,8 +189,19 @@ export function applyProxyResponse<T = any>(
 
 // -- Tests
 
-if (import.meta.vitest) {
-  const { describe, it, expect } = import.meta.vitest
+// The vitest globals are not declared for the server type set, so they are read
+// through a narrow cast: the guard makes the block vanish in a production
+// build.
+interface VitestGlobals {
+  describe: (name: string, suite: () => void) => void
+  it: (name: string, test: () => void) => void
+  expect: (value: unknown) => Record<string, any>
+}
+
+const vitest = (import.meta as ImportMeta & { vitest?: VitestGlobals }).vitest
+
+if (vitest) {
+  const { describe, it, expect } = vitest
 
   describe('filterCookies', () => {
     it('filters to only backend-relevant cookies by default', () => {

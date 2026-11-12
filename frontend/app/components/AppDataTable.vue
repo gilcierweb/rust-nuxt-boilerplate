@@ -4,6 +4,7 @@
       v-if="showToolbar"
       v-model="searchModel"
       :search-placeholder="searchPlaceholder"
+      :search-label="searchLabel"
       :total-label="totalLabel"
       :total="totalLabelCount"
       :show-total="showTotal"
@@ -214,6 +215,7 @@ interface Props {
   columns: DataTableColumn<TData>[]
   rowIdKey?: string
   searchPlaceholder?: string
+  searchLabel?: string
   totalLabel?: string
   total?: number | null
   loading?: boolean
@@ -240,6 +242,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   rowIdKey: 'id',
+  searchLabel: 'Search',
   height: 480,
   enableSorting: true,
   enableGlobalFilter: true,

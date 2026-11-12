@@ -38,14 +38,14 @@ export interface TablePaginationFetcherArgs {
   options?: Record<string, any>
 }
 
-const DEFAULT_PAGE_SIZES = [10, 20, 30, 50] as const
+const DEFAULT_PAGE_SIZES: number[] = [10, 20, 30, 50]
 
 export function useTablePagination<T extends Record<string, any>>(
   fetcher: TablePaginationFetcherArgs | (() => TablePaginationFetcherArgs),
   options: UseTablePaginationOptions = {},
 ): UseTablePaginationReturn<T> {
-  const pageSizes = options.pageSizes ?? [...DEFAULT_PAGE_SIZES]
-  const initialSize = options.defaultPageSize ?? pageSizes[0]
+  const pageSizes: number[] = options.pageSizes ?? [...DEFAULT_PAGE_SIZES]
+  const initialSize = options.defaultPageSize ?? pageSizes[0] ?? 10
 
   const pagination = ref<TablePaginationState>({ page: 1, perPage: initialSize })
   const sorting = ref<SortingState>([])

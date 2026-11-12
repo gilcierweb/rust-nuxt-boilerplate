@@ -18,6 +18,7 @@
           type="search"
           class="w-full bg-transparent text-sm outline-none placeholder:text-base-content/45"
           :placeholder="searchPlaceholder"
+          :aria-label="searchLabel"
           @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
         />
       </label>
@@ -46,6 +47,7 @@
 withDefaults(defineProps<{
   modelValue?: string
   searchPlaceholder?: string
+  searchLabel?: string
   totalLabel?: string
   total?: number | string
   showTotal?: boolean
@@ -56,6 +58,7 @@ withDefaults(defineProps<{
 }>(), {
   modelValue: '',
   searchPlaceholder: '...',
+  searchLabel: 'Search',
   totalLabel: 'Total',
   total: 0,
   showTotal: true,

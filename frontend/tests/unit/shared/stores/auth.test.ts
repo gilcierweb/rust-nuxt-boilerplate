@@ -9,18 +9,14 @@ import { createPinia, setActivePinia } from 'pinia'
 
 const meCalls: string[] = []
 
+// The payload of GET /auth/me answers flat: the subject, its roles, its
+// capabilities and the presentation role code. There is no nested user key.
 const mePayload = {
-  user: {
-    id: 'user-1',
-    email: 'user01@example.com',
-    profile_id: null,
-    roles: ['ADMIN'],
-    is_otp_enabled: false,
-  },
-  profile: null,
+  id: 'user-1',
+  email: 'user01@example.com',
   roles: ['ADMIN'],
   permissions: ['users:read', 'roles:update'],
-  role: 'ADMIN',
+  role: 1,
 }
 
 // The auto-imports the store resolves from the global scope, the same shape
@@ -53,25 +49,46 @@ describe('auth store capabilities', () => {
     expect(meCalls).toEqual(['/auth/me'])
   })
 
-  it('carries the roles and the capability list of the payload', async () => {
+  it('carries the identity, the roles and the capability list of the flat payload', async () => {
     const store = freshStore()
 
     await store.fetchMe()
 
+    expect(store.user?.id).toBe('user-1')
+    expect(store.user?.email).toBe('user01@example.com')
     expect(store.user?.roles).toEqual(['ADMIN'])
     expect(store.user?.permissions).toEqual(['users:read', 'roles:update'])
+    expect(store.user?.role).toBe(1)
   })
 
   it('answers the admin check whatever the case of the role name', () => {
     const store = freshStore()
 
-    store.user = { ...mePayload.user, roles: ['ADMIN'] }
+    store.user = {
+      id: 'user-1',
+      email: 'user01@example.com',
+      profile_id: 'profile-1',
+      roles: ['ADMIN'],
+      is_otp_enabled: false,
+    }
     expect(store.isAdmin).toBe(true)
 
-    store.user = { ...mePayload.user, roles: ['admin'] }
+    store.user = {
+      id: 'user-1',
+      email: 'user01@example.com',
+      profile_id: 'profile-1',
+      roles: ['admin'],
+      is_otp_enabled: false,
+    }
     expect(store.isAdmin).toBe(true)
 
-    store.user = { ...mePayload.user, roles: ['manager'] }
+    store.user = {
+      id: 'user-1',
+      email: 'user01@example.com',
+      profile_id: 'profile-1',
+      roles: ['manager'],
+      is_otp_enabled: false,
+    }
     expect(store.isAdmin).toBe(false)
   })
 })

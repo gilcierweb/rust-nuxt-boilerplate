@@ -27,6 +27,7 @@
       :columns="columns"
       :row-id-key="'id'"
       :search-placeholder="$t('admin.users.searchPlaceholder')"
+      :search-label="$t('admin.common.search')"
       :total-label="$t('admin.common.total')"
       :total="paginationMeta.total"
       :page="pagination.page"
@@ -76,10 +77,10 @@ const breadcrumbItems = computed(() => [
 
 interface UserRow {
   id: string
-  display_name?: string
+  full_name?: string | null
   email: string
-  first_name?: string
-  last_name?: string
+  first_name?: string | null
+  last_name?: string | null
 }
 
 const {
@@ -99,10 +100,14 @@ const {
   url: '/admin/users',
 }))
 
+// The list endpoint answers the profile name as `full_name`; its sort
+// allowlist names `display_name` and `created_at` only, so those two are the
+// sortable columns and every other header stays a plain label. A sort field
+// outside the allowlist is a 422 from the backend, not a silent fallback.
 const columns = computed<DataTableColumn<UserRow>[]>(() => [
   {
     id: 'display_name',
-    accessorKey: 'display_name',
+    accessorKey: 'full_name',
     header: () => t('admin.users.table.displayName'),
     cell: (info) => info.getValue() || '—',
     meta: { align: 'left' },
@@ -111,6 +116,9 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     id: 'email',
     accessorKey: 'email',
     header: () => t('admin.users.table.email'),
+    // The address is encrypted, so its blind index order is not the
+    // alphabetical order of the address: the backend refuses the sort.
+    enableSorting: false,
     cell: (info) => info.getValue(),
     meta: { align: 'left' },
   },
@@ -128,6 +136,7 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     id: 'first_name',
     accessorKey: 'first_name',
     header: () => t('admin.users.table.firstName'),
+    enableSorting: false,
     cell: (info) => info.getValue() || '—',
     meta: { align: 'left' },
   },
@@ -135,6 +144,7 @@ const columns = computed<DataTableColumn<UserRow>[]>(() => [
     id: 'last_name',
     accessorKey: 'last_name',
     header: () => t('admin.users.table.lastName'),
+    enableSorting: false,
     cell: (info) => info.getValue() || '—',
     meta: { align: 'left' },
   },

@@ -10,7 +10,7 @@
     "postinstall": "nuxt prepare",
     "test": "vitest",
     "test:e2e": "playwright test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit -p .nuxt/tsconfig.app.json",
     "lint": "eslint . --ext .vue,.js,.ts",
     "format": "prettier --write .",
     "deploy": "pnpm run build && wrangler deploy",

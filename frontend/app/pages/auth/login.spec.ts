@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
-import LoginView from '@/app/pages/auth/login.vue'
-import { useAuthStore } from '@/app/stores/auth'
+import LoginView from '@/pages/auth/login.vue'
+import { useAuthStore } from '@/stores/auth'
 import { createPinia, setActivePinia } from 'pinia'
 
 describe('LoginView', () => {
@@ -16,7 +16,7 @@ describe('LoginView', () => {
     authStore = useAuthStore()
     
     // Mock the login method
-    authStore.login = vi.fn().mockResolvedValue(undefined)
+    authStore.login = vi.fn().mockResolvedValue(undefined) as typeof authStore.login
   })
 
   it('renders login form', () => {
@@ -46,7 +46,10 @@ describe('LoginView', () => {
   })
 
   it('shows error when login fails', async () => {
-    authStore.login.mockRejectedValueOnce(new Error('Invalid credentials'))
+    const loginMock = authStore.login as unknown as {
+      mockRejectedValueOnce: (error: unknown) => void
+    }
+    loginMock.mockRejectedValueOnce(new Error('Invalid credentials'))
     
     const wrapper = mount(LoginView)
     await wrapper.find('input[type="email"]').setValue('test@example.com')

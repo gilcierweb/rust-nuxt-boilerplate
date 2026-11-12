@@ -8,8 +8,8 @@ export interface User {
   is_otp_enabled: boolean
   /** The capability codes the subject holds at the class level. */
   permissions?: string[]
-  /** The presentation role derived from the grants, never a claim of the token. */
-  role?: string | null
+  /** The presentation role code (1 admin, 2 operator, 3 viewer), never a claim of the token. */
+  role?: number | null
 }
 
 export interface AuthResponse {

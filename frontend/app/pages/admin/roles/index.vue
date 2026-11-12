@@ -31,6 +31,7 @@
       :columns="columns"
       row-id-key="id"
       :search-placeholder="$t('admin.roles.searchPlaceholder')"
+      :search-label="$t('admin.common.search')"
       :total-label="$t('admin.common.total')"
       :total="paginationMeta.total"
       :page="pagination.page"
