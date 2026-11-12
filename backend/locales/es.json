@@ -23,6 +23,7 @@
   "admin.roles.validation.permissions_empty": "Un rol debe tener al menos un permiso",
   "admin.roles.validation.resource_type_invalid": "resource_type debe tener como máximo 255 caracteres",
   "admin.roles.validation.scope_invalid": "resource_type y resource_id deben enviarse juntos",
+  "admin.roles.validation.resource_type_unknown": "El tipo de recurso debe nombrar un recurso del catálogo",
   "admin.users.guard.last_admin_role_assignment": "Este usuario tiene la última asignación del rol de administrador",
   "admin.users.validation.role_unknown": "Rol desconocido: el id no pertenece al catálogo ({unknown})",
   "admin.validation.sort_invalid": "Campo de ordenación desconocido",

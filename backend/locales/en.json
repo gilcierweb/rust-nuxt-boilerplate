@@ -23,6 +23,7 @@
   "admin.roles.validation.permissions_empty": "A role must hold at least one permission",
   "admin.roles.validation.resource_type_invalid": "resource_type must be at most 255 characters",
   "admin.roles.validation.scope_invalid": "resource_type and resource_id must be provided together",
+  "admin.roles.validation.resource_type_unknown": "The resource type must name a resource of the catalog",
   "admin.users.guard.last_admin_role_assignment": "This user holds the last assignment of the administrator role",
   "admin.users.validation.role_unknown": "Unknown role: the id does not belong to the catalog ({unknown})",
   "admin.validation.sort_invalid": "Unknown sort field",

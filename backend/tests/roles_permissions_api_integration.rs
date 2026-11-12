@@ -543,6 +543,55 @@ async fn put_refuses_an_unknown_effect_code_or_role() {
 }
 
 #[actix_web::test]
+async fn update_refuses_a_scope_naming_a_resource_outside_the_catalog() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let subject = subject_with_roles(&db, &["admin"]).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+    let token = bearer(&config, subject);
+    let scratch = scratch_role(&db).await;
+
+    // The instance check compares the target id and never the scope type, so a
+    // scope naming an unknown resource would let the role grant its codes over
+    // a record of another resource that happens to share the id.
+    let req = authorized(
+        test::TestRequest::patch()
+            .uri(format!("/admin/roles/{scratch}").as_str())
+            .set_json(serde_json::json!({
+                "name": format!("scoped-{}", &Uuid::new_v4().to_string()[..8]),
+                "resource_type": "company",
+                "resource_id": Uuid::new_v4().to_string()
+            })),
+        &token,
+    )
+    .to_request();
+    assert_eq!(
+        test::call_service(&app, req).await.status(),
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "a scope names a resource of the catalog"
+    );
+
+    // A resource of the catalog travels freely.
+    let req = authorized(
+        test::TestRequest::patch()
+            .uri(format!("/admin/roles/{scratch}").as_str())
+            .set_json(serde_json::json!({
+                "name": format!("scoped-{}", &Uuid::new_v4().to_string()[..8]),
+                "resource_type": "users",
+                "resource_id": Uuid::new_v4().to_string()
+            })),
+        &token,
+    )
+    .to_request();
+    assert_eq!(
+        test::call_service(&app, req).await.status(),
+        StatusCode::OK,
+        "a known resource scopes the role"
+    );
+}
+
+#[actix_web::test]
 async fn put_refuses_a_code_the_catalog_no_longer_holds() {
     seed_catalog();
     let db = TestDb::new().await;
@@ -737,7 +786,7 @@ async fn update_refuses_to_scope_the_administrator_role() {
             .uri(format!("/admin/roles/{admin_role}").as_str())
             .set_json(serde_json::json!({
                 "name": "admin",
-                "resource_type": "company",
+                "resource_type": "users",
                 "resource_id": Uuid::new_v4().to_string()
             })),
         &token,

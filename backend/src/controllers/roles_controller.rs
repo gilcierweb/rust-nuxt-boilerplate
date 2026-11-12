@@ -34,6 +34,16 @@ fn validate_role_scope(payload: &RoleWriteRequest) -> Result<(), validator::Vali
             .with_message("admin.roles.validation.scope_invalid".into()));
     }
 
+    // A scope names a resource of the catalog: an arbitrary string would let a
+    // role scoped to one resource grant its codes on a record of another,
+    // because the instance check compares the target id and never the type.
+    if let Some(resource_type) = payload.resource_type.as_deref()
+        && AbilityResource::from_code(resource_type).is_none()
+    {
+        return Err(validator::ValidationError::new("role_resource_type")
+            .with_message("admin.roles.validation.resource_type_unknown".into()));
+    }
+
     Ok(())
 }
 
