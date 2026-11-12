@@ -150,7 +150,8 @@
 <script setup lang="ts">
 import { useAdminRbac } from '~/composables/useAdminRbac'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
-import { formatDateTime, extractErrorMessage } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/admin-ui'
+import { mapAdminError } from '~/utils/admin-errors'
 import AppEmptyState from '~/components/admin/AppEmptyState.vue'
 import RolePermissionsEditor from '~/components/admin/roles/RolePermissionsEditor.vue'
 import type { Permission, PermissionAssignment } from '~/types/rbac'

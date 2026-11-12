@@ -1,5 +1,5 @@
 import type { ComputedRef, Ref } from 'vue'
-import { extractErrorMessage } from '~/utils/admin-ui'
+import { mapAdminError } from '~/utils/admin-errors'
 
 export interface UseAdminResourceItemReturn<T> {
   itemId: ComputedRef<string | null>
@@ -89,8 +89,9 @@ export function useAdminResourceItem<T extends Record<string, any>>(
     { immediate: true },
   )
 
+  const { t } = useI18n()
   const item = computed<T | null>(() => data.value)
-  const requestError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
+  const requestError = computed(() => (error.value ? mapAdminError(error.value, t) : ''))
 
   return {
     itemId,

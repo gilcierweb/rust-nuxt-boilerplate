@@ -93,17 +93,6 @@ export function formatCurrency(
   }).format(amount)
 }
 
-// Extract error message from API response
-export function extractErrorMessage(error: any): string {
-  return (
-    error?.data?.error?.message ||
-    error?.response?._data?.error?.message ||
-    error?.statusMessage ||
-    error?.message ||
-    'Could not load data.'
-  )
-}
-
 // Row delete button for admin index pages (shared by every admin table).
 // Native-element children MUST be an ARRAY of vnodes: a slot object
 // ({ default: () => vnode }) returning a single VNode is silently discarded

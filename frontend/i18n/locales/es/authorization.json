@@ -15,6 +15,7 @@
       "update": "Actualizar",
       "delete": "Eliminar",
       "manage": "Administrar"
-    }
+    },
+    "denied": "No tienes permiso para realizar esta acción."
   }
 }

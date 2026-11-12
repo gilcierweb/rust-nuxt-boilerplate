@@ -15,6 +15,7 @@
       "update": "Atualizar",
       "delete": "Excluir",
       "manage": "Administrar"
-    }
+    },
+    "denied": "Você não tem permissão para realizar esta ação."
   }
 }

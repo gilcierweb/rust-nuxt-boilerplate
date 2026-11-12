@@ -68,7 +68,7 @@
 <script setup lang="ts">
 import { useAdminRbac } from '~/composables/useAdminRbac'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
-import { extractErrorMessage } from '~/utils/admin-ui'
+import { mapAdminError } from '~/utils/admin-errors'
 import PermissionsForm from '~/components/admin/permissions/PermissionsForm.vue'
 import type { Permission, PermissionCatalog } from '~/types/rbac'
 
@@ -109,7 +109,7 @@ const catalog = computed<PermissionCatalog>(
   () => data.value?.catalog ?? { resources: [], actions: [] },
 )
 const existingCodes = computed<string[]>(() => data.value?.codes ?? [])
-const loadError = computed(() => (error.value ? extractErrorMessage(error.value) : ''))
+const loadError = computed(() => (error.value ? mapAdminError(error.value, t) : ''))
 
 async function handleSubmit(values: typeof initialValues) {
   saving.value = true

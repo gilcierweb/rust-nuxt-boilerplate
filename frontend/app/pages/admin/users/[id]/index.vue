@@ -106,7 +106,7 @@
 <script setup lang="ts">
 import { useAdminRbac } from '~/composables/useAdminRbac'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
-import { extractErrorMessage } from '~/utils/admin-ui'
+import { mapAdminError } from '~/utils/admin-errors'
 import AdminRoleSelector from '~/components/admin/AdminRoleSelector.vue'
 import type { Role } from '~/types/rbac'
 

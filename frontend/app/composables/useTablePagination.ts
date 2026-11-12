@@ -5,7 +5,7 @@ import {
   normalizeResourceResponse,
   type ResourcePaginationMeta,
 } from '~/utils/admin-resources'
-import { extractErrorMessage } from '~/utils/admin-ui'
+import { mapAdminError } from '~/utils/admin-errors'
 
 export interface UseTablePaginationOptions {
   defaultPageSize?: number
@@ -119,12 +119,13 @@ export function useTablePagination<T extends Record<string, any>>(
 
   const items = computed<T[]>(() => normalizeResourceResponse(data.value) as T[])
   const paginationMeta = computed<ResourcePaginationMeta>(() => extractPaginationMeta(data.value))
+  const { t } = useI18n()
   const requestError = ref<string>('')
 
   watch(
     () => error.value,
     (err) => {
-      requestError.value = err ? extractErrorMessage(err) : ''
+      requestError.value = err ? mapAdminError(err, t) : ''
     },
     { immediate: true },
   )
