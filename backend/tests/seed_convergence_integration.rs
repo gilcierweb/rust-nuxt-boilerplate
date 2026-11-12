@@ -75,17 +75,24 @@ fn connection() -> diesel::PgConnection {
 }
 
 /// Runs the seed binary against the test database with the shared test keys.
+///
+/// The output travels with the assertion: a silent exit code would hide the
+/// reason the seed refused to run, and the suites share one database.
 fn run_seed() {
     let config = test_config();
-    let status = Command::new(env!("CARGO_BIN_EXE_seed"))
+    let output = Command::new(env!("CARGO_BIN_EXE_seed"))
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env("DATABASE_URL", database_url())
         .env("MASTER_KEY", &config.master_key)
         .env("BLIND_INDEX_KEY", &config.blind_index_key)
-        .status()
+        .output()
         .expect("failed to spawn the seed binary");
 
-    assert!(status.success(), "the seed binary exited with a failure");
+    assert!(
+        output.status.success(),
+        "the seed binary exited with a failure: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 }
 
 /// The role names the seed users actually hold.
@@ -203,11 +210,10 @@ async fn the_seed_converges_every_link() {
         "every seed user converges to its canonical role, but: {}",
         mismatches.join("; ")
     );
-}
 
-#[actix_web::test]
-async fn only_the_first_seed_user_holds_the_administrator_role() {
-    run_seed();
+    // And the administrator holder is the first subject and nobody else: the
+    // rotation of the non admin roles never carries the admin role, so the
+    // count is the direct answer.
     assert_eq!(
         administrator_holders(),
         1,
