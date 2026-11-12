@@ -1,4 +1,13 @@
 import '@testing-library/jest-dom/vitest'
+
+// Nuxt auto-imports are not rewritten outside the Nuxt pipeline, so a component
+// that calls useI18n() resolves the bare identifier from the global scope. The
+// identity translation keeps the assertions on the i18n keys, not on sentences
+// of a specific locale.
+const globalScope = globalThis as any
+globalScope.useI18n = () => ({ t: (key: string) => key })
+globalScope.useLocalePath = () => (path: string) => path
+
 import { vi } from 'vitest'
 import { ref, computed, reactive } from 'vue'
 
@@ -39,6 +48,8 @@ Object.defineProperty(globalThis, 'IntersectionObserver', {
 })
 
 vi.mock('#imports', () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+  useLocalePath: () => (path: string) => path,
   useRoute: () => ({
     path: '/',
     params: {},
@@ -102,6 +113,8 @@ vi.mock('vue', async () => {
 
 const mockDefinePageMeta = () => {}
 vi.mock('nuxt/app', () => ({
+  useI18n: () => ({ t: (key: string) => key }),
+  useLocalePath: () => (path: string) => path,
   useRoute: () => ({
     path: '/',
     params: {},

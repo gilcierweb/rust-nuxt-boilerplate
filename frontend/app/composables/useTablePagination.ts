@@ -29,6 +29,8 @@ export interface UseTablePaginationReturn<T extends Record<string, any>> {
   setPageSize: (size: number) => void
   sorting: Ref<SortingState>
   setSorting: (state: SortingState) => void
+  search: Ref<string>
+  setSearch: (term: string) => void
 }
 
 export interface TablePaginationFetcherArgs {
@@ -47,6 +49,9 @@ export function useTablePagination<T extends Record<string, any>>(
 
   const pagination = ref<TablePaginationState>({ page: 1, perPage: initialSize })
   const sorting = ref<SortingState>([])
+  // The search runs server side: the list endpoint resolves `q` against its
+  // own columns, so the term travels as a query parameter.
+  const search = ref('')
 
   const resolvedFetcher = typeof fetcher === 'function' ? fetcher() : fetcher
   const baseOptions = resolvedFetcher.options ?? {}
@@ -74,6 +79,7 @@ export function useTablePagination<T extends Record<string, any>>(
         per_page: perPageQuery.value,
         sort_by: sortByQuery.value,
         sort_dir: sortDirQuery.value,
+        ...(search.value ? { q: search.value } : {}),
       },
     })
     return response
@@ -122,6 +128,13 @@ export function useTablePagination<T extends Record<string, any>>(
     execute()
   }
 
+  function setSearch(term: string) {
+    if (term === search.value) return
+    pagination.value = { ...pagination.value, page: 1 }
+    search.value = term
+    execute()
+  }
+
   return {
     pagination: pagination as Ref<TablePaginationState>,
     paginationMeta: paginationMeta as Ref<ResourcePaginationMeta>,
@@ -134,5 +147,7 @@ export function useTablePagination<T extends Record<string, any>>(
     setPageSize,
     sorting: sorting as Ref<SortingState>,
     setSorting,
+    search: search as Ref<string>,
+    setSearch,
   }
 }

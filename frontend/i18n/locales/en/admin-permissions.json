@@ -1,0 +1,31 @@
+{
+  "admin": {
+    "permissions": {
+      "title": "Permissions",
+      "subtitle": "System permission catalog: the resource:action code, the roles carrying it, and the effect of each link.",
+      "searchPlaceholder": "Search by name or code",
+      "table": {
+        "name": "Name",
+        "code": "Code",
+        "description": "Description",
+        "roles": "Roles",
+        "updated": "Updated",
+        "noRoles": "No roles",
+        "noDescription": "No description"
+      },
+      "effect": {
+        "allow": "Allow",
+        "deny": "Deny",
+        "none": "No link"
+      },
+      "matrix": {
+        "title": "Permission matrix",
+        "description": "Each row is a permission and each column a role. The cell shows the effect of the link, or its absence."
+      },
+      "empty": {
+        "title": "No permission found",
+        "description": "Adjust the search or clear the filter to see the full catalog."
+      }
+    }
+  }
+}

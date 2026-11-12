@@ -6,6 +6,11 @@ export const useRoute = () => ({
   matched: [],
 })
 
+// The tests assert on the i18n keys, not on the translated sentences: the
+// identity translation keeps every assertion independent of the locale files.
+export const useI18n = () => ({ t: (key: string) => key })
+export const useLocalePath = () => (path: string) => path
+
 export const navigateTo = () => {}
 
 export const useRuntimeConfig = () => ({

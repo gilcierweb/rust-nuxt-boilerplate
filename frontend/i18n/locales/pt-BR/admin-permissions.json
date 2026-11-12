@@ -1,0 +1,31 @@
+{
+  "admin": {
+    "permissions": {
+      "title": "Permissões",
+      "subtitle": "Catálogo de permissões do sistema: o código resource:action, os cargos que a carregam e o efeito de cada vínculo.",
+      "searchPlaceholder": "Buscar por nome ou código",
+      "table": {
+        "name": "Nome",
+        "code": "Código",
+        "description": "Descrição",
+        "roles": "Cargos",
+        "updated": "Atualizado em",
+        "noRoles": "Nenhum cargo",
+        "noDescription": "Sem descrição"
+      },
+      "effect": {
+        "allow": "Permite",
+        "deny": "Nega",
+        "none": "Sem vínculo"
+      },
+      "matrix": {
+        "title": "Matriz de permissões",
+        "description": "Cada linha é uma permissão e cada coluna um cargo. A célula mostra o efeito do vínculo, ou a ausência dele."
+      },
+      "empty": {
+        "title": "Nenhuma permissão encontrada",
+        "description": "Ajuste a busca ou limpe o filtro para ver o catálogo completo."
+      }
+    }
+  }
+}

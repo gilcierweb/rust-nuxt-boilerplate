@@ -1,0 +1,31 @@
+{
+  "admin": {
+    "permissions": {
+      "title": "Permisos",
+      "subtitle": "Catálogo de permisos del sistema: el código recurso:acción, los roles que lo cargan y el efecto de cada vínculo.",
+      "searchPlaceholder": "Buscar por nombre o código",
+      "table": {
+        "name": "Nombre",
+        "code": "Código",
+        "description": "Descripción",
+        "roles": "Roles",
+        "updated": "Actualizado",
+        "noRoles": "Ningún rol",
+        "noDescription": "Sin descripción"
+      },
+      "effect": {
+        "allow": "Permite",
+        "deny": "Niega",
+        "none": "Sin vínculo"
+      },
+      "matrix": {
+        "title": "Matriz de permisos",
+        "description": "Cada fila es un permiso y cada columna un rol. La celda muestra el efecto del vínculo, o su ausencia."
+      },
+      "empty": {
+        "title": "Ningún permiso encontrado",
+        "description": "Ajusta la búsqueda o limpia el filtro para ver el catálogo completo."
+      }
+    }
+  }
+}
