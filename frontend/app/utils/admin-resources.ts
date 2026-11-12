@@ -129,8 +129,32 @@ export const ADMIN_RESOURCES: AdminResourceConfig[] = [
     columns: [
       { key: 'display_name', label: 'Nome de exibição' },
       { key: 'email', label: 'Email' },
+      { key: 'roles', label: 'Cargos' },
       { key: 'first_name', label: 'Nome' },
       { key: 'last_name', label: 'Sobrenome' },
+    ],
+  },
+  {
+    slug: 'permissions',
+    label: 'Permissões',
+    singularLabel: 'Permissão',
+    description:
+      'Catálogo de permissões do sistema: o código resource:action, os cargos que a carregam e o efeito de cada vínculo.',
+    group: 'management',
+    icon: 'key',
+    endpoint: '/admin/permissions',
+    titleKey: 'code',
+    canCreate: true,
+    canEdit: true,
+    canDelete: true,
+    canShow: false,
+    fields: [],
+    columns: [
+      { key: 'name', label: 'admin.permissions.table.name' },
+      { key: 'code', label: 'admin.permissions.table.code' },
+      { key: 'description', label: 'admin.permissions.table.description' },
+      { key: 'roles', label: 'admin.permissions.table.roles' },
+      { key: 'updated_at', label: 'admin.permissions.table.updated', format: 'datetime' },
     ],
   },
   {
@@ -200,8 +224,37 @@ export const ADMIN_RESOURCE_GROUP_LABELS: Record<AdminResourceGroup, string> = {
 export const ADMIN_RESOURCE_SIDEBAR_LABELS: Record<string, string> = {
   users: 'users',
   roles: 'roles',
+  permissions: 'permissions',
   'audit-logs': 'auditLogs',
 }
+
+/**
+ * The sort fields each admin list accepts, mirrored from the backend allowlists.
+ *
+ * The backend refuses a field outside its list with 422 instead of silently
+ * falling back, so the frontend offers exactly these choices and never invents
+ * one of its own. The email is absent from the user list on purpose: the
+ * address is encrypted and its order would be the HMAC order, not the
+ * alphabetical one.
+ */
+export const ADMIN_SORT_FIELDS: Record<string, readonly string[]> = {
+  permissions: ['name', 'code', 'updated_at'],
+  roles: ['name', 'resource_type', 'created_at', 'updated_at'],
+  users: ['display_name', 'created_at'],
+  'audit-logs': ['action', 'resource_type', 'created_at'],
+}
+
+/**
+ * Whether the list searches server side. The permission, role and audit log
+ * screens send `q` and the backend resolves it; the user search matches name
+ * fragments and the exact email.
+ */
+export const ADMIN_SEARCHABLE_SLUGS: readonly string[] = [
+  'permissions',
+  'roles',
+  'users',
+  'audit-logs',
+]
 
 function formatDateTimeLocalValue(value: unknown) {
   if (!value) return ''

@@ -80,15 +80,7 @@
 
 <script setup lang="ts">
 import { formatDateTime } from '~/utils/admin-ui'
-
-interface Role {
-  id: string
-  name: string
-  resource_type?: string
-  resource_id?: string
-  created_at?: string
-  updated_at?: string
-}
+import type { Role } from '~/types/rbac'
 
 definePageMeta({
   layout: 'admin'

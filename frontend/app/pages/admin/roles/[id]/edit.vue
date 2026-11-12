@@ -56,15 +56,7 @@
 
 <script setup lang="ts">
 import RolesForm from '~/components/admin/roles/RolesForm.vue'
-
-interface Role {
-  id: string
-  name: string
-  resource_type?: string
-  resource_id?: string
-  created_at?: string
-  updated_at?: string
-}
+import type { Role } from '~/types/rbac'
 
 definePageMeta({ layout: 'admin' })
 

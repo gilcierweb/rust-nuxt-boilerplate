@@ -72,17 +72,10 @@ import type { DataTableColumn } from '~/types/data-table'
 
 definePageMeta({ layout: 'admin', keepalive: true })
 
+import type { Role } from '~/types/rbac'
+
 const { t } = useI18n()
 const localePath = useLocalePath()
-
-interface RoleRow {
-  id: string
-  name: string
-  resource_type?: string
-  resource_id?: string
-  updated_at?: string
-  created_at?: string
-}
 
 const deletePendingId = ref<string | null>(null)
 
@@ -103,12 +96,12 @@ const {
   setPageSize,
   sorting,
   setSorting,
-} = useTablePagination<RoleRow>(() => ({
+} = useTablePagination<Role>(() => ({
   key: 'admin-roles-index',
   url: '/admin/roles',
 }))
 
-const columns = computed<DataTableColumn<RoleRow>[]>(() => [
+const columns = computed<DataTableColumn<Role>[]>(() => [
   {
     id: 'name',
     accessorKey: 'name',
@@ -142,7 +135,7 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
     header: () => t('admin.common.actions'),
     enableSorting: false,
     cell: (info) => {
-      const row = info.row.original as RoleRow
+      const row = info.row.original as Role
       const rowId = row?.id
       const NuxtLink = resolveComponent('NuxtLink')
       if (!rowId) return null
@@ -181,7 +174,7 @@ const columns = computed<DataTableColumn<RoleRow>[]>(() => [
 
 const { removeItem } = useAdminResource('roles')
 
-async function removeRole(item: RoleRow) {
+async function removeRole(item: Role) {
   if (!item.id) return
   deletePendingId.value = item.id
   try {
@@ -197,7 +190,7 @@ async function removeRole(item: RoleRow) {
   }
 }
 
-function onRowClick(row: RoleRow) {
+function onRowClick(row: Role) {
   if (!row?.id) return
   navigateTo(localePath(`/admin/roles/${row.id}`))
 }

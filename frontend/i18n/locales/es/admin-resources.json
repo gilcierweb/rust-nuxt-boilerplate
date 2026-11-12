@@ -2,6 +2,7 @@
   "admin": {
     "sidebar": {
       "closeSidebar": "Cerrar barra lateral",
+      "permissions": "Permisos",
       "sidebar": "Barra lateral",
       "close": "Cerrar",
       "admin": "Admin",
