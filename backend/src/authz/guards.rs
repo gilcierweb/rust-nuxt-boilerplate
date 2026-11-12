@@ -94,6 +94,25 @@ pub fn ensure_role_name_is_free(name_holder: Option<Uuid>, role_id: Uuid) -> Res
     Ok(())
 }
 
+/// Serializes the administrator writes of this process.
+///
+/// Every guard of this module reads the holder set and the write runs
+/// afterwards, so two concurrent requests could each see the other's survivor:
+/// both would pass the guard and the second would empty the set, which is the
+/// disaster the guards exist to prevent. One process serves the self hosted
+/// deployment of this project, so a process lock closes the race. A deployment
+/// of several instances would replace this with a database advisory lock on the
+/// same constant key.
+pub static ADMINISTRATOR_WRITE: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+
+/// Holds the administrator write lock across a guard read and its write.
+///
+/// The guard lives until the end of the handler, and a handler takes it once:
+/// no caller takes it twice, so the callers cannot deadlock on it.
+pub async fn hold_administrator_write() -> tokio::sync::MutexGuard<'static, ()> {
+    ADMINISTRATOR_WRITE.lock().await
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashSet;

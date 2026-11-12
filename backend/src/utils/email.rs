@@ -3,7 +3,7 @@ pub fn normalize_email(input: &str) -> Option<String> {
 
     let email = cleaned.to_lowercase();
 
-    // validação mínima (sem paranoia)
+    // Minimal validation: the shape of an address, nothing stricter.
     if is_basic_valid(&email) {
         Some(email)
     } else {
@@ -17,14 +17,15 @@ fn is_basic_valid(email: &str) -> bool {
     let local = parts.next();
     let domain = parts.next();
 
-    // deve ter exatamente um '@'
+    // Exactly one separator.
     if parts.next().is_some() {
         return false;
     }
 
     match (local, domain) {
         (Some(l), Some(d)) => {
-            !l.is_empty() && !d.is_empty() && d.contains('.') // domínio básico válido
+            // A basic domain shape: something on both sides and a dot.
+            !l.is_empty() && !d.is_empty() && d.contains('.')
         },
         _ => false,
     }
@@ -33,14 +34,3 @@ fn is_basic_valid(email: &str) -> bool {
 fn is_invisible(c: char) -> bool {
     matches!(c, '\u{200B}' | '\u{200C}' | '\u{200D}' | '\u{FEFF}')
 }
-
-/*
-
-fn main() {
-    let input = "  User+Test@Example.COM ";
-
-    match normalize_email(input) {
-        Some(email) => println!("Normalizado: {}", email),
-        None => println!("Email inválido"),
-    }
-}*/

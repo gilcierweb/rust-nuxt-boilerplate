@@ -232,6 +232,9 @@ pub async fn update_user_roles(
     body: web::Json<UserRolesRequest>,
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Update, AbilityResource::Users)?;
+    // The lockout guard below reads the holders and the write runs after, so two
+    // concurrent assignments could each see the other's survivor.
+    let _write = crate::authz::guards::hold_administrator_write().await;
     let payload = body.into_inner();
     payload
         .validate()

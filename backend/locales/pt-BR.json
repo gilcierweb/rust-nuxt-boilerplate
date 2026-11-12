@@ -9,7 +9,7 @@
   "admin.permissions.validation.name_invalid": "O nome da permissão é obrigatório e deve ter no máximo 255 caracteres",
   "admin.permissions.validation.name_taken": "Outra permissão já usa este nome",
   "admin.permissions.validation.resource_invalid": "Recurso desconhecido: o código deve nomear um recurso do catálogo",
-  "admin.permissions.validation.sort_invalid": "Campo de ordenação desconhecido: use name, code ou updated_at",
+  "admin.permissions.validation.sort_invalid": "Campo de ordenação desconhecido: use name ou code",
   "admin.roles.guard.administrator_role": "O papel de administrador não pode ser excluído",
   "admin.roles.guard.administrator_source": "A alteração deixaria nenhum papel com roles:read e roles:update",
   "admin.roles.guard.default_role": "Este papel é o padrão do registro e não pode ser excluído",

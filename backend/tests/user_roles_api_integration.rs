@@ -334,6 +334,65 @@ async fn a_viewer_cannot_grant_a_role_beyond_its_own_authority() {
 }
 
 #[actix_web::test]
+async fn two_assignments_in_flight_leave_one_administrator_holder() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let admin_role = role_id(&db, "admin").await;
+    let manager_role = role_id(&db, "manager").await;
+
+    // Two holders of the administrator role, and an actor with the manager
+    // authority: it may assign the manager role (its codes are a subset of its
+    // own) and holds no administrator assignment of its own.
+    let first = create_user(&db, &[admin_role]).await;
+    let second = create_user(&db, &[admin_role]).await;
+    let actor = create_user(&db, &[manager_role]).await;
+
+    // The isolation leaves the two holders and nothing else, so each request
+    // alone is lawful and only their interaction is not.
+    let borrowed = leave_one_administrator_source(&db, first).await;
+    let _restore = BorrowedAssignments::new(database_url(), borrowed);
+
+    let app = admin_app!(&db);
+    let config = test_config();
+    let token = bearer(&config, actor);
+
+    let first_request = authorized(
+        test::TestRequest::put()
+            .uri(format!("/admin/users/{first}/roles").as_str())
+            .set_json(serde_json::json!({ "role_ids": [manager_role] })),
+        &token,
+    )
+    .to_request();
+    let second_request = authorized(
+        test::TestRequest::put()
+            .uri(format!("/admin/users/{second}/roles").as_str())
+            .set_json(serde_json::json!({ "role_ids": [manager_role] })),
+        &token,
+    )
+    .to_request();
+
+    // Both requests run at the same time. The pair is the disaster shape: each
+    // one alone leaves the other holder behind, so both being lawful depends on
+    // one of them seeing the other's write.
+    let (first_response, second_response) = tokio::join!(
+        test::call_service(&app, first_request),
+        test::call_service(&app, second_request)
+    );
+
+    // The invariant is about the state, not about which request won: whatever
+    // the pair answered, one holder has to survive.
+    let holders = holders_of(&db, admin_role).await;
+    assert_eq!(
+        holders.len(),
+        1,
+        "exactly one holder of the administrator role survives the pair \
+         (responses: {} and {})",
+        first_response.status(),
+        second_response.status()
+    );
+}
+
+#[actix_web::test]
 async fn removing_last_admin_role_assignment_is_refused() {
     seed_catalog();
     let db = TestDb::new().await;

@@ -9,7 +9,7 @@
   "admin.permissions.validation.name_invalid": "El nombre del permiso es obligatorio y debe tener como máximo 255 caracteres",
   "admin.permissions.validation.name_taken": "Otro permiso ya usa este nombre",
   "admin.permissions.validation.resource_invalid": "Recurso desconocido: el código debe nombrar un recurso del catálogo",
-  "admin.permissions.validation.sort_invalid": "Campo de ordenación desconocido: usa name, code o updated_at",
+  "admin.permissions.validation.sort_invalid": "Campo de ordenación desconocido: usa name o code",
   "admin.roles.guard.administrator_role": "El rol de administrador no puede eliminarse",
   "admin.roles.guard.administrator_source": "El cambio dejaría ningún rol con roles:read y roles:update",
   "admin.roles.guard.default_role": "Este rol es el predeterminado del registro y no puede eliminarse",

@@ -196,6 +196,9 @@ pub async fn update_role(
     body: web::Json<RoleWriteRequest>,
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Update, AbilityResource::Roles)?;
+    // The guard below reads the administrator sources and the write runs after,
+    // so two concurrent requests could each see the other's survivor.
+    let _write = crate::authz::guards::hold_administrator_write().await;
     let mut payload = body.into_inner();
     normalize_role_payload(&mut payload);
     payload
@@ -406,11 +409,38 @@ pub async fn update_role_permissions(
     body: web::Json<RolePermissionsRequest>,
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Update, AbilityResource::Roles)?;
+    // The same serialization as the role update: the holder set the guard reads
+    // has to stay the one the write answers to.
+    let _write = crate::authz::guards::hold_administrator_write().await;
     let payload = body.into_inner();
     payload
         .validate()
         .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
     validate_permission_links(&payload.permissions)?;
+
+    // A code that parses is not a code that exists: the catalog is editable at
+    // runtime, so a payload may name a model pair whose row the admin removed.
+    // The replacement deletes every link before it writes, so an unresolvable
+    // code would empty the role while the response reports a smaller number.
+    let catalog: std::collections::HashSet<String> = container
+        .permissions
+        .all()
+        .await
+        .map_err(AppError::Database)?
+        .into_iter()
+        .map(|permission| permission.code)
+        .collect();
+    let unknown: Vec<&str> = payload
+        .permissions
+        .iter()
+        .map(|item| item.code.trim())
+        .filter(|code| !catalog.contains(*code))
+        .collect();
+    if !unknown.is_empty() {
+        return Err(AppError::Validation(
+            t!("admin.roles.validation.code_unknown").into_owned(),
+        ));
+    }
 
     let role_id = id.into_inner();
     container
@@ -522,6 +552,9 @@ pub async fn destroy_role(
     id: web::Path<Uuid>,
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Delete, AbilityResource::Roles)?;
+    // The guard below reads the administrator sources and the deletion runs
+    // after, so two concurrent deletions could each see the other's survivor.
+    let _write = crate::authz::guards::hold_administrator_write().await;
     let role_id = id.into_inner();
 
     let role = container

@@ -1,5 +1,6 @@
+use crate::db::functions::matches_fragment;
 use diesel::BoolExpressionMethods;
-use diesel::expression_methods::{NullableExpressionMethods, TextExpressionMethods};
+use diesel::expression_methods::NullableExpressionMethods;
 use diesel::{ExpressionMethods, JoinOnDsl, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use uuid::Uuid;
@@ -264,10 +265,12 @@ impl IPermissionRepository for PermissionsRepository {
 
                     if let Some(term) = search {
                         let pattern = format!("%{term}%");
+                        // The same case insensitive operator as every other
+                        // admin list: the canonical names are capitalized, so
+                        // a lower case term has to match the name too.
                         query = query.filter(
-                            permissions::code
-                                .like(pattern.clone())
-                                .or(permissions::name.like(pattern)),
+                            matches_fragment(permissions::code.nullable(), &pattern)
+                                .or(matches_fragment(permissions::name.nullable(), &pattern)),
                         );
                     }
 

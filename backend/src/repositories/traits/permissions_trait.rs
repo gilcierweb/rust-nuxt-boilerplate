@@ -9,8 +9,9 @@ use crate::utils::pagination::{PaginatedResponse, PaginationParams};
 
 /// The sort fields the permission list accepts. Anything outside the list is a
 /// client mistake and the handler answers 422 instead of silently falling back
-/// to a default order.
-pub const PERMISSION_SORT_FIELDS: [&str; 3] = ["name", "code", "updated_at"];
+/// to a default order. The list names the fields the response serializes: the
+/// catalog list carries the code and the name, so those are the two fields.
+pub const PERMISSION_SORT_FIELDS: [&str; 2] = ["name", "code"];
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]

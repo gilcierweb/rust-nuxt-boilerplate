@@ -543,6 +543,106 @@ async fn put_refuses_an_unknown_effect_code_or_role() {
 }
 
 #[actix_web::test]
+async fn put_refuses_a_code_the_catalog_no_longer_holds() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    // The wildcard authority expands to every code of the model, so the actor
+    // holds a code the catalog lost: the escalation guard cannot catch this
+    // one, and the resolution would silently drop the code after the delete.
+    let _wildcard = create_permission(&db, "all:manage", "All manage").await;
+    let actor_role =
+        probe_role_with_links(&db, &["all:manage", "roles:read", "roles:update"]).await;
+    let _cleanup = ScratchRoles::new(vec![actor_role]);
+    let actor = subject_with_role_id(&db, actor_role).await;
+    let target = scratch_role(&db).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+    let token = bearer(&config, actor);
+
+    let deleted = delete_permission(&db, "upload:read").await;
+    assert!(!deleted.is_nil());
+
+    let req = authorized(
+        test::TestRequest::put()
+            .uri(format!("/admin/roles/{target}/permissions").as_str())
+            .set_json(serde_json::json!({
+                "permissions": [{ "code": "upload:read", "effect": 0 }]
+            })),
+        &token,
+    )
+    .to_request();
+    assert_eq!(
+        test::call_service(&app, req).await.status(),
+        StatusCode::UNPROCESSABLE_ENTITY,
+        "a code the catalog does not hold is refused before the delete"
+    );
+
+    let req = authorized(
+        test::TestRequest::get().uri(format!("/admin/roles/{target}/permissions").as_str()),
+        &token,
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+    assert!(
+        codes(&body_json(resp).await).is_empty(),
+        "a refused write leaves the role with no link and no phantom one"
+    );
+}
+
+/// Creates a catalog row for a code and answers its id.
+async fn create_permission(db: &TestDb, code: &str, name: &str) -> Uuid {
+    let mut conn = db.pool().get().await.expect("Failed to get connection");
+
+    #[derive(diesel::QueryableByName)]
+    struct IdRow {
+        #[diesel(sql_type = diesel::sql_types::Uuid)]
+        id: Uuid,
+    }
+
+    diesel::sql_query(
+        "INSERT INTO permissions (id, code, name, description, created_at, updated_at) \
+         VALUES (gen_random_uuid(), $1, $2, NULL, NOW(), NOW()) \
+         ON CONFLICT (code) DO UPDATE SET name = EXCLUDED.name \
+         RETURNING id",
+    )
+    .bind::<diesel::sql_types::Text, _>(code)
+    .bind::<diesel::sql_types::Text, _>(name)
+    .get_result::<IdRow>(&mut *conn)
+    .await
+    .expect("permission insert failed")
+    .id
+}
+
+/// Deletes a canonical permission row and answers its id: the catalog is
+/// editable at runtime, so a code may parse and still hold no row. The
+/// additive seed re-inserts it with its canonical name on the next run.
+async fn delete_permission(db: &TestDb, code: &str) -> Uuid {
+    let mut conn = db.pool().get().await.expect("Failed to get connection");
+
+    #[derive(diesel::QueryableByName)]
+    struct IdRow {
+        #[diesel(sql_type = diesel::sql_types::Uuid)]
+        id: Uuid,
+    }
+
+    let id = diesel::sql_query("SELECT id FROM permissions WHERE code = $1")
+        .bind::<diesel::sql_types::Text, _>(code)
+        .get_result::<IdRow>(&mut *conn)
+        .await
+        .unwrap_or_else(|error| panic!("permission lookup failed for {code}: {error}"))
+        .id;
+
+    diesel::sql_query("DELETE FROM permissions WHERE id = $1")
+        .bind::<diesel::sql_types::Uuid, _>(id)
+        .execute(&mut *conn)
+        .await
+        .expect("the permission removal failed");
+
+    id
+}
+
+#[actix_web::test]
 async fn delete_refuses_the_admin_and_the_default_role_and_accepts_a_scratch_one() {
     seed_catalog();
     let db = TestDb::new().await;

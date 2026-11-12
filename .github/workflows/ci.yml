@@ -264,6 +264,83 @@ jobs:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
+      - name: Run seed convergence tests
+        # Runs the seed binary over the migrated database, so every suite after
+        # this one reads the demo subjects and the canonical catalog.
+        run: cargo test --test seed_convergence_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run rbac grants tests
+        run: cargo test --test rbac_grants_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run auth me tests
+        run: cargo test --test auth_me_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run profile self service tests
+        run: cargo test --test profile_self_service_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run registration tests
+        run: cargo test --test register_role_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run registration abuse tests
+        run: cargo test --test register_abuse_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run token revocation tests
+        run: cargo test --test token_revocation_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run permissions admin tests
+        # Runs before the catalog migration suite on purpose: it detaches and
+        # deletes a canonical permission row, and the catalog suite re-seeds it
+        # and asserts every canonical link of the administrator role.
+        run: cargo test --test permissions_api_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run rbac catalog migration tests
+        run: cargo test --test rbac_catalog_migration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run role permissions admin tests
+        run: cargo test --test roles_permissions_api_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run user roles assignment tests
+        run: cargo test --test user_roles_api_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
+      - name: Run admin search and sort tests
+        run: cargo test --test admin_search_sort_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
   frontend-test:
     name: Frontend Tests
     runs-on: ubuntu-latest

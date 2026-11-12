@@ -485,8 +485,9 @@ fn main() -> SeedResult<()> {
 
     // Check if user wants to send test emails (exit early)
     if env::args().any(|arg| arg == "--send-test-emails") {
+        // A runtime that fails to build is an error of the seed, not a panic.
         return tokio::runtime::Runtime::new()
-            .unwrap()
+            .map_err(|error| format!("failed to build the tokio runtime: {error}"))?
             .block_on(send_test_emails());
     }
 

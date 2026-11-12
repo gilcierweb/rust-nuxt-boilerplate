@@ -265,6 +265,33 @@ async fn the_list_search_matches_the_code() {
 }
 
 #[actix_web::test]
+async fn the_list_search_folds_the_case_of_the_human_name() {
+    seed_catalog();
+    let db = TestDb::new().await;
+    let subject = subject_with_roles(&db, &["admin"]).await;
+    let app = admin_app!(&db);
+    let config = test_config();
+
+    // The canonical names are capitalized ("Users read"), so a term typed in
+    // lower case has to match: every other admin list folds the case and the
+    // operator should not have to know the exact capitalization.
+    let req = authorized(
+        test::TestRequest::get().uri("/admin/permissions?q=users+read"),
+        &bearer(&config, subject),
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+
+    let json = body_json(resp).await;
+    let items = json["data"].as_array().expect("the data array");
+    assert!(
+        items.iter().any(|item| item["code"] == "users:read"),
+        "the lower case name fragment matches the capitalized name"
+    );
+}
+
+#[actix_web::test]
 async fn a_sort_field_outside_the_allowlist_is_refused() {
     seed_catalog();
     let db = TestDb::new().await;
@@ -287,6 +314,17 @@ async fn a_sort_field_outside_the_allowlist_is_refused() {
     .to_request();
     let resp = test::call_service(&app, req).await;
     assert_eq!(resp.status(), StatusCode::OK);
+
+    // The allowlist names the fields the response serializes. A field the
+    // catalog list does not return is a client mistake too: answering it with
+    // a silent fallback to the name order would hide the mistake.
+    let req = authorized(
+        test::TestRequest::get().uri("/admin/permissions?sort_by=updated_at"),
+        &bearer(&config, subject),
+    )
+    .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::UNPROCESSABLE_ENTITY);
 }
 
 #[actix_web::test]
