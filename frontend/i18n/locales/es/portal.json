@@ -3,7 +3,20 @@
     "navbar": {
       "openMenu": "Abrir menú",
       "subtitle": "Portal del Cliente",
-      "logout": "Salir"
+      "logout": "Salir",
+      "userMenu": "Menú de usuario",
+      "dashboard": "Panel",
+      "support": "Soporte",
+      "backToSite": "Volver al sitio",
+      "roles": {
+        "admin": "Administrador",
+        "manager": "Gerente",
+        "editor": "Editor",
+        "viewer": "Observador",
+        "support": "Soporte",
+        "customer": "Cliente"
+      },
+      "fallbackName": "Cliente"
     },
     "common": {
       "back": "Volver",

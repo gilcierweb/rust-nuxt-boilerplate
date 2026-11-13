@@ -3,7 +3,20 @@
     "navbar": {
       "openMenu": "Open menu",
       "subtitle": "Client Portal",
-      "logout": "Logout"
+      "logout": "Logout",
+      "userMenu": "User menu",
+      "dashboard": "Dashboard",
+      "support": "Support",
+      "backToSite": "Back to site",
+      "roles": {
+        "admin": "Administrator",
+        "manager": "Manager",
+        "editor": "Editor",
+        "viewer": "Viewer",
+        "support": "Support",
+        "customer": "Customer"
+      },
+      "fallbackName": "Customer"
     },
     "common": {
       "back": "Back",

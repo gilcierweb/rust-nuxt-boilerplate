@@ -3,7 +3,20 @@
     "navbar": {
       "openMenu": "Abrir menu",
       "subtitle": "Portal do Cliente",
-      "logout": "Sair"
+      "logout": "Sair",
+      "userMenu": "Menu do usuário",
+      "dashboard": "Painel",
+      "support": "Suporte",
+      "backToSite": "Voltar ao site",
+      "roles": {
+        "admin": "Administrador",
+        "manager": "Gerente",
+        "editor": "Editor",
+        "viewer": "Visualizador",
+        "support": "Suporte",
+        "customer": "Cliente"
+      },
+      "fallbackName": "Cliente"
     },
     "dashboard": {
       "description": "Acompanhe seus documentos, solicitações e tickets em um só lugar.",
