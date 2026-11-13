@@ -190,10 +190,13 @@ function submit() {
         v-if="duplicate"
         data-testid="duplicate-warning"
         role="alert"
-        class="rounded-box border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning-content"
+        class="rounded-box border flex items-start gap-3 border-warning/40 bg-warning/10 px-4 py-3 text-sm text-base-content"
       >
-        <p class="font-semibold">{{ t('admin.permissions.form.duplicate_title') }}</p>
-        <p>{{ t('admin.permissions.form.duplicate') }}</p>
+        <span class="icon-[tabler--alert-triangle] mt-0.5 shrink-0 size-5 text-warning"></span>
+        <div>
+          <p class="font-semibold">{{ t('admin.permissions.form.duplicate_title') }}</p>
+          <p>{{ t('admin.permissions.form.duplicate') }}</p>
+        </div>
       </div>
 
       <div>

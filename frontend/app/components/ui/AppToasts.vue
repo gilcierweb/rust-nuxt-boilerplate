@@ -17,7 +17,11 @@
           role="alert"
         >
           <span :class="[toastIcons[toast.type], 'shrink-0 size-6']"></span>
-          <p class="flex-1 text-sm font-medium">{{ toast.message }}</p>
+          <!-- The text reads in the foreground of the theme, never in the tone
+               color: this theme's warning and success hues sit near 1.8:1 on
+               the soft surface, and the tinted background carries the signal
+               alone. The icon keeps the tone, redundant with the words. -->
+          <p class="flex-1 text-sm font-medium text-base-content">{{ toast.message }}</p>
           <button
             class="ms-auto cursor-pointer leading-none opacity-60 hover:opacity-100 transition-opacity"
             aria-label="Close Button"

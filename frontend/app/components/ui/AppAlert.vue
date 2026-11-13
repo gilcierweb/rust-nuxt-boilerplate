@@ -7,7 +7,12 @@
       role="alert"
     >
       <span :class="iconClasses"></span>
-      <p class="flex-1">
+      <!-- The text reads in the foreground of the theme, never in the tone
+           color: the soft surface of this theme's warning and success hues
+           leaves the tone color near 1.8:1, and the tinted background and
+           border carry the signal alone. The icon keeps the tone, redundant
+           with the words it accompanies. -->
+      <p class="flex-1 text-base-content">
         <span v-if="title" class="text-lg font-semibold">{{ title }}: </span>
         <slot>{{ message }}</slot>
       </p>

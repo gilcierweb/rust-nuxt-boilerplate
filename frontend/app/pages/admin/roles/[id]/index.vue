@@ -38,8 +38,8 @@
     </div>
 
     <div v-else-if="error" class="rounded-box border border-error/20 bg-error/10 p-6">
-      <div class="flex items-center gap-3 text-error">
-        <span class="icon-[tabler--alert-circle] size-6"></span>
+      <div class="flex items-start gap-3 text-base-content">
+        <span class="icon-[tabler--alert-circle] mt-0.5 size-6 shrink-0 text-error"></span>
         <div>
           <p class="font-semibold">{{ $t('admin.common.errorLoadingData') }}</p>
           <p class="text-sm">{{ error }}</p>
