@@ -204,20 +204,24 @@ where
                             actix_web::error::ErrorInternalServerError(t!("errors.internal").into_owned())
                         })?;
 
-                    match verify_token_with_secrets(
-                        &token,
-                        &secrets,
-                        ACCESS_TOKEN_USE,
-                        &req.app_data::<actix_web::web::Data<crate::repositories::container::AppContainer>>()
-                            .map(|c| c.config.jwt_audience.clone())
-                            .or_else(|| {
-                                req.app_data::<actix_web::web::Data<AppState>>()
-                                    .map(|s| s.config.jwt_audience.clone())
-                            })
-                            .unwrap_or_else(|| {
-                                crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string()
-                            }),
-                    ) {
+                    // The audience resolves from the same source and in the
+                    // same order as the secrets above: a deployment that
+                    // registers both must not verify a token minted against
+                    // one config with the audience of the other.
+                    let audience = req
+                        .app_data::<actix_web::web::Data<AppState>>()
+                        .map(|s| s.config.jwt_audience.clone())
+                        .or_else(|| {
+                            req.app_data::<actix_web::web::Data<
+                                    crate::repositories::container::AppContainer,
+                                >>()
+                                .map(|c| c.config.jwt_audience.clone())
+                        })
+                        .unwrap_or_else(|| {
+                            crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string()
+                        });
+
+                    match verify_token_with_secrets(&token, &secrets, ACCESS_TOKEN_USE, &audience) {
                         Ok(result) => {
                             let metrics = req
                                 .app_data::<actix_web::web::Data<AppState>>()
@@ -290,9 +294,18 @@ where
                             if let Some(m) = metrics {
                                 m.record_jwt_rejected();
                             }
+                            // One code for every verification failure: an
+                            // expired token, a forged one and a token of
+                            // another audience all answer the same refusal,
+                            // and naming one reason would lie about the
+                            // others. The rollout story of the audience
+                            // claim lives here: a token minted before the
+                            // claim existed fails here, and the client
+                            // answers this 401 with the refresh, which mints
+                            // a token that names the audience.
                             let response = actix_web::HttpResponse::Unauthorized().json(json!({
                                 "error": {
-                                    "code": "TOKEN_EXPIRED",
+                                    "code": "TOKEN_INVALID",
                                     "message": t!("middleware.invalid_token").into_owned(),
                                 }
                             }));
