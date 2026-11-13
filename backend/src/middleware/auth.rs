@@ -486,6 +486,16 @@ fn verify_token_for_use(
 ) -> AppResult<Claims> {
     use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode};
 
+    // A blank audience would accept exactly the tokens that name no audience,
+    // the hole the claim closes. The config never hands one (an empty
+    // JWT_AUDIENCE falls back to the default), so this is the invariant at
+    // the verify edge rather than a second config read.
+    let audience = if audience.is_empty() {
+        DEFAULT_TOKEN_AUDIENCE
+    } else {
+        audience
+    };
+
     // Explicitly pin the algorithm to HS256.
     //
     // `Validation::default()` also uses HS256, but the explicit form:
@@ -793,6 +803,29 @@ mod tests {
             "the minted token must name this application as its audience"
         );
         assert_eq!(DEFAULT_TOKEN_AUDIENCE, "rust-nuxt-boilerplate");
+    }
+
+    #[test]
+    fn a_blank_audience_never_accepts_a_token_with_none() {
+        use chrono::Utc;
+
+        use crate::config::app_config::JwtSecretKey;
+
+        let secret = JwtSecretKey {
+            kid: "aud-key".to_string(),
+            secret: "audience-secret-value".to_string(),
+            created_at: Utc::now().naive_utc(),
+            expires_at: None,
+        };
+        // The hole this closes: a token that names the empty audience,
+        // verified with a blank one, would match. The verify edge substitutes
+        // the default, so the token is refused.
+        let token = hand_minted_token(&secret.secret, &secret.kid, Some(""));
+
+        assert!(
+            verify_token_with_secrets(&token, &[secret], "access", "").is_err(),
+            "a blank audience must fall back to the default, never accept a token of the empty audience"
+        );
     }
 
     #[test]

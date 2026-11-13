@@ -193,8 +193,9 @@ pub async fn create_role(
         (status = 200, description = "Role updated", body = Role),
         (status = 400, description = "Validation error"),
         (status = 401, description = "Authentication required"),
-        (status = 403, description = "Missing `roles:update` authority"),
-        (status = 404, description = "Role not found")
+        (status = 403, description = "Missing `roles:update` authority, or a policy refusal (protected name, name taken)"),
+        (status = 404, description = "Role not found"),
+        (status = 409, description = "Name already held")
     ),
     security(("bearer_auth" = []))
 )]
@@ -550,7 +551,7 @@ pub async fn find_role_members(
     responses(
         (status = 200, description = "Role deleted"),
         (status = 401, description = "Authentication required"),
-        (status = 403, description = "Missing `roles:delete` authority"),
+        (status = 403, description = "Missing `roles:delete` authority, or a policy refusal (administrator role, default role, last administrator source)"),
         (status = 404, description = "Role not found")
     ),
     security(("bearer_auth" = []))
@@ -575,7 +576,7 @@ pub async fn destroy_role(
 
     // The administrator role is the one every deployment keeps: deleting it
     // would take the whole catalog of links with it.
-    if role.name == "admin" {
+    if role.name == crate::authz::guards::ADMINISTRATOR_ROLE_NAME {
         return Err(AppError::Forbidden(
             t!("admin.roles.guard.administrator_role").into_owned(),
         ));
