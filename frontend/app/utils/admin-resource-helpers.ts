@@ -1,3 +1,5 @@
+import { mapAdminError } from '~/utils/admin-errors'
+
 /**
  * Admin Resource Helpers
  * Centralized helper functions for admin CRUD operations
@@ -34,6 +36,7 @@ export function useAdminResource(resource: string, options?: {
 }) {
   const api = useApi()
   const toast = useToast()
+  const { t } = useI18n()
   const localePath = useLocalePath()
   const basePath = options?.basePath || `/admin/${resource}`
 
@@ -61,7 +64,7 @@ export function useAdminResource(resource: string, options?: {
     confirmLabel: string
     cancelLabel: string
     successMessage: string
-    errorMessage: string
+    errorKey: string
     deleteEndpoint: string
   } | null>(null)
   const removalPending = ref(false)
@@ -77,7 +80,7 @@ export function useAdminResource(resource: string, options?: {
       confirmLabel?: string
       cancelLabel?: string
       successMessage: string
-      errorMessage: string
+      errorKey: string
       deleteEndpoint?: string
     },
   ) {
@@ -88,7 +91,7 @@ export function useAdminResource(resource: string, options?: {
       confirmLabel: config.confirmLabel ?? 'Excluir',
       cancelLabel: config.cancelLabel ?? 'Cancelar',
       successMessage: config.successMessage,
-      errorMessage: config.errorMessage,
+      errorKey: config.errorKey,
       deleteEndpoint: config.deleteEndpoint ?? `${basePath}/${item.id}`,
     }
   }
@@ -110,7 +113,7 @@ export function useAdminResource(resource: string, options?: {
       removal.value = null
       return true
     } catch (error: any) {
-      toast.error(error?.message || target.errorMessage)
+      toast.error(mapAdminError(error, t, target.errorKey))
       return false
     } finally {
       removalPending.value = false

@@ -118,7 +118,7 @@ async function handleSubmit(values: typeof initialValues) {
     toast.success(t('admin.permissions.messages.createSuccess'))
     await navigateTo(localePath('/admin/permissions'))
   } catch (submitError: any) {
-    toast.error(submitError?.message || t('admin.permissions.messages.createError'))
+    toast.error(mapAdminError(submitError, t, 'admin.permissions.messages.createError'))
   } finally {
     saving.value = false
   }

@@ -23,21 +23,30 @@ const toast = useToast()
 // the server never hydrates. The marker on the query travels with the
 // navigation instead, and spending it here covers both the SPA navigation
 // and the first client render after an SSR redirect, because the query is
-// still on the address bar at hydration. The spending itself is client only:
-// on the server there is no router to strip with and no toast to show.
+// still on the address bar at hydration.
 if (import.meta.client) {
+  const spendNotice = () => {
+    const key = noticeKeyFromQuery(route.query)
+    if (!key) return
+    toast.warning(t(key))
+    // Strip only the marker, so a refresh or a back navigation does not
+    // repeat it and the rest of the query survives.
+    const { notice: _notice, ...rest } = route.query
+    router.replace({ path: route.path, query: rest })
+  }
+
+  // The first spending waits for the mount: pushing during the setup made
+  // the client vdom hold a toast the server markup never rendered, and the
+  // container hydrated with a children mismatch.
+  onMounted(spendNotice)
+
+  // A later navigation that carries a notice spends it when it lands: no
+  // hydration is in flight then, so the watcher may push at once.
   watch(
     () => route.query.notice,
-    () => {
-      const key = noticeKeyFromQuery(route.query)
-      if (!key) return
-      toast.warning(t(key))
-      // Strip only the marker, so a refresh or a back navigation does not
-      // repeat it and the rest of the query survives.
-      const { notice: _notice, ...rest } = route.query
-      router.replace({ path: route.path, query: rest })
+    (notice) => {
+      if (notice) spendNotice()
     },
-    { immediate: true },
   )
 }
 </script>

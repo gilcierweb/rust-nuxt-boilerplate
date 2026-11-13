@@ -143,7 +143,7 @@ async function handleSubmit(values: PermissionFormValues) {
     toast.success(t('admin.permissions.messages.updateSuccess'))
     await refresh()
   } catch (submitError: any) {
-    toast.error(submitError?.message || t('admin.permissions.messages.updateError'))
+    toast.error(mapAdminError(submitError, t, 'admin.permissions.messages.updateError'))
   } finally {
     saving.value = false
   }

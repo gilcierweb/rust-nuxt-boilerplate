@@ -11,11 +11,15 @@
  * failure saw English fallback text.
  *
  * The policy, one for one with the auth helper:
- * - a denial (`FORBIDDEN`) names a locale key of its own, because the
- *   sentence the operator needs is "you may not do this", not the status of
- *   a form field;
- * - another 4xx is trusted from the backend: the message is authored by us
- *   and localized through the forwarded `Accept-Language`;
+ * - a denial (`FORBIDDEN`) and a throttled request name a locale key of
+ *   their own, in the locale of the viewer: those sentences must read in
+ *   the language of the screen, not in the language of the server;
+ * - another 4xx keeps the backend message when it carries one. Be clear
+ *   about what that message is: the refusals of the ability engine are
+ *   built with `t!` against the boot locale, fixed to pt-BR in `app.rs`,
+ *   so the text of an unmapped 4xx answers in pt-BR whatever the viewer.
+ *   A key of ours wins wherever we have one, which is why the codes above
+ *   are mapped instead of trusted;
  * - a 5xx or a network failure never leaks a URL or a runtime diagnostic;
  * - an unknown shape answers the fallback key, never a raw field.
  */

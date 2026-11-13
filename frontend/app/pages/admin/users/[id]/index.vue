@@ -172,7 +172,7 @@ async function handleSave(roleIds: string[]) {
   } catch (saveError: any) {
     // A refusal (escalation, lockout, unknown role) answers 422 with the
     // reason: the message travels to the selector instead of a toast alone.
-    rolesError.value = saveError?.message || t('admin.users.roles.updateError')
+    rolesError.value = mapAdminError(saveError, t, 'admin.users.roles.updateError')
   } finally {
     saving.value = false
   }

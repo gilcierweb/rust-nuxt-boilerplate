@@ -183,7 +183,7 @@ async function removeEntity(item: AuditLogRow) {
     const success = await removeItem(item, {
       confirmMessage: t('admin.auditLogs.messages.confirmDelete'),
       successMessage: t('admin.auditLogs.messages.deleteSuccess'),
-      errorMessage: t('admin.auditLogs.messages.deleteError'),
+      errorKey: 'admin.auditLogs.messages.deleteError',
       deleteEndpoint: `/admin/audit-logs/${item.id}`,
     })
     if (success) await refresh()

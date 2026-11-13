@@ -37,6 +37,17 @@
       </div>
     </div>
 
+    <div v-else-if="error" class="rounded-box border border-error/20 bg-error/10 p-6">
+      <div class="flex items-center gap-3 text-error">
+        <span class="icon-[tabler--alert-circle] size-6"></span>
+        <div>
+          <p class="font-semibold">{{ $t('admin.common.errorLoadingData') }}</p>
+          <p class="text-sm">{{ error }}</p>
+        </div>
+      </div>
+      <button class="btn btn-soft mt-4" @click="refresh()">{{ $t('admin.common.tryAgain') }}</button>
+    </div>
+
     <div v-else-if="!role" class="rounded-box border border-base-content/10 bg-base-100 p-12 shadow-md">
       <AppEmptyState
         :title="$t('admin.roles.not_found.title')"
@@ -216,7 +227,7 @@ async function handleSave(next: PermissionAssignment[]) {
     toast.success(t('admin.roles.permissions.updated'))
     await Promise.all([refreshRoleData(), refresh()])
   } catch (saveError: any) {
-    toast.error(saveError?.message || t('admin.roles.permissions.updateError'))
+    toast.error(mapAdminError(saveError, t, 'admin.roles.permissions.updateError'))
   } finally {
     saving.value = false
   }

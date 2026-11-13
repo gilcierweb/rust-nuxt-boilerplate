@@ -8,6 +8,7 @@
 
 <script setup lang="ts">
 import AuditLogsForm from '~/components/admin/audit-logs/AuditLogsForm.vue'
+import { mapAdminError } from '~/utils/admin-errors'
 
 definePageMeta({ layout: 'admin' })
 
@@ -60,7 +61,7 @@ async function handleSubmit(values: typeof initialValues) {
     toast.success(t('admin.auditLogs.messages.createSuccess'))
     await navigateTo(localePath('/admin/audit-logs'))
   } catch (error: any) {
-    toast.error(error?.message || t('admin.auditLogs.messages.createError'))
+    toast.error(mapAdminError(error, t, 'admin.auditLogs.messages.createError'))
   } finally {
     saving.value = false
   }

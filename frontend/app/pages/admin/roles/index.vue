@@ -196,7 +196,7 @@ function removeRole(item: Role) {
     title: t('admin.roles.dialog.deleteTitle'),
     message: t('admin.roles.messages.confirmDelete'),
     successMessage: t('admin.roles.messages.deleteSuccess'),
-    errorMessage: t('admin.roles.messages.deleteError'),
+    errorKey: 'admin.roles.messages.deleteError',
     deleteEndpoint: `/admin/roles/${item.id}`,
   })
 }

@@ -57,6 +57,7 @@
 <script setup lang="ts">
 import RolesForm from '~/components/admin/roles/RolesForm.vue'
 import type { Role } from '~/types/rbac'
+import { mapAdminError } from '~/utils/admin-errors'
 
 definePageMeta({ layout: 'admin' })
 
@@ -99,7 +100,7 @@ async function handleSubmit(values: Role) {
     toast.success(t('admin.roles.messages.updateSuccess'))
     await refresh()
   } catch (err: any) {
-    toast.error(err?.message || t('admin.roles.messages.updateError'))
+    toast.error(mapAdminError(err, t, 'admin.roles.messages.updateError'))
   } finally {
     saving.value = false
   }
