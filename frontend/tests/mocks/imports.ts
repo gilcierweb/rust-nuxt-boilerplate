@@ -31,7 +31,14 @@ export const useNuxtApp = () => ({
   $api: () => Promise.resolve(),
 })
 
-export const useState = () => ref(null)
+// A keyed singleton within the test process, the way Nuxt keeps one instance
+// per key for the client, so a composable that reads the same key twice
+// shares the state and the initializer runs once per key.
+const states = new Map<string, { value: unknown }>()
+export const useState = <T,>(key: string, init: () => T) => {
+  if (!states.has(key)) states.set(key, ref(init()))
+  return states.get(key) as { value: T }
+}
 
 export const useRequestEvent = () => null
 export const useRequestFetch = () => fetch

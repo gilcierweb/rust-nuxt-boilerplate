@@ -53,6 +53,17 @@ Object.defineProperty(globalThis, 'IntersectionObserver', {
   value: MockIntersectionObserver,
 })
 
+// A keyed singleton for the useState of the mocks below, the way Nuxt keeps
+// one instance per key for the client: a composable that reads the same key
+// twice shares the state and the initializer runs once per key. Both mocks
+// share the one map so a key read through either import path is the same
+// state.
+const states = new Map<string, any>()
+const useStateMock = <T,>(key: string, init: () => T) => {
+  if (!states.has(key)) states.set(key, ref(init()))
+  return states.get(key)
+}
+
 vi.mock('#imports', () => ({
   useI18n: () => ({ t: (key: string) => key }),
   useLocalePath: () => (path: string) => path,
@@ -81,7 +92,7 @@ vi.mock('#imports', () => ({
     $api: () => Promise.resolve({ data: 'test' }),
     $fetch: () => Promise.resolve({}),
   }),
-  useState: () => ref(null),
+  useState: useStateMock,
   useRequestEvent: () => null,
   useRequestFetch: () => Promise.resolve({}),
   defineNuxtRouteMiddleware: (fn: any) => fn,
@@ -146,7 +157,7 @@ vi.mock('nuxt/app', () => ({
     $api: () => Promise.resolve({ data: 'test' }),
     $fetch: () => Promise.resolve({}),
   }),
-  useState: () => ref(null),
+  useState: useStateMock,
   useRequestEvent: () => null,
   useRequestFetch: () => Promise.resolve({}),
   defineNuxtRouteMiddleware: (fn: any) => fn,
