@@ -6,16 +6,16 @@
     </div>
 
     <div v-if="success" class="alert alert-soft alert-success flex flex-col items-center gap-4 text-center" role="alert">
-      <span class="icon-[tabler--circle-check] size-10 shrink-0"></span>
-      <div>
+      <span class="icon-[tabler--circle-check] size-10 shrink-0 text-success"></span>
+      <div class="text-base-content">
         <h3 class="font-semibold text-lg mb-1">{{ $t('auth.resetPassword.success.title') }}</h3>
         <NuxtLink :to="localePath('/auth/login')" class="btn btn-primary mt-4 inline-flex">{{ $t('auth.resetPassword.success.login') }}</NuxtLink>
       </div>
     </div>
 
     <div v-else-if="!token" class="alert alert-soft alert-error flex items-center gap-4" role="alert">
-      <span class="icon-[tabler--alert-circle] shrink-0 size-6"></span>
-      <div class="flex-1">
+      <span class="icon-[tabler--alert-circle] shrink-0 size-6 text-error"></span>
+      <div class="flex-1 text-base-content">
         <p class="text-sm">{{ $t('auth.resetPassword.error.invalidToken') }}</p>
         <NuxtLink :to="localePath('/auth/forgot-password')" class="btn btn-outline btn-primary mt-4 inline-flex text-sm">{{ $t('auth.resetPassword.error.requestNew') }}</NuxtLink>
       </div>

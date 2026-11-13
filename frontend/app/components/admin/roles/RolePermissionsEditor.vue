@@ -117,9 +117,9 @@ function save() {
       v-if="catalogTruncated"
       data-testid="catalog-truncated-warning"
       role="alert"
-      class="alert alert-warning"
+      class="rounded-box flex items-center gap-3 border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-base-content"
     >
-      <span class="icon-[tabler--alert-triangle] size-5"></span>
+      <span class="icon-[tabler--alert-triangle] size-5 shrink-0 text-warning"></span>
       <span>{{ t('admin.roles.permissions.catalog_truncated') }}</span>
     </div>
 

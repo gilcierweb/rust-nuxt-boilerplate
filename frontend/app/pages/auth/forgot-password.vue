@@ -17,8 +17,8 @@
       class="alert alert-soft alert-success flex flex-col items-center gap-4 mb-6 text-center"
       role="alert"
     >
-      <span class="icon-[tabler--mail-opened] size-10 shrink-0"></span>
-      <div>
+      <span class="icon-[tabler--mail-opened] size-10 shrink-0 text-success"></span>
+      <div class="text-base-content">
         <h3 class="font-semibold text-lg mb-1">{{ $t('auth.forgotPassword.success.title') }}</h3>
         <p class="text-sm opacity-80">
           {{ $t('auth.forgotPassword.success.message') }}
