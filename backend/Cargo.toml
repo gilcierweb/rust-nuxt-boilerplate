@@ -8,6 +8,9 @@ default-run = "backend"
 [[bin]]
 name = "seed"
 path = "src/bin/seed.rs"
+# The seeder is a development tool; the feature also keeps its fake-data
+# dependency out of every production build of the other targets.
+required-features = ["seed"]
 
 [[bin]]
 name = "cleanup_refresh_tokens"
@@ -18,12 +21,26 @@ available-locales = ["pt-BR", "en", "es"]
 default-locale = "pt-BR"
 load-path = "locales"
 
+[profile.dev]
+debug = 1                    # Line tables only - faster builds, still get backtraces
+split-debuginfo = "packed"
+incremental = true           # Re-enabled: without it every save recompiled this crate whole, dominated the dev loop and held the target lock for ~15 min per rebuild. The cache is ~7 GB on disk, accepted as the cheaper trade; purge with `rm -rf target/debug/incremental` if the disk ever gets tight
+opt-level = 1 # Code compiles much faster, but it still has basic optimizations.
+codegen-units = 256
+
+[profile.dev.package."*"]
+opt-level = 3
+debug = 0
+
 [profile.release]
 lto = true
 opt-level = 3   
 panic = "abort"
 strip = "symbols"
 codegen-units = 1
+
+[features]
+seed = ["dep:faker-rust"]
 
 [dependencies]
 actix = "0.13"
@@ -116,7 +133,7 @@ actix-multipart = "0.7"
 infer = "0.19"
 mime = "0.3"
 sysinfo = "0.32"
-faker-rust = "0.1.0"
+faker-rust = { version = "0.1.0", optional = true }
 deadpool = { version = "0.13.0", features = ["managed"] }
 reqwest = { version = "0.13", features = ["json", "rustls"] }
 

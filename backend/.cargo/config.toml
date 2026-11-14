@@ -1,0 +1,8 @@
+# Cargo aliases for the backend workspace.
+#
+# `cargo seed` runs the database seeder. The seeder is a development tool
+# whose fake-data dependency (faker-rust) is feature-gated so production
+# builds never compile it; the alias exists so nobody has to remember the
+# feature flag. CI keeps the explicit form for self-documentation.
+[alias]
+seed = "run --features seed --bin seed"

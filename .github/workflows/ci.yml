@@ -68,7 +68,7 @@ jobs:
         run: cargo build --bin backend
 
       - name: Build seed binary (debug)
-        run: cargo build --bin seed
+        run: cargo build --features seed --bin seed
 
       - name: Upload seed binary (debug)
         uses: actions/upload-artifact@v4
@@ -267,7 +267,7 @@ jobs:
       - name: Run seed convergence tests
         # Runs the seed binary over the migrated database, so every suite after
         # this one reads the demo subjects and the canonical catalog.
-        run: cargo test --test seed_convergence_integration -- --test-threads=1
+        run: cargo test --features seed --test seed_convergence_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379

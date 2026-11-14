@@ -256,7 +256,9 @@ cd backend
 diesel migration run
 
 # Seed demo data (roles, permissions, and the convergent demo subjects)
-cargo run --bin seed
+# (`cargo seed` is the alias for `cargo run --features seed --bin seed`,
+# defined in backend/.cargo/config.toml)
+cargo seed
 ```
 
 ### 10. Start Backend
@@ -403,7 +405,7 @@ The migration creates the canonical catalog: the roles `admin`, `manager`, `edit
 
 ### Seed behavior
 
-`cargo run --bin seed` reuses that catalog and converges the demo subjects to it:
+`cargo seed` reuses that catalog and converges the demo subjects to it:
 
 - `admin@example.com` is the only `admin`.
 - `userNN@example.com` (NN from 02 to 100) rotate over `manager`, `editor`, `viewer`, `support`, `customer`.
@@ -516,7 +518,7 @@ docker compose up -d --build
 
 ```bash
 docker compose exec backend diesel migration run
-docker compose exec backend cargo run --bin seed
+docker compose exec backend cargo seed
 ```
 
 ### Docker Compose Profiles
@@ -933,7 +935,7 @@ app/
 
 ```bash
 cargo watch -x "run --bin backend"     # Watch + run (dev)
-cargo run --bin seed                    # Run seed
+cargo seed                              # Run seed
 cargo check && cargo clippy             # Check + clippy
 cargo fmt --all                         # Format
 docker compose logs -f backend          # View logs (Docker)
