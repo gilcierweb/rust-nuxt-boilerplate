@@ -119,7 +119,8 @@ rust_decimal = { version = "1.38", features = ["serde"] }
 
 # RUSTSEC-2021-0157/0158 (XSS via SVG animate tags, CSS url("") escaping) fixed in >=4.2.3
 # RUSTSEC-2026-0373 (CSS url() bypass via case variations) fixed in >=4.2.4
-ammonia = "4.2.4"
+# RUSTSEC-2026-0533 (mutation XSS through embedded SVG and MathML) fixed in >=4.2.5
+ammonia = "4.2.5"
 actix-multipart = "0.7"
 infer = "0.19"
 mime = "0.3"
