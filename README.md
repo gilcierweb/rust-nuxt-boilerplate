@@ -52,7 +52,7 @@
 ## ✨ Features
 
 ### Backend (Rust / Actix Web)
-- **Authentication**: JWT access/refresh tokens, Paseto for email verification, PBKDF2 password hashing, TOTP 2FA, OAuth2 ready
+- **Authentication**: JWT access/refresh tokens, signed email-verification tokens, Argon2id password hashing, TOTP 2FA, OAuth2 ready
 - **Authorization**: RBAC with resource-level permissions, role hierarchies, grant-based authorization (actix-web-grants)
 - **Database**: Diesel ORM with compile-time SQL verification, migrations, connection pooling, repository pattern
 - **API Docs**: OpenAPI 3.1 (utoipa) → TypeScript client generation, Swagger UI + Scalar
@@ -860,7 +860,7 @@ src/
 ├── routes/           # Route definitions
 │   └── router.rs     # Main router with middleware configuration
 ├── middleware/       # Auth, CORS, rate limiting, metrics
-├── auth/             # JWT, Paseto, PBKDF2, TOTP
+├── auth/             # JWT, signed verification tokens, Argon2id, TOTP
 ├── authz/            # RBAC engine (grants/abilities)
 ├── security/         # Encryption, blind indexes, key mgmt
 ├── ws/               # WebSocket server
@@ -983,7 +983,7 @@ docker compose exec redis redis-cli -a "$REDIS_PASSWORD"              # Connect 
 
 - **JWT + Refresh Tokens**: Access tokens (1 hour) + refresh tokens (7 days) with rotation
 - **Paseto Email Verification**: Secure email confirmation tokens
-- **PBKDF2 Password Hashing**: Industry-standard password security
+- **Argon2id Password Hashing**: Memory-hard password security
 - **TOTP 2FA**: Time-based one-time passwords with QR code setup
 - **OAuth2 Ready**: Extensible for social login providers
 - **Session Management**: Real-time session validation with Redis blacklist
