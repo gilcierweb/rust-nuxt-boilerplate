@@ -3,6 +3,10 @@ import {
   getRequestURL,
 } from 'h3'
 import {
+  fetchBackendWithRenderWakeupRetry,
+  mapBackendWakeupExhaustion,
+} from '~~/server/utils/backend-proxy-fetch'
+import {
   applyProxyResponse,
   createForwardHeaders,
   requireBackendProxyConfig,
@@ -37,12 +41,14 @@ export default defineEventHandler(async (event) => {
     for (const backendApiBase of backendApiBases) {
       const targetUrl = `${backendApiBase}/auth/session${requestUrl.search}`
       try {
-        response = (await $fetch.raw(targetUrl, {
-          method: 'GET',
-          headers,
-          redirect: 'manual',
-          credentials: 'include',
-        })) as unknown as typeof response
+        response = (await fetchBackendWithRenderWakeupRetry(
+          targetUrl,
+          backendApiBase,
+          {
+            method: 'GET',
+            headers,
+          },
+        )) as unknown as typeof response
         break
       } catch (error: any) {
         const status = error?.response?.status
@@ -63,6 +69,15 @@ export default defineEventHandler(async (event) => {
 
     throw lastError
 } catch (error: any) {
+      const unavailableResponse = mapBackendWakeupExhaustion(
+        event,
+        error,
+        { method: 'GET', path: 'auth/session' },
+      )
+      if (unavailableResponse) {
+        return unavailableResponse
+      }
+
       const response = error?.response
       if (!response) {
         throw createError({

@@ -4,6 +4,11 @@ import {
   readRawBody,
 } from 'h3'
 import {
+  fetchBackendWithRenderWakeupRetry,
+  mapBackendWakeupExhaustion,
+  type BackendRawResponse,
+} from '~~/server/utils/backend-proxy-fetch'
+import {
   applyProxyResponse,
   createForwardHeaders,
   requireBackendProxyConfig,
@@ -36,7 +41,7 @@ export default defineEventHandler(async (event) => {
   const body = await readRawBody(event, false)
 
   try {
-    let response: Awaited<ReturnType<typeof $fetch.raw<any>>> | null = null
+    let response: BackendRawResponse<any> | null = null
     let lastError: any = null
 
     for (const backendApiBase of backendApiBases) {
@@ -47,13 +52,15 @@ export default defineEventHandler(async (event) => {
 
       for (const targetUrl of targetUrls) {
         try {
-          response = await $fetch.raw(targetUrl, {
-            method: 'POST',
-            headers,
-            body,
-            redirect: 'manual',
-            credentials: 'include',
-          })
+          response = await fetchBackendWithRenderWakeupRetry(
+            targetUrl,
+            backendApiBase,
+            {
+              method: 'POST',
+              headers,
+              body,
+            },
+          )
           break
         } catch (error: any) {
           const status = error?.response?.status
@@ -75,6 +82,15 @@ if (!response) {
 
     return applyProxyResponse(event, response as unknown as Parameters<typeof applyProxyResponse>[1])
   } catch (error: any) {
+    const unavailableResponse = mapBackendWakeupExhaustion(
+      event,
+      error,
+      { method: 'POST', path: 'auth/refresh' },
+    )
+    if (unavailableResponse) {
+      return unavailableResponse
+    }
+
     const response = error?.response
     if (!response) {
       throw createError({

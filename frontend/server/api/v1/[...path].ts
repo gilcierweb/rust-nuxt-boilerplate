@@ -5,6 +5,11 @@ import {
 } from 'h3'
 import { resolveAccessTokenForProxy } from '~~/server/utils/auth'
 import {
+  fetchBackendWithRenderWakeupRetry,
+  mapBackendWakeupExhaustion,
+  type BackendFetchMethod,
+} from '~~/server/utils/backend-proxy-fetch'
+import {
   applyProxyResponse,
   createForwardHeaders,
   requireBackendProxyConfig,
@@ -13,6 +18,12 @@ import {
 export default defineEventHandler(async (event) => {
   const { backendApiBases, backendApiKey } = requireBackendProxyConfig(event)
   const backendApiBase = backendApiBases[0]
+  if (!backendApiBase) {
+    throw createError({
+      statusCode: 500,
+      statusMessage: 'Backend proxy is not configured',
+    })
+  }
   const path = event.context.params?.path || ''
   const requestUrl = getRequestURL(event)
   const targetUrl = `${backendApiBase}/${path}${requestUrl.search}`
@@ -40,23 +51,34 @@ export default defineEventHandler(async (event) => {
     },
   )
 
-  const method = event.method || 'GET'
+  const method = (event.method || 'GET') as BackendFetchMethod
   const body = ['GET', 'HEAD'].includes(method)
     ? undefined
     : await readRawBody(event, false)
 
   try {
-    const response = await $fetch.raw(targetUrl, {
-      method,
-      headers,
-      body,
-      redirect: 'manual',
-      credentials: 'include',
-    })
+    const response = await fetchBackendWithRenderWakeupRetry(
+      targetUrl,
+      backendApiBase,
+      {
+        method,
+        headers,
+        body,
+      },
+    )
 
     return applyProxyResponse(event, response as unknown as Parameters<typeof applyProxyResponse>[1])
   } catch (error: any) {
     const response = error?.response
+    const unavailableResponse = mapBackendWakeupExhaustion(
+      event,
+      error,
+      { method, path },
+    )
+    if (unavailableResponse) {
+      return unavailableResponse
+    }
+
     if (!response) {
       // Unexpected error shape (no response) — log for debugging and rethrow.
       // The cause could be a network error (ECONNREFUSED, ENOTFOUND, abort),
