@@ -89,7 +89,6 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     await $api('/auth/forgot-password', { method: 'POST', body: { email: values.email } })
     sent.value = true
-    toast.success(t('auth.forgotPassword.success.title'))
   } catch (err) {
     // The request failed (network or server), which is not the same as the
     // address simply not existing: the account enumeration guard still
