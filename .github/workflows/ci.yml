@@ -177,9 +177,12 @@ jobs:
     name: Backend Integration Tests
     runs-on: ubuntu-latest
     # Compiles the test binaries, runs a migration rollback cycle, migrates and
-    # seeds, then the auth cycle. On a cold cache this is close to 8 minutes,
-    # which is what cancelled the run before.
-    timeout-minutes: 15
+    # seeds, then the auth cycle. Every cargo invocation carries --features
+    # seed so the whole graph is compiled once: flipping the feature mid-job
+    # recompiled the crate from scratch at the seed step (which is what pushed
+    # this job past 15 minutes). Only the seed suite reads the feature, so the
+    # other suites behave identically. A cold cache still needs headroom.
+    timeout-minutes: 20
     needs: [backend-build-debug]
     defaults:
       run:
@@ -247,12 +250,15 @@ jobs:
           diesel --version
 
       - name: Compile test binaries once
-        # The lib is built in the test profile a single time here. Running the
-        # binaries afterwards reuses it, instead of recompiling it per step.
-        run: cargo test --no-run
+        # The lib is built in the test profile a single time here, already
+        # with the seed feature on. Every suite below then runs with the same
+        # flags so the binaries are reused instead of recompiled: cargo keys
+        # its cache on the feature set, so a step without the flag would
+        # trigger a full rebuild of the crate mid-job.
+        run: cargo test --features seed --no-run
 
       - name: Run migration rollback test (clean DB)
-        run: cargo test --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
+        run: cargo test --features seed --test migration_rollback live_migration_rollback_cycle -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
@@ -264,7 +270,7 @@ jobs:
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
 
       - name: Run integration tests (sequential, with DB)
-        run: cargo test --test auth_integration -- --test-threads=1
+        run: cargo test --features seed --test auth_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
@@ -273,7 +279,7 @@ jobs:
         # Runs after auth_integration on purpose: both suites write subjects to
         # the same database, so this pins the shared encryption keys (a row
         # registered by the first suite has to be readable by the second).
-        run: cargo test --test handler_authorization_integration -- --test-threads=1
+        run: cargo test --features seed --test handler_authorization_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
@@ -287,37 +293,37 @@ jobs:
           REDIS_URL: redis://localhost:6379
 
       - name: Run rbac grants tests
-        run: cargo test --test rbac_grants_integration -- --test-threads=1
+        run: cargo test --features seed --test rbac_grants_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run auth me tests
-        run: cargo test --test auth_me_integration -- --test-threads=1
+        run: cargo test --features seed --test auth_me_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run profile self service tests
-        run: cargo test --test profile_self_service_integration -- --test-threads=1
+        run: cargo test --features seed --test profile_self_service_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run registration tests
-        run: cargo test --test register_role_integration -- --test-threads=1
+        run: cargo test --features seed --test register_role_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run registration abuse tests
-        run: cargo test --test register_abuse_integration -- --test-threads=1
+        run: cargo test --features seed --test register_abuse_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run token revocation tests
-        run: cargo test --test token_revocation_integration -- --test-threads=1
+        run: cargo test --features seed --test token_revocation_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
@@ -326,31 +332,31 @@ jobs:
         # Runs before the catalog migration suite on purpose: it detaches and
         # deletes a canonical permission row, and the catalog suite re-seeds it
         # and asserts every canonical link of the administrator role.
-        run: cargo test --test permissions_api_integration -- --test-threads=1
+        run: cargo test --features seed --test permissions_api_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run rbac catalog migration tests
-        run: cargo test --test rbac_catalog_migration -- --test-threads=1
+        run: cargo test --features seed --test rbac_catalog_migration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run role permissions admin tests
-        run: cargo test --test roles_permissions_api_integration -- --test-threads=1
+        run: cargo test --features seed --test roles_permissions_api_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run user roles assignment tests
-        run: cargo test --test user_roles_api_integration -- --test-threads=1
+        run: cargo test --features seed --test user_roles_api_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
       - name: Run admin search and sort tests
-        run: cargo test --test admin_search_sort_integration -- --test-threads=1
+        run: cargo test --features seed --test admin_search_sort_integration -- --test-threads=1
         env:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
