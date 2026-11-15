@@ -1,0 +1,49 @@
+# Prometheus rule file for the two conditions the backend can report today:
+# a large share of traffic being refused by the rate limiter, and the Redis
+# circuit breaker of the rate limiter opening (which means the limiter has
+# stopped limiting and login is no longer brute-force protected).
+#
+# The backend also warns on its own, once per crossing, via the structured
+# event rate_limit.429_share_threshold_exceeded. These rules exist for
+# operators who run a monitoring stack; they need the /metrics scraper from
+# prometheus.yml or the collector in infra/opentelemetry/collector.yaml.
+#
+# Note: the outbound HTTP breaker (e-mail, OAuth) is event-only today
+# (outbound_http.circuit_breaker_opened in the structured logs), so there is
+# no rule for it here. Alert on the log pipeline for now.
+
+groups:
+  - name: boilerplate-backend
+    rules:
+      - alert: RateLimitRejectionShareHigh
+        expr: rate_limit_429_share > 0.10
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: More than 10% of requests are being refused by the rate limiter
+          description: |
+            Share of 429 responses on the last windows: {{ $value }}
+            (threshold 0.10 = 10%).
+            First check: when a reverse proxy fronts the API and TRUSTED_PROXIES
+            is empty, every client is charged at the proxy's IP and all users
+            collapse into one bucket. See .env.example, "TRUSTED_PROXIES".
+            The in-process watchdog already logs one warning per crossing with
+            the most refused route; the route breakdown lives in
+            http_requests_route_total{status="429"}.
+
+      - alert: RateLimiterCircuitBreakerOpen
+        expr: circuit_breaker_state{breaker="rate_limit_redis"} == 1
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: The rate limiter's Redis circuit breaker is open
+          description: |
+            Consecutive Redis failures opened the limiter circuit. While it is
+            open, ordinary traffic fails open and stops being limited, so the
+            brute-force budgets are the exposure to watch. It opens after 5
+            consecutive Redis errors by default and re-probes every 30s.
+            Openings: circuit_breaker_opened_total{breaker="rate_limit_redis"};
+            time lost accumulates in
+            circuit_breaker_open_seconds_total{breaker="rate_limit_redis"}.

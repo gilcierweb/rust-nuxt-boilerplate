@@ -16,10 +16,13 @@ infra/
 │       ├── rate-limit.conf  # Rate limiting zones (per-IP, auth, API)
 │       └── proxy.conf       # Reusable proxy-pass directives
 ├── prometheus/
-│   └── prometheus.yml       # Prometheus scrape targets
+│   ├── prometheus.yml       # Scrape targets (goes through metrics-proxy)
+│   └── alert-rules.yml      # Rules for the rejection share and the breaker
 ├── grafana/
 │   ├── dashboards/          # JSON dashboard definitions
 │   └── provisioning/        # Grafana datasource/dashboards provisioning
+├── opentelemetry/
+│   └── collector.yaml       # Optional collector hub (metrics + OTLP traces)
 ├── secrets/                 # Production secrets (gitignored)
 │   ├── README.md            # Which file corresponds to which secret
 │   └── *.txt                # One secret per file
@@ -28,6 +31,64 @@ infra/
     ├── key.pem              # Private key (production)
     └── dhparam.pem          # Diffie-Hellman parameters (gitignored, optional)
 ```
+
+## Monitoring
+
+The backend exposes three signals and the operator chooses the stack that reads
+them. The application has one source of metrics: the registry rendered as
+Prometheus exposition at `GET /api/v1/metrics`. Traces go out as OTLP when
+`OTEL_EXPORTER_OTLP_ENDPOINT` is set. Events are structured JSON logs.
+
+### The metrics endpoint requires an API key
+
+`/api/v1/metrics` answers only to `X-API-Key: <key>` or
+`Authorization: ApiKey <key>`, from `INTERNAL_API_KEYS` in the backend `.env`
+(the payload carries route names, counters and system data). Prometheus itself
+can only send Bearer or Basic credentials, so the local stack scrapes through
+the `metrics-proxy` service in `docker-compose.yml`, which injects the header.
+Tell it which key to use in your `.env`:
+
+```bash
+# .env (root): METRICS_SCRAPE_KEY must be one of the keys in INTERNAL_API_KEYS
+METRICS_SCRAPE_KEY=$(openssl rand -hex 32)
+```
+
+`infra/prometheus/prometheus.yml` scrapes `metrics-proxy:9091` and loads the
+rules in `infra/prometheus/alert-rules.yml`. Grafana is provisioned from
+`infra/grafana/provisioning` with the `backend-overview` dashboard ready on
+login; no click-through setup.
+
+### Fan-out to a vendor backend
+
+`infra/opentelemetry/collector.yaml` runs the collector as the ingestion hub: it
+scrapes the backend with the API key, accepts OTLP traces from the app,
+re-exposes metrics on `:8889` for a local Prometheus, and carries commented
+exporters for Grafana Cloud and Datadog. The app needs no per-vendor code for
+any of it.
+
+### Alerting the backend already does itself
+
+No external stack is required for the first line of defence. Configured in the
+backend `.env` and documented in `.env.example`:
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `ALERT_429_ENABLED` | `true` | Turns the rejection-share watchdog on or off |
+| `ALERT_429_SHARE_PCT` | `10` | Share of 429 responses in the window that trips it |
+| `ALERT_429_WINDOW_SECS` | `30` | Seconds between evaluations |
+
+The watchdog samples the registry off the request path and emits one structured
+warning per crossing event (`rate_limit.429_share_threshold_exceeded`, with the
+most refused route) plus the gauges and counters
+`rate_limit_429_share` / `rate_limit_429_alerts_total` /
+`circuit_breaker_state` / `circuit_breaker_opened_total` /
+`circuit_breaker_open_seconds_total`, which is what the rules in
+`alert-rules.yml` read. A mistyped percentage or a zero window refuses to boot
+rather than silently disarming the alert.
+
+Related event names in the structured logs:
+`rate_limit.circuit_breaker_opened` (Redis breaker of the limiter) and
+`outbound_http.circuit_breaker_opened` (e-mail/OAuth client, event-only today).
 
 ## Service Profiles (SECURITY_AUDIT.md I1, I4)
 

@@ -290,6 +290,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./infra/prometheus/alert-rules.yml:/etc/prometheus/alert-rules.yml:ro
       - prometheus_data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -299,7 +300,31 @@ services:
     networks:
       - rust_nuxt_boilerplate_net
 
-  # -- Grafana 
+  # -- Metrics auth proxy
+  # GET /api/v1/metrics requires an API key (X-API-Key or Authorization:
+  # ApiKey). Prometheus itself can only send Bearer or Basic credentials, so
+  # this sidecar injects the header for the scrape in infra/prometheus.
+  # METRICS_SCRAPE_KEY must be one of the keys in the backend's
+  # INTERNAL_API_KEYS.
+  metrics-proxy:
+    image: caddy:2-alpine
+    container_name: rust_nuxt_boilerplate_metrics_proxy
+    restart: unless-stopped
+    environment:
+      METRICS_SCRAPE_KEY: ${METRICS_SCRAPE_KEY:?set METRICS_SCRAPE_KEY in .env (one of INTERNAL_API_KEYS) for the Prometheus scrape}
+    command:
+      - sh
+      - -c
+      - |
+        echo ":9091 {
+          reverse_proxy backend:8080 {
+            header_up X-API-Key {$METRICS_SCRAPE_KEY}
+          }
+        }" > /tmp/Caddyfile && caddy run --config /tmp/Caddyfile --adapter caddyfile
+    networks:
+      - rust_nuxt_boilerplate_net
+
+# -- Grafana
   grafana:
     image: grafana/grafana:latest
     container_name: rust_nuxt_boilerplate_grafana

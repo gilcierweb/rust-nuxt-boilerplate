@@ -811,6 +811,14 @@ is opt-in and vendor-neutral.
   the plaintext address).
 - **Production refuses to boot unprotected** — `RATE_LIMIT_ENABLED=false` is
   rejected in staging/production.
+- **Silence has signals now** — when Redis fails, the limiter circuit opens
+  (fail open, strict endpoints still fail closed) and every transition reaches
+  the metrics (`circuit_breaker_state`, `circuit_breaker_opened_total`,
+  `circuit_breaker_open_seconds_total`) and the structured log. When the
+  refused share of traffic trips `ALERT_429_SHARE_PCT` (default 10%), the
+  watchdog emits one warning per crossing with the most refused route and
+  publishes `rate_limit_429_share`. Rules for both ship in
+  `infra/prometheus/alert-rules.yml`.
 
 **Optional (all off by default, no vendor imposed)**
 
@@ -1073,7 +1081,7 @@ instead and start mailcatcher via `docker compose --profile dev-tools up mailcat
 - [ ] Configure email transport (`EMAIL_TRANSPORT=resend` + `RESEND_API_KEY`, or `EMAIL_TRANSPORT=smtp` + `SMTP_URL`)
 - [ ] Set up S3-compatible storage (Bunny.net, Backblaze B2)
 - [ ] Configure Stripe keys (if using payments)
-- [ ] Set up monitoring alerts (Grafana/Prometheus)
+- [x] Set up monitoring alerts (Grafana/Prometheus) — rules ship in `infra/prometheus/alert-rules.yml`, dashboard in `infra/grafana/dashboards/`
 - [ ] Run security audit (`cargo audit`)
 
 ### Kubernetes / Cloud Deploy

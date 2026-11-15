@@ -1,0 +1,30 @@
+global:
+  # Matches the alert window default (ALERT_429_WINDOW_SECS=30): each scrape
+  # reads one whole window of the rejection-share watchdog.
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/alert-rules.yml
+
+# No alertmanager ships with the local stack (it is not in docker-compose.yml).
+# Point `alertmanagers` at your own and uncomment to route the rules in
+# alert-rules.yml somewhere useful; the backend already logs every crossing
+# as event rate_limit.429_share_threshold_exceeded without any of this.
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets: [alertmanager:9093]
+
+scrape_configs:
+  # /api/v1/metrics requires an API key (X-API-Key or Authorization: ApiKey).
+  # Prometheus itself can only send Bearer or Basic credentials, so the local
+  # stack scrapes through the metrics-proxy service in docker-compose.yml,
+  # which injects the header. Set METRICS_SCRAPE_KEY in your .env to one of
+  # the keys listed in INTERNAL_API_KEYS.
+  - job_name: backend
+    metrics_path: /api/v1/metrics
+    static_configs:
+      - targets: [metrics-proxy:9091]
+        labels:
+          service: backend

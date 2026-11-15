@@ -1,0 +1,90 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "429 share (last window)",
+      "description": "Share of requests refused by the rate limiter on the last measured window (ALERT_429_SHARE_PCT).",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "orange", "value": 0.05 },
+              { "color": "red", "value": 0.1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        { "expr": "rate_limit_429_share", "legendFormat": "share" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Redis breaker (rate limiter)",
+      "description": "0 closed, 1 open. Open means the limiter stops limiting ordinary traffic.",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "closed" } } },
+            { "type": "value", "options": { "1": { "text": "OPEN" } } }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": 0 },
+              { "color": "red", "value": 1 }
+            ]
+          }
+        }
+      },
+      "targets": [
+        { "expr": "circuit_breaker_state{breaker=\"rate_limit_redis\"}", "legendFormat": "state" }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Breaker openings",
+      "description": "How many times the Redis breaker opened since boot, and the seconds lost while open.",
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "targets": [
+        { "expr": "circuit_breaker_opened_total{breaker=\"rate_limit_redis\"}", "legendFormat": "openings" },
+        { "expr": "circuit_breaker_open_seconds_total{breaker=\"rate_limit_redis\"}", "legendFormat": "seconds open" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Requests by status",
+      "description": "Per-status counters since boot; watch the 429 line against the total.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "legend": { "displayMode": "table", "placement": "right" } },
+      "targets": [
+        { "expr": "http_requests_by_status_total", "legendFormat": "{{status}}", "format": "table" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Latency p95 (ms)",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "ms" } },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom" } },
+      "targets": [
+        { "expr": "http_request_duration_p95_ms", "legendFormat": "{{method}} {{path}}" }
+      ]
+    }
+  ],
+  "refresh": "10s",
+  "schemaVersion": 39,
+  "tags": ["backend"],
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Backend overview",
+  "uid": "backend-overview"
+}

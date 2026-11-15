@@ -1,0 +1,80 @@
+# OpenTelemetry Collector as the single ingestion hub for the backend.
+#
+# The app exposes two signals, both ingested here without any backend-specific
+# code in the app:
+#
+#   1. Metrics: Prometheus exposition on GET /api/v1/metrics (API key required).
+#      The prometheus receiver below scrapes it and the collector re-exposes
+#      the result on :8889 for a local Prometheus/Grafana, and forwards it to
+#      the OTLP backend of the operator's choice.
+#   2. Traces: OTLP push from the app (enabled via OTEL_EXPORTER_OTLP_ENDPOINT).
+#      The otlp receiver below accepts them.
+#
+# Set the API key in backend/.env as INTERNAL_API_KEYS and copy one of those
+# keys into the file named below. Without it the scrape gets a 401: the
+# /metrics payload carries route names, counters and system data by design.
+#
+# This collector is optional for the local stack (the compose stack scrapes
+# through metrics-proxy instead). It is the documented path for operators who
+# fan the telemetry out to a vendor backend.
+
+extensions:
+  health_check:
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+  prometheus:
+    config:
+      scrape_configs:
+        - job_name: backend
+          metrics_path: /api/v1/metrics
+          scheme: http
+          static_configs:
+            - targets: [backend:8080] # or host.docker.internal:8080 from the host
+          # The endpoint never answers without a key. Prometheus itself cannot
+          # send custom headers; the collector can.
+          authorization:
+            type: ApiKey
+            credentials_file: /etc/otel/backend-api-key # contains a single line: the key
+
+processors:
+  batch:
+
+exporters:
+  # Local Prometheus/Grafana: scrape this collector on :8889/metrics.
+  prometheus:
+    endpoint: 0.0.0.0:8889
+
+  # Forward metrics and traces to a vendor backend. Enable exactly one and
+  # fill the credentials from that vendor:
+  #
+  # otlphttp/grafana-cloud:
+  #   endpoint: https://otlp-gateway-XXX.grafana.net/otlp
+  #   headers:
+  #     authorization: Basic <base64 user:token>
+  #
+  # otlphttp/datadog:
+  #   endpoint: https://datadoghq.com/api/v2/otlp
+  #   headers:
+  #     dd-api-key: <DD-API-KEY>
+  #
+  # debug: # verify locally before wiring a backend
+  #   verbosity: detailed
+
+service:
+  extensions: [health_check]
+  pipelines:
+    metrics:
+      receivers: [prometheus]
+      processors: [batch]
+      exporters: [prometheus] # add otlphttp/<vendor> here once enabled
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [] # add otlphttp/<vendor> here once enabled
