@@ -52,7 +52,10 @@ onMounted(async () => {
   try {
     await $api(`/auth/confirm?token=${token}`)
     confirmed.value = true
-  } catch {}
+  } catch {
+    // The error state below already explains the failure generically, so the
+    // catch only needs to leave confirmed=false for the template to render it.
+  }
   loading.value = false
 })
 </script>

@@ -1,6 +1,6 @@
 <template>
-	<div>
-		 <!-- 1. Header/Navigation -->
+    <div>
+         <!-- 1. Header/Navigation -->
         <header
             class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-800 dark:text-slate-100 font-sans antialiased text-sm font-medium tracking-tight fixed top-0 w-full z-50 border-b border-slate-200 dark:border-slate-800"
         >
@@ -41,5 +41,5 @@
                 </button>
             </div>
         </header>
-	</div>
+    </div>
 </template>

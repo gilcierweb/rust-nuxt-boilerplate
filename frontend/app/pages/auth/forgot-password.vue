@@ -64,12 +64,14 @@
 import { toTypedSchema } from '@vee-validate/valibot'
 import { useForm } from 'vee-validate'
 import { forgotPasswordSchema, type ForgotPasswordValues } from '~/forms/auth-schemas'
+import { mapAuthError } from '~/utils/auth-errors'
 
 definePageMeta({ layout: 'auth' })
 
 const { t } = useI18n()
 const { $api } = useNuxtApp()
 const localePath = useLocalePath()
+const toast = useToast()
 
 const loading = ref(false)
 const sent = ref(false)
@@ -86,8 +88,15 @@ const onSubmit = handleSubmit(async (values) => {
   loading.value = true
   try {
     await $api('/auth/forgot-password', { method: 'POST', body: { email: values.email } })
-  } catch {}
-  sent.value = true
-  loading.value = false
+    sent.value = true
+    toast.success(t('auth.forgotPassword.success.title'))
+  } catch (err) {
+    // The request failed (network or server), which is not the same as the
+    // address simply not existing: the account enumeration guard still
+    // applies to a successful response, so only surface the transport error.
+    toast.error(mapAuthError(err, t))
+  } finally {
+    loading.value = false
+  }
 })
 </script>

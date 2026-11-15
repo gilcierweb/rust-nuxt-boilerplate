@@ -145,9 +145,9 @@
           <span class="icon-[tabler--chevron-left] size-4 rtl:rotate-180"></span>
         </button>
 
-        <template v-for="page in visiblePages" :key="page">
+        <template v-for="pageNumber in visiblePages" :key="pageNumber">
           <span
-            v-if="page === '...'"
+            v-if="pageNumber === '...'"
             class="px-2 text-base-content/40"
           >
             <span class="icon-[tabler--dots] size-4"></span>
@@ -156,12 +156,12 @@
             v-else
             type="button"
             class="btn btn-sm transition-none"
-            :class="page === currentPage
+            :class="pageNumber === currentPage
               ? 'btn-primary'
               : 'btn-soft btn-square'"
-            @click="goToPage(page)"
+            @click="goToPage(pageNumber)"
           >
-            {{ page }}
+            {{ pageNumber }}
           </button>
         </template>
 

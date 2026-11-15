@@ -56,7 +56,7 @@ use repositories::AppContainer;
 use routes::router::config;
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> std::io::Result&lt;()&gt; {
     let config = AppConfig::from_env()?;
     let db = Database::new();
     let pool = db.pool.clone();
