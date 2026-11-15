@@ -10,6 +10,13 @@ env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
 
+# runs-on is deliberately `ubuntu-latest` everywhere: the label is moved by
+# GitHub to the newest Ubuntu LTS, which is exactly the policy this project
+# wants. The "ubuntu-latest will migrate to Ubuntu 26" notice from October
+# 2026 is that movement in progress, not a defect, and it asks for no action.
+# Pinning a specific release (ubuntu-24.04) would silently freeze the toolchain
+# and was rejected on purpose.
+
 jobs:
   # Fast lint job - runs in parallel with build
   backend-lint:
