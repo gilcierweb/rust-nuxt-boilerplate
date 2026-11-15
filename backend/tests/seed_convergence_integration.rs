@@ -12,6 +12,14 @@
 //!
 //! The keys come from `test_config`, the same deterministic values the other
 //! suites use, so the emails of the seed subjects can be looked up.
+//!
+//! The convergence contract needs the real seeder: this suite dirties the
+//! shared database on purpose and only a second seed run repairs it, so a
+//! skipped run would assert against a state nobody cleaned. The seeder is
+//! feature-gated behind `seed`, and integration tests see the package
+//! features, so the whole contract only compiles with the feature on.
+
+#![cfg(feature = "seed")]
 
 use std::collections::HashMap;
 use std::process::Command;
@@ -166,13 +174,7 @@ fn administrator_holders() -> i64 {
         .expect("failed to count the administrator holders")
 }
 
-// The convergence contract needs the real seeder: this suite dirties the
-// shared database on purpose and only a second seed run repairs it, so a
-// skipped run would assert against a state nobody cleaned. The seeder is
-// feature-gated behind `seed`, and integration tests see the package
-// features, so the whole contract only compiles with the feature on.
 #[actix_web::test]
-#[cfg(feature = "seed")]
 async fn the_seed_converges_every_link() {
     run_seed();
 
