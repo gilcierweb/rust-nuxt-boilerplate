@@ -9,11 +9,53 @@ type ResponseWithHeaders = {
 }
 
 export interface BackendWakeupRetryOptions {
-  maxAttempts?: number
+  maxAttempts: number
   initialDelayMs?: number
   maxDelayMs?: number
   sleep?: (delayMs: number) => Promise<void>
-  waitUntilReady?: () => Promise<void>
+}
+
+export const BACKEND_HEALTH_MAX_ATTEMPTS = 4
+export const BACKEND_HEALTH_DELAYS_MS = [2_000, 4_000, 8_000] as const
+
+export interface BackendHealthBudget {
+  attemptsUsed: number
+}
+
+export interface BackendWakeupState {
+  healthBudget: BackendHealthBudget
+  healthReady: boolean
+}
+
+export interface BackendHealthWaitOptions {
+  budget: BackendHealthBudget
+  sleep?: (delayMs: number) => Promise<void>
+}
+
+export class BackendHealthProbeExhaustedError extends Error {
+  readonly code = 'BACKEND_HEALTH_PROBE_EXHAUSTED'
+
+  constructor(readonly attempts: number) {
+    super('Backend health probe exhausted')
+    this.name = 'BackendHealthProbeExhaustedError'
+  }
+}
+
+export function createBackendHealthBudget(): BackendHealthBudget {
+  return { attemptsUsed: 0 }
+}
+
+export function createBackendWakeupState(): BackendWakeupState {
+  return {
+    healthBudget: createBackendHealthBudget(),
+    healthReady: false,
+  }
+}
+
+export function isBackendHealthProbeExhaustedError(
+  error: unknown,
+): error is BackendHealthProbeExhaustedError {
+  return error instanceof BackendHealthProbeExhaustedError
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -89,11 +131,39 @@ function defaultSleep(delayMs: number): Promise<void> {
   })
 }
 
+export async function waitForBackendHealth<T extends { status: number }>(
+  operation: () => Promise<T>,
+  options: BackendHealthWaitOptions,
+): Promise<T> {
+  const sleep = options.sleep ?? defaultSleep
+  const maxAttempts = Math.max(1, Math.floor(BACKEND_HEALTH_MAX_ATTEMPTS))
+
+  while (options.budget.attemptsUsed < maxAttempts) {
+    options.budget.attemptsUsed += 1
+
+    try {
+      const response = await operation()
+      if (response.status === 200) {
+        return response
+      }
+    } catch {
+      // Network and HTTP failures consume the shared readiness budget.
+    }
+
+    if (options.budget.attemptsUsed < maxAttempts) {
+      const delayIndex = options.budget.attemptsUsed - 1
+      await sleep(BACKEND_HEALTH_DELAYS_MS[delayIndex] ?? 0)
+    }
+  }
+
+  throw new BackendHealthProbeExhaustedError(options.budget.attemptsUsed)
+}
+
 export async function fetchWithRenderWakeupRetry<T>(
   operation: () => Promise<T>,
-  options: BackendWakeupRetryOptions = {},
+  options: BackendWakeupRetryOptions,
 ): Promise<T> {
-  const maxAttempts = Math.max(1, Math.floor(options.maxAttempts ?? 7))
+  const maxAttempts = Math.max(1, Math.floor(options.maxAttempts))
   const initialDelayMs = Math.max(0, Math.floor(options.initialDelayMs ?? 2_000))
   const maxDelayMs = Math.max(0, Math.floor(options.maxDelayMs ?? 30_000))
   const sleep = options.sleep ?? defaultSleep
@@ -113,11 +183,7 @@ export async function fetchWithRenderWakeupRetry<T>(
         initialDelayMs * 2 ** (attempt - 1),
         maxDelayMs,
       )
-      if (options.waitUntilReady) {
-        await options.waitUntilReady()
-      } else {
-        await sleep(delayMs)
-      }
+      await sleep(delayMs)
       return executeWithRetry(attempt + 1)
     }
   }

@@ -9,6 +9,7 @@ import {
   mapBackendWakeupExhaustion,
   type BackendFetchMethod,
 } from '~~/server/utils/backend-proxy-fetch'
+import { createBackendWakeupState } from '~~/server/utils/backend-wakeup'
 import {
   applyProxyResponse,
   createForwardHeaders,
@@ -56,6 +57,8 @@ export default defineEventHandler(async (event) => {
     ? undefined
     : await readRawBody(event, false)
 
+  const wakeupState = createBackendWakeupState()
+
   try {
     const response = await fetchBackendWithRenderWakeupRetry(
       targetUrl,
@@ -65,9 +68,13 @@ export default defineEventHandler(async (event) => {
         headers,
         body,
       },
+      wakeupState,
     )
 
-    return applyProxyResponse(event, response as unknown as Parameters<typeof applyProxyResponse>[1])
+    return applyProxyResponse(
+      event,
+      response as unknown as Parameters<typeof applyProxyResponse>[1],
+    )
   } catch (error: any) {
     const response = error?.response
     const unavailableResponse = mapBackendWakeupExhaustion(

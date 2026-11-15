@@ -6,6 +6,7 @@ import {
   fetchBackendWithRenderWakeupRetry,
   mapBackendWakeupExhaustion,
 } from '~~/server/utils/backend-proxy-fetch'
+import { createBackendWakeupState } from '~~/server/utils/backend-wakeup'
 import {
   applyProxyResponse,
   createForwardHeaders,
@@ -30,6 +31,8 @@ export default defineEventHandler(async (event) => {
     },
   )
 
+  const wakeupState = createBackendWakeupState()
+
   try {
     // The shape the proxy helper reads: the annotation of the raw response is
     // written out because the inferred type is circular through the catch
@@ -48,6 +51,7 @@ export default defineEventHandler(async (event) => {
             method: 'GET',
             headers,
           },
+          wakeupState,
         )) as unknown as typeof response
         break
       } catch (error: any) {
@@ -68,7 +72,7 @@ export default defineEventHandler(async (event) => {
     }
 
     throw lastError
-} catch (error: any) {
+  } catch (error: any) {
       const unavailableResponse = mapBackendWakeupExhaustion(
         event,
         error,
@@ -86,8 +90,8 @@ export default defineEventHandler(async (event) => {
         })
       }
 
-    return applyProxyResponse(event, response) ?? {
-      error: response.statusText || 'Request failed',
-    }
+      return applyProxyResponse(event, response) ?? {
+        error: response.statusText || 'Request failed',
+      }
   }
 })

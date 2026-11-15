@@ -8,6 +8,7 @@ import {
   mapBackendWakeupExhaustion,
   type BackendRawResponse,
 } from '~~/server/utils/backend-proxy-fetch'
+import { createBackendWakeupState } from '~~/server/utils/backend-wakeup'
 import {
   applyProxyResponse,
   createForwardHeaders,
@@ -40,6 +41,8 @@ export default defineEventHandler(async (event) => {
 
   const body = await readRawBody(event, false)
 
+  const wakeupState = createBackendWakeupState()
+
   try {
     let response: BackendRawResponse<any> | null = null
     let lastError: any = null
@@ -60,6 +63,7 @@ export default defineEventHandler(async (event) => {
               headers,
               body,
             },
+            wakeupState,
           )
           break
         } catch (error: any) {
@@ -76,11 +80,14 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-if (!response) {
+    if (!response) {
       throw lastError
     }
 
-    return applyProxyResponse(event, response as unknown as Parameters<typeof applyProxyResponse>[1])
+    return applyProxyResponse(
+      event,
+      response as unknown as Parameters<typeof applyProxyResponse>[1],
+    )
   } catch (error: any) {
     const unavailableResponse = mapBackendWakeupExhaustion(
       event,

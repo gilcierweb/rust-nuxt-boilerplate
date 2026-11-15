@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 
-import {
+import * as backendWakeup from '../../../../server/utils/backend-wakeup'
+
+const {
   fetchWithRenderWakeupRetry,
   isRenderWakeupResponse,
-} from '../../../../server/utils/backend-wakeup'
+} = backendWakeup
 
 function upstreamError(
   status: number,
@@ -88,6 +90,52 @@ describe('isRenderWakeupResponse', () => {
   })
 })
 
+describe('backend health readiness', () => {
+  it('retries every not-ready health outcome with the required delays', async () => {
+    const delays: number[] = []
+    let attempts = 0
+
+    await expect(
+      backendWakeup.waitForBackendHealth(
+        async () => {
+          attempts += 1
+          if (attempts === 1) {
+            throw new TypeError('fetch failed')
+          }
+          if (attempts === 2) {
+            return { status: 503 }
+          }
+          if (attempts === 3) {
+            return { status: 302 }
+          }
+          throw new TypeError('fetch failed')
+        },
+        {
+          budget: backendWakeup.createBackendHealthBudget(),
+          sleep: async (delayMs) => {
+            delays.push(delayMs)
+          },
+        },
+      ),
+    ).rejects.toThrow('Backend health probe exhausted')
+
+    expect(attempts).toBe(4)
+    expect(delays).toEqual([2_000, 4_000, 8_000])
+  })
+
+  it('accepts only HTTP 200 as a ready health response', async () => {
+    await expect(
+      backendWakeup.waitForBackendHealth(
+        async () => ({ status: 204 }),
+        {
+          budget: backendWakeup.createBackendHealthBudget(),
+          sleep: async () => {},
+        },
+      ),
+    ).rejects.toThrow('Backend health probe exhausted')
+  })
+})
+
 describe('fetchWithRenderWakeupRetry', () => {
   it('returns the backend response after a Render wake-up response', async () => {
     const wakeupError = upstreamError(429, 'text/html; charset=UTF-8')
@@ -102,7 +150,10 @@ describe('fetchWithRenderWakeupRetry', () => {
         }
         return expectedResponse
       },
-      { sleep: async () => {} },
+      {
+        maxAttempts: 3,
+        sleep: async () => {},
+      },
     )
 
     expect(response).toBe(expectedResponse)
@@ -121,7 +172,10 @@ describe('fetchWithRenderWakeupRetry', () => {
           attempts += 1
           throw rateLimitError
         },
-        { sleep: async () => {} },
+        {
+          maxAttempts: 3,
+          sleep: async () => {},
+        },
       ),
     ).rejects.toBe(rateLimitError)
 
@@ -148,9 +202,8 @@ describe('fetchWithRenderWakeupRetry', () => {
     expect(attempts).toBe(3)
   })
 
-  it('uses the production delay schedule', async () => {
+  it('requires an explicit attempt budget', async () => {
     const wakeupError = upstreamError(429, 'text/plain; charset=utf-8')
-    const delays: number[] = []
     let attempts = 0
 
     await expect(
@@ -160,15 +213,13 @@ describe('fetchWithRenderWakeupRetry', () => {
           throw wakeupError
         },
         {
-          sleep: async (delayMs) => {
-            delays.push(delayMs)
-          },
+          maxAttempts: 3,
+          sleep: async () => {},
         },
       ),
     ).rejects.toBe(wakeupError)
 
-    expect(attempts).toBe(7)
-    expect(delays).toEqual([2_000, 4_000, 8_000, 16_000, 30_000, 30_000])
+    expect(attempts).toBe(3)
   })
 
   it('uses capped exponential delays between wake-up attempts', async () => {

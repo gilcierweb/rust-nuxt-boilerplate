@@ -17,6 +17,10 @@ export default defineConfig({
       // vitest runs outside the Nitro runtime, so we resolve it explicitly
       // from the pnpm virtual store so server utility tests can import it.
       'h3': resolve(__dirname, 'node_modules/.pnpm/h3@1.15.11/node_modules/h3'),
+      // ofetch is provided transitively by Nuxt/Nitro and supplies the global
+      // $fetch used by the server routes. Resolve the installed version for
+      // tests that exercise its real retry behavior.
+      'ofetch': resolve(__dirname, 'node_modules/.pnpm/ofetch@1.5.1/node_modules/ofetch'),
     },
   },
   test: {

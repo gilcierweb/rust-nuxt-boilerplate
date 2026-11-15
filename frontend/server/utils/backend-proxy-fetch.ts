@@ -5,9 +5,15 @@ import {
 } from 'h3'
 
 import {
-  fetchWithRenderWakeupRetry,
+  BackendHealthProbeExhaustedError,
+  createBackendWakeupState,
+  isBackendHealthProbeExhaustedError,
   isRenderWakeupError,
+  waitForBackendHealth,
+  type BackendWakeupState,
 } from '~~/server/utils/backend-wakeup'
+
+export const BACKEND_REQUEST_MAX_ATTEMPTS = 3
 
 export const BACKEND_FETCH_RETRY_STATUS_CODES = [
   408,
@@ -34,6 +40,10 @@ export interface BackendFetchOptions {
   method: BackendFetchMethod
   headers: Headers
   body?: unknown
+  credentials?: RequestCredentials
+  ignoreResponseError?: boolean
+  retry?: number
+  retryStatusCodes?: readonly number[]
 }
 
 export interface BackendRawResponse<T = unknown> {
@@ -61,7 +71,7 @@ function backendHealthUrl(backendApiBase: string): string {
     return `${normalizedBase}/health`
   }
 
-  return `${normalizedBase}/api/v1/health`
+  return `${normalizedBase}/health`
 }
 
 async function fetchBackendRaw<T>(
@@ -73,8 +83,12 @@ async function fetchBackendRaw<T>(
     headers: options.headers,
     body: options.body as BodyInit | undefined,
     redirect: 'manual',
-    credentials: 'include',
-    retryStatusCodes: [...BACKEND_FETCH_RETRY_STATUS_CODES],
+    credentials: options.credentials ?? 'include',
+    ignoreResponseError: options.ignoreResponseError,
+    ...(options.retry === undefined ? {} : { retry: options.retry }),
+    retryStatusCodes: options.retryStatusCodes
+      ? [...options.retryStatusCodes]
+      : [...BACKEND_FETCH_RETRY_STATUS_CODES],
   })
 
   return response as BackendRawResponse<T>
@@ -84,31 +98,45 @@ export async function fetchBackendWithRenderWakeupRetry<T = unknown>(
   targetUrl: string,
   backendApiBase: string,
   options: BackendFetchOptions,
+  wakeupState: BackendWakeupState = createBackendWakeupState(),
 ): Promise<BackendRawResponse<T>> {
-  const waitUntilReady = async () => {
-    await fetchWithRenderWakeupRetry(
-      () => fetchBackendRaw(
-        backendHealthUrl(backendApiBase),
-        {
-          method: 'GET',
-          headers: new Headers({ accept: 'application/json' }),
-        },
-      ),
-      {
-        maxAttempts: 4,
-        initialDelayMs: 2_000,
-        maxDelayMs: 8_000,
-      },
-    )
+  let originalAttempt = 0
+
+  while (originalAttempt < BACKEND_REQUEST_MAX_ATTEMPTS) {
+    originalAttempt += 1
+
+    try {
+      return await fetchBackendRaw<T>(targetUrl, options)
+    } catch (error) {
+      if (!isRenderWakeupError(error)) {
+        throw error
+      }
+
+      if (originalAttempt >= BACKEND_REQUEST_MAX_ATTEMPTS) {
+        throw error
+      }
+
+      if (!wakeupState.healthReady) {
+        await waitForBackendHealth(
+          () => fetchBackendRaw(
+            backendHealthUrl(backendApiBase),
+            {
+              method: 'GET',
+              headers: new Headers({ accept: 'application/json' }),
+              credentials: 'omit',
+              ignoreResponseError: true,
+              retry: 0,
+              retryStatusCodes: [],
+            },
+          ),
+          { budget: wakeupState.healthBudget },
+        )
+        wakeupState.healthReady = true
+      }
+    }
   }
 
-  return fetchWithRenderWakeupRetry(
-    () => fetchBackendRaw<T>(targetUrl, options),
-    {
-      maxAttempts: 3,
-      waitUntilReady,
-    },
-  )
+  throw new Error('Backend request attempts exhausted')
 }
 
 export function mapBackendWakeupExhaustion(
@@ -116,7 +144,10 @@ export function mapBackendWakeupExhaustion(
   error: unknown,
   context: BackendRequestContext,
 ): BackendUnavailableResponse | null {
-  if (!isRenderWakeupError(error)) {
+  if (
+    !isRenderWakeupError(error)
+    && !isBackendHealthProbeExhaustedError(error)
+  ) {
     return null
   }
 
