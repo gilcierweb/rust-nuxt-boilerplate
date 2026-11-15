@@ -934,6 +934,14 @@ async fn password_change_revokes_existing_access_tokens() {
     });
     assert_eq!(resp.status(), 200, "token must work before change-password");
 
+    // The credential epoch is recorded in whole seconds and the token's iat
+    // is compared against it with a strict less-than, so a change landing in
+    // the same second as the login would not revoke the token (the check
+    // treats them as simultaneous). Cross a second boundary first: a fast
+    // runner completes this whole flow in milliseconds, which would make the
+    // assertion below flaky on exactly that edge.
+    tokio::time::sleep(std::time::Duration::from_millis(1_100)).await;
+
     // --- Change password ---
     let resp = test::call_service(
         &app,

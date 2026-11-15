@@ -160,8 +160,16 @@ pub fn hash_token_for_blacklist(token: &str) -> String {
 ///
 /// Tokens issued strictly before the epoch are considered revoked: whoever
 /// holds them acquired them before the credential change that invalidated
-/// every prior session. A token issued at the exact epoch second is still
-/// valid (it postdates the change).
+/// every prior session.
+///
+/// The comparison is deliberately strict. Both sides carry whole-second
+/// precision, so a token minted in the same second as the change is
+/// indistinguishable from one minted after it, and treating equality as
+/// revoked would also kill the fresh login a user performs right after
+/// changing their own password (the token would be born rejected and stay
+/// so until the epoch TTL expires). Closing that one-second ambiguity
+/// completely requires an epoch counter stamped into the claims at mint
+/// time instead of an iat comparison.
 pub fn is_token_revoked_by_epoch(iat: usize, epoch: Option<u64>) -> bool {
     epoch.is_some_and(|e| (iat as u64) < e)
 }
