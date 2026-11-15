@@ -45,7 +45,10 @@ jobs:
   backend-build-debug:
     name: Backend Build (debug)
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # Compiles the workspace from a cold cache whenever a dependency or
+    # feature changes (which invalidates the Cargo cache), and on the shared
+    # 8-minute budget that cancelled this job before. Keep it wide.
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: ./backend
@@ -81,7 +84,9 @@ jobs:
   backend-build-release:
     name: Backend Build (release for E2E)
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Release builds run optimizations over the whole dependency tree, so
+    # they are slower than the debug job even when they share its warm cache.
+    timeout-minutes: 15
     needs: [backend-build-debug]  # only needs debug build to exist (cache warm)
     defaults:
       run:
@@ -115,7 +120,9 @@ jobs:
   backend-unit-tests:
     name: Backend Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    # Compiles the test binaries on top of the debug build's cache; on a
+    # cold cache that compile alone has exceeded 8 minutes before.
+    timeout-minutes: 15
     needs: [backend-build-debug]
     defaults:
       run:
