@@ -194,7 +194,16 @@
       "totalRoles": "Total de Roles",
       "totalAuditLogs": "Total de Logs de Auditoria",
       "quickLinks": "Enlaces rápidos",
-      "recentActivity": "Actividad Reciente"
+      "recentActivity": "Actividad Reciente",
+      "subtitle": "Resumen rápido de usuarios, roles y logs de auditoría.",
+      "refresh": "Actualizar",
+      "activityUser": "Usuario",
+      "activityRole": "Rol",
+      "activityAudit": "Auditoría",
+      "chartResourceDistribution": "Distribución de recursos",
+      "chartAuditActions": "Acciones de auditoría por tipo",
+      "chartAuditActivity": "Actividad de auditoría en el tiempo",
+      "auditLogCount": "Logs de auditoría"
     }
   }
 }

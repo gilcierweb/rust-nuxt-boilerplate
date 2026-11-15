@@ -11,14 +11,14 @@
           </div>
           <h1 class="text-3xl font-semibold tracking-tight text-base-content">{{ $t('admin.title') }}</h1>
           <p class="mt-2 max-w-3xl text-sm leading-relaxed text-base-content/60">
-            Monitoramento rápido de usuários, cargos e logs de auditoria.
+            {{ $t('admin.dashboard.subtitle') }}
           </p>
         </div>
 
         <div class="flex flex-wrap gap-2">
           <button type="button" class="btn btn-soft" :disabled="pendingAny" @click="refreshDashboard">
             <span class="icon-[tabler--refresh] size-4.5"></span>
-            Atualizar
+            {{ $t('admin.dashboard.refresh') }}
           </button>
         </div>
       </div>
@@ -37,6 +37,49 @@
         <p class="text-xs font-semibold uppercase tracking-[0.18em] text-base-content/45">{{ $t('admin.dashboard.totalAuditLogs') }}</p>
         <p class="mt-2 text-2xl font-semibold text-base-content">{{ stats.totalAuditLogs }}</p>
       </div>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-2">
+      <div class="rounded-box border border-base-content/10 bg-base-100 p-5 shadow-md shadow-base-content/5">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold text-base-content">{{ $t('admin.dashboard.chartResourceDistribution') }}</h2>
+        </div>
+        <DonutChart
+          :data="resourceDistribution"
+          :categories="donutCategories"
+          name-key="name"
+          value-key="value"
+          :height="260"
+          empty-label="—"
+        />
+      </div>
+
+      <div class="rounded-box border border-base-content/10 bg-base-100 p-5 shadow-md shadow-base-content/5">
+        <div class="mb-4 flex items-center justify-between gap-3">
+          <h2 class="text-lg font-semibold text-base-content">{{ $t('admin.dashboard.chartAuditActions') }}</h2>
+        </div>
+        <BarChart
+          :data="auditActionCounts"
+          :categories="barCategories"
+          :y-axis="['count']"
+          x-axis="action"
+          :height="260"
+          empty-label="—"
+        />
+      </div>
+    </div>
+
+    <div class="rounded-box border border-base-content/10 bg-base-100 p-5 shadow-md shadow-base-content/5">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold text-base-content">{{ $t('admin.dashboard.chartAuditActivity') }}</h2>
+      </div>
+      <LineChart
+        :data="auditByDay"
+        :categories="lineCategories"
+        x-axis="date"
+        :height="260"
+        empty-label="—"
+      />
     </div>
 
     <div class="grid gap-6 xl:grid-cols-3">
@@ -119,7 +162,7 @@ const breadcrumbItems = computed(() => [{ label: t('admin.common.dashboard') }])
 
 const usersFetch = await useApiFetch<any>('/admin/users', { key: 'admin-dashboard-users', server: true, default: () => [] })
 const rolesFetch = await useApiFetch<any>('/admin/roles', { key: 'admin-dashboard-roles', server: true, default: () => [] })
-const auditLogsFetch = await useApiFetch<any>('/admin/audit-logs', { key: 'admin-dashboard-audit-logs', server: true, default: () => [] })
+const auditLogsFetch = await useApiFetch<any>('/admin/audit-logs', { key: 'admin-dashboard-audit-logs', server: true, default: () => [], query: { per_page: 100 } })
 
 const users = computed<any[]>(() => normalizeResourceResponse(usersFetch.data.value))
 const roles = computed<any[]>(() => normalizeResourceResponse(rolesFetch.data.value))
@@ -151,25 +194,79 @@ const stats = computed(() => {
   }
 })
 
+const auditActionCounts = computed(() => {
+  const counts = new Map<string, number>()
+
+  for (const item of auditLogs.value) {
+    const action = String(item?.action || 'unknown')
+    counts.set(action, (counts.get(action) ?? 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .slice(0, 6)
+    .map(([action, count]) => ({ action, count }))
+})
+
+const auditByDay = computed(() => {
+  const counts = new Map<string, number>()
+
+  for (const item of auditLogs.value) {
+    const rawDate = item?.created_at
+    if (!rawDate) continue
+
+    const date = new Date(rawDate)
+    if (Number.isNaN(date.getTime())) continue
+
+    const key = date.toISOString().slice(0, 10)
+    counts.set(key, (counts.get(key) ?? 0) + 1)
+  }
+
+  return [...counts.entries()]
+    .sort((left, right) => left[0].localeCompare(right[0]))
+    .slice(-14)
+    .map(([date, count]) => ({ date, count }))
+})
+
+const resourceDistribution = computed(() => ([
+  { name: 'users', value: stats.value.totalUsers },
+  { name: 'roles', value: stats.value.totalRoles },
+  { name: 'auditLogs', value: stats.value.totalAuditLogs },
+]))
+
+const donutCategories = computed(() => ({
+  users: { name: t('admin.dashboard.totalUsers') },
+  roles: { name: t('admin.dashboard.totalRoles') },
+  auditLogs: { name: t('admin.dashboard.totalAuditLogs') },
+}))
+
+const barCategories = computed(() => ({
+  count: { name: t('admin.dashboard.auditLogCount') },
+}))
+
+const lineCategories = computed(() => ({
+  count: { name: t('admin.dashboard.auditLogCount') },
+}))
+
 const recentActivity = computed(() => {
   const userActivity = users.value.slice(0, 3).map((item) => ({
     key: `user-${item.id}`,
     date: item.updated_at || item.created_at,
-    title: 'Usuário',
+    title: t('admin.dashboard.activityUser'),
     description: `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.email || item.id,
   }))
 
   const roleActivity = roles.value.slice(0, 3).map((item) => ({
     key: `role-${item.id}`,
     date: item.updated_at || item.created_at,
-    title: 'Cargo',
+    title: t('admin.dashboard.activityRole'),
     description: item.name || item.id,
   }))
 
   const auditActivity = auditLogs.value.slice(0, 3).map((item) => ({
     key: `audit-${item.id}`,
     date: item.created_at,
-    title: 'Auditoria',
+    title: t('admin.dashboard.activityAudit'),
     description: `${item.action} - ${item.resource_type || ''}`.trim(),
   }))
 

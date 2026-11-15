@@ -20,7 +20,7 @@ export default defineNuxtConfig({
     ],
   },
 
-  modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', 'nuxt-security', '@vee-validate/nuxt'],
+  modules: ['@pinia/nuxt', 'pinia-plugin-persistedstate/nuxt', '@nuxtjs/i18n', '@vite-pwa/nuxt', 'nuxt-security', '@vee-validate/nuxt', 'nuxt-charts'],
 
   app: {
     head: {
