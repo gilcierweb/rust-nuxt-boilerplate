@@ -92,6 +92,12 @@ impl CsrfProtection {
             "/api/v1/auth/register/".to_string(),
             "/api/v1/auth/recover".to_string(),
             "/api/v1/auth/recover/".to_string(),
+            // The semantic alias of recover: unauthenticated, changes no
+            // session state, and the SPA calls it before any CSRF cookie
+            // exists (the page is served by the frontend), so it must be
+            // excluded exactly like recover itself.
+            "/api/v1/auth/forgot-password".to_string(),
+            "/api/v1/auth/forgot-password/".to_string(),
             "/api/v1/auth/reset".to_string(),
             "/api/v1/auth/reset/".to_string(),
             "/api/v1/auth/confirm".to_string(),

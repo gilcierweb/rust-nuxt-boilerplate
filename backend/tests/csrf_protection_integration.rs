@@ -210,6 +210,31 @@ async fn excluded_path_skips_csrf() {
 }
 
 #[actix_web::test]
+async fn forgot_password_alias_skips_csrf() {
+    // The recover alias must carry the same CSRF exemption as recover: the
+    // forgot-password page is served by the frontend, so a browser reaching
+    // the endpoint has no CSRF cookie yet and a check would 403 the request.
+    let config = make_config();
+    let app = test::init_service(
+        App::new().app_data(web::Data::new(config)).service(
+            web::scope("/api/v1")
+                .wrap(CsrfProtection::new(vec![]))
+                .route(
+                    "/auth/forgot-password",
+                    web::post().to(state_changing_handler),
+                ),
+        ),
+    )
+    .await;
+
+    let req = test::TestRequest::post()
+        .uri("/api/v1/auth/forgot-password")
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(resp.status(), StatusCode::OK);
+}
+
+#[actix_web::test]
 async fn get_request_sets_csrf_cookie() {
     let config = make_config();
     let app = test::init_service(
