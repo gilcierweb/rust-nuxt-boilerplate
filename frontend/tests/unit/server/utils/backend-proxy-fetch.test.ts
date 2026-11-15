@@ -103,7 +103,7 @@ describe('fetchBackendWithRenderWakeupRetry with real ofetch', () => {
       const attempt = (attemptsByUrl.get(url) ?? 0) + 1
       attemptsByUrl.set(url, attempt)
 
-      if (url === 'https://backend.example/api/v1/health') {
+      if (url === 'https://backend.example/health' || url === 'https://backend.example/api/v1/health') {
         return jsonResponse(200, { status: 'ok' })
       }
 
@@ -140,7 +140,7 @@ describe('fetchBackendWithRenderWakeupRetry with real ofetch', () => {
 
     expect(requestedUrls).toEqual([
       'https://backend.example/api/v1/items',
-      'https://backend.example/api/v1/health',
+      'https://backend.example/health',
       'https://backend.example/api/v1/items',
       'https://backup.example/api/v1/items',
       'https://backup.example/api/v1/items',
@@ -164,13 +164,18 @@ describe('fetchBackendWithRenderWakeupRetry with real ofetch', () => {
         return jsonResponse(200, { status: 'ok' })
       }
 
-      if (url === 'https://backend.example/api/v1/health') {
+      if (url === 'https://backend.example/health' || url === 'https://backend.example/api/v1/health') {
+        const rawHealthCalls = healthAttempts.filter((value) => value === 'https://backend.example/health').length
         healthAttempts.push(url)
-        if (healthAttempts.length === 1) {
+        if (url === 'https://backend.example/health' && rawHealthCalls === 0) {
           throw new TypeError('fetch failed')
         }
 
-        return jsonResponse(200, { status: 'ok' })
+        if (url === 'https://backend.example/health') {
+          return jsonResponse(200, { status: 'ok' })
+        }
+
+        return jsonResponse(503, { status: 'unavailable' })
       }
 
       throw new Error(`Unexpected URL: ${url}`)
@@ -190,8 +195,9 @@ describe('fetchBackendWithRenderWakeupRetry with real ofetch', () => {
 
     expect(requestedUrls).toEqual([
       'https://backend.example/api/v1/items',
+      'https://backend.example/health',
       'https://backend.example/api/v1/health',
-      'https://backend.example/api/v1/health',
+      'https://backend.example/health',
       'https://backend.example/api/v1/items',
     ])
     expect(response.status).toBe(200)

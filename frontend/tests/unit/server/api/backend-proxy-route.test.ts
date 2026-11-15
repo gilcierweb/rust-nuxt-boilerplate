@@ -191,7 +191,7 @@ describe('backend proxy route', () => {
 
     expect(mocks.rawFetch).toHaveBeenCalledTimes(3)
     expect(mocks.rawFetch.mock.calls[1][0]).toBe(
-      'https://backend.example/api/v1/health',
+      'https://backend.example/health',
     )
     expect(mocks.rawFetch.mock.calls[1][1].headers.has('x-api-key')).toBe(false)
     expect(mocks.rawFetch.mock.calls[1][1].headers.has('authorization')).toBe(false)
@@ -223,8 +223,8 @@ describe('backend proxy route', () => {
     const healthCalls = mocks.rawFetch.mock.calls.filter(([url]) =>
       String(url).endsWith('/health'),
     )
-    expect(mocks.rawFetch).toHaveBeenCalledTimes(5)
-    expect(healthCalls).toHaveLength(4)
+    expect(mocks.rawFetch).toHaveBeenCalledTimes(9)
+    expect(healthCalls).toHaveLength(8)
     expect(response.error.code).toBe('BACKEND_UNAVAILABLE')
     expect(mocks.setResponseStatus).toHaveBeenLastCalledWith(event, 503)
     expect(mocks.setResponseHeader).toHaveBeenLastCalledWith(
@@ -426,7 +426,7 @@ describe('backend proxy route', () => {
 
     expect(mocks.rawFetch).toHaveBeenCalledTimes(3)
     expect(mocks.rawFetch.mock.calls[1][0]).toBe(
-      'https://backend.example/api/v1/health',
+      'https://backend.example/health',
     )
     expect(mocks.rawFetch.mock.calls[1][1].credentials).toBe('omit')
     expect(response).toEqual(expectedResponse)
@@ -460,7 +460,7 @@ describe('backend proxy route', () => {
 
     expect(mocks.rawFetch).toHaveBeenCalledTimes(3)
     expect(mocks.rawFetch.mock.calls[1][0]).toBe(
-      'https://backend.example/api/v1/health',
+      'https://backend.example/health',
     )
     expect(mocks.rawFetch.mock.calls[1][1].credentials).toBe('omit')
     expect(response).toEqual(expectedResponse)
@@ -480,7 +480,7 @@ describe('backend proxy route', () => {
       error: { code: string }
     }
 
-    expect(mocks.rawFetch).toHaveBeenCalledTimes(5)
+    expect(mocks.rawFetch).toHaveBeenCalledTimes(9)
     expect(response.error.code).toBe('BACKEND_UNAVAILABLE')
     expect(mocks.setResponseStatus).toHaveBeenLastCalledWith(event, 503)
     expect(mocks.setResponseHeader).toHaveBeenLastCalledWith(
@@ -542,7 +542,7 @@ describe('backend proxy route', () => {
   it('reuses readiness across fallback URLs in the same request', async () => {
     const attempts = new Map<string, number>()
     mocks.rawFetch.mockImplementation(async (url: string) => {
-      if (url === 'https://backend.example/api/v1/health') {
+      if (url === 'https://backend.example/health' || url === 'https://backend.example/api/v1/health') {
         return successfulResponse({ status: 'ok' }, 200)
       }
 

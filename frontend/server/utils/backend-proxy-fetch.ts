@@ -65,13 +65,20 @@ export interface BackendUnavailableResponse {
   }
 }
 
-function backendHealthUrl(backendApiBase: string): string {
+function backendHealthUrls(backendApiBase: string): string[] {
   const normalizedBase = backendApiBase.replace(/\/+$/, '')
+
+  // Probe both health bases so a cold Render instance is detected as soon
+  // as the process is up (raw liveness, fast) while still allowing the
+  // versioned readiness endpoint (DB + Redis) to gate full readiness.
+  // The raw liveness endpoint is tried first because it returns 200 the
+  // moment the process boots, before dependencies are connected.
   if (/\/api\/v\d+$/i.test(normalizedBase)) {
-    return `${normalizedBase}/health`
+    const hostRoot = normalizedBase.replace(/\/api\/v\d+$/i, '')
+    return [...new Set([`${hostRoot}/health`, `${normalizedBase}/health`])]
   }
 
-  return `${normalizedBase}/health`
+  return [`${normalizedBase}/health`]
 }
 
 async function fetchBackendRaw<T>(
@@ -117,18 +124,39 @@ export async function fetchBackendWithRenderWakeupRetry<T = unknown>(
       }
 
       if (!wakeupState.healthReady) {
+        const healthUrls = backendHealthUrls(backendApiBase)
         await waitForBackendHealth(
-          () => fetchBackendRaw(
-            backendHealthUrl(backendApiBase),
-            {
-              method: 'GET',
-              headers: new Headers({ accept: 'application/json' }),
-              credentials: 'omit',
-              ignoreResponseError: true,
-              retry: 0,
-              retryStatusCodes: [],
-            },
-          ),
+          async () => {
+            let lastResponse: BackendRawResponse<unknown> | undefined
+            let lastError: unknown
+            for (const healthUrl of healthUrls) {
+              try {
+                const response = await fetchBackendRaw<unknown>(
+                  healthUrl,
+                  {
+                    method: 'GET',
+                    headers: new Headers({ accept: 'application/json' }),
+                    credentials: 'omit',
+                    ignoreResponseError: true,
+                    retry: 0,
+                    retryStatusCodes: [],
+                  },
+                )
+                if (response.status === 200) {
+                  return response
+                }
+                lastResponse = response
+              } catch (error) {
+                lastError = error
+              }
+            }
+            if (lastResponse) {
+              return lastResponse
+            }
+            throw (lastError instanceof Error
+              ? lastError
+              : new Error('Backend health probe failed'))
+          },
           { budget: wakeupState.healthBudget },
         )
         wakeupState.healthReady = true
