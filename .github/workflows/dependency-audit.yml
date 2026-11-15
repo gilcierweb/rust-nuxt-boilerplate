@@ -41,12 +41,14 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
           version: 12.11.2
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        # v5 is pinned on purpose: v6+ ("Limit automatic caching to npm")
+        # dropped built-in caching for pnpm, which this workflow relies on.
+        uses: actions/setup-node@v5
         with:
           node-version: '20'
           cache: 'pnpm'
