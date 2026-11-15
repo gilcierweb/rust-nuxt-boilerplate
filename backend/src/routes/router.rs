@@ -87,7 +87,11 @@ use crate::middleware::stripe_webhook_verifier::StripeWebhookVerifier;
 ///   This prevents leaking internal route documentation, request/response
 ///   schemas, and auth scheme details to unauthenticated callers in
 ///   internet-facing environments.
-pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
+pub fn config(
+    cfg: &mut web::ServiceConfig,
+    redis_pool: deadpool_redis::Pool,
+    metrics: std::sync::Arc<crate::services::metrics_service::MetricsRegistry>,
+) {
     // Redis-backed revocation store shared by every JwtAuth scope:
     // per-token blacklist (logout) + per-user credential epoch
     // (password/2FA change). One instance, stateless — safe to share.
@@ -150,7 +154,8 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
             .wrap(crate::middleware::rate_limit_middleware::RateLimiter::new(
                 redis_pool.clone(),
                 crate::middleware::rate_limit_middleware::RATE_API,
-            ))
+            )
+            .with_metrics(Some(metrics.clone())))
             // API Key auth - for service-to-service (registered last =
             // outermost = executes first, before rate limiting below)
             // NOTE: /metrics is intentionally NOT in this exempt list.
@@ -210,7 +215,8 @@ pub fn config(cfg: &mut web::ServiceConfig, redis_pool: deadpool_redis::Pool) {
                     .wrap(crate::middleware::rate_limit_middleware::RateLimiter::default_only(
                         redis_pool.clone(),
                         crate::middleware::rate_limit_middleware::RATE_AUTH,
-                    ))
+                    )
+                    .with_metrics(Some(metrics.clone())))
                     .wrap(crate::middleware::auth::JwtAuth::new(
                         crate::middleware::auth_middleware::JwtAuthConfig::bearer_exempt()
                             .with_token_blacklist(token_blacklist.clone()),

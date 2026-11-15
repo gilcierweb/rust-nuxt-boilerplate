@@ -94,6 +94,14 @@ struct RouteMetric {
     histogram: DurationHistogram,
 }
 
+/// Count of responses that finished with one status, for one normalized route.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RouteRejection {
+    pub method: String,
+    pub path: String,
+    pub count: u64,
+}
+
 impl RouteMetric {
     fn new() -> Self {
         Self {
@@ -151,11 +159,24 @@ struct SystemMeasures {
     cpu_usage_percent: f32,
 }
 
+/// State and transition counters of one circuit breaker instance.
+///
+/// Written only when the breaker changes state, never on the hot path.
+#[derive(Debug, Default, Clone)]
+struct CircuitBreakerMetrics {
+    /// 0 for closed, 1 for open.
+    state: u8,
+    /// How many times the breaker opened since boot.
+    opened_total: u64,
+    /// Accumulated time spent open, in seconds, since boot.
+    open_seconds_total: f64,
+}
+
 // ---------------------------------------------------------------------------
 // Metrics registry
 // ---------------------------------------------------------------------------
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct MetricsRegistry {
     // HTTP request counters (existing)
     total_requests: AtomicU64,
@@ -176,6 +197,11 @@ pub struct MetricsRegistry {
     db_query_timing: Mutex<ProbeMetrics>,
     redis_op_timing: Mutex<ProbeMetrics>,
     system_measures: Mutex<SystemMeasures>,
+    circuit_breakers: Mutex<HashMap<String, CircuitBreakerMetrics>>,
+    /// Last measured share of rate-limited responses, stored as f64 bits.
+    rejected_share_bits: AtomicU64,
+    /// How many share-threshold alerts were emitted since boot.
+    rejected_share_alerts: AtomicU64,
 }
 
 impl MetricsRegistry {
@@ -388,6 +414,84 @@ impl MetricsRegistry {
 
     // ---- Prometheus render (now with histogram, baselines, system metrics) ----
 
+    // ---- Share accessors (read side for the alert watchdog) ----
+
+    /// Total requests recorded since boot.
+    pub fn total_requests(&self) -> u64 {
+        self.total_requests.load(Ordering::Relaxed)
+    }
+
+    /// Requests that finished with the given status since boot.
+    pub fn rejected_by_status(&self, status: u16) -> u64 {
+        match self.per_status.lock() {
+            Ok(per_status) => per_status.get(&status).copied().unwrap_or(0),
+            Err(_) => 0,
+        }
+    }
+
+    /// Per-route counts for the given status, ordered by count descending and
+    /// then by method and path, so every caller sees a deterministic list.
+    pub fn route_rejections(&self, status: u16) -> Vec<RouteRejection> {
+        let Ok(per_route_status) = self.per_route_status.lock() else {
+            return Vec::new();
+        };
+        let mut routes: Vec<RouteRejection> = per_route_status
+            .iter()
+            .filter(|((_, _, route_status), metric)| *route_status == status && metric.requests > 0)
+            .map(|((method, path, _), metric)| RouteRejection {
+                method: method.clone(),
+                path: path.clone(),
+                count: metric.requests,
+            })
+            .collect();
+        routes.sort_by(|left, right| {
+            right
+                .count
+                .cmp(&left.count)
+                .then_with(|| left.method.cmp(&right.method))
+                .then_with(|| left.path.cmp(&right.path))
+        });
+        routes
+    }
+
+    // ---- Rejected-share gauges (written by the alert watchdog) ----
+
+    /// Publish the share of rate-limited responses measured on the last pass.
+    pub fn record_429_share(&self, share: f64) {
+        self.rejected_share_bits
+            .store(share.to_bits(), Ordering::Relaxed);
+    }
+
+    /// Count one emitted threshold alert.
+    pub fn record_429_alert_emitted(&self) {
+        self.rejected_share_alerts.fetch_add(1, Ordering::Relaxed);
+    }
+
+    // ---- Circuit breakers ----
+
+    /// Record a breaker opening. Called by the breaker only on the closed to
+    /// open transition, so the request path never pays for it.
+    pub fn record_circuit_breaker_opened(&self, breaker: &str) {
+        if let Ok(mut breakers) = self.circuit_breakers.lock() {
+            let entry = breakers.entry(breaker.to_owned()).or_default();
+            if entry.state == 0 {
+                entry.opened_total += 1;
+            }
+            entry.state = 1;
+        }
+    }
+
+    /// Record a breaker closing, accumulating how long it stayed open.
+    pub fn record_circuit_breaker_closed(&self, breaker: &str, open_duration: Duration) {
+        if let Ok(mut breakers) = self.circuit_breakers.lock() {
+            let entry = breakers.entry(breaker.to_owned()).or_default();
+            if entry.state == 1 {
+                entry.open_seconds_total += open_duration.as_secs_f64();
+            }
+            entry.state = 0;
+        }
+    }
+
     pub fn render_prometheus(&self) -> String {
         let mut output = String::with_capacity(4096);
 
@@ -592,6 +696,56 @@ impl MetricsRegistry {
         output.push_str(&format!(
             "process_cpu_usage_percent {:.2}\n",
             self.cpu_usage_percent()
+        ));
+
+        // --- Circuit breakers (state and transitions) ---
+        if let Ok(breakers) = self.circuit_breakers.lock() {
+            let mut names: Vec<&String> = breakers.keys().collect();
+            names.sort();
+            for name in names {
+                let entry = &breakers[name];
+                output.push_str(
+                    "# HELP circuit_breaker_state Circuit breaker state (0 closed, 1 open).\n",
+                );
+                output.push_str("# TYPE circuit_breaker_state gauge\n");
+                output.push_str(&format!(
+                    "circuit_breaker_state{{breaker=\"{}\"}} {}\n",
+                    escape_label(name),
+                    entry.state
+                ));
+                output.push_str(
+                    "# HELP circuit_breaker_opened_total Circuit breaker openings since boot.\n",
+                );
+                output.push_str("# TYPE circuit_breaker_opened_total counter\n");
+                output.push_str(&format!(
+                    "circuit_breaker_opened_total{{breaker=\"{}\"}} {}\n",
+                    escape_label(name),
+                    entry.opened_total
+                ));
+                output.push_str("# HELP circuit_breaker_open_seconds_total Accumulated open duration in seconds since boot.\n");
+                output.push_str("# TYPE circuit_breaker_open_seconds_total counter\n");
+                output.push_str(&format!(
+                    "circuit_breaker_open_seconds_total{{breaker=\"{}\"}} {}\n",
+                    escape_label(name),
+                    entry.open_seconds_total
+                ));
+            }
+        }
+
+        // --- Rate-limit rejection share (written by the alert watchdog) ---
+        output.push_str("# HELP rate_limit_429_share Share of requests refused by the rate limiter on the last measured window.\n");
+        output.push_str("# TYPE rate_limit_429_share gauge\n");
+        output.push_str(&format!(
+            "rate_limit_429_share {:.6}\n",
+            f64::from_bits(self.rejected_share_bits.load(Ordering::Relaxed))
+        ));
+
+        output
+            .push_str("# HELP rate_limit_429_alerts_total Threshold alerts emitted since boot.\n");
+        output.push_str("# TYPE rate_limit_429_alerts_total counter\n");
+        output.push_str(&format!(
+            "rate_limit_429_alerts_total {}\n",
+            self.rejected_share_alerts.load(Ordering::Relaxed)
         ));
 
         output
@@ -893,5 +1047,70 @@ mod tests {
         registry.record_db_query(Duration::from_millis(30));
         let avg = registry.db_query_avg_ms().unwrap();
         assert!((avg - 20.0).abs() < 0.01, "Avg should be 20ms, got {}", avg);
+    }
+
+    #[test]
+    fn render_prometheus_reports_circuit_breaker_transitions() {
+        let registry = MetricsRegistry::new();
+
+        registry.record_circuit_breaker_opened("rate_limit_redis");
+        let opened_payload = registry.render_prometheus();
+        assert!(
+            opened_payload.contains("circuit_breaker_state{breaker=\"rate_limit_redis\"} 1"),
+            "the open state must reach the payload"
+        );
+        assert!(
+            opened_payload.contains("circuit_breaker_opened_total{breaker=\"rate_limit_redis\"} 1"),
+            "the opening must be counted"
+        );
+
+        registry.record_circuit_breaker_closed("rate_limit_redis", Duration::from_secs(30));
+        let closed_payload = registry.render_prometheus();
+        assert!(
+            closed_payload.contains("circuit_breaker_state{breaker=\"rate_limit_redis\"} 0"),
+            "the closed state must reach the payload"
+        );
+        assert!(
+            closed_payload
+                .contains("circuit_breaker_open_seconds_total{breaker=\"rate_limit_redis\"} 30"),
+            "the time spent open must accumulate"
+        );
+    }
+
+    #[test]
+    fn share_accessors_report_rejections_by_status_and_route() {
+        let registry = MetricsRegistry::new();
+        registry.record("POST", "/api/v1/auth/login", 200, Duration::from_millis(5));
+        registry.record("POST", "/api/v1/auth/login", 200, Duration::from_millis(5));
+        registry.record("POST", "/api/v1/auth/login", 429, Duration::from_millis(5));
+        registry.record("GET", "/api/v1/admin/roles", 429, Duration::from_millis(5));
+
+        assert_eq!(registry.total_requests(), 4);
+        assert_eq!(registry.rejected_by_status(429), 2);
+
+        let routes = registry.route_rejections(429);
+        assert_eq!(routes.len(), 2, "one entry per distinct route");
+        assert!(
+            routes.iter().all(|route| route.count == 1),
+            "each route kept its own count: {:?}",
+            routes
+        );
+    }
+
+    #[test]
+    fn render_prometheus_reports_the_rejected_share_and_alert_count() {
+        let registry = MetricsRegistry::new();
+        registry.record_429_share(0.125);
+        registry.record_429_alert_emitted();
+
+        let payload = registry.render_prometheus();
+        assert!(
+            payload.contains("rate_limit_429_share 0.125000"),
+            "the last measured share must reach the payload"
+        );
+        assert!(
+            payload.contains("rate_limit_429_alerts_total 1"),
+            "the alert must be counted"
+        );
     }
 }

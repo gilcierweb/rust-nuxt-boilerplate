@@ -16,8 +16,12 @@ use serde_json::json;
 use crate::AppState;
 use crate::middleware::auth::{Claims, RateLimitCategory, rate_limit_category};
 use crate::repositories::container::AppContainer;
+use crate::services::metrics_service::MetricsRegistry;
 
 const CSRF_COOKIE_NAME: &str = "csrf_token";
+
+/// Name the rate limiter's Redis breaker is published under in the metrics.
+const REDIS_BREAKER_NAME: &str = "rate_limit_redis";
 
 /// Rate limit configuration.
 ///
@@ -152,16 +156,32 @@ pub struct RedisCircuitBreaker {
     opened_at: std::sync::Mutex<Option<Instant>>,
     /// How long to stay open before retrying (default: 30s)
     reset_timeout: Duration,
+    /// Metrics sink for state transitions. Absent in tests and in
+    /// limiters built without a registry; the request path never reads it.
+    metrics: Option<Arc<MetricsRegistry>>,
 }
 
 impl RedisCircuitBreaker {
+    /// Consecutive Redis failures that open the circuit by default.
+    pub const DEFAULT_FAILURE_THRESHOLD: u64 = 5;
+    /// How long the open circuit refuses work before a retry, by default.
+    pub const DEFAULT_RESET_TIMEOUT: Duration = Duration::from_secs(30);
+
     pub fn new(failure_threshold: u64, reset_timeout: Duration) -> Self {
         Self {
             consecutive_failures: AtomicU64::new(0),
             failure_threshold,
             opened_at: std::sync::Mutex::new(None),
             reset_timeout,
+            metrics: None,
         }
+    }
+
+    /// Attach the metrics registry. Called on transitions only, so this
+    /// costs the hot path nothing.
+    pub fn with_metrics(mut self, metrics: Option<Arc<MetricsRegistry>>) -> Self {
+        self.metrics = metrics;
+        self
     }
 
     /// Check if the circuit is open (should fail open).
@@ -186,7 +206,10 @@ impl RedisCircuitBreaker {
     pub fn record_success(&self) {
         self.consecutive_failures.store(0, Ordering::Relaxed);
         let mut opened_at = self.opened_at.lock().unwrap();
-        *opened_at = None;
+        let was_open_since = std::mem::take(&mut *opened_at);
+        if let (Some(metrics), Some(was_open_since)) = (self.metrics.as_ref(), was_open_since) {
+            metrics.record_circuit_breaker_closed(REDIS_BREAKER_NAME, was_open_since.elapsed());
+        }
     }
 
     /// Record a Redis failure.
@@ -205,6 +228,9 @@ impl RedisCircuitBreaker {
                     reset_timeout_secs = self.reset_timeout.as_secs(),
                     "Rate limiter circuit breaker opened due to consecutive Redis failures"
                 );
+                if let Some(metrics) = self.metrics.as_ref() {
+                    metrics.record_circuit_breaker_opened(REDIS_BREAKER_NAME);
+                }
                 *opened_at = Some(Instant::now());
             }
         }
@@ -213,7 +239,7 @@ impl RedisCircuitBreaker {
 
 impl Default for RedisCircuitBreaker {
     fn default() -> Self {
-        Self::new(5, Duration::from_secs(30))
+        Self::new(Self::DEFAULT_FAILURE_THRESHOLD, Self::DEFAULT_RESET_TIMEOUT)
     }
 }
 
@@ -238,9 +264,20 @@ end
 return {current, redis.call('TTL', key)}
 "#;
 
+/// Threshold and reset timeout the limiter builds its breaker with.
+///
+/// Kept so [`RateLimiter::with_metrics`] can attach a registry without
+/// changing what the breaker does.
+#[derive(Debug, Clone, Copy)]
+struct BreakerConfig {
+    failure_threshold: u64,
+    reset_timeout: Duration,
+}
+
 pub struct RateLimiter {
     redis: deadpool_redis::Pool,
     limit: RateLimit,
+    breaker_config: BreakerConfig,
     circuit_breaker: Arc<RedisCircuitBreaker>,
     charge_scope: ChargeScope,
 }
@@ -250,9 +287,26 @@ impl RateLimiter {
         Self {
             redis,
             limit,
+            breaker_config: BreakerConfig {
+                failure_threshold: RedisCircuitBreaker::DEFAULT_FAILURE_THRESHOLD,
+                reset_timeout: RedisCircuitBreaker::DEFAULT_RESET_TIMEOUT,
+            },
             circuit_breaker: Arc::new(RedisCircuitBreaker::default()),
             charge_scope: ChargeScope::All,
         }
+    }
+
+    /// Attach the metrics registry to the breaker. Call it right after
+    /// construction: the breaker carries no history at that point, so it is
+    /// rebuilt from the same thresholds with the registry attached, and the
+    /// request path only pays for the transitions it already detects.
+    pub fn with_metrics(mut self, metrics: Option<Arc<MetricsRegistry>>) -> Self {
+        let config = self.breaker_config;
+        self.circuit_breaker = Arc::new(
+            RedisCircuitBreaker::new(config.failure_threshold, config.reset_timeout)
+                .with_metrics(metrics),
+        );
+        self
     }
 
     /// Rate limiter mounted on a nested scope that already lives under a
@@ -265,6 +319,10 @@ impl RateLimiter {
         Self {
             redis,
             limit,
+            breaker_config: BreakerConfig {
+                failure_threshold: RedisCircuitBreaker::DEFAULT_FAILURE_THRESHOLD,
+                reset_timeout: RedisCircuitBreaker::DEFAULT_RESET_TIMEOUT,
+            },
             circuit_breaker: Arc::new(RedisCircuitBreaker::default()),
             charge_scope: ChargeScope::DefaultOnly,
         }
@@ -280,6 +338,10 @@ impl RateLimiter {
         Self {
             redis,
             limit,
+            breaker_config: BreakerConfig {
+                failure_threshold,
+                reset_timeout,
+            },
             circuit_breaker: Arc::new(RedisCircuitBreaker::new(failure_threshold, reset_timeout)),
             charge_scope: ChargeScope::All,
         }
@@ -1206,6 +1268,37 @@ mod tests {
         assert!(!cb.is_open()); // 2 failures after reset
         cb.record_failure();
         assert!(cb.is_open()); // 3 failures after reset, now open
+    }
+
+    #[test]
+    fn circuit_breaker_reports_transitions_to_the_metrics_registry() {
+        let registry = Arc::new(MetricsRegistry::new());
+        let cb = RedisCircuitBreaker::new(3, Duration::from_secs(30))
+            .with_metrics(Some(registry.clone()));
+
+        cb.record_failure();
+        cb.record_failure();
+        cb.record_failure();
+        let opened = registry.render_prometheus();
+        assert!(
+            opened.contains("circuit_breaker_state{breaker=\"rate_limit_redis\"} 1"),
+            "the opening must reach the metrics"
+        );
+        assert!(
+            opened.contains("circuit_breaker_opened_total{breaker=\"rate_limit_redis\"} 1"),
+            "the opening must be counted"
+        );
+
+        cb.record_success();
+        let closed = registry.render_prometheus();
+        assert!(
+            closed.contains("circuit_breaker_state{breaker=\"rate_limit_redis\"} 0"),
+            "the closing must reach the metrics"
+        );
+        assert!(
+            closed.contains("circuit_breaker_open_seconds_total{breaker=\"rate_limit_redis\"} 0"),
+            "the open duration must accumulate"
+        );
     }
 
     #[test]

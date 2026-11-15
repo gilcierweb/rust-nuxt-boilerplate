@@ -1,3 +1,4 @@
+pub mod alert_watchdog;
 pub mod audit_log_service;
 pub mod audit_log_verifier;
 pub mod auth_service;

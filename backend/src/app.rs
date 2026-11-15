@@ -219,11 +219,12 @@ async fn build_runtime(
     // broadcasts are never delivered to local sockets.
     let ws_state = crate::ws::WsRedisState::new(redis_pool.clone(), crate::ws::WsLimits::default());
 
+    let metrics = Arc::new(crate::services::metrics_service::MetricsRegistry::new());
     let state = web::Data::new(AppState {
         db: db_pool,
         redis: redis_pool,
         config: config.clone(),
-        metrics: Arc::new(crate::services::metrics_service::MetricsRegistry::new()),
+        metrics: metrics.clone(),
         ws: ws_state.clone(),
         // Cache Arc<Vec<JwtSecretKey>> for cheap O(1) clones in JWT middleware.
         // Avoids cloning the full Vec on every authenticated request.
@@ -261,6 +262,18 @@ fn start_background_tasks(
         }
     });
 
+    // Start the rejection share watchdog: samples the metrics registry off the
+    // request path and warns once per crossing event (see services::alert_watchdog).
+    let alert_config = crate::services::alert_watchdog::Alert429Config {
+        enabled: state.config.alert_429_enabled,
+        threshold_share: state.config.alert_429_threshold_share,
+        window_secs: state.config.alert_429_window_secs,
+    };
+    let alert_registry = state.metrics.clone();
+    actix::spawn(async move {
+        crate::services::alert_watchdog::run_429_share_watchdog(alert_registry, alert_config).await;
+    });
+
     // Start background audit log chain verifier (hourly by default)
     let audit_repo_for_verifier = container.domain_audit_logs.clone();
     actix::spawn(async move {
@@ -294,6 +307,7 @@ pub async fn run() -> std::io::Result<()> {
     // Actix application factory shared by every worker.
     let app = move || {
         let pool_for_router = runtime.state.redis.clone();
+        let metrics_for_router = runtime.state.metrics.clone();
 
         App::new()
             .app_data(runtime.state.clone())
@@ -319,7 +333,9 @@ pub async fn run() -> std::io::Result<()> {
             // the resolved locale appears in the structured log fields.
             .wrap(crate::middleware::locale::LocaleMiddleware::new())
             .service(crate::controllers::health_controller::liveness)
-            .configure(|cfg| crate::routes::router::config(cfg, pool_for_router.clone()))
+            .configure(|cfg| {
+            crate::routes::router::config(cfg, pool_for_router.clone(), metrics_for_router.clone())
+        })
             .default_service(web::route().to(not_found))
     };
 

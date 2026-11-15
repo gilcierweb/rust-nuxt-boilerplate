@@ -111,7 +111,10 @@ impl CircuitBreaker {
                     *state = CircuitState::Closed;
                     self.failures.store(0, Ordering::Relaxed);
                     self.successes.store(0, Ordering::Relaxed);
-                    debug!("Circuit breaker closed after successful requests");
+                    debug!(
+                        event = "outbound_http.circuit_breaker_closed",
+                        "Outbound HTTP circuit breaker closed after successful requests"
+                    );
                 }
             },
             CircuitState::Open => {},
@@ -133,14 +136,21 @@ impl CircuitBreaker {
                     drop(state);
                     let mut state = self.state.write().await;
                     *state = CircuitState::Open;
-                    warn!("Circuit breaker opened after {} failures", failures);
+                    warn!(
+                        event = "outbound_http.circuit_breaker_opened",
+                        failures = failures,
+                        "Outbound HTTP circuit breaker opened after consecutive failures"
+                    );
                 }
             },
             CircuitState::HalfOpen => {
                 drop(state);
                 let mut state = self.state.write().await;
                 *state = CircuitState::Open;
-                warn!("Circuit breaker reopened after failure in half-open state");
+                warn!(
+                    event = "outbound_http.circuit_breaker_reopened",
+                    "Outbound HTTP circuit breaker reopened after a failure in half-open state"
+                );
             },
             CircuitState::Open => {},
         }

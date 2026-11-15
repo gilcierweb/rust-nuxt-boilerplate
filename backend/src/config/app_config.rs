@@ -297,6 +297,15 @@ pub struct AppConfig {
     // closed: a user without a role has no permissions at all.
     pub register_default_role: String,
 
+    // Rejection share alert (watchdog in services/alert_watchdog). The
+    // evaluation runs off the request path; the numbers reach the Prometheus
+    // payload and every crossing event logs one structured warning.
+    pub alert_429_enabled: bool,
+    /// Share of refused requests that trips the alert, as a fraction (0.10 = 10%).
+    pub alert_429_threshold_share: f64,
+    /// Seconds between two evaluations.
+    pub alert_429_window_secs: u64,
+
     // Optional CAPTCHA (Cloudflare Turnstile / Google reCAPTCHA / any custom
     // site-verify service) for brute-force-sensitive endpoints. Disabled by
     // default — the boilerplate must run without any third-party verification
@@ -611,6 +620,29 @@ impl AppConfig {
                 .ok()
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(crate::middleware::rate_limit_middleware::DEFAULT_REGISTER_DAILY_LIMIT),
+
+            // Rejection share alert: on by default, 10% of the window, every
+            // 30 seconds. A mistyped percentage or a zero window becomes a
+            // value that validate() refuses, so a typo cannot silently
+            // disarm the alert the way the 429 storm went unnoticed.
+            alert_429_enabled: env::var("ALERT_429_ENABLED")
+                .ok()
+                .and_then(|s| s.parse::<bool>().ok())
+                .unwrap_or(true),
+            alert_429_threshold_share: match env::var("ALERT_429_SHARE_PCT") {
+                Ok(raw) => match raw.parse::<f64>() {
+                    Ok(pct) if pct > 0.0 && pct <= 100.0 => pct / 100.0,
+                    _ => 0.0,
+                },
+                Err(_) => 0.10,
+            },
+            alert_429_window_secs: match env::var("ALERT_429_WINDOW_SECS") {
+                Ok(raw) => match raw.parse::<u64>() {
+                    Ok(secs) if secs > 0 => secs,
+                    _ => 0,
+                },
+                Err(_) => 30,
+            },
 
             // Role assigned to a new registration, resolved by name. The
             // customer role is the default: the account starts with the self
@@ -976,6 +1008,21 @@ impl AppConfig {
             );
         }
 
+        // The rejection share alert must stay armed: a percentage below the
+        // measurement range (zero or negative, or a typo that failed to parse
+        // and collapsed to it) silently disables the watchdog, and a window
+        // of zero seconds would spin the sampling loop.
+        if self.alert_429_threshold_share <= 0.0 || self.alert_429_threshold_share > 1.0 {
+            errors.push(
+                "ALERT_429_SHARE_PCT must be a percentage between 0 (exclusive) and \
+                 100 (inclusive)"
+                    .to_string(),
+            );
+        }
+        if self.alert_429_window_secs == 0 {
+            errors.push("ALERT_429_WINDOW_SECS must be at least 1 second".to_string());
+        }
+
         // CAPTCHA (optional anti-bot verification) validation.
         // A provider half-enabled (provider set, secret missing) silently
         // disables the protection it was configured for — in production the
@@ -1285,6 +1332,72 @@ mod placeholder_tests {
         let config = AppConfig::from_env().expect("config builds");
         assert_eq!(config.captcha_provider, CaptchaProvider::Turnstile);
         assert!(config.captcha_enabled());
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn the_rejection_share_alert_defaults_to_a_conservative_threshold() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::remove_var("ALERT_429_SHARE_PCT") };
+        unsafe { std::env::remove_var("ALERT_429_WINDOW_SECS") };
+        unsafe { std::env::remove_var("ALERT_429_ENABLED") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(config.alert_429_enabled, "the alert ships on");
+        assert!(
+            (config.alert_429_threshold_share - 0.10).abs() < 1e-9,
+            "the default threshold must be 10%, got {}",
+            config.alert_429_threshold_share
+        );
+        assert_eq!(config.alert_429_window_secs, 30);
+        assert!(config.validate().is_empty(), "the defaults must validate");
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn the_rejection_share_alert_honours_custom_values() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("ALERT_429_SHARE_PCT", "25") };
+        unsafe { std::env::set_var("ALERT_429_WINDOW_SECS", "15") };
+        unsafe { std::env::set_var("ALERT_429_ENABLED", "false") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(!config.alert_429_enabled, "the alert can be turned off");
+        assert!(
+            (config.alert_429_threshold_share - 0.25).abs() < 1e-9,
+            "percentages become fractions, got {}",
+            config.alert_429_threshold_share
+        );
+        assert_eq!(config.alert_429_window_secs, 15);
+        assert!(
+            config.validate().is_empty(),
+            "custom valid values must validate"
+        );
+
+        unsafe { std::env::remove_var("ALERT_429_SHARE_PCT") };
+        unsafe { std::env::remove_var("ALERT_429_WINDOW_SECS") };
+        unsafe { std::env::remove_var("ALERT_429_ENABLED") };
+    }
+
+    #[test]
+    #[serial_test::serial]
+    fn a_mistyped_threshold_is_rejected_instead_of_defaulting() {
+        let _backup = EnvBackup::new();
+        setup_minimal_env();
+        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        unsafe { std::env::set_var("ALERT_429_SHARE_PCT", "0") };
+
+        let config = AppConfig::from_env().expect("config builds");
+        assert!(
+            !config.validate().is_empty(),
+            "a zero threshold must be refused: a typo must not silently disarm the alert"
+        );
+
+        unsafe { std::env::remove_var("ALERT_429_SHARE_PCT") };
     }
 
     #[test]
