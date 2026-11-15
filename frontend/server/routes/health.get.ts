@@ -1,0 +1,96 @@
+import {
+  getRequestURL,
+} from 'h3'
+import {
+  fetchBackendWithRenderWakeupRetry,
+  mapBackendWakeupExhaustion,
+} from '~~/server/utils/backend-proxy-fetch'
+import { createBackendWakeupState } from '~~/server/utils/backend-wakeup'
+import {
+  applyProxyResponse,
+  createForwardHeaders,
+  requireBackendProxyConfig,
+} from '~~/server/utils/proxy'
+
+export default defineEventHandler(async (event) => {
+  const { backendApiBases, backendApiKey } = requireBackendProxyConfig(
+    event,
+    true,
+  )
+
+  const requestUrl = getRequestURL(event)
+  const headers = createForwardHeaders(
+    event,
+    backendApiKey,
+    ['accept', 'cookie', 'user-agent'],
+    undefined,
+    {
+      filterCookies: true,
+      allowedCookiePrefixes: [
+        'refresh_token',
+        'csrf',
+      ],
+    },
+  )
+
+  const wakeupState = createBackendWakeupState()
+
+  try {
+    let response: { status: number; statusText: string; headers: Headers; _data: any } | null =
+      null
+    let lastError: any = null
+
+    for (const backendApiBase of backendApiBases) {
+      const targetUrl = `${backendApiBase}/health${requestUrl.search}`
+      try {
+        response = (await fetchBackendWithRenderWakeupRetry(
+          targetUrl,
+          backendApiBase,
+          {
+            method: 'GET',
+            headers,
+          },
+          wakeupState,
+        )) as unknown as typeof response
+        break
+      } catch (error: any) {
+        const status = error?.response?.status
+        lastError = error
+        if (status !== 404) {
+          throw error
+        }
+        continue
+      }
+    }
+
+    if (response) {
+      return applyProxyResponse(
+        event,
+        response as unknown as Parameters<typeof applyProxyResponse>[1],
+      )
+    }
+
+    throw lastError
+  } catch (error: any) {
+    const unavailableResponse = mapBackendWakeupExhaustion(
+      event,
+      error,
+      { method: 'GET', path: 'health' },
+    )
+    if (unavailableResponse) {
+      return unavailableResponse
+    }
+
+    const response = error?.response
+    if (!response) {
+      throw createError({
+        statusCode: 502,
+        statusMessage: 'Backend API unavailable for health check',
+      })
+    }
+
+    return applyProxyResponse(event, response) ?? {
+      error: response.statusText || 'Request failed',
+    }
+  }
+})
