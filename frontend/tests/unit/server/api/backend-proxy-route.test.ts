@@ -223,8 +223,8 @@ describe('backend proxy route', () => {
     const healthCalls = mocks.rawFetch.mock.calls.filter(([url]) =>
       String(url).endsWith('/health'),
     )
-    expect(mocks.rawFetch).toHaveBeenCalledTimes(21)
-    expect(healthCalls).toHaveLength(20)
+    expect(mocks.rawFetch).toHaveBeenCalledTimes(25)
+    expect(healthCalls).toHaveLength(24)
     expect(response.error.code).toBe('BACKEND_UNAVAILABLE')
     expect(mocks.setResponseStatus).toHaveBeenLastCalledWith(event, 503)
     expect(mocks.setResponseHeader).toHaveBeenLastCalledWith(
@@ -480,7 +480,7 @@ describe('backend proxy route', () => {
       error: { code: string }
     }
 
-    expect(mocks.rawFetch).toHaveBeenCalledTimes(21)
+    expect(mocks.rawFetch).toHaveBeenCalledTimes(25)
     expect(response.error.code).toBe('BACKEND_UNAVAILABLE')
     expect(mocks.setResponseStatus).toHaveBeenLastCalledWith(event, 503)
     expect(mocks.setResponseHeader).toHaveBeenLastCalledWith(

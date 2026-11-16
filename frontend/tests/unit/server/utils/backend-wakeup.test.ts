@@ -119,8 +119,8 @@ describe('backend health readiness', () => {
       ),
     ).rejects.toThrow('Backend health probe exhausted')
 
-    expect(attempts).toBe(10)
-    expect(delays).toEqual([3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 12_000, 15_000, 20_000])
+    expect(attempts).toBe(12)
+    expect(delays).toEqual([3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 12_000, 15_000, 20_000, 25_000, 30_000])
   })
 
   it('accepts only HTTP 200 as a ready health response', async () => {

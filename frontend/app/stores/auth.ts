@@ -114,7 +114,7 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    async wakeBackend(timeoutMs = 90_000): Promise<boolean> {
+    async wakeBackend(timeoutMs = 180_000): Promise<boolean> {
       // Render free tier hibernates after 15 min of inactivity and takes
       // 30-60s to boot. A single proxied request now lives up to 75s (proxy
       // budget), so one /health call is enough to ride out the cold start.

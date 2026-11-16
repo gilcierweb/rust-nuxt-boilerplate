@@ -31,7 +31,7 @@ function readEnvNumber(name: string, fallback: number): number {
 // A cold host boots in tens of seconds and holds the request while it does.
 // Aborting early kills the request that would have waited for the boot.
 export function backendColdStartTimeoutMs(): number {
-  return readEnvNumber('NUXT_BACKEND_WAKEUP_TIMEOUT_MS', 90_000)
+  return readEnvNumber('NUXT_BACKEND_WAKEUP_TIMEOUT_MS', 180_000)
 }
 
 export function backendProbeTimeoutMs(): number {
