@@ -127,27 +127,48 @@ export async function fetchBackendWithRenderWakeupRetry<T = unknown>(
         throw error
       }
 
-      // Render is hibernating. Actively trigger the spin-up with a
-      // browser-like request (Accept: text/html) so the service actually
-      // wakes, then surface the wake-up to the caller (mapped to 503
-      // BACKEND_UNAVAILABLE) and let the client retry with backoff.
-      const healthUrls = backendHealthUrls(backendApiBase)
-      for (const healthUrl of healthUrls) {
-        try {
-          await fetchBackendRaw<unknown>(healthUrl, {
-            method: 'GET',
-            headers: new Headers({ accept: 'text/html' }),
-            credentials: 'omit',
-            ignoreResponseError: true,
-            retry: 0,
-            retryStatusCodes: [],
-            timeout: 2000,
-          })
-        } catch {
-          // Best-effort trigger; ignore.
-        }
+      if (originalAttempt >= BACKEND_REQUEST_MAX_ATTEMPTS) {
+        throw error
       }
-      throw error
+
+      if (!wakeupState.healthReady) {
+        const healthUrls = backendHealthUrls(backendApiBase)
+        await waitForBackendHealth(
+          async () => {
+            let lastResponse: BackendRawResponse<unknown> | undefined
+            let lastError: unknown
+            for (const healthUrl of healthUrls) {
+              try {
+                const response = await fetchBackendRaw<unknown>(
+                  healthUrl,
+                  {
+                    method: 'GET',
+                    headers: new Headers({ accept: 'application/json' }),
+                    credentials: 'omit',
+                    ignoreResponseError: true,
+                    retry: 0,
+                    retryStatusCodes: [],
+                  },
+                )
+                if (response.status === 200) {
+                  return response
+                }
+                lastResponse = response
+              } catch (probeError) {
+                lastError = probeError
+              }
+            }
+            if (lastResponse) {
+              return lastResponse
+            }
+            throw (lastError instanceof Error
+              ? lastError
+              : new Error('Backend health probe failed'))
+          },
+          { budget: wakeupState.healthBudget },
+        )
+        wakeupState.healthReady = true
+      }
     }
   }
 
