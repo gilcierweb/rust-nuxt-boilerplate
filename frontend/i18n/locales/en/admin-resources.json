@@ -19,7 +19,8 @@
       "openApiDocs": "Open API Docs",
       "users": "Users",
       "roles": "Roles",
-      "auditLogs": "Audit Logs"
+      "auditLogs": "Audit Logs",
+      "portal": "Portal"
     },
     "statusLabels": {
       "active": "Active",

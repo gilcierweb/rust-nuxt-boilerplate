@@ -22,7 +22,7 @@
               v-model="search"
               type="search"
               class="grow placeholder:text-sm"
-              placeholder="Type to Search..."
+              :placeholder="$t('common.search')"
             />
             <label class="sr-only" for="kbdInput">Search</label>
           </div>
@@ -39,7 +39,7 @@
               class="dropdown-toggle avatar"
               aria-haspopup="menu"
               aria-expanded="false"
-              aria-label="Dropdown"
+              aria-label="$t('portal.navbar.userMenu')"
             >
               <span class="bg-primary text-primary-content rounded-field flex size-9.5 items-center justify-center text-sm font-semibold">
                 {{ initials }}
@@ -60,25 +60,25 @@
               <li>
                 <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/dashboard')">
                   <span class="icon-[tabler--layout-dashboard] size-5"></span>
-                  Dashboard
+                  {{ $t('admin.sidebar.dashboard') }}
                 </NuxtLink>
               </li>
               <li>
                 <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/users')">
                   <span class="icon-[tabler--users] size-5"></span>
-                  Users
+                  {{ $t('admin.sidebar.users') }}
                 </NuxtLink>
               </li>
               <li>
                 <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/roles')">
                   <span class="icon-[tabler--shield] size-5"></span>
-                  Roles
+                  {{ $t('admin.sidebar.roles') }}
                 </NuxtLink>
               </li>
               <li>
                 <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/audit-logs')">
                   <span class="icon-[tabler--history] size-5"></span>
-                  Audit Logs
+                  {{ $t('admin.sidebar.auditLogs') }}
                 </NuxtLink>
               </li>
               <li>
@@ -87,19 +87,19 @@
               <li>
                 <NuxtLink class="dropdown-item px-3" :to="localePath('/portal')">
                   <span class="icon-[tabler--app-window] size-5"></span>
-                  Portal
+                  {{ $t('admin.sidebar.portal') }}
                 </NuxtLink>
               </li>
               <li>
                 <a class="dropdown-item px-3" href="/swagger-ui/" target="_blank">
                   <span class="icon-[tabler--api] size-5"></span>
-                  API documentation
+                  {{ $t('admin.sidebar.apiDocs') }}
                 </a>
               </li>
               <li>
                 <NuxtLink class="dropdown-item px-3" :to="localePath('/')">
                   <span class="icon-[tabler--home] size-5"></span>
-                  Back to site
+                  {{ $t('portal.navbar.backToSite') }}
                 </NuxtLink>
               </li>
               <li class="dropdown-footer p-2 pt-1">
@@ -109,7 +109,7 @@
                   @click="handleLogout"
                 >
                   <span class="icon-[tabler--logout] size-5"></span>
-                  Logout
+                  {{ $t('portal.navbar.logout') }}
                 </button>
               </li>
             </ul>
