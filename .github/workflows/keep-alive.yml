@@ -1,0 +1,25 @@
+name: Keep backend warm
+
+# Render free tier sleeps after 15 min of inactivity and takes 30-90s to boot.
+# A ping from a Cloudflare Worker (this app's own edge) cannot wake a sleeping
+# service because Render's front does not forward it to the origin. GitHub
+# Actions runs on a non-Cloudflare IP, so this workflow can both wake and keep
+# the service warm. Runs every 10 min (less than the 15 min sleep window).
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping backend health
+        env:
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+        run: |
+          URL="${BACKEND_URL:-}"
+          if [ -z "$URL" ]; then echo "Set BACKEND_URL secret (your backend base URL)"; exit 1; fi
+          echo "Pinging $URL/health"
+          curl -sS --max-time 120 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
+            -A "keep-alive/1.0" "$URL/health"

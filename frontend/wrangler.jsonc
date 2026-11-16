@@ -25,9 +25,4 @@
     // "NUXT_BACKEND_WAKEUP_TIMEOUT_MS": "90000",
     // "NUXT_BACKEND_WAKEUP_PROBE_TIMEOUT_MS": "10000"
   },
-  // Keep-alive: ping the backend /health every 10 min so hibernating hosts
-  // (Render free tier) never sleep. Handled by server/plugins/keep-alive.ts.
-  "triggers": {
-    "crons": ["*/10 * * * *"]
-  }
 }
