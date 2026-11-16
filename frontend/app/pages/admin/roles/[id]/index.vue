@@ -159,6 +159,11 @@
 </template>
 
 <script setup lang="ts">
+
+// Unique component name: NuxtPage collects keepalive page names globally, so
+// two pages sharing the inferred filename name break KeepAlive routing.
+defineOptions({ name: 'AdminRoleDetailPage' })
+
 import { useAdminRbac } from '~/composables/useAdminRbac'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
 import { formatDateTime } from '~/utils/admin-ui'

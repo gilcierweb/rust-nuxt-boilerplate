@@ -827,6 +827,11 @@ Clone the boilerplate,
 </template>
 
 <script setup lang="ts">
+
+// Unique component name: NuxtPage collects keepalive page names globally, so
+// two pages sharing the inferred filename name break KeepAlive routing.
+defineOptions({ name: 'LandingHomePage' })
+
 definePageMeta({
   layout: 'landing'
 })

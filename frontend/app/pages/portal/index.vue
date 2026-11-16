@@ -1,4 +1,9 @@
 <script setup lang="ts">
+
+// Unique component name: NuxtPage collects keepalive page names globally, so
+// two pages sharing the inferred filename name break KeepAlive routing.
+defineOptions({ name: 'PortalLandingPage' })
+
 definePageMeta({ layout: 'portal' })
 const localePath = useLocalePath()
 const route = useRoute()

@@ -55,6 +55,11 @@
 </template>
 
 <script setup lang="ts">
+
+// Unique component name: NuxtPage collects keepalive page names globally, so
+// two pages sharing the inferred filename name break KeepAlive routing.
+defineOptions({ name: 'AdminRoleEditPage' })
+
 import RolesForm from '~/components/admin/roles/RolesForm.vue'
 import type { Role } from '~/types/rbac'
 import { mapAdminError } from '~/utils/admin-errors'
