@@ -15,6 +15,50 @@ import {
 
 export const BACKEND_REQUEST_MAX_ATTEMPTS = 3
 
+// The wake-up path is generic HTTP: a cold or hibernating host answers a
+// 429/502/503/504 (or drops the connection), the caller probes readiness
+// and retries. The knobs below only shape that path and are all optional:
+// a warm backend on a VPS or a cloud VM never takes it, and any value here
+// is a plain HTTP header or a ceiling, inert to a host that is always up.
+
+function readEnvNumber(name: string, fallback: number): number {
+  const raw = process.env?.[name]
+  if (raw === undefined || raw === '') return fallback
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback
+}
+
+// A cold host boots in tens of seconds and holds the request while it does.
+// Aborting early kills the request that would have waited for the boot.
+export function backendColdStartTimeoutMs(): number {
+  return readEnvNumber('NUXT_BACKEND_WAKEUP_TIMEOUT_MS', 30_000)
+}
+
+export function backendProbeTimeoutMs(): number {
+  return readEnvNumber('NUXT_BACKEND_WAKEUP_PROBE_TIMEOUT_MS', 10_000)
+}
+
+// Some edges (Render fronts its free services with a Cloudflare challenge)
+// drop requests that present no browser identity, so the wake request never
+// reaches the host and the host never boots. The default UA is therefore a
+// plain browser string, which any ordinary server ignores; set the variable
+// to an empty string to send nothing, or to your own value.
+const DEFAULT_WAKEUP_USER_AGENT =
+  'Mozilla/5.0 (X11; Linux x86_64; rv:158.0) Gecko/20100101 Firefox/158.0'
+
+export function backendWakeupUserAgent(): string {
+  return process.env?.NUXT_BACKEND_WAKEUP_USER_AGENT ?? DEFAULT_WAKEUP_USER_AGENT
+}
+
+function withWakeupIdentity(headers: Headers): Headers {
+  const userAgent = backendWakeupUserAgent()
+  const next = new Headers(headers)
+  if (userAgent && !next.get('user-agent')) {
+    next.set('user-agent', userAgent)
+  }
+  return next
+}
+
 export const BACKEND_FETCH_RETRY_STATUS_CODES = [
   408,
   409,
@@ -118,9 +162,8 @@ export async function fetchBackendWithRenderWakeupRetry<T = unknown>(
     try {
       return await fetchBackendRaw<T>(targetUrl, {
         ...options,
-        // Bound the initial attempt so a Render wake-up that holds the
-        // connection open (browser-less requests) cannot hang the worker.
-        timeout: options.timeout ?? 5000,
+        headers: withWakeupIdentity(options.headers),
+        timeout: options.timeout ?? backendColdStartTimeoutMs(),
       })
     } catch (error) {
       if (!isRenderWakeupError(error)) {
@@ -143,11 +186,15 @@ export async function fetchBackendWithRenderWakeupRetry<T = unknown>(
                   healthUrl,
                   {
                     method: 'GET',
-                    headers: new Headers({ accept: 'application/json' }),
+                    headers: new Headers({
+                      accept: 'text/html',
+                      'user-agent': backendWakeupUserAgent(),
+                    }),
                     credentials: 'omit',
                     ignoreResponseError: true,
                     retry: 0,
                     retryStatusCodes: [],
+                    timeout: backendProbeTimeoutMs(),
                   },
                 )
                 if (response.status === 200) {
