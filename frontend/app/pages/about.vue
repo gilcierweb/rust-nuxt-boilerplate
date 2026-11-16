@@ -8,7 +8,7 @@
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div
               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
-            <span class="material-symbols-outlined text-sm" data-icon="info">info</span>
+            <span class="icon-[tabler--info-circle] text-sm"></span>
             About This Boilerplate
           </div>
           <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight max-w-4xl mx-auto">
@@ -30,7 +30,7 @@
                 class="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
-                <span class="material-symbols-outlined text-3xl" data-icon="rocket_launch">rocket_launch</span>
+                <span class="icon-[tabler--rocket] text-3xl"></span>
               </div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Mission</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -44,7 +44,7 @@
                 class="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
-                <span class="material-symbols-outlined text-3xl" data-icon="visibility">visibility</span>
+                <span class="icon-[tabler--eye] text-3xl"></span>
               </div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Vision</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
@@ -58,28 +58,28 @@
                 class="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/30 hover:shadow-lg hover:-translate-y-1 transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
-                <span class="material-symbols-outlined text-3xl" data-icon="verified">verified</span>
+                <span class="icon-[tabler--circle-check] text-3xl"></span>
               </div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Values</h3>
               <ul class="space-y-2 font-body-md text-body-md text-on-surface-variant">
                 <li class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                  <span class="icon-[tabler--check] text-primary text-sm"></span>
                   Type safety across the stack
                 </li>
                 <li class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                  <span class="icon-[tabler--check] text-primary text-sm"></span>
                   Security by default
                 </li>
                 <li class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                  <span class="icon-[tabler--check] text-primary text-sm"></span>
                   Clean architecture principles
                 </li>
                 <li class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                  <span class="icon-[tabler--check] text-primary text-sm"></span>
                   Developer experience first
                 </li>
                 <li class="flex items-center gap-2">
-                  <span class="material-symbols-outlined text-primary text-sm" data-icon="check">check</span>
+                  <span class="icon-[tabler--check] text-primary text-sm"></span>
                   Open source sustainability
                 </li>
               </ul>
@@ -203,7 +203,7 @@
             <div
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-primary" data-icon="shield">shield</span>
+                <span class="icon-[tabler--shield] text-4xl text-primary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Security First</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
@@ -215,7 +215,7 @@
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-24 h-24 rounded-full bg-secondary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-secondary" data-icon="code">code</span>
+                <span class="icon-[tabler--code] text-4xl text-secondary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Type Safety</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
@@ -227,9 +227,7 @@
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-24 h-24 rounded-full bg-tertiary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span
-class="material-symbols-outlined text-4xl text-tertiary"
-                      data-icon="architecture">architecture</span>
+                <span class="icon-[tabler--topology-star] text-4xl text-tertiary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Clean Architecture</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
@@ -240,7 +238,7 @@ class="material-symbols-outlined text-4xl text-tertiary"
             <div
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-primary" data-icon="speed">speed</span>
+                <span class="icon-[tabler--bolt] text-4xl text-primary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Developer Experience</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
@@ -266,9 +264,7 @@ class="material-symbols-outlined text-4xl text-tertiary"
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--brand-rust] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Rust + Actix Web</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -281,9 +277,7 @@ Memory safety without GC, async runtime,
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--database-cog] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Diesel ORM</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -296,9 +290,7 @@ Compile-time checked SQL, migrations,
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--database] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">PostgreSQL</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -311,9 +303,7 @@ Robust, ACID-compliant, JSON support,
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--server] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Redis</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -326,9 +316,7 @@ Caching, sessions, rate limiting, WebSocket
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--brand-nuxt] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Nuxt 4 + Vue 3</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -341,9 +329,7 @@ SSR, auto-imports, file-based routing,
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--brand-tailwind] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Tailwind CSS 4</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -356,9 +342,7 @@ Utility-first, CSS-first config, lightning
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--stack-2] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Pinia</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -371,9 +355,7 @@ Lightweight, type-safe state management.
                 class="bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30 hover:shadow-lg transition-all duration-300">
               <div
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
-                <svg class="w-8 h-8" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
-                </svg>
+                <span class="icon-[tabler--brand-docker] w-8 h-8"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Docker</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
@@ -399,7 +381,7 @@ Consistent dev/prod environments, multi-stage
             <div
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-primary" data-icon="person">person</span>
+                <span class="icon-[tabler--user] text-4xl text-primary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Core Team</h3>
               <p class="font-body-sm text-body-sm text-primary mt-1">Lead Maintainers</p>
@@ -412,7 +394,7 @@ Consistent dev/prod environments, multi-stage
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-24 h-24 rounded-full bg-secondary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-secondary" data-icon="group">group</span>
+                <span class="icon-[tabler--users] text-4xl text-secondary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Contributors</h3>
               <p class="font-body-sm text-body-sm text-secondary mt-1">Code & Documentation</p>
@@ -425,7 +407,7 @@ Consistent dev/prod environments, multi-stage
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div
                   class="w-24 h-24 rounded-full bg-tertiary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-tertiary" data-icon="bug_report">bug_report</span>
+                <span class="icon-[tabler--bug] text-4xl text-tertiary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Security Researchers</h3>
               <p class="font-body-sm text-body-sm text-tertiary mt-1">Responsible Disclosure</p>
@@ -437,7 +419,7 @@ Consistent dev/prod environments, multi-stage
             <div
                 class="bg-surface p-6 rounded-2xl border border-outline-variant/30 text-center hover:shadow-lg transition-all duration-300">
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
-                <span class="material-symbols-outlined text-4xl text-primary" data-icon="favorite">favorite</span>
+                <span class="icon-[tabler--heart] text-4xl text-primary"></span>
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface">Sponsors</h3>
               <p class="font-body-sm text-body-sm text-primary mt-1">Financial Support</p>
@@ -491,7 +473,7 @@ Consistent dev/prod environments, multi-stage
                 <NuxtLink
 to="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"
                           class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
-                  View on GitHub <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+                  View on GitHub <span class="icon-[tabler--arrow-right]"></span>
                 </NuxtLink>
                 <NuxtLink
 to="/contact"
