@@ -14,6 +14,10 @@ services:
     runtime: rust
     plan: free
     region: oregon
+    # Monorepo: backend lives in backend/. Setting rootDir makes Render run
+    # commands from there, and avoids redeploying the backend on frontend
+    # changes.
+    rootDir: backend
     buildCommand: cargo build --release
     startCommand: ./target/release/backend
     healthCheckPath: /health
