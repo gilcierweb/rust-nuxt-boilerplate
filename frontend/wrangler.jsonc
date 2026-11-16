@@ -12,5 +12,17 @@
   },
   "compatibility_flags": [
     "nodejs_compat"
-  ]
+  ],
+  // Runtime environment variables for the Worker. These are injected at
+  // RUNTIME (not baked at build time) and are the correct place to configure
+  // the backend connection. Uncomment and fill in your values, or set them in
+  // the Cloudflare dashboard (Workers -> Settings -> Variables and Secrets).
+  // Secrets (NUXT_BACKEND_API_KEY) should be set as secrets, not vars:
+  //   npx wrangler secret put NUXT_BACKEND_API_KEY
+  "vars": {
+    // "NUXT_BACKEND_API_BASE": "https://your-backend.example.com/api/v1",
+    // "NUXT_BACKEND_WAKEUP_USER_AGENT": "Mozilla/5.0 (X11; Linux x86_64; rv:158.0) Gecko/20100101 Firefox/158.0",
+    // "NUXT_BACKEND_WAKEUP_TIMEOUT_MS": "30000",
+    // "NUXT_BACKEND_WAKEUP_PROBE_TIMEOUT_MS": "10000"
+  }
 }

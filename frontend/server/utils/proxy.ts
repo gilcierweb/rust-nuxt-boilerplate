@@ -33,6 +33,57 @@ export function candidateBackendApiBases(
   return Array.from(new Set(list.filter(Boolean)))
 }
 
+/**
+ * Cloudflare Workers (and other edge runtimes) inject environment variables
+ * at RUNTIME via bindings, not via `process.env` (which is only populated
+ * when `nodejs_compat_populate_process_env` is enabled). To stay robust
+ * across runtimes and Nuxt versions, resolve a runtime env var from every
+ * source the host may have used, in priority order:
+ *   1. `process.env` (Node / local dev / enabled compat flag)
+ *   2. the Cloudflare `env` binding on the H3 event context
+ *   3. `globalThis.__env__` (set by the Workers fetch handler)
+ * Returns the first non-empty value, or '' when none is present.
+ */
+export function resolveRuntimeEnvVar(
+  event: H3Event,
+  ...names: string[]
+): string {
+  if (typeof process !== 'undefined' && process.env) {
+    for (const name of names) {
+      const value = process.env[name]
+      if (typeof value === 'string' && value.trim() !== '') {
+        return value.trim()
+      }
+    }
+  }
+
+  let cloudflareEnv: Record<string, unknown> | undefined
+  try {
+    const platformEnv = (event as any)?.context?._platform?.cloudflare?.env
+    if (platformEnv && typeof platformEnv === 'object') {
+      cloudflareEnv = platformEnv as Record<string, unknown>
+    }
+  } catch {
+    // ignore — fall through to globalThis
+  }
+  if (!cloudflareEnv && typeof globalThis !== 'undefined') {
+    const globalEnv = (globalThis as any)?.__env__
+    if (globalEnv && typeof globalEnv === 'object') {
+      cloudflareEnv = globalEnv as Record<string, unknown>
+    }
+  }
+  if (cloudflareEnv) {
+    for (const name of names) {
+      const value = cloudflareEnv[name]
+      if (typeof value === 'string' && value.trim() !== '') {
+        return value.trim()
+      }
+    }
+  }
+
+  return ''
+}
+
 export function requireBackendProxyConfig(
   event: H3Event,
   includeRawBase = false,
@@ -44,23 +95,62 @@ export function requireBackendProxyConfig(
   // A variable set only in the Cloudflare dashboard therefore never reaches
   // the baked config, leaving `backendApiBase` as the localhost default and
   // making every proxied request (login included) target the worker itself
-  // instead of the Render backend. Prefer the runtime process env so the
-  // dashboard-configured value wins; fall back to the baked config for local
-  // Node / docker setups where both are equivalent.
-  const runtimeBackendApiBase =
-    (typeof process !== 'undefined' &&
-      (process.env?.NUXT_BACKEND_API_BASE || process.env?.BACKEND_API_BASE)) ||
-    ''
-  const runtimeBackendApiKey =
-    (typeof process !== 'undefined' &&
-      (process.env?.NUXT_BACKEND_API_KEY || process.env?.BACKEND_API_KEY)) ||
-    ''
+  // instead of the real backend. Prefer the runtime env (from any source the
+  // host may have used) so the dashboard-configured value wins; fall back to
+  // the baked config for local Node / docker setups where both are equivalent.
+  const runtimeBackendApiBase = resolveRuntimeEnvVar(
+    event,
+    'NUXT_BACKEND_API_BASE',
+    'BACKEND_API_BASE',
+  )
+  const runtimeBackendApiKey = resolveRuntimeEnvVar(
+    event,
+    'NUXT_BACKEND_API_KEY',
+    'BACKEND_API_KEY',
+  )
 
   const backendApiBases = candidateBackendApiBases(
     String(runtimeBackendApiBase || config.backendApiBase || ''),
     includeRawBase,
   )
   const backendApiKey = String(runtimeBackendApiKey || config.backendApiKey || '')
+
+  // Diagnostic: emit the resolved backend URL (sanitized, no API key) so a
+  // `wrangler tail` run shows exactly what the worker is talking to. This is
+  // the single most useful line when debugging a 503 in production.
+  const resolvedBase = backendApiBases[0] || '(none)'
+  const envSource = runtimeBackendApiBase ? 'runtime-env' : 'baked-config'
+  console.warn(
+    '[proxy] backend base:',
+    resolvedBase,
+    '| source:',
+    envSource,
+    '| baked:',
+    config.backendApiBase || '(none)',
+  )
+
+  // Fail fast when the backend URL is still the localhost default that Nuxt
+  // bakes at build time. Hitting localhost from a Cloudflare Worker can never
+  // work, and silently retrying it wastes the whole wake-up budget (14s) on
+  // every login before answering 503. Throwing here surfaces the missing
+  // configuration immediately and points at the fix.
+  const isLocalhostDefault =
+    !runtimeBackendApiBase &&
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(resolvedBase)
+  const isDevEnvironment =
+    process.env?.NODE_ENV === 'development' ||
+    process.env?.NODE_ENV === 'test'
+  if (isLocalhostDefault && !isDevEnvironment) {
+    throw createError({
+      statusCode: 500,
+      statusMessage:
+        'Backend proxy is not configured: backendApiBase resolved to the ' +
+        'localhost default. Set NUXT_BACKEND_API_BASE (and ' +
+        'NUXT_BACKEND_API_KEY) in the Cloudflare Worker environment ' +
+        'variables (Dashboard -> Workers -> Settings -> Variables and Secrets) ' +
+        'or in wrangler.jsonc `vars`, then redeploy.',
+    })
+  }
 
   if (backendApiBases.length === 0 || !backendApiKey) {
     throw createError({
