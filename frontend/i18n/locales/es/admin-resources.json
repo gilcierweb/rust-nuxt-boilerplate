@@ -72,6 +72,14 @@
       "dialog": {
         "confirm": "Confirmar",
         "cancel": "Cancelar"
+      },
+      "bulkActions": {
+        "regionLabel": "Acciones en lote",
+        "selectedCount": "{count} registros seleccionados",
+        "clear": "Limpiar selección",
+        "selectAll": "Seleccionar todos los registros de esta página",
+        "selectRow": "Seleccionar registro",
+        "deleteSelected": "Eliminar seleccionados"
       }
     },
     "roles": {
@@ -100,7 +108,10 @@
         "updateError": "Error al actualizar rol",
         "deleteSuccess": "Rol eliminado exitosamente",
         "deleteError": "Error al eliminar rol",
-        "confirmDelete": "¿Seguro que deseas eliminar este rol?"
+        "confirmDelete": "¿Seguro que deseas eliminar este rol?",
+        "confirmBulkDelete": "¿Seguro que deseas eliminar {count} roles? Esta acción no se puede deshacer.",
+        "bulkDeleteSuccess": "{count} roles eliminados exitosamente.",
+        "bulkDeletePartial": "{deleted} de {total} roles eliminados. {failed} fallaron."
       }
     },
     "users": {
@@ -177,7 +188,13 @@
         "updateError": "Error al actualizar log",
         "deleteSuccess": "Log eliminado exitosamente",
         "deleteError": "Error al eliminar log",
-        "confirmDelete": "¿Seguro que quieres eliminar este log?"
+        "confirmDelete": "¿Seguro que quieres eliminar este log?",
+        "confirmBulkDelete": "¿Seguro que deseas eliminar {count} logs? Esta acción no se puede deshacer.",
+        "bulkDeleteSuccess": "{count} logs eliminados exitosamente.",
+        "bulkDeletePartial": "{deleted} de {total} logs eliminados. {failed} fallaron."
+      },
+      "dialog": {
+        "deleteTitle": "Eliminar log"
       }
     },
     "dashboard": {

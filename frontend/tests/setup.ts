@@ -11,6 +11,19 @@ globalScope.useLocalePath = () => (path: string) => path
 globalScope.useSlots = (...args: any[]) => (globalThis as any).__vueUseSlots?.(...args)
 globalScope.useAttrs = (...args: any[]) => (globalThis as any).__vueUseAttrs?.(...args)
 
+// VueUse composables are auto-imported by @vueuse/nuxt outside the Nuxt
+// pipeline too. The mock adds and removes the real listener on the resolved
+// element, so a component that binds Escape exercises the wiring it ships.
+globalScope.useEventListener = (
+  target: any,
+  event: string,
+  handler: (event: any) => void,
+) => {
+  const element = typeof target === 'function' ? target() : target
+  element?.addEventListener?.(event, handler)
+  return () => element?.removeEventListener?.(event, handler)
+}
+
 import { vi } from 'vitest'
 import { ref, computed, reactive, useSlots, useAttrs } from 'vue'
 

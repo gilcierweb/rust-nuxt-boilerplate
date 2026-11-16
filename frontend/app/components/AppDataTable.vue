@@ -22,6 +22,15 @@
       </template>
     </AppDataTableToolbar>
 
+    <AppBulkActions
+      v-if="enableSelection && selectedCount > 0"
+      :count="selectedCount"
+      :label="$t('admin.common.bulkActions.selectedCount', { count: selectedCount })"
+      @clear="clearSelection"
+    >
+      <slot name="bulk-actions" />
+    </AppBulkActions>
+
     <div v-if="error" class="mb-4 rounded-box border border-error/20 bg-error/10 px-4 py-3 text-sm text-error">
       {{ error }}
     </div>
@@ -30,6 +39,17 @@
       <table class="table table-zebra table-pin-rows">
         <thead>
           <tr>
+            <th v-if="enableSelection" scope="col" class="w-10">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-primary checkbox-sm align-middle"
+                :aria-label="$t('admin.common.bulkActions.selectAll')"
+                :checked="allPageRowsSelected"
+                :indeterminate.prop="somePageRowsSelected"
+                data-testid="select-all"
+                @change="onToggleAllRows"
+              />
+            </th>
             <th
               v-for="col in table.getFlatHeaders()"
               :key="col.id"
@@ -73,6 +93,16 @@
             class="cursor-pointer"
             @click="(event: MouseEvent) => onRowClick(row, event)"
           >
+            <td v-if="enableSelection" class="w-10">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-primary checkbox-sm align-middle"
+                :aria-label="$t('admin.common.bulkActions.selectRow')"
+                :checked="row.getIsSelected()"
+                data-testid="select-row"
+                @change="onToggleRow(row)"
+              />
+            </td>
             <td
               v-for="cell in row.getVisibleCells()"
               :key="cell.id"
@@ -82,17 +112,17 @@
             </td>
           </tr>
           <tr v-if="loading && !rows.length">
-            <td :colspan="table.getAllLeafColumns().length">
+            <td :colspan="visibleColumnCount">
               <AppDataTableStatus state="loading" :label="loadingLabel ?? 'Carregando registros...'" />
             </td>
           </tr>
           <tr v-if="error">
-            <td :colspan="table.getAllLeafColumns().length">
+            <td :colspan="visibleColumnCount">
               <AppDataTableStatus state="error" :label="errorLabel ?? error ?? 'Erro ao carregar dados'" />
             </td>
           </tr>
           <tr v-if="!loading && !error && !rows.length">
-            <td :colspan="table.getAllLeafColumns().length">
+            <td :colspan="visibleColumnCount">
               <AppDataTableStatus state="empty" :label="emptyLabel ?? 'Nenhum registro encontrado.'" />
             </td>
           </tr>
@@ -200,6 +230,7 @@ import {
   getSortedRowModel,
   useVueTable,
   type Row,
+  type RowSelectionState,
   type ColumnDef,
   type SortingState,
   type Header,
@@ -227,6 +258,10 @@ interface Props {
   height?: number | string
   enableSorting?: boolean
   enableGlobalFilter?: boolean
+  /** Shows the checkbox column and the bulk action bar above the table. */
+  enableSelection?: boolean
+  /** The controlled selection, a TanStack row id map of the current page. */
+  rowSelection?: RowSelectionState
   mode?: 'client' | 'server'
   showToolbar?: boolean
   showTotal?: boolean
@@ -246,6 +281,8 @@ const props = withDefaults(defineProps<Props>(), {
   height: 480,
   enableSorting: true,
   enableGlobalFilter: true,
+  enableSelection: false,
+  rowSelection: () => ({}),
   mode: 'client',
   showToolbar: true,
   showTotal: true,
@@ -266,12 +303,18 @@ const emit = defineEmits<{
   'action:click': [action: DataTableRowAction<TData>, row: TData]
   'update:search': [value: string]
   'update:sorting': [state: SortingState]
+  'update:rowSelection': [state: RowSelectionState]
   'update:page': [page: number]
   'update:pageSize': [size: number]
 }>()
 
 const searchModel = ref('')
 const sorting = ref<SortingState>(props.sorting ?? [])
+// The selection lives beside the table: the page owns the ids through the
+// v-model, and the bulk action bar acts on the very same map. The state is
+// page scoped, so the row ids of one page never outlive a fetch that
+// answers another page.
+const rowSelection = ref<RowSelectionState>(props.rowSelection ?? {})
 
 const isServer = computed(() => props.mode === 'server')
 
@@ -298,6 +341,17 @@ watch(
   },
 )
 
+watch(
+  () => props.rowSelection,
+  (value) => {
+    // The page resets the selection (a refresh, a cleared filter): the map
+    // beside the table follows the prop it is bound to.
+    if (JSON.stringify(value ?? {}) !== JSON.stringify(rowSelection.value)) {
+      rowSelection.value = value ?? {}
+    }
+  },
+)
+
 watch(searchModel, (value) => {
   // The term travels to the parent in both modes: in server mode the list
   // endpoint resolves it, in client mode the table filters it beside.
@@ -320,6 +374,15 @@ const clientTable = useVueTable<TData>({
     get globalFilter() {
       return isServer.value ? undefined : searchModel.value
     },
+    get rowSelection() {
+      return rowSelection.value
+    },
+  },
+  enableRowSelection: props.enableSelection,
+  onRowSelectionChange: (updater) => {
+    const next = typeof updater === 'function' ? updater(rowSelection.value) : updater
+    rowSelection.value = next
+    emit('update:rowSelection', next)
   },
   onSortingChange: (updater) => {
     const next = typeof updater === 'function' ? updater(sorting.value) : updater
@@ -345,6 +408,44 @@ const clientTable = useVueTable<TData>({
 
 const table = clientTable
 const rows = computed(() => clientTable.getRowModel().rows)
+
+/** How many rows the selection holds, read from the very map TanStack uses. */
+const selectedCount = computed(() => Object.values(rowSelection.value).filter(Boolean).length)
+
+const allPageRowsSelected = computed(() => table.getIsAllPageRowsSelected())
+const somePageRowsSelected = computed(() => table.getIsSomePageRowsSelected())
+
+/** The visual column count: the checkbox column is one more than the data. */
+const visibleColumnCount = computed(() =>
+  table.getAllLeafColumns().length + (props.enableSelection ? 1 : 0),
+)
+
+function onToggleAllRows() {
+  // The checkbox is fully driven by the table state, so the header names the
+  // next state itself instead of reading the DOM: a click while the state is
+  // partial selects every row of the page, the next one clears it.
+  table.toggleAllPageRowsSelected(!allPageRowsSelected.value)
+}
+
+function onToggleRow(row: Row<TData>) {
+  row.toggleSelected()
+}
+
+function clearSelection() {
+  const cleared: RowSelectionState = {}
+  rowSelection.value = cleared
+  emit('update:rowSelection', cleared)
+}
+
+// A query that answers another set of rows would leave the previous ids in
+// the map, and the bulk action would act on records the screen no longer
+// shows: the selection follows the rows of the page it was made on.
+const visibleRowIds = computed(() => rows.value.map((row) => row.id).join(','))
+watch(visibleRowIds, () => {
+  if (!props.enableSelection) return
+  if (selectedCount.value === 0) return
+  clearSelection()
+})
 
 const containerStyle = computed(() => {
   const height = typeof props.height === 'number' ? `${props.height}px` : props.height
@@ -435,7 +536,10 @@ function onRowClick(row: Row<TData> | undefined, event?: MouseEvent) {
   if (!row) return
   if (event) {
     const target = event.target as HTMLElement | null
-    if (target?.closest('a, button, [role="button"]')) {
+    // A checkbox marks a row, it does not open it: the guard keeps the
+    // selection controls out of the row navigation the same way it keeps
+    // the links and the buttons out.
+    if (target?.closest('a, button, [role="button"], input, select, textarea, label')) {
       return
     }
   }

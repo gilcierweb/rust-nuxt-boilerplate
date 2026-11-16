@@ -27,6 +27,7 @@
     </div>
 
     <AppDataTable
+      v-model:row-selection="rowSelection"
       :data="items"
       :columns="columns"
       :row-id-key="'id'"
@@ -46,6 +47,7 @@
       :height="540"
       :enable-sorting="true"
       :enable-global-filter="true"
+      enable-selection
       mode="server"
       :sorting="sorting"
       @row-click="onRowClick"
@@ -61,7 +63,44 @@
           </div>
         </div>
       </template>
+
+      <template #bulk-actions>
+        <button
+          type="button"
+          class="btn btn-error btn-sm"
+          :disabled="bulkRemovalPending"
+          data-testid="bulk-delete"
+          @click="requestBulkAuditRemoval"
+        >
+          <span class="icon-[tabler--trash] size-4"></span>
+          {{ $t('admin.common.bulkActions.deleteSelected') }}
+        </button>
+      </template>
     </AppDataTable>
+
+    <ConfirmDialog
+      v-if="removal"
+      :open="true"
+      :pending="removalPending"
+      :title="removal.title"
+      :message="removal.message"
+      :confirm-label="removal.confirmLabel"
+      :cancel-label="removal.cancelLabel"
+      @confirm="onRemovalConfirmed"
+      @cancel="cancelRemoval"
+    />
+
+    <ConfirmDialog
+      v-if="bulkRemoval"
+      :open="true"
+      :pending="bulkRemovalPending"
+      :title="bulkRemoval.title"
+      :message="bulkRemoval.message"
+      :confirm-label="bulkRemoval.confirmLabel"
+      :cancel-label="bulkRemoval.cancelLabel"
+      @confirm="onBulkRemovalConfirmed"
+      @cancel="cancelBulkRemoval"
+    />
   </section>
 </template>
 
@@ -71,9 +110,11 @@
 // two pages sharing the inferred filename name break KeepAlive routing.
 defineOptions({ name: 'AdminAuditLogsIndexPage' })
 
-import { computed, h, resolveComponent } from 'vue'
+import { computed, h, ref, resolveComponent } from 'vue'
+import type { RowSelectionState } from '@tanstack/vue-table'
 import { useAdminResource } from '~/utils/admin-resource-helpers'
 import { adminDeleteButton, formatDateTime } from '~/utils/admin-ui'
+import ConfirmDialog from '~/components/admin/ConfirmDialog.vue'
 import type { DataTableColumn } from '~/types/data-table'
 
 definePageMeta({ layout: 'admin', keepalive: true })
@@ -97,8 +138,6 @@ interface AuditLogRow {
   created_at?: string
 }
 
-const deletePendingId = ref<string | null>(null)
-
 const {
   pagination,
   paginationMeta,
@@ -115,6 +154,10 @@ const {
   key: 'admin-audit-logs-index',
   url: '/admin/audit-logs',
 }))
+
+// The selection is page scoped: the bar above the table acts on the rows the
+// screen shows, so the ids of the current page are the ones it deletes.
+const rowSelection = ref<RowSelectionState>({})
 
 const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
   {
@@ -170,8 +213,8 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
           { default: () => h('span', { class: 'icon-[tabler--eye] size-5' }) },
         ),
         adminDeleteButton({
-          pending: deletePendingId.value === rowId,
-          onClick: () => removeEntity(row),
+          pending: removalPending.value && removal.value?.item?.id === rowId,
+          onClick: () => requestAuditRemoval(row),
         }),
       ])
     },
@@ -179,22 +222,54 @@ const columns = computed<DataTableColumn<AuditLogRow>[]>(() => [
   },
 ])
 
-const { removeItem } = useAdminResource('audit-logs')
+const {
+  requestRemoval,
+  confirmRemoval,
+  cancelRemoval,
+  removal,
+  removalPending,
+  requestBulkRemoval,
+  confirmBulkRemoval,
+  cancelBulkRemoval,
+  bulkRemoval,
+  bulkRemovalPending,
+} = useAdminResource('audit-logs')
 
-async function removeEntity(item: AuditLogRow) {
+const selectedAuditLogs = computed(() =>
+  items.value.filter((item) => rowSelection.value[String(item.id)] === true),
+)
+
+function requestAuditRemoval(item: AuditLogRow) {
   if (!item.id) return
-  deletePendingId.value = item.id
-  try {
-    const success = await removeItem(item, {
-      confirmMessage: t('admin.auditLogs.messages.confirmDelete'),
-      successMessage: t('admin.auditLogs.messages.deleteSuccess'),
-      errorKey: 'admin.auditLogs.messages.deleteError',
-      deleteEndpoint: `/admin/audit-logs/${item.id}`,
-    })
-    if (success) await refresh()
-  } finally {
-    deletePendingId.value = null
-  }
+  requestRemoval(item, {
+    title: t('admin.auditLogs.dialog.deleteTitle'),
+    message: t('admin.auditLogs.messages.confirmDelete'),
+    successMessage: t('admin.auditLogs.messages.deleteSuccess'),
+    errorKey: 'admin.auditLogs.messages.deleteError',
+    deleteEndpoint: `/admin/audit-logs/${item.id}`,
+  })
+}
+
+async function onRemovalConfirmed() {
+  const removed = await confirmRemoval()
+  if (removed) await refresh()
+}
+
+function requestBulkAuditRemoval() {
+  const selected = selectedAuditLogs.value
+  if (selected.length === 0) return
+  requestBulkRemoval(selected, {
+    title: t('admin.auditLogs.dialog.deleteTitle'),
+    message: t('admin.auditLogs.messages.confirmBulkDelete', { count: selected.length }),
+    successKey: 'admin.auditLogs.messages.bulkDeleteSuccess',
+    partialKey: 'admin.auditLogs.messages.bulkDeletePartial',
+    errorKey: 'admin.auditLogs.messages.deleteError',
+  })
+}
+
+async function onBulkRemovalConfirmed() {
+  const result = await confirmBulkRemoval()
+  if (result.deleted > 0) await refresh()
 }
 
 function onRowClick(row: AuditLogRow) {

@@ -120,6 +120,98 @@ export function useAdminResource(resource: string, options?: {
     }
   }
 
+  // The bulk removal reuses the dialog of the single one: the message names
+  // the count, and the keys are translated with the real numbers of the run
+  // once it ends, so a partial result reads as a partial result.
+  const bulkRemoval = ref<{
+    items: Record<string, any>[]
+    title: string
+    message: string
+    confirmLabel: string
+    cancelLabel: string
+    successKey: string
+    partialKey: string
+    errorKey: string
+    endpointFor: (item: Record<string, any>) => string
+  } | null>(null)
+  const bulkRemovalPending = ref(false)
+
+  /**
+   * Open the confirmation dialog of a bulk removal.
+   */
+  function requestBulkRemoval(
+    items: Record<string, any>[],
+    config: {
+      title: string
+      message: string
+      confirmLabel?: string
+      cancelLabel?: string
+      successKey: string
+      partialKey: string
+      errorKey: string
+      endpointFor?: (item: Record<string, any>) => string
+    },
+  ) {
+    bulkRemoval.value = {
+      items,
+      title: config.title,
+      message: config.message,
+      confirmLabel: config.confirmLabel ?? t('admin.common.delete'),
+      cancelLabel: config.cancelLabel ?? t('admin.common.dialog.cancel'),
+      successKey: config.successKey,
+      partialKey: config.partialKey,
+      errorKey: config.errorKey,
+      endpointFor: config.endpointFor ?? ((item) => `${basePath}/${item.id}`),
+    }
+  }
+
+  function cancelBulkRemoval() {
+    bulkRemoval.value = null
+  }
+
+  /**
+   * Perform the confirmed bulk removal and close the dialog. The backend
+   * answers one removal per request, so the bulk runs as a sequence of the
+   * very same single removals: a failure keeps the remaining ids going, and
+   * the report names how many of them went through.
+   */
+  async function confirmBulkRemoval(): Promise<{ deleted: number; failed: number }> {
+    const target = bulkRemoval.value
+    if (!target) return { deleted: 0, failed: 0 }
+    bulkRemovalPending.value = true
+    let deleted = 0
+    let failed = 0
+    let lastError: any = null
+    try {
+      for (const item of target.items) {
+        try {
+          await api.delete(target.endpointFor(item))
+          deleted += 1
+        } catch (error: any) {
+          failed += 1
+          lastError = error
+        }
+      }
+      if (failed === 0) {
+        toast.success(t(target.successKey, { count: deleted }))
+      } else if (deleted > 0) {
+        toast.error(
+          t(target.partialKey, {
+            deleted,
+            total: target.items.length,
+            failed,
+          }),
+        )
+      } else {
+        toast.error(mapAdminError(lastError, t, target.errorKey))
+      }
+      bulkRemoval.value = null
+      return { deleted, failed }
+    } finally {
+      bulkRemovalPending.value = false
+    }
+  }
+
   return {
     navigateToShow,
     navigateToEdit,
@@ -128,6 +220,11 @@ export function useAdminResource(resource: string, options?: {
     cancelRemoval,
     removal,
     removalPending,
+    requestBulkRemoval,
+    confirmBulkRemoval,
+    cancelBulkRemoval,
+    bulkRemoval,
+    bulkRemovalPending,
     showPath: (id: string) => localePath(useShowPath(resource, id)),
     editPath: (id: string) => localePath(useEditPath(resource, id)),
   }

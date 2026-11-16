@@ -27,6 +27,7 @@
     </div>
 
     <AppDataTable
+      v-model:row-selection="rowSelection"
       :data="items"
       :columns="columns"
       row-id-key="id"
@@ -46,6 +47,7 @@
       :height="540"
       :enable-sorting="true"
       :enable-global-filter="true"
+      enable-selection
       mode="server"
       :sorting="sorting"
       @row-click="onRowClick"
@@ -61,17 +63,43 @@
           </div>
         </div>
       </template>
+
+      <template #bulk-actions>
+        <button
+          type="button"
+          class="btn btn-error btn-sm"
+          :disabled="bulkRemovalPending"
+          data-testid="bulk-delete"
+          @click="requestBulkRoleRemoval"
+        >
+          <span class="icon-[tabler--trash] size-4"></span>
+          {{ $t('admin.common.bulkActions.deleteSelected') }}
+        </button>
+      </template>
     </AppDataTable>
 
     <ConfirmDialog
       v-if="removal"
       :open="true"
+      :pending="removalPending"
       :title="removal.title"
       :message="removal.message"
       :confirm-label="removal.confirmLabel"
       :cancel-label="removal.cancelLabel"
       @confirm="onRemovalConfirmed"
       @cancel="cancelRemoval"
+    />
+
+    <ConfirmDialog
+      v-if="bulkRemoval"
+      :open="true"
+      :pending="bulkRemovalPending"
+      :title="bulkRemoval.title"
+      :message="bulkRemoval.message"
+      :confirm-label="bulkRemoval.confirmLabel"
+      :cancel-label="bulkRemoval.cancelLabel"
+      @confirm="onBulkRemovalConfirmed"
+      @cancel="cancelBulkRemoval"
     />
   </section>
 </template>
@@ -82,7 +110,8 @@
 // two pages sharing the inferred filename name break KeepAlive routing.
 defineOptions({ name: 'AdminRolesIndexPage' })
 
-import { computed, h, resolveComponent } from 'vue'
+import { computed, h, ref, resolveComponent } from 'vue'
+import type { RowSelectionState } from '@tanstack/vue-table'
 import { useAdminResource } from '~/utils/admin-resource-helpers'
 import { adminDeleteButton, formatDateTime } from '~/utils/admin-ui'
 import ConfirmDialog from '~/components/admin/ConfirmDialog.vue'
@@ -193,7 +222,36 @@ const {
   cancelRemoval,
   removal,
   removalPending,
+  requestBulkRemoval,
+  confirmBulkRemoval,
+  cancelBulkRemoval,
+  bulkRemoval,
+  bulkRemovalPending,
 } = useAdminResource('roles')
+
+// The selection is page scoped: the bar above the table acts on the rows the
+// screen shows, so the ids of the current page are the ones it deletes.
+const rowSelection = ref<RowSelectionState>({})
+const selectedRoles = computed(() =>
+  items.value.filter((role) => rowSelection.value[String(role.id)] === true),
+)
+
+function requestBulkRoleRemoval() {
+  const selected = selectedRoles.value
+  if (selected.length === 0) return
+  requestBulkRemoval(selected, {
+    title: t('admin.roles.dialog.deleteTitle'),
+    message: t('admin.roles.messages.confirmBulkDelete', { count: selected.length }),
+    successKey: 'admin.roles.messages.bulkDeleteSuccess',
+    partialKey: 'admin.roles.messages.bulkDeletePartial',
+    errorKey: 'admin.roles.messages.deleteError',
+  })
+}
+
+async function onBulkRemovalConfirmed() {
+  const result = await confirmBulkRemoval()
+  if (result.deleted > 0) await refresh()
+}
 
 function removeRole(item: Role) {
   if (!item.id) return

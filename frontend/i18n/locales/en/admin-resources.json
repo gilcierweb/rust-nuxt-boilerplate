@@ -72,6 +72,14 @@
       "dialog": {
         "confirm": "Confirm",
         "cancel": "Cancel"
+      },
+      "bulkActions": {
+        "regionLabel": "Bulk actions",
+        "selectedCount": "{count} records selected",
+        "clear": "Clear selection",
+        "selectAll": "Select all records on this page",
+        "selectRow": "Select record",
+        "deleteSelected": "Delete selected"
       }
     },
     "roles": {
@@ -100,7 +108,10 @@
         "updateError": "Error updating role",
         "deleteSuccess": "Role deleted successfully",
         "deleteError": "Error deleting role",
-        "confirmDelete": "Are you sure you want to delete this role?"
+        "confirmDelete": "Are you sure you want to delete this role?",
+        "confirmBulkDelete": "Are you sure you want to delete {count} roles? This action cannot be undone.",
+        "bulkDeleteSuccess": "{count} roles deleted successfully.",
+        "bulkDeletePartial": "{deleted} of {total} roles deleted. {failed} failed."
       }
     },
     "users": {
@@ -222,7 +233,13 @@
         "updateError": "Error updating log",
         "deleteSuccess": "Log deleted successfully",
         "deleteError": "Error deleting log",
-        "confirmDelete": "Are you sure you want to delete this log?"
+        "confirmDelete": "Are you sure you want to delete this log?",
+        "confirmBulkDelete": "Are you sure you want to delete {count} logs? This action cannot be undone.",
+        "bulkDeleteSuccess": "{count} logs deleted successfully.",
+        "bulkDeletePartial": "{deleted} of {total} logs deleted. {failed} failed."
+      },
+      "dialog": {
+        "deleteTitle": "Delete log"
       }
     },
     "dashboard": {

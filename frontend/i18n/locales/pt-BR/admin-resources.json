@@ -72,6 +72,14 @@
       "dialog": {
         "confirm": "Confirmar",
         "cancel": "Cancelar"
+      },
+      "bulkActions": {
+        "regionLabel": "Ações em lote",
+        "selectedCount": "{count} registros selecionados",
+        "clear": "Limpar seleção",
+        "selectAll": "Selecionar todos os registros desta página",
+        "selectRow": "Selecionar registro",
+        "deleteSelected": "Excluir selecionados"
       }
     },
     "roles": {
@@ -100,7 +108,10 @@
         "updateError": "Erro ao atualizar cargo",
         "deleteSuccess": "Cargo excluído com sucesso",
         "deleteError": "Erro ao excluir cargo",
-        "confirmDelete": "Tem certeza que deseja excluir este cargo?"
+        "confirmDelete": "Tem certeza que deseja excluir este cargo?",
+        "confirmBulkDelete": "Tem certeza que deseja excluir {count} cargos? A ação não pode ser desfeita.",
+        "bulkDeleteSuccess": "{count} cargos excluídos com sucesso.",
+        "bulkDeletePartial": "{deleted} de {total} cargos excluídos. {failed} falharam."
       }
     },
     "users": {
@@ -177,7 +188,13 @@
         "updateError": "Erro ao atualizar log",
         "deleteSuccess": "Log excluído com sucesso",
         "deleteError": "Erro ao excluir log",
-        "confirmDelete": "Tem certeza que deseja excluir este log?"
+        "confirmDelete": "Tem certeza que deseja excluir este log?",
+        "confirmBulkDelete": "Tem certeza que deseja excluir {count} logs? A ação não pode ser desfeita.",
+        "bulkDeleteSuccess": "{count} logs excluídos com sucesso.",
+        "bulkDeletePartial": "{deleted} de {total} logs excluídos. {failed} falharam."
+      },
+      "dialog": {
+        "deleteTitle": "Excluir log"
       }
     },
     "dashboard": {
