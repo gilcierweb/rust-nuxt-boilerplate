@@ -131,15 +131,18 @@ export const useAuthStore = defineStore('auth', {
           // Extract the backend origin URL from the 503 so we can call it
           // directly. Falls back to nothing (give up) if not provided.
           const backendUrl =
+            err?.response?.headers?.get?.('x-backend-url') ??
             err?.data?.error?.backendUrl ??
             err?.response?._data?.error?.backendUrl ??
             err?.data?.backendUrl
           if (!backendUrl || typeof backendUrl !== 'string') {
+            console.warn('[auth] wakeBackend: no backendUrl in 503 response', err)
             return false
           }
 
           // 2. Wake Render directly from the browser (residential IP).
           const directHealthUrl = `${backendUrl.replace(/\/+$/, '')}/health`
+          console.info('[auth] waking Render directly:', directHealthUrl)
           while (Date.now() - startedAt < timeoutMs) {
             try {
               await $fetch(directHealthUrl, {
@@ -147,16 +150,16 @@ export const useAuthStore = defineStore('auth', {
                 mode: 'cors',
                 credentials: 'omit',
               })
+              console.info('[auth] Render awake, confirming via Worker')
               // 3. Render is awake — confirm via the Worker proxy.
               try {
                 await $fetch('/health', { method: 'GET', credentials: 'omit' })
               } catch {
-                // Worker might lag; give it a moment.
                 await new Promise((r) => setTimeout(r, 1_000))
               }
               return true
-            } catch {
-              // Not ready yet. Wait and retry.
+            } catch (directErr: any) {
+              console.warn('[auth] direct wake attempt failed:', directErr?.message ?? directErr)
             }
             const remaining = timeoutMs - (Date.now() - startedAt)
             if (remaining <= 0) return false

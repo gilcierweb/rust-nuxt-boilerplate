@@ -254,6 +254,10 @@ export function mapBackendWakeupExhaustion(
     }),
   )
   setResponseStatus(event, 503)
+  setResponseHeader(event, 'content-type', 'application/json')
+  if (backendUrl) {
+    setResponseHeader(event, 'x-backend-url', backendUrl)
+  }
   setResponseHeader(event, 'retry-after', 30)
 
   return {
