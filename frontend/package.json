@@ -57,6 +57,7 @@
     "sass-embedded": "^1.108.2",
     "typescript": "^5.9.3",
     "vitest": "^1.6.1",
+    "vue-eslint-parser": "9.4.3",
     "wrangler": "^4.160.1"
   }
 }

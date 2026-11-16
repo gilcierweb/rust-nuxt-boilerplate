@@ -127,6 +127,9 @@ importers:
       vitest:
         specifier: ^1.6.1
         version: 1.6.1(@types/node@20.19.43)(@vitest/ui@1.6.1)(jsdom@29.1.1)(lightningcss@1.33.0)(sass-embedded@1.108.2)(sass@1.108.2)(supports-color@10.2.2)(terser@5.51.2)
+      vue-eslint-parser:
+        specifier: 9.4.3
+        version: 9.4.3(eslint@8.57.1(supports-color@10.2.2))(supports-color@10.2.2)
       wrangler:
         specifier: ^4.160.1
         version: 4.160.1(@types/node@20.19.43)
