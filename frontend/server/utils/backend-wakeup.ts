@@ -17,8 +17,9 @@ export interface BackendWakeupRetryOptions {
 
 // A sleeping Render (or any hibernating host) needs ~60s to boot, so the
 // readiness budget must outlive a cold start instead of giving up at ~14s.
-export const BACKEND_HEALTH_MAX_ATTEMPTS = 8
-export const BACKEND_HEALTH_DELAYS_MS = [3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 15_000] as const
+// Render free cold start can take 60-90s; the budget must outlive it.
+export const BACKEND_HEALTH_MAX_ATTEMPTS = 10
+export const BACKEND_HEALTH_DELAYS_MS = [3_000, 4_000, 5_000, 6_000, 8_000, 10_000, 12_000, 15_000, 20_000] as const
 
 export interface BackendHealthBudget {
   attemptsUsed: number
