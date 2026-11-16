@@ -108,6 +108,7 @@ export interface BackendUnavailableResponse {
   error: {
     code: 'BACKEND_UNAVAILABLE'
     message: string
+    backendUrl?: string
   }
 }
 
@@ -234,6 +235,14 @@ export function mapBackendWakeupExhaustion(
     return null
   }
 
+  // Expose the backend origin URL so the frontend can wake a hibernating
+  // host directly from the browser (residential IP). A Cloudflare Worker
+  // cannot wake a sleeping Render instance because Render's edge does not
+  // forward datacenter-origin requests to the origin; a browser request does.
+  const backendUrl = (context.backendApiBase || '')
+    .replace(/\/api\/v\d+$/i, '')
+    .replace(/\/+$/, '')
+
   console.warn(
     '[proxy] Render backend did not become ready:',
     JSON.stringify({
@@ -241,6 +250,7 @@ export function mapBackendWakeupExhaustion(
       method: context.method,
       path: context.path,
       backendApiBase: context.backendApiBase,
+      backendUrl,
     }),
   )
   setResponseStatus(event, 503)
@@ -250,6 +260,7 @@ export function mapBackendWakeupExhaustion(
     error: {
       code: 'BACKEND_UNAVAILABLE',
       message: 'Backend API unavailable',
+      backendUrl,
     },
   }
 }

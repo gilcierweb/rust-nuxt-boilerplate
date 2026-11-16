@@ -116,36 +116,56 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async wakeBackend(timeoutMs = 180_000): Promise<boolean> {
       // Render free tier hibernates after 15 min of inactivity and takes
-      // 30-60s to boot. A single proxied request now lives up to 75s (proxy
-      // budget), so one /health call is enough to ride out the cold start.
-      // We still loop to honour a retry-after hint or a proxy that gave up
-      // early, but never more often than the remaining budget allows.
+      // 30-60s to boot. A Cloudflare Worker cannot wake a sleeping Render
+      // instance (Render's edge does not forward datacenter-origin requests
+      // to the origin), so we wake it directly from the browser, whose
+      // residential IP Render treats as a real user.
       this.isWakingUp = true
       const startedAt = Date.now()
       try {
-        while (Date.now() - startedAt < timeoutMs) {
-          try {
-            await $fetch('/health', { method: 'GET', credentials: 'omit' })
-            return true
-          } catch (err: any) {
-            const status =
-              err?.status ?? err?.statusCode ?? err?.response?.status
-            const retryAfterRaw =
-              err?.response?.headers?.get?.('retry-after') ??
-              err?.headers?.get?.('retry-after')
-            const retryAfterSeconds = Number(retryAfterRaw)
-            const waitMs =
-              Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
-                ? retryAfterSeconds * 1000
-                : 5_000
+        // 1. Try the Worker proxy first (fast path when warm).
+        try {
+          await $fetch('/health', { method: 'GET', credentials: 'omit' })
+          return true
+        } catch (err: any) {
+          // Extract the backend origin URL from the 503 so we can call it
+          // directly. Falls back to nothing (give up) if not provided.
+          const backendUrl =
+            err?.data?.error?.backendUrl ??
+            err?.response?._data?.error?.backendUrl ??
+            err?.data?.backendUrl
+          if (!backendUrl || typeof backendUrl !== 'string') {
+            return false
+          }
+
+          // 2. Wake Render directly from the browser (residential IP).
+          const directHealthUrl = `${backendUrl.replace(/\/+$/, '')}/health`
+          while (Date.now() - startedAt < timeoutMs) {
+            try {
+              await $fetch(directHealthUrl, {
+                method: 'GET',
+                mode: 'cors',
+                credentials: 'omit',
+              })
+              // 3. Render is awake — confirm via the Worker proxy.
+              try {
+                await $fetch('/health', { method: 'GET', credentials: 'omit' })
+              } catch {
+                // Worker might lag; give it a moment.
+                await new Promise((r) => setTimeout(r, 1_000))
+              }
+              return true
+            } catch {
+              // Not ready yet. Wait and retry.
+            }
             const remaining = timeoutMs - (Date.now() - startedAt)
             if (remaining <= 0) return false
             await new Promise((resolve) =>
-              setTimeout(resolve, Math.min(waitMs, remaining)),
+              setTimeout(resolve, Math.min(3_000, remaining)),
             )
           }
+          return false
         }
-        return false
       } finally {
         this.isWakingUp = false
       }
