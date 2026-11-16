@@ -116,22 +116,34 @@ export const useAuthStore = defineStore('auth', {
   actions: {
     async wakeBackend(timeoutMs = 90_000): Promise<boolean> {
       // Render free tier hibernates after 15 min of inactivity and takes
-      // 30-60s to boot. Instead of letting every login attempt pay that
-      // cold start (and fail), wake the backend explicitly first and poll
-      // /health until it answers 200, then let login run against a warm
-      // service. Returns true if the backend became ready in time.
+      // 30-60s to boot. A single proxied request now lives up to 75s (proxy
+      // budget), so one /health call is enough to ride out the cold start.
+      // We still loop to honour a retry-after hint or a proxy that gave up
+      // early, but never more often than the remaining budget allows.
       this.isWakingUp = true
       const startedAt = Date.now()
-      const pollIntervalMs = 3_000
       try {
         while (Date.now() - startedAt < timeoutMs) {
           try {
             await $fetch('/health', { method: 'GET', credentials: 'omit' })
             return true
-          } catch {
-            // Not ready yet (503 while waking, or network). Keep polling.
+          } catch (err: any) {
+            const status =
+              err?.status ?? err?.statusCode ?? err?.response?.status
+            const retryAfterRaw =
+              err?.response?.headers?.get?.('retry-after') ??
+              err?.headers?.get?.('retry-after')
+            const retryAfterSeconds = Number(retryAfterRaw)
+            const waitMs =
+              Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+                ? retryAfterSeconds * 1000
+                : 5_000
+            const remaining = timeoutMs - (Date.now() - startedAt)
+            if (remaining <= 0) return false
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.min(waitMs, remaining)),
+            )
           }
-          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
         }
         return false
       } finally {
@@ -144,31 +156,18 @@ export const useAuthStore = defineStore('auth', {
       this.isLoading = true
       try {
         // Wake the backend first when it is hibernating, so the login
-        // request itself does not pay the cold-start penalty.
+        // request itself does not pay the cold-start penalty. Login is
+        // attempted exactly once afterwards: it is not idempotent and must
+        // not be retried in a loop (rate limit, lockout, audit logs).
         await this.wakeBackend()
 
-        const maxAttempts = 12
-        let lastError: unknown
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          try {
-            const data = await $api<AuthResponse>('/auth/login', {
-              method: 'POST',
-              body: payload,
-            })
-            this._setTokens(data)
-            this.isInitialized = true
-            return data
-          } catch (err: unknown) {
-            lastError = err
-            console.warn('[auth.login] attempt', attempt, 'failed:', err)
-            if (!isBackendUnavailable(err) || attempt === maxAttempts - 1) {
-              throw err
-            }
-            const delayMs = 3_000
-            await new Promise((resolve) => setTimeout(resolve, delayMs))
-          }
-        }
-        throw lastError
+        const data = await $api<AuthResponse>('/auth/login', {
+          method: 'POST',
+          body: payload,
+        })
+        this._setTokens(data)
+        this.isInitialized = true
+        return data
       } finally {
         this.isLoading = false
         this.isWakingUp = false
