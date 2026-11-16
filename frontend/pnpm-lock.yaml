@@ -39,6 +39,9 @@ importers:
       '@vite-pwa/nuxt':
         specifier: ^1.1.1
         version: 1.1.1(magicast@0.5.5)(supports-color@10.2.2)(vite@8.3.8(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.108.2)(sass@1.108.2)(terser@5.51.2)(yaml@2.9.1))(workbox-build@7.4.1(supports-color@10.2.2))(workbox-window@7.4.1)
+      '@vueuse/nuxt':
+        specifier: 15.0.0
+        version: 15.0.0(@nuxt/schema@4.6.4)(confbox@0.2.4)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.5)(mlly@1.8.2)(nuxt@4.6.4(5fb6ef8633b285e01c6793a98386d965))(oxc-parser@0.141.0)(rolldown@1.2.19)(unplugin@3.7.0(esbuild@0.28.2)(rolldown@1.2.19)(rollup@4.68.2)(vite@8.3.8(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.108.2)(sass@1.108.2)(terser@5.51.2)(yaml@2.9.1)))(vue@3.5.45(typescript@5.9.3))
       flyonui:
         specifier: ^2.4.1
         version: 2.4.1
@@ -47,7 +50,7 @@ importers:
         version: 4.6.4(5fb6ef8633b285e01c6793a98386d965)
       nuxt-charts:
         specifier: ^3.1.0
-        version: 3.2.0(@vueuse/core@13.9.0(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3))
+        version: 3.2.0(@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3))
       nuxt-security:
         specifier: 2.5.1
         version: 2.5.1(@nuxt/schema@4.6.4)(confbox@0.2.4)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.5)(mlly@1.8.2)(oxc-parser@0.141.0)(rolldown@1.2.19)(rollup@4.68.2)(supports-color@10.2.2)(unplugin@3.7.0(esbuild@0.28.2)(rolldown@1.2.19)(rollup@4.68.2)(vite@8.3.8(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.108.2)(sass@1.108.2)(terser@5.51.2)(yaml@2.9.1)))
@@ -3040,11 +3043,34 @@ packages:
     peerDependencies:
       vue: ^3.5.0
 
+  '@vueuse/core@15.0.0':
+    resolution: {integrity: sha512-Zv67h5mrk7YHDJsRObx+DXaCBz6RKBUpxqLesJ+3xZNPG6yuQs7ja7kg3veFrrouYLWAqydQ7CwGEbLVxB43Ng==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      vue: ^3.5.0
+
   '@vueuse/metadata@13.9.0':
     resolution: {integrity: sha512-1AFRvuiGphfF7yWixZa0KwjYH8ulyjDCC0aFgrGRz8+P4kvDFSdXLVfTk5xAN9wEuD1J6z4/myMoYbnHoX07zg==}
 
+  '@vueuse/metadata@15.0.0':
+    resolution: {integrity: sha512-sfWE5LADAKJ0KnjtGliMdSN8Ij/L7uP6rXIZlgPloAI4zvvefbw6H5Lt7KJA6RqQOYgVqWF5Guj50HHMIzygBg==}
+    engines: {node: '>=22'}
+
+  '@vueuse/nuxt@15.0.0':
+    resolution: {integrity: sha512-qiFrJ9WX6wI/LkUL7R2nsepjMLRfugR39WIsEHis1EkPOCA+qVRIwNEBui+yJ/BD1xblBIPXgD77wBX/SkcnJw==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      nuxt: ^3.0.0 || ^4.0.0-0 || ^5.0.0-0
+      vue: ^3.5.0
+
   '@vueuse/shared@13.9.0':
     resolution: {integrity: sha512-e89uuTLMh0U5cZ9iDpEI2senqPGfbPRTHM/0AaQkcxnpqjkZqDYP8rpfm7edOz8s+pOCOROEy1PIveSW8+fL5g==}
+    peerDependencies:
+      vue: ^3.5.0
+
+  '@vueuse/shared@15.0.0':
+    resolution: {integrity: sha512-vbNXhGrbV53xPOMSyOzMHQRvhMgZf7oNDw2RChUetVxwTIEkInQ1joZ9JbT0G3z2n2AJNjvmCWeM9ySYrnvogA==}
+    engines: {node: '>=22'}
     peerDependencies:
       vue: ^3.5.0
 
@@ -9819,9 +9845,42 @@ snapshots:
       '@vueuse/shared': 13.9.0(vue@3.5.45(typescript@5.9.3))
       vue: 3.5.45(typescript@5.9.3)
 
+  '@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3))':
+    dependencies:
+      '@types/web-bluetooth': 0.0.21
+      '@vueuse/metadata': 15.0.0
+      '@vueuse/shared': 15.0.0(vue@3.5.45(typescript@5.9.3))
+      vue: 3.5.45(typescript@5.9.3)
+
   '@vueuse/metadata@13.9.0': {}
 
+  '@vueuse/metadata@15.0.0': {}
+
+  '@vueuse/nuxt@15.0.0(@nuxt/schema@4.6.4)(confbox@0.2.4)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.5)(mlly@1.8.2)(nuxt@4.6.4(5fb6ef8633b285e01c6793a98386d965))(oxc-parser@0.141.0)(rolldown@1.2.19)(unplugin@3.7.0(esbuild@0.28.2)(rolldown@1.2.19)(rollup@4.68.2)(vite@8.3.8(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.108.2)(sass@1.108.2)(terser@5.51.2)(yaml@2.9.1)))(vue@3.5.45(typescript@5.9.3))':
+    dependencies:
+      '@nuxt/kit': 4.6.4(@nuxt/schema@4.6.4)(confbox@0.2.4)(dotenv@17.4.2)(giget@3.3.1)(jiti@2.7.0)(magic-string@1.4.5)(mlly@1.8.2)(oxc-parser@0.141.0)(rolldown@1.2.19)(unplugin@3.7.0(esbuild@0.28.2)(rolldown@1.2.19)(rollup@4.68.2)(vite@8.3.8(@types/node@20.19.43)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.108.2)(sass@1.108.2)(terser@5.51.2)(yaml@2.9.1)))
+      '@vueuse/core': 15.0.0(vue@3.5.45(typescript@5.9.3))
+      '@vueuse/metadata': 15.0.0
+      local-pkg: 1.2.1
+      nuxt: 4.6.4(5fb6ef8633b285e01c6793a98386d965)
+      vue: 3.5.45(typescript@5.9.3)
+    transitivePeerDependencies:
+      - '@nuxt/schema'
+      - confbox
+      - dotenv
+      - giget
+      - jiti
+      - magic-string
+      - mlly
+      - oxc-parser
+      - rolldown
+      - unplugin
+
   '@vueuse/shared@13.9.0(vue@3.5.45(typescript@5.9.3))':
+    dependencies:
+      vue: 3.5.45(typescript@5.9.3)
+
+  '@vueuse/shared@15.0.0(vue@3.5.45(typescript@5.9.3))':
     dependencies:
       vue: 3.5.45(typescript@5.9.3)
 
@@ -11723,9 +11782,9 @@ snapshots:
 
   motion-utils@14.7.0: {}
 
-  motion-v@2.12.0(@vueuse/core@13.9.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)):
+  motion-v@2.12.0(@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)):
     dependencies:
-      '@vueuse/core': 13.9.0(vue@3.5.45(typescript@5.9.3))
+      '@vueuse/core': 15.0.0(vue@3.5.45(typescript@5.9.3))
       framer-motion: 14.11.1
       hey-listen: 1.0.8
       motion-dom: 14.11.1
@@ -11917,7 +11976,7 @@ snapshots:
     dependencies:
       boolbase: 1.0.0
 
-  nuxt-charts@3.2.0(@vueuse/core@13.9.0(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3)):
+  nuxt-charts@3.2.0(@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3)):
     dependencies:
       '@types/d3-geo': 3.1.1
       '@types/geojson': 7946.0.16
@@ -11925,9 +11984,9 @@ snapshots:
       d3-geo: 3.1.2
       d3-selection: 3.0.1
       d3-zoom: 3.0.1
-      motion-v: 2.12.0(@vueuse/core@13.9.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
+      motion-v: 2.12.0(@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
       topojson-client: 3.1.0
-      vccs: 0.5.0(motion-v@2.12.0(@vueuse/core@13.9.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3))
+      vccs: 0.5.0(motion-v@2.12.0(@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3))
       vue: 3.5.45(typescript@5.9.3)
     transitivePeerDependencies:
       - '@types/react'
@@ -13482,7 +13541,7 @@ snapshots:
 
   varint@6.0.0: {}
 
-  vccs@0.5.0(motion-v@2.12.0(@vueuse/core@13.9.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3)):
+  vccs@0.5.0(motion-v@2.12.0(@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3)))(redux@5.0.1)(vue@3.5.45(typescript@5.9.3)):
     dependencies:
       '@reduxjs/toolkit': 2.14.0
       '@reduxjs/vue-redux': 1.0.1(redux@5.0.1)(vue@3.5.45(typescript@5.9.3))
@@ -13494,7 +13553,7 @@ snapshots:
       eventemitter3: 5.0.4
       immer: 10.2.0
       lodash-es: 4.18.1
-      motion-v: 2.12.0(@vueuse/core@13.9.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
+      motion-v: 2.12.0(@vueuse/core@15.0.0(vue@3.5.45(typescript@5.9.3)))(vue@3.5.45(typescript@5.9.3))
       victory-vendor: 37.4.1
       vue: 3.5.45(typescript@5.9.3)
     transitivePeerDependencies:
