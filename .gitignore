@@ -32,6 +32,7 @@ frontend/node_modules/
 .codex
 .planning/
 .superpowers/
+.wrangler/
 
 # TLS certificates and secrets (production should never be committed)
 infra/ssl/*.pem
