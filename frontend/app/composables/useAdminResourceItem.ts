@@ -6,7 +6,7 @@ export interface UseAdminResourceItemReturn<T> {
   itemId: ComputedRef<string | null>
   item: ComputedRef<T | null>
   raw: ComputedRef<T | null>
-  pending: ComputedRef<boolean>
+  pending: Ref<boolean>
   error: Ref<string>
   refresh: () => Promise<void>
 }

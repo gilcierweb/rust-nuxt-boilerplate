@@ -1,3 +1,4 @@
+import type { MaybeRefOrGetter } from 'vue'
 import type { FetchError } from 'ofetch'
 
 type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
@@ -153,9 +154,8 @@ export function useApiLazyFetch<T>(
 }
 
 export function useApiAsyncData<T>(
-  key: string,
+  key: MaybeRefOrGetter<string>,
   handler: () => Promise<T>,
-  options?: Record<string, any>,
 ) {
-  return useAsyncData(key, handler, options)
+  return useAsyncData(key, handler)
 }
