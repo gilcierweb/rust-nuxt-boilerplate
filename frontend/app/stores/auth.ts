@@ -79,6 +79,7 @@ interface AuthState {
   accessToken: string | null
   user: User | null
   isLoading: boolean
+  isWakingUp: boolean
   returnUrl: string | null
   isInitialized: boolean
   isBootstrapping: boolean
@@ -90,6 +91,7 @@ export const useAuthStore = defineStore('auth', {
     accessToken: null,
     user: null,
     isLoading: false,
+    isWakingUp: false,
     returnUrl: null,
     isInitialized: false,
     isBootstrapping: false,
@@ -112,11 +114,40 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
+    async wakeBackend(timeoutMs = 90_000): Promise<boolean> {
+      // Render free tier hibernates after 15 min of inactivity and takes
+      // 30-60s to boot. Instead of letting every login attempt pay that
+      // cold start (and fail), wake the backend explicitly first and poll
+      // /health until it answers 200, then let login run against a warm
+      // service. Returns true if the backend became ready in time.
+      this.isWakingUp = true
+      const startedAt = Date.now()
+      const pollIntervalMs = 3_000
+      try {
+        while (Date.now() - startedAt < timeoutMs) {
+          try {
+            await $fetch('/health', { method: 'GET', credentials: 'omit' })
+            return true
+          } catch {
+            // Not ready yet (503 while waking, or network). Keep polling.
+          }
+          await new Promise((resolve) => setTimeout(resolve, pollIntervalMs))
+        }
+        return false
+      } finally {
+        this.isWakingUp = false
+      }
+    },
+
     async login(payload: LoginPayload) {
       const { $api } = useNuxtApp()
       this.isLoading = true
       try {
-        const maxAttempts = 30
+        // Wake the backend first when it is hibernating, so the login
+        // request itself does not pay the cold-start penalty.
+        await this.wakeBackend()
+
+        const maxAttempts = 12
         let lastError: unknown
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
           try {
@@ -129,20 +160,18 @@ export const useAuthStore = defineStore('auth', {
             return data
           } catch (err: unknown) {
             lastError = err
-            // Render free tier hibernates; the proxy answers 503
-            // BACKEND_UNAVAILABLE while it wakes up. Retry with backoff
-            // instead of surfacing the error to the user.
             console.warn('[auth.login] attempt', attempt, 'failed:', err)
             if (!isBackendUnavailable(err) || attempt === maxAttempts - 1) {
               throw err
             }
-            const delayMs = 5000
+            const delayMs = 3_000
             await new Promise((resolve) => setTimeout(resolve, delayMs))
           }
         }
         throw lastError
       } finally {
         this.isLoading = false
+        this.isWakingUp = false
       }
     },
 
