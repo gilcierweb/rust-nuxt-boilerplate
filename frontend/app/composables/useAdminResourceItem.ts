@@ -1,10 +1,11 @@
 import type { ComputedRef, Ref } from 'vue'
 import { mapAdminError } from '~/utils/admin-errors'
+import { useApiAsyncData } from '~/composables/useApi'
 
 export interface UseAdminResourceItemReturn<T> {
   itemId: ComputedRef<string | null>
   item: ComputedRef<T | null>
-  raw: ComputedRef<any>
+  raw: ComputedRef<T | null>
   pending: ComputedRef<boolean>
   error: Ref<string>
   refresh: () => Promise<void>
@@ -42,8 +43,10 @@ function unwrapItem<T>(payload: any): T | null {
  * Composable for admin `[id]` detail/edit pages. Extracts the route id safely,
  * short-circuits the fetch when id is invalid, and normalizes the response shape.
  *
- * DRY replacement for the repeated `route.params.id as string` + `useApiFetch`
- * pattern that was producing `/admin/<resource>/undefined` requests.
+ * The item travels through `useAsyncData`, so the server render fills the
+ * payload and the client hydration reads the item from it: the first client
+ * render carries the item, and direct loads no longer flash the empty state
+ * before the standalone ref fetch answers.
  */
 export function useAdminResourceItem<T extends Record<string, any>>(
   resource: string,
@@ -53,54 +56,30 @@ export function useAdminResourceItem<T extends Record<string, any>>(
   const itemId = useRouteResourceId()
   const api = useApi()
 
-  const data = ref<T | null>(null) as Ref<T | null>
-  const pending = ref(false)
-  const error = ref<unknown>(null)
-  let lastFetchedId: string | null = null
+  const keyBase = keyPrefix ?? `admin-${resource}-item`
+  const cacheKey = computed(() => `${keyBase}-${itemId.value ?? 'none'}`)
 
-  async function fetchItem(id: string) {
-    pending.value = true
-    error.value = null
-    lastFetchedId = id
-    try {
-      const response = await api.request<any>(`/admin/${resource}/${id}`, { method: 'GET' })
-      if (lastFetchedId !== id) return
-      data.value = unwrapItem<T>(response)
-    } catch (err) {
-      if (lastFetchedId !== id) return
-      error.value = err
-      data.value = null
-    } finally {
-      if (lastFetchedId === id) pending.value = false
-    }
-  }
-
-  watch(
-    itemId,
-    (id) => {
-      if (!id) {
-        pending.value = false
-        error.value = null
-        data.value = null
-        return
-      }
-      fetchItem(id)
+  const { data, pending, error: rawError, refresh: refreshData } = useApiAsyncData<T | null>(
+    cacheKey,
+    async () => {
+      if (!itemId.value) return null
+      const response = await api.request<any>(`/admin/${resource}/${itemId.value}`, { method: 'GET' })
+      return unwrapItem<T>(response)
     },
-    { immediate: true },
   )
 
   const { t } = useI18n()
-  const item = computed<T | null>(() => data.value)
-  const requestError = computed(() => (error.value ? mapAdminError(error.value, t) : ''))
+  const item = computed<T | null>(() => data.value ?? null)
+  const error = computed(() => (rawError.value ? mapAdminError(rawError.value, t) : ''))
 
   return {
     itemId,
     item,
-    raw: computed(() => data.value),
-    pending: computed(() => pending.value),
-    error: requestError as Ref<string>,
+    raw: item,
+    pending,
+    error: error as Ref<string>,
     refresh: async () => {
-      if (itemId.value) await fetchItem(itemId.value)
+      if (itemId.value) await refreshData()
     },
   }
 }
