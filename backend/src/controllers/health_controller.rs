@@ -27,20 +27,9 @@ pub struct HealthResponse {
 /// Liveness probe — process is up and responding.
 ///
 /// Returns a static `200` without touching any external dependency
-/// (DB, Redis). Used by orchestrators that only need to know the
-/// process is alive; not suitable for determining whether the service
-/// is ready to handle traffic (use `/api/v1/health` for that).
-///
-/// # When to use this endpoint
-///
-/// - **Kubernetes `livenessProbe`**:LB: checks the process can answer HTTP —
-///   if this fails, k8s restarts the pod.
-/// - **AWS NLB/ALB health checks** (target group): balancing decision.
-/// - **Docker `HEALTHCHECK`** + **Wrangler dev** probe.
-///
-/// Intentionally does NOT probe DB/Redis so a transient dependency
-/// blip does not trigger a cascading pod restart (a slow DB is not
-/// proof the process is dead).
+/// (DB, Redis, locks). Used by orchestrators, uptime monitors and the
+/// frontend wake-up probe. Must answer in milliseconds: if it ever blocks,
+/// every wake-up, keep-alive and proxy check dies at once.
 #[utoipa::path(
     get,
     path = "/health",
@@ -49,12 +38,6 @@ pub struct HealthResponse {
         (status = 200, description = "Process is alive", body = HealthResponse)
     )
 )]
-/// Liveness probe — process is up and responding.
-///
-/// Returns a static `200` without touching any external dependency
-/// (DB, Redis). Used by orchestrators that only need to know the
-/// process is alive; not suitable for determining whether the service
-/// is ready to handle traffic (use `/api/v1/health` for that).
 #[get("/health")]
 pub async fn liveness() -> HttpResponse {
     HttpResponse::Ok().json(HealthResponse {
