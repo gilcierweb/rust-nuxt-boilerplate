@@ -185,16 +185,7 @@
         "createSuccess": "Log creado exitosamente",
         "createError": "Error al crear log",
         "updateSuccess": "Log actualizado exitosamente",
-        "updateError": "Error al actualizar log",
-        "deleteSuccess": "Log eliminado exitosamente",
-        "deleteError": "Error al eliminar log",
-        "confirmDelete": "¿Seguro que quieres eliminar este log?",
-        "confirmBulkDelete": "¿Seguro que deseas eliminar {count} logs? Esta acción no se puede deshacer.",
-        "bulkDeleteSuccess": "{count} logs eliminados exitosamente.",
-        "bulkDeletePartial": "{deleted} de {total} logs eliminados. {failed} fallaron."
-      },
-      "dialog": {
-        "deleteTitle": "Eliminar log"
+        "updateError": "Error al actualizar log"
       }
     },
     "dashboard": {

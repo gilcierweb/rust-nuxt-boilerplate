@@ -185,16 +185,7 @@
         "createSuccess": "Log criado com sucesso",
         "createError": "Erro ao criar log",
         "updateSuccess": "Log atualizado com sucesso",
-        "updateError": "Erro ao atualizar log",
-        "deleteSuccess": "Log excluído com sucesso",
-        "deleteError": "Erro ao excluir log",
-        "confirmDelete": "Tem certeza que deseja excluir este log?",
-        "confirmBulkDelete": "Tem certeza que deseja excluir {count} logs? A ação não pode ser desfeita.",
-        "bulkDeleteSuccess": "{count} logs excluídos com sucesso.",
-        "bulkDeletePartial": "{deleted} de {total} logs excluídos. {failed} falharam."
-      },
-      "dialog": {
-        "deleteTitle": "Excluir log"
+        "updateError": "Erro ao atualizar log"
       }
     },
     "dashboard": {

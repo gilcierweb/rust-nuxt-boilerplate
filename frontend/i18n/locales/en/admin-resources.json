@@ -230,16 +230,7 @@
         "createSuccess": "Log created successfully",
         "createError": "Error creating log",
         "updateSuccess": "Log updated successfully",
-        "updateError": "Error updating log",
-        "deleteSuccess": "Log deleted successfully",
-        "deleteError": "Error deleting log",
-        "confirmDelete": "Are you sure you want to delete this log?",
-        "confirmBulkDelete": "Are you sure you want to delete {count} logs? This action cannot be undone.",
-        "bulkDeleteSuccess": "{count} logs deleted successfully.",
-        "bulkDeletePartial": "{deleted} of {total} logs deleted. {failed} failed."
-      },
-      "dialog": {
-        "deleteTitle": "Delete log"
+        "updateError": "Error updating log"
       }
     },
     "dashboard": {
