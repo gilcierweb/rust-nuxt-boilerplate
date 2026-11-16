@@ -71,6 +71,12 @@
                 {{ $t('portal.navbar.support') }}
               </NuxtLink>
             </li>
+            <li v-if="authStore.isAdmin">
+              <NuxtLink class="dropdown-item px-3" :to="localePath('/admin/dashboard')">
+                <span class="icon-[tabler--shield] size-5"></span>
+                {{ $t('admin.sidebar.admin') }}
+              </NuxtLink>
+            </li>
             <li>
               <NuxtLink class="dropdown-item px-3" :to="localePath('/')">
                 <span class="icon-[tabler--home] size-5"></span>
