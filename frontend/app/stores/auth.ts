@@ -1,5 +1,31 @@
 import { defineStore } from 'pinia'
 
+function isBackendUnavailable(err: unknown): boolean {
+  const anyErr = err as any
+  const status =
+    anyErr?.status ?? anyErr?.statusCode ?? anyErr?.response?.status ?? anyErr?.data?.status
+  if (status === 503) return true
+  // ofetch's FetchError stores `data`/`status` as non-enumerable getters,
+  // so JSON.stringify() omits them — check the direct properties first.
+  const directCode =
+    anyErr?.data?.error?.code ??
+    anyErr?.response?._data?.error?.code ??
+    anyErr?.error?.code
+  if (directCode === 'BACKEND_UNAVAILABLE') return true
+  if (anyErr?.status === 503 || anyErr?.statusCode === 503 || anyErr?.response?.status === 503) {
+    return true
+  }
+  let serialized = ''
+  try {
+    serialized = JSON.stringify(anyErr?.data ?? anyErr?.response?._data ?? '')
+  } catch {
+    serialized = String(anyErr ?? '')
+  }
+  if (/BACKEND_UNAVAILABLE/i.test(serialized)) return true
+  const message = String(anyErr?.message ?? anyErr?.data?.error?.message ?? '')
+  return /backend (api )?unavailable/i.test(message)
+}
+
 import { csrfTokenFromCookieHeader } from '~~/shared/utils/csrf'
 import type {
   User,
@@ -90,13 +116,31 @@ export const useAuthStore = defineStore('auth', {
       const { $api } = useNuxtApp()
       this.isLoading = true
       try {
-        const data = await $api<AuthResponse>('/auth/login', {
-          method: 'POST',
-          body: payload,
-        })
-        this._setTokens(data)
-        this.isInitialized = true
-        return data
+        const maxAttempts = 30
+        let lastError: unknown
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          try {
+            const data = await $api<AuthResponse>('/auth/login', {
+              method: 'POST',
+              body: payload,
+            })
+            this._setTokens(data)
+            this.isInitialized = true
+            return data
+          } catch (err: unknown) {
+            lastError = err
+            // Render free tier hibernates; the proxy answers 503
+            // BACKEND_UNAVAILABLE while it wakes up. Retry with backoff
+            // instead of surfacing the error to the user.
+            console.warn('[auth.login] attempt', attempt, 'failed:', err)
+            if (!isBackendUnavailable(err) || attempt === maxAttempts - 1) {
+              throw err
+            }
+            const delayMs = 5000
+            await new Promise((resolve) => setTimeout(resolve, delayMs))
+          }
+        }
+        throw lastError
       } finally {
         this.isLoading = false
       }

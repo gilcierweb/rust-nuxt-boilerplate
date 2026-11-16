@@ -103,7 +103,14 @@ function responseFromError(error: unknown): unknown {
 }
 
 export function isRenderWakeupError(error: unknown): boolean {
-  return isRenderWakeupResponse(responseFromError(error))
+  const response = responseFromError(error)
+  if (response !== undefined) {
+    return isRenderWakeupResponse(response)
+  }
+  // Network failure / timeout (no response) while the backend is waking up:
+  // Render holds the connection open for browser-less requests, so a timeout
+  // is itself a wake-up signal.
+  return true
 }
 
 export function isRenderWakeupResponse(response: unknown): boolean {
@@ -112,17 +119,45 @@ export function isRenderWakeupResponse(response: unknown): boolean {
   }
 
   const typedResponse = response as ResponseWithHeaders
-  if (typedResponse.status !== 429) {
+  const status = typedResponse.status
+  const routing = (readHeader(typedResponse.headers, 'x-render-routing') || '')
+    .toLowerCase()
+
+  // Render's free tier, while waking from hibernation, answers with a 503
+  // (or, for browser-like requests, a 429) page. The distinguishing marks
+  // are the `hibernate-pending-wake` routing header and/or an HTML/plain
+  // body without application rate-limit headers. A suspended service
+  // (`suspend*`) is NOT wakeable, so it is deliberately excluded.
+  const isWakeableStatus = status === 429 || status === 503 || status === 502 || status === 504
+  if (!isWakeableStatus) {
     return false
   }
+
+  if (routing.includes('suspend')) {
+    return false
+  }
+
+  const isHibernateWake =
+    routing.includes('hibernate') ||
+    routing.includes('pending') ||
+    routing.includes('wake') ||
+    routing.includes('no-server')
 
   const contentType = readHeader(typedResponse.headers, 'content-type')
   const mediaType = contentType?.split(';', 1)[0]?.trim().toLowerCase()
-  if (mediaType !== 'text/html' && mediaType !== 'text/plain') {
+  const isTextBody = mediaType === 'text/html' || mediaType === 'text/plain'
+
+  if (!isHibernateWake && !isTextBody) {
     return false
   }
 
-  return !hasRateLimitHeader(typedResponse.headers)
+  // A real application rate-limit 429 carries limiter headers and a JSON
+  // body: never treat it as a wake-up.
+  if (hasRateLimitHeader(typedResponse.headers)) {
+    return false
+  }
+
+  return true
 }
 
 function defaultSleep(delayMs: number): Promise<void> {

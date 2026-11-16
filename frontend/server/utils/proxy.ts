@@ -38,11 +38,29 @@ export function requireBackendProxyConfig(
   includeRawBase = false,
 ): { backendApiBases: string[]; backendApiKey: string } {
   const config = useRuntimeConfig(event)
+
+  // Cloudflare Workers (and other edge runtimes) inject environment variables
+  // at RUNTIME via bindings, but Nuxt bakes `runtimeConfig` at BUILD time.
+  // A variable set only in the Cloudflare dashboard therefore never reaches
+  // the baked config, leaving `backendApiBase` as the localhost default and
+  // making every proxied request (login included) target the worker itself
+  // instead of the Render backend. Prefer the runtime process env so the
+  // dashboard-configured value wins; fall back to the baked config for local
+  // Node / docker setups where both are equivalent.
+  const runtimeBackendApiBase =
+    (typeof process !== 'undefined' &&
+      (process.env?.NUXT_BACKEND_API_BASE || process.env?.BACKEND_API_BASE)) ||
+    ''
+  const runtimeBackendApiKey =
+    (typeof process !== 'undefined' &&
+      (process.env?.NUXT_BACKEND_API_KEY || process.env?.BACKEND_API_KEY)) ||
+    ''
+
   const backendApiBases = candidateBackendApiBases(
-    String(config.backendApiBase || ''),
+    String(runtimeBackendApiBase || config.backendApiBase || ''),
     includeRawBase,
   )
-  const backendApiKey = String(config.backendApiKey || '')
+  const backendApiKey = String(runtimeBackendApiKey || config.backendApiKey || '')
 
   if (backendApiBases.length === 0 || !backendApiKey) {
     throw createError({

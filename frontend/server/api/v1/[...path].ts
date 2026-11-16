@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
     const unavailableResponse = mapBackendWakeupExhaustion(
       event,
       error,
-      { method, path },
+      { method, path, backendApiBase },
     )
     if (unavailableResponse) {
       return unavailableResponse

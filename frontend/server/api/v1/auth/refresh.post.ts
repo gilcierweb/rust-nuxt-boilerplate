@@ -92,7 +92,7 @@ export default defineEventHandler(async (event) => {
     const unavailableResponse = mapBackendWakeupExhaustion(
       event,
       error,
-      { method: 'POST', path: 'auth/refresh' },
+      { method: 'POST', path: 'auth/refresh', backendApiBase: backendApiBases[0] },
     )
     if (unavailableResponse) {
       return unavailableResponse

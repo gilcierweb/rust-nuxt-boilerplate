@@ -44,6 +44,7 @@ export interface BackendFetchOptions {
   ignoreResponseError?: boolean
   retry?: number
   retryStatusCodes?: readonly number[]
+  timeout?: number
 }
 
 export interface BackendRawResponse<T = unknown> {
@@ -56,6 +57,7 @@ export interface BackendRawResponse<T = unknown> {
 export interface BackendRequestContext {
   method: string
   path: string
+  backendApiBase?: string
 }
 
 export interface BackendUnavailableResponse {
@@ -93,6 +95,7 @@ async function fetchBackendRaw<T>(
     credentials: options.credentials ?? 'include',
     ignoreResponseError: options.ignoreResponseError,
     ...(options.retry === undefined ? {} : { retry: options.retry }),
+    ...(options.timeout === undefined ? {} : { timeout: options.timeout }),
     retryStatusCodes: options.retryStatusCodes
       ? [...options.retryStatusCodes]
       : [...BACKEND_FETCH_RETRY_STATUS_CODES],
@@ -113,54 +116,38 @@ export async function fetchBackendWithRenderWakeupRetry<T = unknown>(
     originalAttempt += 1
 
     try {
-      return await fetchBackendRaw<T>(targetUrl, options)
+      return await fetchBackendRaw<T>(targetUrl, {
+        ...options,
+        // Bound the initial attempt so a Render wake-up that holds the
+        // connection open (browser-less requests) cannot hang the worker.
+        timeout: options.timeout ?? 5000,
+      })
     } catch (error) {
       if (!isRenderWakeupError(error)) {
         throw error
       }
 
-      if (originalAttempt >= BACKEND_REQUEST_MAX_ATTEMPTS) {
-        throw error
+      // Render is hibernating. Actively trigger the spin-up with a
+      // browser-like request (Accept: text/html) so the service actually
+      // wakes, then surface the wake-up to the caller (mapped to 503
+      // BACKEND_UNAVAILABLE) and let the client retry with backoff.
+      const healthUrls = backendHealthUrls(backendApiBase)
+      for (const healthUrl of healthUrls) {
+        try {
+          await fetchBackendRaw<unknown>(healthUrl, {
+            method: 'GET',
+            headers: new Headers({ accept: 'text/html' }),
+            credentials: 'omit',
+            ignoreResponseError: true,
+            retry: 0,
+            retryStatusCodes: [],
+            timeout: 2000,
+          })
+        } catch {
+          // Best-effort trigger; ignore.
+        }
       }
-
-      if (!wakeupState.healthReady) {
-        const healthUrls = backendHealthUrls(backendApiBase)
-        await waitForBackendHealth(
-          async () => {
-            let lastResponse: BackendRawResponse<unknown> | undefined
-            let lastError: unknown
-            for (const healthUrl of healthUrls) {
-              try {
-                const response = await fetchBackendRaw<unknown>(
-                  healthUrl,
-                  {
-                    method: 'GET',
-                    headers: new Headers({ accept: 'application/json' }),
-                    credentials: 'omit',
-                    ignoreResponseError: true,
-                    retry: 0,
-                    retryStatusCodes: [],
-                  },
-                )
-                if (response.status === 200) {
-                  return response
-                }
-                lastResponse = response
-              } catch (error) {
-                lastError = error
-              }
-            }
-            if (lastResponse) {
-              return lastResponse
-            }
-            throw (lastError instanceof Error
-              ? lastError
-              : new Error('Backend health probe failed'))
-          },
-          { budget: wakeupState.healthBudget },
-        )
-        wakeupState.healthReady = true
-      }
+      throw error
     }
   }
 
@@ -185,6 +172,7 @@ export function mapBackendWakeupExhaustion(
       event: 'backend_proxy.render_wakeup_timeout',
       method: context.method,
       path: context.path,
+      backendApiBase: context.backendApiBase,
     }),
   )
   setResponseStatus(event, 503)

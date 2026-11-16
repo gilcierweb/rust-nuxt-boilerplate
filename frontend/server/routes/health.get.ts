@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
     const unavailableResponse = mapBackendWakeupExhaustion(
       event,
       error,
-      { method: 'GET', path: 'health' },
+      { method: 'GET', path: 'health', backendApiBase: backendApiBases[0] },
     )
     if (unavailableResponse) {
       return unavailableResponse

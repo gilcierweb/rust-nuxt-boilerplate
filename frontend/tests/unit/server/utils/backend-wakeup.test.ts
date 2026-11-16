@@ -83,10 +83,10 @@ describe('isRenderWakeupResponse', () => {
     expect(isRenderWakeupResponse(response)).toBe(false)
   })
 
-  it('does not recognize a non-429 response as a Render wake-up response', () => {
+  it('recognizes a Render hibernation 503 (text/html) as a wake-up response', () => {
     const error = upstreamError(503, 'text/html; charset=UTF-8')
 
-    expect(isRenderWakeupResponse(error.response)).toBe(false)
+    expect(isRenderWakeupResponse(error.response)).toBe(true)
   })
 })
 
