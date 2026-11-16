@@ -137,10 +137,14 @@ export function requireBackendProxyConfig(
   const isLocalhostDefault =
     !runtimeBackendApiBase &&
     /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?(\/|$)/i.test(resolvedBase)
-  const isDevEnvironment =
-    process.env?.NODE_ENV === 'development' ||
-    process.env?.NODE_ENV === 'test'
-  if (isLocalhostDefault && !isDevEnvironment) {
+  // Detect whether we are running inside a deployed Cloudflare Worker (where
+  // localhost can never be reached) rather than the local Nitro dev server
+  // (where localhost:8080 is the expected backend). The Worker handler sets
+  // globalThis.__env__ on every request; the dev server never does.
+  const isDeployedWorker =
+    typeof globalThis !== 'undefined' &&
+    typeof (globalThis as any).__env__ !== 'undefined'
+  if (isLocalhostDefault && isDeployedWorker) {
     throw createError({
       statusCode: 500,
       statusMessage:
