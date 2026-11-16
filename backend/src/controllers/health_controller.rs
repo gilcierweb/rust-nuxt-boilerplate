@@ -49,6 +49,12 @@ pub struct HealthResponse {
         (status = 200, description = "Process is alive", body = HealthResponse)
     )
 )]
+/// Liveness probe — process is up and responding.
+///
+/// Returns a static `200` without touching any external dependency
+/// (DB, Redis). Used by orchestrators that only need to know the
+/// process is alive; not suitable for determining whether the service
+/// is ready to handle traffic (use `/api/v1/health` for that).
 #[get("/health")]
 pub async fn liveness() -> HttpResponse {
     HttpResponse::Ok().json(HealthResponse {
@@ -95,18 +101,25 @@ pub async fn liveness() -> HttpResponse {
 )]
 #[get("/health")]
 pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpResponse {
-    // --- DB probe with timing ---
+    // --- DB probe with timing (bounded so a slow/unreachable DB can never
+    //     hang the endpoint — health that hangs is worse than health that
+    //     fails fast). ---
     let db_probe_start = std::time::Instant::now();
-    let db_result = async {
-        let mut conn_obj = state.db.get().await.map_err(|error| error.to_string())?;
-        let connection = &mut *conn_obj;
-        diesel::sql_query("SELECT 1")
-            .execute(connection)
-            .await
-            .map_err(|error| error.to_string())?;
-        Ok::<(), String>(())
-    }
-    .await;
+    let db_result = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        async {
+            let mut conn_obj = state.db.get().await.map_err(|error| error.to_string())?;
+            let connection = &mut *conn_obj;
+            diesel::sql_query("SELECT 1")
+                .execute(connection)
+                .await
+                .map_err(|error| error.to_string())?;
+            Ok::<(), String>(())
+        },
+    )
+    .await
+    .map_err(|_| "timed out after 2s".to_string())
+    .and_then(|inner| inner);
     let db_latency_ms = db_probe_start.elapsed().as_secs_f64() * 1000.0;
 
     // Record DB probe timing in metrics registry
@@ -125,17 +138,22 @@ pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpR
         },
     };
 
-    // --- Redis probe with timing ---
+    // --- Redis probe with timing (bounded, see DB probe above). ---
     let redis_probe_start = std::time::Instant::now();
-    let redis_result = async {
-        let mut connection = state.redis.get().await.map_err(|error| error.to_string())?;
-        redis::cmd("PING")
-            .query_async::<String>(&mut connection)
-            .await
-            .map(|_| ())
-            .map_err(|error| error.to_string())
-    }
-    .await;
+    let redis_result = tokio::time::timeout(
+        std::time::Duration::from_secs(2),
+        async {
+            let mut connection = state.redis.get().await.map_err(|error| error.to_string())?;
+            redis::cmd("PING")
+                .query_async::<String>(&mut connection)
+                .await
+                .map(|_| ())
+                .map_err(|error| error.to_string())
+        },
+    )
+    .await
+    .map_err(|_| "timed out after 2s".to_string())
+    .and_then(|inner| inner);
     let redis_latency_ms = redis_probe_start.elapsed().as_secs_f64() * 1000.0;
 
     // Record Redis probe timing in metrics registry
