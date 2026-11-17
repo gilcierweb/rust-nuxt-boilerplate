@@ -50,6 +50,7 @@
       enable-selection
       mode="server"
       :sorting="sorting"
+      @update:search="setSearch"
       @row-click="onRowClick"
       @update:page="setPage"
       @update:page-size="setPageSize"
@@ -140,6 +141,7 @@ const {
   setPageSize,
   sorting,
   setSorting,
+  setSearch,
 } = useTablePagination<Role>(() => ({
   key: 'admin-roles-index',
   url: '/admin/roles',

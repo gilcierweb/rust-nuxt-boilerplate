@@ -48,6 +48,7 @@
       :enable-global-filter="true"
       mode="server"
       :sorting="sorting"
+      @update:search="setSearch"
       @row-click="onRowClick"
       @update:page="setPage"
       @update:page-size="setPageSize"
@@ -108,6 +109,7 @@ const {
   setPageSize,
   sorting,
   setSorting,
+  setSearch,
 } = useTablePagination<AuditLogRow>(() => ({
   key: 'admin-audit-logs-index',
   url: '/admin/audit-logs',
