@@ -73,9 +73,10 @@
       <div class="mb-4 flex items-center justify-between gap-3">
         <h2 class="text-lg font-semibold text-base-content">{{ $t('admin.dashboard.chartAuditActivity') }}</h2>
       </div>
-      <LineChart
+      <BarChart
         :data="auditByDay"
-        :categories="lineCategories"
+        :categories="auditActivityCategories"
+        :y-axis="['count']"
         x-axis="date"
         :height="260"
         empty-label="—"
@@ -249,7 +250,7 @@ const barCategories = computed(() => ({
   count: { name: t('admin.dashboard.auditLogCount') },
 }))
 
-const lineCategories = computed(() => ({
+const auditActivityCategories = computed(() => ({
   count: { name: t('admin.dashboard.auditLogCount') },
 }))
 
