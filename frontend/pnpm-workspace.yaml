@@ -18,6 +18,16 @@ allowBuilds:
 # ^10, workbox-build wants glob ^11 and @vercel/nft wants glob ^13; minimatch
 # advisory GHSA-g3hv-75wg-m249 flags >=7.0.0 <11.0.1 while glob@10 pins
 # minimatch ^9. Drop these overrides once the parents widen their ranges.
+
+# Accepted advisory: picomatch has no patched release (latest 4.0.7 is still
+# flagged, GHSA-fc5q-39xc-vjpf) and it is only used for build-time glob
+# matching (nitropack/globby/micromatch/anymatch, @nuxtjs/i18n unplugin),
+# never shipped in the Nuxt build output. Drop this ignore once a patched
+# picomatch is released upstream.
+auditConfig:
+  ignoreGhsas:
+    - GHSA-fc5q-39xc-vjpf
+
 overrides:
   glob: ^14.0.2
   minimatch: ^11.0.1
