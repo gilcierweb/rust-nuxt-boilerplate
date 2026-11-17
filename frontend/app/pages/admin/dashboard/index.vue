@@ -44,11 +44,11 @@
         <div class="mb-4 flex items-center justify-between gap-3">
           <h2 class="text-lg font-semibold text-base-content">{{ $t('admin.dashboard.chartResourceDistribution') }}</h2>
         </div>
-        <DonutChart
+        <BarChart
           :data="resourceDistribution"
-          :categories="donutCategories"
-          name-key="name"
-          value-key="value"
+          :categories="resourceCategories"
+          :y-axis="['count']"
+          x-axis="resource"
           :height="260"
           empty-label="—"
         />
@@ -235,15 +235,13 @@ const auditByDay = computed(() => {
 })
 
 const resourceDistribution = computed(() => ([
-  { name: 'users', value: stats.value.totalUsers },
-  { name: 'roles', value: stats.value.totalRoles },
-  { name: 'auditLogs', value: stats.value.totalAuditLogs },
+  { resource: t('admin.dashboard.totalUsers'), count: stats.value.totalUsers },
+  { resource: t('admin.dashboard.totalRoles'), count: stats.value.totalRoles },
+  { resource: t('admin.dashboard.totalAuditLogs'), count: stats.value.totalAuditLogs },
 ]))
 
-const donutCategories = computed(() => ({
-  users: { name: t('admin.dashboard.totalUsers') },
-  roles: { name: t('admin.dashboard.totalRoles') },
-  auditLogs: { name: t('admin.dashboard.totalAuditLogs') },
+const resourceCategories = computed(() => ({
+  count: { name: t('admin.common.total') },
 }))
 
 const barCategories = computed(() => ({
