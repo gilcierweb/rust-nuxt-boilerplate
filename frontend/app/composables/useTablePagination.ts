@@ -64,6 +64,15 @@ export function useTablePagination<T extends Record<string, any>>(
   // own columns, so the term travels as a query parameter.
   const search = ref('')
 
+  // VueUse's debounced helper replaces the hand-rolled timer: it cancels a
+  // pending run on every new keystroke and cleans the timer up on unmount,
+  // so the composable stays free of manual setTimeout/clearTimeout bookkeeping.
+  const debouncedSearch = useDebounceFn((term: string) => {
+    pagination.value = { ...pagination.value, page: 1 }
+    search.value = term
+    execute()
+  }, SEARCH_DEBOUNCE_MS)
+
   const resolvedFetcher = typeof fetcher === 'function' ? fetcher() : fetcher
   const baseOptions = resolvedFetcher.options ?? {}
 
@@ -152,17 +161,11 @@ export function useTablePagination<T extends Record<string, any>>(
 
   // The search travels as a query parameter, so every keystroke would fire a
   // request: the term is debounced and the request runs on the quiet term.
-  let searchTimer: ReturnType<typeof setTimeout> | null = null
-
+  // The committed term is compared up front so a re-typed identical value
+  // does not even schedule a debounced run.
   function setSearch(term: string) {
     if (term === search.value) return
-    if (searchTimer) clearTimeout(searchTimer)
-    searchTimer = setTimeout(() => {
-      searchTimer = null
-      pagination.value = { ...pagination.value, page: 1 }
-      search.value = term
-      execute()
-    }, SEARCH_DEBOUNCE_MS)
+    debouncedSearch(term)
   }
 
   return {

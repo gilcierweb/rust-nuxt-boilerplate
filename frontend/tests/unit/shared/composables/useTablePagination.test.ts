@@ -27,6 +27,21 @@ globalScope.useNuxtApp = () => ({
 // `useAsyncData` is synchronous in the real composable: the object answers at
 // once and the fetch runs in the background. An async shim would hand the
 // caller a Promise, and the destructuring would read every field as undefined.
+// `useDebounceFn` is auto-imported by @vueuse/nuxt in the app; the test
+// environment has no Nuxt pipeline, so it is shimmed here. The shim keeps the
+// real debounce semantics (a pending run is cancelled by a new call) while
+// using a real timer, so `settle()` can flush it with a zero-delay wait.
+globalScope.useDebounceFn = (fn: (...args: any[]) => void, ms: number) => {
+  let timer: ReturnType<typeof setTimeout> | null = null
+  return (...args: any[]) => {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = null
+      fn(...args)
+    }, ms)
+  }
+}
+
 globalScope.useAsyncData = (
   _key: unknown,
   handler: () => Promise<unknown>,
