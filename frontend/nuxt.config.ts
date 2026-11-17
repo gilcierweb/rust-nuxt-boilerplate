@@ -103,6 +103,13 @@ security: {
       // @ts-ignore
       apiBase: "/api/v1", // Always use relative URL for proxy (recommended)
       // @ts-ignore
+      // Optional: backend origin for direct browser wake-up of a hibernating
+      // host (e.g. Render free tier). When set, the CSP allows fetches to
+      // this origin and the login flow can wake the backend from the browser's
+      // residential IP, which Render's edge forwards (unlike datacenter IPs).
+      // Leave empty (default) to disable direct wake-up.
+      backendOrigin: process.env.NUXT_PUBLIC_BACKEND_ORIGIN || "",
+      // @ts-ignore
       wsBase: process.env.NUXT_PUBLIC_WS_BASE || "ws://localhost:8080/api/v1",
       // @ts-ignore
       cdnUrl: process.env.NUXT_PUBLIC_CDN_URL || "https://cdn.rust-nuxt-boilerplate.com",

@@ -27,6 +27,15 @@ const DEV_CONNECT_SOURCES = [
 ]
 
 export function contentSecurityPolicy(isDev: boolean) {
+  // In production the backend origin is injected via NUXT_PUBLIC_BACKEND_ORIGIN
+  // (set in the Cloudflare dashboard or .env) so the browser is allowed to
+  // call it directly for waking a hibernating host. Empty by default.
+  const backendOrigin = process.env?.NUXT_PUBLIC_BACKEND_ORIGIN || ''
+  const prodConnectSources = ["'self'"]
+  if (backendOrigin) {
+    prodConnectSources.push(backendOrigin)
+  }
+
   return {
     'default-src': ["'self'"],
     'base-uri': ["'none'"],
@@ -38,7 +47,7 @@ export function contentSecurityPolicy(isDev: boolean) {
     'style-src': ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
     'script-src': ["'self'", "'unsafe-inline'"],
     'script-src-attr': ["'none'"],
-    'connect-src': isDev ? DEV_CONNECT_SOURCES : ["'self'"],
+    'connect-src': isDev ? DEV_CONNECT_SOURCES : prodConnectSources,
     'upgrade-insecure-requests': true,
   }
 }

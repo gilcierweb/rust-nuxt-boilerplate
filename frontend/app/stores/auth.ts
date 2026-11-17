@@ -120,6 +120,13 @@ export const useAuthStore = defineStore('auth', {
       // instance (Render's edge does not forward datacenter-origin requests
       // to the origin), so we wake it directly from the browser, whose
       // residential IP Render treats as a real user.
+      //
+      // The backend origin is read from NUXT_PUBLIC_BACKEND_ORIGIN (set in
+      // the Cloudflare dashboard or .env). If unset, direct wake-up is
+      // disabled and we fall back to the Worker proxy (which only works
+      // when Render is already warm).
+      const backendOrigin = useRuntimeConfig().public.backendOrigin as string
+
       this.isWakingUp = true
       const startedAt = Date.now()
       try {
@@ -127,47 +134,42 @@ export const useAuthStore = defineStore('auth', {
         try {
           await $fetch('/health', { method: 'GET', credentials: 'omit' })
           return true
-        } catch (err: any) {
-          // Extract the backend origin URL from the 503 so we can call it
-          // directly. Falls back to nothing (give up) if not provided.
-          const backendUrl =
-            err?.response?.headers?.get?.('x-backend-url') ??
-            err?.data?.error?.backendUrl ??
-            err?.response?._data?.error?.backendUrl ??
-            err?.data?.backendUrl
-          if (!backendUrl || typeof backendUrl !== 'string') {
-            console.warn('[auth] wakeBackend: no backendUrl in 503 response', err)
+        } catch {
+          if (!backendOrigin) {
+            console.warn('[auth] wakeBackend: NUXT_PUBLIC_BACKEND_ORIGIN not set, cannot wake directly')
             return false
           }
-
-          // 2. Wake Render directly from the browser (residential IP).
-          // Use no-cors mode: the response is opaque (can't read status), but
-          // Render receives the request and wakes up. CORS is bypassed.
-          const directHealthUrl = `${backendUrl.replace(/\/+$/, '')}/health`
-          console.info('[auth] waking Render directly:', directHealthUrl)
-          while (Date.now() - startedAt < timeoutMs) {
-            try {
-              await fetch(directHealthUrl, { method: 'GET', mode: 'no-cors' })
-              console.info('[auth] wake request sent, confirming via Worker')
-            } catch (directErr: any) {
-              console.warn('[auth] direct wake attempt failed:', directErr?.message ?? directErr)
-            }
-            // 3. Confirm via the Worker proxy (Render should be waking).
-            try {
-              await $fetch('/health', { method: 'GET', credentials: 'omit' })
-              console.info('[auth] Worker /health returned 200 — Render is awake')
-              return true
-            } catch {
-              // Not ready yet. Wait and retry.
-              const remaining = timeoutMs - (Date.now() - startedAt)
-              if (remaining <= 0) return false
-              await new Promise((resolve) =>
-                setTimeout(resolve, Math.min(3_000, remaining)),
-              )
-            }
-          }
-          return false
         }
+
+        if (!backendOrigin) return false
+
+        // 2. Wake Render directly from the browser (residential IP).
+        // Use no-cors mode: the response is opaque (can't read status), but
+        // Render receives the request and wakes up. CORS is bypassed.
+        const directHealthUrl = `${backendOrigin.replace(/\/+$/, '')}/health`
+        console.info('[auth] waking Render directly:', directHealthUrl)
+        while (Date.now() - startedAt < timeoutMs) {
+          try {
+            await fetch(directHealthUrl, { method: 'GET', mode: 'no-cors' })
+            console.info('[auth] wake request sent, confirming via Worker')
+          } catch (directErr: any) {
+            console.warn('[auth] direct wake attempt failed:', directErr?.message ?? directErr)
+          }
+          // 3. Confirm via the Worker proxy (Render should be waking).
+          try {
+            await $fetch('/health', { method: 'GET', credentials: 'omit' })
+            console.info('[auth] Worker /health returned 200 — Render is awake')
+            return true
+          } catch {
+            // Not ready yet. Wait and retry.
+            const remaining = timeoutMs - (Date.now() - startedAt)
+            if (remaining <= 0) return false
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.min(3_000, remaining)),
+            )
+          }
+        }
+        return false
       } finally {
         this.isWakingUp = false
       }
