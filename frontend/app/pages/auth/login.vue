@@ -182,7 +182,7 @@ const onSubmit = handleSubmit(async (values) => {
       requiresOtp.value = true
       return
     }
-    toast.success(t('common.success'))
+    toast.success(t('auth.login.success'))
     const returnUrl = authStore.returnUrl || localePath('/admin/dashboard')
     authStore.returnUrl = null
     await navigateTo(returnUrl)
@@ -210,7 +210,7 @@ async function handleOtpVerify() {
       password: password.value,
       otp_code: otp.value,
     })
-    toast.success(t('common.success'))
+    toast.success(t('auth.login.success'))
     await navigateTo(authStore.returnUrl || localePath('/admin/dashboard'))
     authStore.returnUrl = null
     resetForm()

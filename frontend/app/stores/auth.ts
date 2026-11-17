@@ -191,6 +191,15 @@ export const useAuthStore = defineStore('auth', {
         method: 'POST',
       }).catch(() => {}) // ignore logout errors
       this._clear()
+      if (import.meta.client) {
+        try {
+          const toast = useToast()
+          const { t } = useI18n()
+          toast.success(t('auth.logout.success'))
+        } catch {
+          // Toast/i18n may be unavailable in some contexts; logout still succeeds.
+        }
+      }
       const localePath = useLocalePath()
       await navigateTo(localePath('/auth/login'))
     },
