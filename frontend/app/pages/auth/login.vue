@@ -23,15 +23,6 @@
     </div>
 
     <AppAlert
-      v-if="authStore.isWakingUp"
-      tone="info"
-      variant="soft"
-      :message="$t('auth.login.wakingUp')"
-      :dismissible="false"
-      class="text-sm"
-    />
-
-    <AppAlert
       v-if="errorMsg"
       tone="error"
       variant="soft"

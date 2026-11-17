@@ -79,7 +79,6 @@ interface AuthState {
   accessToken: string | null
   user: User | null
   isLoading: boolean
-  isWakingUp: boolean
   returnUrl: string | null
   isInitialized: boolean
   isBootstrapping: boolean
@@ -91,7 +90,6 @@ export const useAuthStore = defineStore('auth', {
     accessToken: null,
     user: null,
     isLoading: false,
-    isWakingUp: false,
     returnUrl: null,
     isInitialized: false,
     isBootstrapping: false,
@@ -114,98 +112,34 @@ export const useAuthStore = defineStore('auth', {
   },
 
   actions: {
-    async wakeBackend(timeoutMs = 180_000): Promise<boolean> {
-      // Render free tier hibernates after 15 min of inactivity and takes
-      // 30-60s to boot. A Cloudflare Worker cannot wake a sleeping Render
-      // instance (Render's edge does not forward datacenter-origin requests
-      // to the origin), so we wake it directly from the browser, whose
-      // residential IP Render treats as a real user.
-      //
-      // The backend origin is read from NUXT_PUBLIC_BACKEND_ORIGIN (set in
-      // the Cloudflare dashboard or .env). If unset, direct wake-up is
-      // disabled and we fall back to the Worker proxy (which only works
-      // when Render is already warm).
-      const backendOrigin = useRuntimeConfig().public.backendOrigin as string
-
-      this.isWakingUp = true
-      const startedAt = Date.now()
-      try {
-        // 1. Try the Worker proxy first (fast path when warm).
-        try {
-          await $fetch('/health', { method: 'GET', credentials: 'omit' })
-          return true
-        } catch {
-          if (!backendOrigin) {
-            console.warn('[auth] wakeBackend: NUXT_PUBLIC_BACKEND_ORIGIN not set, cannot wake directly')
-            return false
-          }
-        }
-
-        if (!backendOrigin) return false
-
-        // 2. Wake Render directly from the browser using an iframe (navigation,
-        // not fetch). Render's edge only wakes the service for real browser
-        // navigations (Sec-Fetch-Mode: navigate, Sec-Fetch-Dest: document).
-        // A fetch/XHR is treated as bot traffic and never triggers a wake.
-        const directHealthUrl = `${backendOrigin.replace(/\/+$/, '')}/health`
-        console.info('[auth] waking Render via iframe navigation:', directHealthUrl)
-        while (Date.now() - startedAt < timeoutMs) {
-          // Create a hidden iframe to trigger a real browser navigation.
-          const iframe = document.createElement('iframe')
-          iframe.style.display = 'none'
-          iframe.src = directHealthUrl
-          document.body.appendChild(iframe)
-
-          // Give the navigation a moment to reach Render's edge.
-          await new Promise((resolve) => setTimeout(resolve, 2_000))
-
-          // Clean up the iframe.
-          try {
-            document.body.removeChild(iframe)
-          } catch {
-            // Already removed or not in DOM.
-          }
-
-          // 3. Confirm via the Worker proxy (Render should be waking).
-          try {
-            await $fetch('/health', { method: 'GET', credentials: 'omit' })
-            console.info('[auth] Worker /health returned 200 — Render is awake')
-            return true
-          } catch {
-            // Not ready yet. Wait and retry.
-            const remaining = timeoutMs - (Date.now() - startedAt)
-            if (remaining <= 0) return false
-            await new Promise((resolve) =>
-              setTimeout(resolve, Math.min(3_000, remaining)),
-            )
-          }
-        }
-        return false
-      } finally {
-        this.isWakingUp = false
-      }
-    },
-
     async login(payload: LoginPayload) {
       const { $api } = useNuxtApp()
       this.isLoading = true
       try {
-        // Wake the backend first when it is hibernating, so the login
-        // request itself does not pay the cold-start penalty. Login is
-        // attempted exactly once afterwards: it is not idempotent and must
-        // not be retried in a loop (rate limit, lockout, audit logs).
-        await this.wakeBackend()
-
-        const data = await $api<AuthResponse>('/auth/login', {
-          method: 'POST',
-          body: payload,
-        })
-        this._setTokens(data)
-        this.isInitialized = true
-        return data
+        const maxAttempts = 30
+        let lastError: unknown
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          try {
+            const data = await $api<AuthResponse>('/auth/login', {
+              method: 'POST',
+              body: payload,
+            })
+            this._setTokens(data)
+            this.isInitialized = true
+            return data
+          } catch (err: unknown) {
+            lastError = err
+            console.warn('[auth.login] attempt', attempt, 'failed:', err)
+            if (!isBackendUnavailable(err) || attempt === maxAttempts - 1) {
+              throw err
+            }
+            const delayMs = 5_000
+            await new Promise((resolve) => setTimeout(resolve, delayMs))
+          }
+        }
+        throw lastError
       } finally {
         this.isLoading = false
-        this.isWakingUp = false
       }
     },
 
