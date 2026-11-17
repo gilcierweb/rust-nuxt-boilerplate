@@ -141,31 +141,30 @@ export const useAuthStore = defineStore('auth', {
           }
 
           // 2. Wake Render directly from the browser (residential IP).
+          // Use no-cors mode: the response is opaque (can't read status), but
+          // Render receives the request and wakes up. CORS is bypassed.
           const directHealthUrl = `${backendUrl.replace(/\/+$/, '')}/health`
           console.info('[auth] waking Render directly:', directHealthUrl)
           while (Date.now() - startedAt < timeoutMs) {
             try {
-              await $fetch(directHealthUrl, {
-                method: 'GET',
-                mode: 'cors',
-                credentials: 'omit',
-              })
-              console.info('[auth] Render awake, confirming via Worker')
-              // 3. Render is awake — confirm via the Worker proxy.
-              try {
-                await $fetch('/health', { method: 'GET', credentials: 'omit' })
-              } catch {
-                await new Promise((r) => setTimeout(r, 1_000))
-              }
-              return true
+              await fetch(directHealthUrl, { method: 'GET', mode: 'no-cors' })
+              console.info('[auth] wake request sent, confirming via Worker')
             } catch (directErr: any) {
               console.warn('[auth] direct wake attempt failed:', directErr?.message ?? directErr)
             }
-            const remaining = timeoutMs - (Date.now() - startedAt)
-            if (remaining <= 0) return false
-            await new Promise((resolve) =>
-              setTimeout(resolve, Math.min(3_000, remaining)),
-            )
+            // 3. Confirm via the Worker proxy (Render should be waking).
+            try {
+              await $fetch('/health', { method: 'GET', credentials: 'omit' })
+              console.info('[auth] Worker /health returned 200 — Render is awake')
+              return true
+            } catch {
+              // Not ready yet. Wait and retry.
+              const remaining = timeoutMs - (Date.now() - startedAt)
+              if (remaining <= 0) return false
+              await new Promise((resolve) =>
+                setTimeout(resolve, Math.min(3_000, remaining)),
+              )
+            }
           }
           return false
         }
