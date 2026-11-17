@@ -134,19 +134,20 @@
       v-if="showPagination"
       class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
     >
-      <div class="flex items-center gap-2 text-sm text-base-content/60">
-        <span v-if="totalLabelCount !== null">
+      <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-base-content/60">
+        <span v-if="totalLabelCount !== null" class="whitespace-nowrap">
           {{ $t('admin.common.total') }}: {{ totalLabelCount }}
         </span>
-<label for="page-size-select" class="label-text">
-          {{ $t('admin.common.table.pageSize') }}
-        </label>
-        <select
-          id="page-size-select"
-          :value="currentPageSize"
-          class="select select-sm select-bordered bg-base-100 transition-none"
-          @change="onPageSizeChange"
-        >
+        <span class="inline-flex items-center gap-2 whitespace-nowrap">
+          <label for="page-size-select" class="whitespace-nowrap">
+            {{ $t('admin.common.table.pageSize') }}
+          </label>
+          <select
+            id="page-size-select"
+            :value="currentPageSize"
+            class="select select-sm select-bordered bg-base-100 transition-none"
+            @change="onPageSizeChange"
+          >
           <option
             v-for="size in pageSizes"
             :key="size"
@@ -155,6 +156,7 @@
             {{ size }} / {{ $t('admin.common.table.page') }}
           </option>
         </select>
+        </span>
       </div>
 
       <nav class="flex items-center gap-x-1" :aria-label="$t('admin.common.table.pagination')">
