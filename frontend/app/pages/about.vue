@@ -471,7 +471,7 @@ Consistent dev/prod environments, multi-stage
               </p>
               <div class="flex flex-wrap justify-center gap-4">
                 <NuxtLink
-to="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"
+to="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank"
                           class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
                   View on GitHub <span class="icon-[tabler--arrow-right]"></span>
                 </NuxtLink>

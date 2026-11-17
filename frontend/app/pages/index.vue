@@ -26,7 +26,7 @@ A production-ready Rust (Actix Web) +
             <div class="flex flex-wrap items-center gap-4">
               <a
 class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2"
-                 href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank">View on GitHub <span
+                 href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank">View on GitHub <span
                   class="icon-[tabler--arrow-right]"></span></a>
               <a
 class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50"
@@ -712,7 +712,7 @@ Clone the repo, start the stack, and open your
 </p>
             <pre
                 class="bg-surface-container-lowest text-on-surface rounded-xl p-6 overflow-x-auto text-sm font-mono"><code v-pre># 1. Clone
-git clone https://github.com/your-org/rust-nuxt-boilerplate.git
+git clone https://github.com/gilcierweb/rust-nuxt-boilerplate.git
 cd rust-nuxt-boilerplate
 
 # 2. Start (includes DB, Redis, backend, frontend)
@@ -811,7 +811,7 @@ Clone the boilerplate,
               </p>
               <div class="flex flex-wrap justify-center gap-4">
 <a
-                  href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"
+                  href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank"
                   class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2"><span
                   class="icon-[tabler--rocket]"></span>Star on GitHub</a><a
                   href="#getting-started"

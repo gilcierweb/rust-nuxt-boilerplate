@@ -461,7 +461,7 @@ Choose the option that fits your needs. All tiers include the complete source co
                 <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Community Discord support</span></li>
                 <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">MIT License - commercial use OK</span></li>
               </ul>
-              <a href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank" class="w-full py-3 rounded-xl border border-primary text-primary font-headline-md text-headline-md hover:bg-primary/5 transition-colors">
+              <a href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank" class="w-full py-3 rounded-xl border border-primary text-primary font-headline-md text-headline-md hover:bg-primary/5 transition-colors">
                 View on GitHub
               </a>
             </div>
@@ -613,7 +613,7 @@ Choose the option that fits your needs. All tiers include the complete source co
                 Clone the repository, follow the quick start guide, and have a running full-stack application in minutes.
               </p>
               <div class="flex flex-wrap justify-center gap-4">
-                <a href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank" class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
+                <a href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank" class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
                   <span class="icon-[tabler--rocket]"></span>
                   Star on GitHub
                 </a>

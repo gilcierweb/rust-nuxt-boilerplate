@@ -8,7 +8,7 @@
         </div>
         <p class="text-sm leading-relaxed text-on-surface-variant mb-6 max-w-xs">A production-ready Rust (Actix Web) + Nuxt 4 boilerplate with authentication, RBAC, admin panel, and modern developer experience.</p>
         <div class="flex gap-4">
-          <a class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank"><span class="icon-[tabler--code] text-sm" /></a>
+          <a class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank"><span class="icon-[tabler--code] text-sm" /></a>
           <a class="w-8 h-8 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant hover:text-primary transition-colors" href="mailto:contact@example.com"><span class="icon-[tabler--mail] text-sm" /></a>
         </div>
       </div>
@@ -32,7 +32,7 @@
       <div>
         <h4 class="font-bold text-on-surface mb-4 text-sm uppercase tracking-wider">Resources</h4>
         <ul class="space-y-3">
-          <li><a class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none" href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank">GitHub</a></li>
+          <li><a class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none" href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank">GitHub</a></li>
           <li><a class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none" href="/swagger-ui/">API Docs</a></li>
           <li><a class="text-sm leading-relaxed text-on-surface-variant hover:text-primary hover:underline transition-all focus:ring-2 focus:ring-primary outline-none" href="/#getting-started">Quick Start</a></li>
         </ul>

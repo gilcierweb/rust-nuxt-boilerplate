@@ -47,7 +47,7 @@
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
                   Issues, discussions, contributions
                 </p>
-                <a href="https://github.com/your-org/rust-nuxt-boilerplate" target="_blank" class="text-secondary font-medium hover:underline flex items-center gap-1">
+                <a href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank" class="text-secondary font-medium hover:underline flex items-center gap-1">
                   <span class="icon-[tabler--external-link] text-sm"></span>
                   View Repository
                 </a>
@@ -289,7 +289,7 @@
                   <span class="icon-[tabler--briefcase]"></span>
                   Contact Sales
                 </NuxtLink>
-                <NuxtLink to="https://github.com/your-org/rust-nuxt-boilerplate/discussions" target="_blank" class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
+                <NuxtLink to="https://github.com/gilcierweb/rust-nuxt-boilerplate/discussions" target="_blank" class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
                   <span class="icon-[tabler--messages]"></span>
                   Community Forum
                 </NuxtLink>
