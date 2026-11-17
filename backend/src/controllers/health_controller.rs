@@ -88,18 +88,15 @@ pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpR
     //     hang the endpoint — health that hangs is worse than health that
     //     fails fast). ---
     let db_probe_start = std::time::Instant::now();
-    let db_result = tokio::time::timeout(
-        std::time::Duration::from_secs(2),
-        async {
-            let mut conn_obj = state.db.get().await.map_err(|error| error.to_string())?;
-            let connection = &mut *conn_obj;
-            diesel::sql_query("SELECT 1")
-                .execute(connection)
-                .await
-                .map_err(|error| error.to_string())?;
-            Ok::<(), String>(())
-        },
-    )
+    let db_result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        let mut conn_obj = state.db.get().await.map_err(|error| error.to_string())?;
+        let connection = &mut *conn_obj;
+        diesel::sql_query("SELECT 1")
+            .execute(connection)
+            .await
+            .map_err(|error| error.to_string())?;
+        Ok::<(), String>(())
+    })
     .await
     .map_err(|_| "timed out after 2s".to_string())
     .and_then(|inner| inner);
@@ -123,17 +120,14 @@ pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpR
 
     // --- Redis probe with timing (bounded, see DB probe above). ---
     let redis_probe_start = std::time::Instant::now();
-    let redis_result = tokio::time::timeout(
-        std::time::Duration::from_secs(2),
-        async {
-            let mut connection = state.redis.get().await.map_err(|error| error.to_string())?;
-            redis::cmd("PING")
-                .query_async::<String>(&mut connection)
-                .await
-                .map(|_| ())
-                .map_err(|error| error.to_string())
-        },
-    )
+    let redis_result = tokio::time::timeout(std::time::Duration::from_secs(2), async {
+        let mut connection = state.redis.get().await.map_err(|error| error.to_string())?;
+        redis::cmd("PING")
+            .query_async::<String>(&mut connection)
+            .await
+            .map(|_| ())
+            .map_err(|error| error.to_string())
+    })
     .await
     .map_err(|_| "timed out after 2s".to_string())
     .and_then(|inner| inner);
