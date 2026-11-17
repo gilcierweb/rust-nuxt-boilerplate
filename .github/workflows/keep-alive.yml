@@ -19,7 +19,11 @@ jobs:
           BACKEND_URL: ${{ secrets.BACKEND_URL }}
         run: |
           URL="${BACKEND_URL:-}"
-          if [ -z "$URL" ]; then echo "Set BACKEND_URL secret (your backend base URL)"; exit 1; fi
+          if [ -z "$URL" ]; then
+            echo "BACKEND_URL secret not set — skipping keep-alive ping."
+            echo "Set it in Settings -> Secrets -> Actions -> BACKEND_URL"
+            exit 0
+          fi
           echo "Pinging $URL/health"
           curl -sS --max-time 120 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
-            -A "keep-alive/1.0" "$URL/health"
+            -A "keep-alive/1.0" "$URL/health" || echo "Ping failed (service may be suspended)"
