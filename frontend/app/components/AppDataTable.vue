@@ -61,7 +61,7 @@
                 <button
                   v-if="enableSorting && col.column.getCanSort()"
                   type="button"
-                  class="inline-flex items-center gap-1"
+                  class="inline-flex items-center gap-1 uppercase"
                   style="cursor: pointer; user-select: none;"
                   @click="onHeaderClick(col, $event)"
                 >
