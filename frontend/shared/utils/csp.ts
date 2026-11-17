@@ -32,8 +32,10 @@ export function contentSecurityPolicy(isDev: boolean) {
   // call it directly for waking a hibernating host. Empty by default.
   const backendOrigin = process.env?.NUXT_PUBLIC_BACKEND_ORIGIN || ''
   const prodConnectSources = ["'self'"]
+  const prodFrameSources = ["'self'"]
   if (backendOrigin) {
     prodConnectSources.push(backendOrigin)
+    prodFrameSources.push(backendOrigin)
   }
 
   return {
@@ -48,6 +50,7 @@ export function contentSecurityPolicy(isDev: boolean) {
     'script-src': ["'self'", "'unsafe-inline'"],
     'script-src-attr': ["'none'"],
     'connect-src': isDev ? DEV_CONNECT_SOURCES : prodConnectSources,
+    'frame-src': isDev ? ["'self'"] : prodFrameSources,
     'upgrade-insecure-requests': true,
   }
 }

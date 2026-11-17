@@ -143,18 +143,29 @@ export const useAuthStore = defineStore('auth', {
 
         if (!backendOrigin) return false
 
-        // 2. Wake Render directly from the browser (residential IP).
-        // Use no-cors mode: the response is opaque (can't read status), but
-        // Render receives the request and wakes up. CORS is bypassed.
+        // 2. Wake Render directly from the browser using an iframe (navigation,
+        // not fetch). Render's edge only wakes the service for real browser
+        // navigations (Sec-Fetch-Mode: navigate, Sec-Fetch-Dest: document).
+        // A fetch/XHR is treated as bot traffic and never triggers a wake.
         const directHealthUrl = `${backendOrigin.replace(/\/+$/, '')}/health`
-        console.info('[auth] waking Render directly:', directHealthUrl)
+        console.info('[auth] waking Render via iframe navigation:', directHealthUrl)
         while (Date.now() - startedAt < timeoutMs) {
+          // Create a hidden iframe to trigger a real browser navigation.
+          const iframe = document.createElement('iframe')
+          iframe.style.display = 'none'
+          iframe.src = directHealthUrl
+          document.body.appendChild(iframe)
+
+          // Give the navigation a moment to reach Render's edge.
+          await new Promise((resolve) => setTimeout(resolve, 2_000))
+
+          // Clean up the iframe.
           try {
-            await fetch(directHealthUrl, { method: 'GET', mode: 'no-cors' })
-            console.info('[auth] wake request sent, confirming via Worker')
-          } catch (directErr: any) {
-            console.warn('[auth] direct wake attempt failed:', directErr?.message ?? directErr)
+            document.body.removeChild(iframe)
+          } catch {
+            // Already removed or not in DOM.
           }
+
           // 3. Confirm via the Worker proxy (Render should be waking).
           try {
             await $fetch('/health', { method: 'GET', credentials: 'omit' })
