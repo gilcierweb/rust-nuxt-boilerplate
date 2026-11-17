@@ -83,6 +83,19 @@
       />
     </div>
 
+    <div class="rounded-box border border-base-content/10 bg-base-100 p-5 shadow-md shadow-base-content/5">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <h2 class="text-lg font-semibold text-base-content">{{ $t('admin.dashboard.chartAuditActivityCumulative') }}</h2>
+      </div>
+      <AreaChart
+        :data="auditCumulative"
+        :categories="auditCumulativeCategories"
+        x-axis="date"
+        :height="260"
+        empty-label="—"
+      />
+    </div>
+
     <div class="grid gap-6 xl:grid-cols-3">
       <div class="rounded-box border border-base-content/10 bg-base-100 p-5 shadow-md shadow-base-content/5 xl:col-span-2">
         <div class="mb-4 flex items-center justify-between gap-3">
@@ -233,6 +246,18 @@ const auditByDay = computed(() => {
     .slice(-14)
     .map(([date, count]) => ({ date, count }))
 })
+
+const auditCumulative = computed(() => {
+  let running = 0
+  return auditByDay.value.map((item) => {
+    running += item.count
+    return { date: item.date, cumulative: running }
+  })
+})
+
+const auditCumulativeCategories = computed(() => ({
+  cumulative: { name: t('admin.dashboard.totalAuditLogs') },
+}))
 
 const resourceDistribution = computed(() => ([
   { resource: t('admin.dashboard.totalUsers'), count: stats.value.totalUsers },

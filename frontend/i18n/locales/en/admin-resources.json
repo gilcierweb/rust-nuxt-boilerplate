@@ -248,6 +248,7 @@
       "chartResourceDistribution": "Resource distribution",
       "chartAuditActions": "Audit actions by type",
       "chartAuditActivity": "Audit activity over time",
+      "chartAuditActivityCumulative": "Cumulative audit volume over time",
       "auditLogCount": "Audit logs",
       "activeCustomers": "Active Customers",
       "openDebts": "Open Debts",

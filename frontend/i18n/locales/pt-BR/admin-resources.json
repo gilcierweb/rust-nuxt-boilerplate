@@ -212,6 +212,7 @@
       "chartResourceDistribution": "Distribuição de recursos",
       "chartAuditActions": "Ações de auditoria por tipo",
       "chartAuditActivity": "Atividade de auditoria ao longo do tempo",
+      "chartAuditActivityCumulative": "Volume cumulativo de auditoria ao longo do tempo",
       "auditLogCount": "Logs de auditoria"
     }
   }
