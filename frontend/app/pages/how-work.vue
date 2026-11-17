@@ -192,7 +192,7 @@
               </div>
               <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Authentication System</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                JWT access/refresh tokens, Paseto for email verification, PBKDF2 password hashing, TOTP 2FA, OAuth2 providers ready.
+                JWT access/refresh tokens, Paseto for email verification, Argon2id password hashing, TOTP 2FA, OAuth2 providers ready.
               </p>
             </div>
 
@@ -553,7 +553,7 @@ Choose the option that fits your needs. All tiers include the complete source co
                 How does the authentication work?
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                JWT access tokens (short-lived) + Paseto refresh tokens (long-lived, revocable). PBKDF2 for password hashing. Optional TOTP 2FA. OAuth2 providers can be added via the auth service.
+                JWT access tokens (short-lived) + refresh tokens (long-lived, revocable). Paseto for email verification. Argon2id for password hashing. Optional TOTP 2FA. OAuth2 providers can be added via the auth service.
               </p>
             </div>
 

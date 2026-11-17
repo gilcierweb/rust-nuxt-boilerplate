@@ -144,7 +144,7 @@ Clone, run `docker compose up`, and you have
 </div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Secure by Default</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-JWT auth, PBKDF2 password hashing, RBAC
+JWT auth, Argon2id password hashing, RBAC
                 permissions, CSRF protection, and encrypted sensitive fields out of the box.
 </p>
             </div>
@@ -200,7 +200,7 @@ Each technology chosen for developer
                 </li>
                 <li class="flex items-start gap-3">
 <span class="icon-[tabler--circle-check] text-primary mt-0.5"></span><span
-                    class="font-body-md text-body-md text-on-surface"><strong>Auth:</strong> JWT + PBKDF2 + Paseto tokens + RBAC</span>
+                    class="font-body-md text-body-md text-on-surface"><strong>Auth:</strong> JWT + Argon2id + Paseto email tokens + RBAC</span>
                 </li>
                 <li class="flex items-start gap-3">
 <span class="icon-[tabler--circle-check] text-primary mt-0.5"></span><span
@@ -238,7 +238,7 @@ A comprehensive toolkit
                 <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Complete Auth System</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
 JWT access/refresh tokens, Paseto for email
-                  verification, PBKDF2 password hashing, 2FA/TOTP, OAuth2 providers ready.
+                  verification, Argon2id password hashing, 2FA/TOTP, OAuth2 providers ready.
 </p>
 </div>
               <div
@@ -496,8 +496,8 @@ No security configuration
               <div class="text-4xl font-black text-primary mb-4 font-display-xl">🔐</div>
               <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Auth & Tokens</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-JWT access tokens, Paseto refresh tokens,
-                PBKDF2 hashing, TOTP 2FA, OAuth2 ready.
+JWT access/refresh tokens, Paseto email tokens,
+                Argon2id hashing, TOTP 2FA, OAuth2 ready.
 </p>
 </div>
             <div
