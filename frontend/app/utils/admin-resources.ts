@@ -388,6 +388,31 @@ export function normalizeResourceResponse(payload: any): Record<string, any>[] {
   return []
 }
 
+/**
+ * The audit row fields the dashboard renders: the charts group by action and by
+ * day, the activity feed lists the id, the action, the resource and the
+ * timestamp. The rest of the row, the changes and metadata documents above all,
+ * never reaches a template, so it stays out of the payload the render
+ * serializes into the HTML for the browser.
+ */
+const AUDIT_DASHBOARD_FIELDS = ['id', 'action', 'resource_type', 'created_at']
+
+export function toAuditDashboardPayload(payload: any) {
+  if (!payload || typeof payload !== 'object' || Array.isArray(payload)) return payload
+  if (!Array.isArray(payload.data)) return payload
+
+  return {
+    ...payload,
+    data: payload.data.map((row: any) => {
+      const trimmed: Record<string, any> = {}
+      for (const field of AUDIT_DASHBOARD_FIELDS) {
+        if (row && row[field] !== undefined) trimmed[field] = row[field]
+      }
+      return trimmed
+    }),
+  }
+}
+
 export interface ResourcePaginationMeta {
   page: number
   perPage: number

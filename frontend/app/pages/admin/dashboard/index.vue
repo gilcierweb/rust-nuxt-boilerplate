@@ -168,7 +168,7 @@
 defineOptions({ name: 'AdminDashboardPage' })
 
 import { formatDateTime } from '~/utils/admin-ui'
-import { extractPaginationMeta, normalizeResourceResponse } from '~/utils/admin-resources'
+import { extractPaginationMeta, normalizeResourceResponse, toAuditDashboardPayload } from '~/utils/admin-resources'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -181,7 +181,7 @@ const breadcrumbItems = computed(() => [{ label: t('admin.common.dashboard') }])
 
 const usersFetch = await useApiFetch<any>('/admin/users', { key: 'admin-dashboard-users', server: true, default: () => [] })
 const rolesFetch = await useApiFetch<any>('/admin/roles', { key: 'admin-dashboard-roles', server: true, default: () => [] })
-const auditLogsFetch = await useApiFetch<any>('/admin/audit-logs', { key: 'admin-dashboard-audit-logs', server: true, default: () => [], query: { per_page: 100 } })
+const auditLogsFetch = await useApiFetch<any>('/admin/audit-logs', { key: 'admin-dashboard-audit-logs', server: true, default: () => [], query: { per_page: 100 }, transform: toAuditDashboardPayload })
 
 const users = computed<any[]>(() => normalizeResourceResponse(usersFetch.data.value))
 const roles = computed<any[]>(() => normalizeResourceResponse(rolesFetch.data.value))
