@@ -116,25 +116,32 @@ const initialValues = computed(() => {
 })
 
 // The code of a permission never changes: the edit form fixes the two selects,
-// so the collision list only matters for the other rows.
-const { data } = await useApiAsyncData('admin-permissions-edit', async () => {
-  const [catalogResponse, listResponse] = await Promise.all([
-    permissions.catalog(),
-    permissions.list({ per_page: 100 }),
-  ])
-  const currentCode = item.value?.code
-  return {
-    catalog: catalogResponse,
-    codes: normalizeResourceResponse(listResponse)
-      .map((row: Permission) => row.code)
-      .filter((code: string) => code !== currentCode),
-  }
-})
+// so the collision list only matters for the other rows. The row travels in
+// its own request, which may answer after this one: the exclusion of its own
+// code reads the item reactively instead of inside the handler, so a row that
+// answers last cannot leak its code into the collision list. The key follows
+// the route id, so a navigation between two rows refetches beside the item.
+const { data } = await useApiAsyncData(
+  () => `admin-permissions-edit-form-${permissionId.value ?? 'none'}`,
+  async () => {
+    const [catalogResponse, listResponse] = await Promise.all([
+      permissions.catalog(),
+      permissions.list({ per_page: 100 }),
+    ])
+    return {
+      catalog: catalogResponse,
+      codes: normalizeResourceResponse(listResponse).map((row: Permission) => row.code),
+    }
+  },
+)
 
 const catalog = computed<PermissionCatalog>(
   () => data.value?.catalog ?? { resources: [], actions: [] },
 )
-const existingCodes = computed<string[]>(() => data.value?.codes ?? [])
+const existingCodes = computed<string[]>(() => {
+  const currentCode = item.value?.code
+  return (data.value?.codes ?? []).filter((code: string) => code !== currentCode)
+})
 const loadError = computed(() => (error.value ? mapAdminError(error.value, t) : ''))
 
 async function handleSubmit(values: PermissionFormValues) {
