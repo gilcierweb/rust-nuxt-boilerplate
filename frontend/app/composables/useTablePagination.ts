@@ -6,6 +6,7 @@ import {
   type ResourcePaginationMeta,
 } from '~/utils/admin-resources'
 import { mapAdminError } from '~/utils/admin-errors'
+import { resolveApiBase } from '~/utils/api-base'
 
 export interface UseTablePaginationOptions {
   defaultPageSize?: number
@@ -85,11 +86,10 @@ export function useTablePagination<T extends Record<string, any>>(
 
   const fetchData = async () => {
     const { $api } = useNuxtApp()
-    // The same base the rest of the app reads, so a configured direct API base
-    // routes the tables the same way it routes the imperative client.
-    const config = useRuntimeConfig()
-    const directBase = config.public.apiDirectBase?.replace(/\/+$/, '')
-    const apiBase = directBase || config.public.apiBase || '/api/v1'
+    // The same base the rest of the app reads: the shared resolver keeps the
+    // server on the proxy, so a configured direct base only shortens the
+    // client round-trip and never walks a server render around the proxy.
+    const apiBase = resolveApiBase(useRuntimeConfig(), import.meta.server)
     const url = resolvedFetcher.url.startsWith('/api/')
       ? resolvedFetcher.url
       : `${apiBase}${resolvedFetcher.url.startsWith('/') ? '' : '/'}${resolvedFetcher.url}`
