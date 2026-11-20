@@ -1,11 +1,11 @@
 use actix_web::cookie::time::Duration;
 use actix_web::cookie::{Cookie, SameSite};
 use actix_web::{HttpRequest, HttpResponse, get, post, web};
-use chrono::Utc;
 use diesel::result::Error as DieselError;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
+use time::{Duration as TimeDuration, OffsetDateTime};
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -312,7 +312,7 @@ pub async fn register(
 
     validate_password_strength(&body.password, &locale)?;
     let encrypted_password = hash_password(&body.password, container.config.as_ref())?;
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let confirmation_token = Uuid::new_v4().to_string();
     let confirmation_token_digest = hash_token(
         &confirmation_token,
@@ -853,7 +853,7 @@ pub async fn login(
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             encrypted_password.eq(&new_hash),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await?;
@@ -861,8 +861,8 @@ pub async fn login(
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             failed_attempts.eq(0),
-                            locked_at.eq::<Option<chrono::NaiveDateTime>>(None),
-                            current_sign_in_at.eq(Some(chrono::Utc::now().naive_utc())),
+                            locked_at.eq::<Option<OffsetDateTime>>(None),
+                            current_sign_in_at.eq(Some(OffsetDateTime::now_utc())),
                             last_sign_in_at.eq(diesel::dsl::sql::<
                                 diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,
                             >("current_sign_in_at")),
@@ -870,7 +870,7 @@ pub async fn login(
                             sign_in_count.eq(diesel::dsl::sql::<diesel::sql_types::Integer>(
                                 "sign_in_count + 1",
                             )),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await?;
@@ -898,10 +898,10 @@ pub async fn login(
             .and_then(|h| h.to_str().ok())
             .map(|s| s.to_string()),
         ip_address: ip_string.clone(),
-        expires_at: Utc::now()
-            + chrono::Duration::seconds(container.config.jwt_refresh_expiry_secs),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        expires_at: OffsetDateTime::now_utc()
+            + TimeDuration::seconds(container.config.jwt_refresh_expiry_secs),
+        created_at: OffsetDateTime::now_utc(),
+        updated_at: OffsetDateTime::now_utc(),
     };
 
     container
@@ -1331,7 +1331,7 @@ async fn recover_password_handler(
     // Always execute the same code path to prevent email enumeration attacks
     // Generate token and attempt DB update regardless of user existence
     let token = Uuid::new_v4().to_string();
-    let now = Utc::now().naive_utc();
+    let now = OffsetDateTime::now_utc();
     let token_digest = hash_token(&token, &container.config.refresh_token_hash_salt);
 
     // Attempt to find user and create reset token
@@ -1417,7 +1417,7 @@ pub async fn reset_password(
         .await
         .map_err(AppError::Database)?;
 
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let mut valid = false;
     let mut user_id: Option<uuid::Uuid> = None;
 
@@ -1425,9 +1425,9 @@ pub async fn reset_password(
         && let Some(sent_at) = user.reset_password_sent_at
     {
         // Token exists and has a sent_at timestamp - check expiry
-        let duration = now.signed_duration_since(sent_at);
+        let duration = now - sent_at;
         // Use constant-time comparison: always compute, don't branch on result
-        let is_expired = duration > chrono::Duration::hours(2);
+        let is_expired = duration > TimeDuration::hours(2);
         // Store user_id only if not expired (but still compute duration)
         if !is_expired {
             valid = true;
@@ -2085,9 +2085,9 @@ pub trait UserExt {
 impl UserExt for User {
     fn is_locked(&self, lockout_duration_secs: i64) -> bool {
         if let Some(locked_at) = self.locked_at {
-            let now = chrono::Utc::now();
-            let duration = now.signed_duration_since(locked_at);
-            duration.num_seconds() < lockout_duration_secs
+            let now = OffsetDateTime::now_utc();
+            let duration = now - locked_at;
+            duration.whole_seconds() < lockout_duration_secs
         } else {
             false
         }
@@ -2231,8 +2231,8 @@ pub async fn request_magic_link(
     // Generate a random token and its digest for storage.
     let token = generate_random_token(48);
     let token_digest = hash_token(&token, &container.config.refresh_token_hash_salt);
-    let now = Utc::now();
-    let expires_at = now + chrono::Duration::minutes(MAGIC_LINK_EXPIRY_MINUTES);
+    let now = OffsetDateTime::now_utc();
+    let expires_at = now + TimeDuration::minutes(MAGIC_LINK_EXPIRY_MINUTES);
 
     // Attempt to find user and create magic link token
     if let Ok(Some(user)) = container
@@ -2324,7 +2324,7 @@ pub async fn verify_magic_link(
     };
 
     // Check expiry
-    if magic_token.expires_at <= chrono::Utc::now() {
+    if magic_token.expires_at <= OffsetDateTime::now_utc() {
         tracing::warn!(
             event = "auth.magic_link.verify.expired",
             user_id = %magic_token.user_id,
@@ -2435,10 +2435,10 @@ pub async fn verify_magic_link(
             .and_then(|h| h.to_str().ok())
             .map(|s| s.to_string()),
         ip_address: ip_string.clone(),
-        expires_at: Utc::now()
-            + chrono::Duration::seconds(container.config.jwt_refresh_expiry_secs),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        expires_at: OffsetDateTime::now_utc()
+            + TimeDuration::seconds(container.config.jwt_refresh_expiry_secs),
+        created_at: OffsetDateTime::now_utc(),
+        updated_at: OffsetDateTime::now_utc(),
     };
 
     container
@@ -2521,6 +2521,7 @@ mod tests {
         let security = SecurityService::from_config(&mock_app_config()).unwrap();
         let protected_email = security.protect_email(email).unwrap();
 
+        let now = OffsetDateTime::now_utc();
         User {
             id: Uuid::new_v4(),
             email_blind_index: protected_email.blind_index,
@@ -2535,7 +2536,7 @@ mod tests {
             current_sign_in_ip: None,
             last_sign_in_ip: None,
             confirmation_token_digest: None,
-            confirmed_at: Some(chrono::Utc::now()),
+            confirmed_at: Some(now),
             confirmation_sent_at: None,
             unconfirmed_email_blind_index: None,
             unconfirmed_email_encrypted: None,
@@ -2546,12 +2547,13 @@ mod tests {
             otp_enabled_at: None,
             otp_backup_codes: None,
             encryption_key_version: 1,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
+            created_at: now,
+            updated_at: now,
         }
     }
 
     pub(super) fn test_profile(user_id: Uuid) -> Profile {
+        let now = OffsetDateTime::now_utc();
         Profile {
             id: Uuid::new_v4(),
             user_id,
@@ -2571,8 +2573,8 @@ mod tests {
             status: true,
             social_network: json!({}),
             encryption_key_version: 1,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
+            created_at: now,
+            updated_at: now,
         }
     }
 
@@ -2580,7 +2582,7 @@ mod tests {
     async fn session_block_reason_detects_locked_account() {
         let config = mock_app_config();
         let mut user = test_user("locked@example.com");
-        user.locked_at = Some(chrono::Utc::now());
+        user.locked_at = Some(OffsetDateTime::now_utc());
 
         assert_eq!(
             session_block_reason(&user, &config),
@@ -2612,8 +2614,8 @@ mod tests {
     async fn session_block_reason_ignores_expired_lock() {
         let config = mock_app_config();
         let mut user = test_user("stale-lock@example.com");
-        let stale = chrono::Utc::now()
-            - chrono::Duration::seconds(config.account_lockout_duration_secs + 60);
+        let stale = OffsetDateTime::now_utc()
+            - TimeDuration::seconds(config.account_lockout_duration_secs + 60);
         user.locked_at = Some(stale);
 
         assert_eq!(session_block_reason(&user, &config), None);
@@ -2731,10 +2733,10 @@ mod tests {
                 token_hash: "hash".to_string(),
                 device_info: None,
                 ip_address: None,
-                expires_at: chrono::Utc::now(),
+                expires_at: OffsetDateTime::now_utc(),
                 revoked_at: None,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
+                created_at: OffsetDateTime::now_utc(),
+                updated_at: OffsetDateTime::now_utc(),
             })
         });
 
@@ -2820,10 +2822,10 @@ mod tests {
                 token_hash: "hash".to_string(),
                 device_info: None,
                 ip_address: None,
-                expires_at: chrono::Utc::now(),
+                expires_at: OffsetDateTime::now_utc(),
                 revoked_at: None,
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
+                created_at: OffsetDateTime::now_utc(),
+                updated_at: OffsetDateTime::now_utc(),
             })
         });
 
@@ -2945,10 +2947,10 @@ mod tests {
                     token_hash: "hash".to_string(),
                     device_info: Some("test-agent".to_string()),
                     ip_address: None,
-                    expires_at: chrono::Utc::now() + chrono::Duration::days(1),
+                    expires_at: OffsetDateTime::now_utc() + TimeDuration::days(1),
                     revoked_at: None,
-                    created_at: chrono::Utc::now(),
-                    updated_at: chrono::Utc::now(),
+                    created_at: OffsetDateTime::now_utc(),
+                    updated_at: OffsetDateTime::now_utc(),
                 }))
             });
 
@@ -3025,10 +3027,10 @@ mod tests {
             token_hash: "new-hash".to_string(),
             device_info: Some("test-agent".to_string()),
             ip_address: None,
-            expires_at: chrono::Utc::now() + chrono::Duration::days(1),
+            expires_at: OffsetDateTime::now_utc() + TimeDuration::days(1),
             revoked_at: None,
-            created_at: chrono::Utc::now(),
-            updated_at: chrono::Utc::now(),
+            created_at: OffsetDateTime::now_utc(),
+            updated_at: OffsetDateTime::now_utc(),
         };
 
         mock_refresh_tokens
@@ -3236,7 +3238,7 @@ mod tests {
     async fn reset_password_rejects_expired_token_digest() {
         let mut mock_users = MockIUserRepository::new();
         let mut user = test_user("user@example.com");
-        user.reset_password_sent_at = Some(chrono::Utc::now() - chrono::Duration::hours(3));
+        user.reset_password_sent_at = Some(OffsetDateTime::now_utc() - TimeDuration::hours(3));
 
         mock_users
             .expect_find_by_reset_token_digest()
@@ -3275,7 +3277,7 @@ mod tests {
         let mut mock_users = MockIUserRepository::new();
         let mut user = test_user("user@example.com");
         // Set reset_password_sent_at to a valid time (within 2 hours)
-        user.reset_password_sent_at = Some(chrono::Utc::now() - chrono::Duration::minutes(30));
+        user.reset_password_sent_at = Some(OffsetDateTime::now_utc() - TimeDuration::minutes(30));
         let expected_user_id = user.id;
 
         // Clone user for both mock expectations to avoid move issues

@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use chrono::{DateTime, Utc};
 use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -17,8 +17,8 @@ pub struct Role {
     pub name: String,
     pub resource_type: Option<String>,
     pub resource_id: Option<Uuid>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset, ToSchema)]

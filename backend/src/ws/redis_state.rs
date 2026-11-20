@@ -2,10 +2,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use actix::Recipient;
-use chrono::{DateTime, Utc};
 use deadpool_redis::Pool;
 use futures_util::StreamExt;
 use redis::{AsyncCommands, cmd};
+use time::OffsetDateTime;
 use tokio::sync::Mutex as TokioMutex;
 use tracing::{debug, error, info, warn};
 use uuid::Uuid;
@@ -262,7 +262,7 @@ impl WsRedisState {
 
         let is_last = self.decrement_user_connections(profile_id).await?;
         if is_last {
-            self.publish_presence_change(profile_id, false, Some(Utc::now()))
+            self.publish_presence_change(profile_id, false, Some(OffsetDateTime::now_utc()))
                 .await?;
         }
 
@@ -326,12 +326,14 @@ impl WsRedisState {
             .await
             .unwrap_or(0);
 
-        let last_seen_at: Option<DateTime<Utc>> = conn
+        let last_seen_at: Option<OffsetDateTime> = conn
             .hget(&presence_key, "last_seen_at")
             .await
             .ok()
             .flatten()
-            .and_then(|s: String| s.parse().ok());
+            .and_then(|s: String| {
+                time::OffsetDateTime::parse(&s, &time::format_description::well_known::Rfc3339).ok()
+            });
 
         Ok(PresenceInfo {
             active_connections,
@@ -352,13 +354,13 @@ impl WsRedisState {
         &self,
         profile_id: Uuid,
         is_online: bool,
-        last_seen_at: Option<DateTime<Utc>>,
+        last_seen_at: Option<OffsetDateTime>,
     ) -> AppResult<()> {
         let envelope = serde_json::json!({
             "type": "presence_changed",
             "profile_id": profile_id.to_string(),
             "is_online": is_online,
-            "last_seen_at": last_seen_at.map(|dt| dt.to_rfc3339()),
+            "last_seen_at": last_seen_at.map(|dt| dt.format(&time::format_description::well_known::Rfc3339).unwrap_or_default()),
         });
 
         self.publish_envelope(&envelope).await
@@ -511,7 +513,9 @@ impl WsRedisState {
     pub async fn update_last_seen(&self, profile_id: Uuid) -> AppResult<()> {
         let mut conn = self.get_conn().await?;
         let presence_key = format!("{}{}", WS_PRESENCE_PREFIX, profile_id);
-        let now = Utc::now().to_rfc3339();
+        let now = OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default();
 
         cmd("HSET")
             .arg(&presence_key)

@@ -553,7 +553,6 @@ dependencies = [
  "async-trait",
  "base64 0.22.1",
  "bigdecimal",
- "chrono",
  "claims",
  "deadpool",
  "deadpool-redis",
@@ -592,6 +591,7 @@ dependencies = [
  "tempfile",
  "tera",
  "thiserror 1.0.69",
+ "time",
  "tokio",
  "totp-rs",
  "tracing",
@@ -823,7 +823,6 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
- "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -1275,6 +1274,9 @@ name = "deranged"
 version = "0.5.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
+dependencies = [
+ "serde_core",
+]
 
 [[package]]
 name = "derive_more"
@@ -1327,7 +1329,6 @@ dependencies = [
  "bigdecimal",
  "bitflags 2.13.2",
  "byteorder",
- "chrono",
  "diesel_derives",
  "downcast-rs",
  "ipnet",
@@ -1339,6 +1340,7 @@ dependencies = [
  "pq-sys",
  "r2d2",
  "serde_json",
+ "time",
  "uuid",
 ]
 
@@ -2758,6 +2760,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "071dfc062690e90b734c0b2273ce72ad0ffa95f0c74596bc250dcfd960262841"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "num_threads"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cabcc654086861f9e1bc5115258de62ef92c79b20f4615a1b0cc57c4e82027d4"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -4439,7 +4450,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cdb87b95ec50ddfa440816d227a17b2ccbdda963a316a727fda0fc4334f7d134"
 dependencies = [
  "deranged",
+ "libc",
  "num-conv",
+ "num_threads",
  "powerfmt",
  "serde_core",
  "time-core",
@@ -4799,7 +4812,6 @@ version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
 dependencies = [
- "chrono",
  "matchers",
  "nu-ansi-term",
  "once_cell",
@@ -4809,6 +4821,7 @@ dependencies = [
  "sharded-slab",
  "smallvec",
  "thread_local",
+ "time",
  "tracing",
  "tracing-core",
  "tracing-log",

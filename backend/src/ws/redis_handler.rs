@@ -3,7 +3,7 @@
 use actix::prelude::*;
 use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web_actors::ws;
-use chrono::Utc;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::AppState;
@@ -21,7 +21,7 @@ pub struct WebSocketActor {
     pub username: String,
     pub room: Option<String>,
     pub ws_state: web::Data<WsRedisState>,
-    pub last_pong: chrono::DateTime<chrono::Utc>,
+    pub last_pong: OffsetDateTime,
 }
 
 impl Actor for WebSocketActor {
@@ -47,9 +47,7 @@ impl Actor for WebSocketActor {
         let interval = self.ws_state.limits.heartbeat_interval_secs;
         ctx.run_interval(std::time::Duration::from_secs(interval), |act, ctx| {
             let timeout = act.ws_state.limits.client_timeout_secs;
-            let elapsed = Utc::now()
-                .signed_duration_since(act.last_pong)
-                .num_seconds() as u64;
+            let elapsed = (OffsetDateTime::now_utc() - act.last_pong).whole_seconds() as u64;
 
             if elapsed > timeout {
                 tracing::warn!(
@@ -99,7 +97,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketActor {
         match msg {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Pong(_)) => {
-                self.last_pong = Utc::now();
+                self.last_pong = OffsetDateTime::now_utc();
             },
             Ok(ws::Message::Text(text)) => self.handle_message(&text, ctx),
             Ok(ws::Message::Binary(_)) => {},
@@ -223,7 +221,7 @@ impl WebSocketActor {
                 let pong = WsMessage::new(
                     "pong",
                     serde_json::json!({
-                        "timestamp": chrono::Utc::now().timestamp(),
+                        "timestamp": OffsetDateTime::now_utc().unix_timestamp(),
                     }),
                 );
                 ctx.text(serde_json::to_string(&pong).unwrap_or_default());
@@ -318,7 +316,7 @@ pub async fn ws_handler(
         username: profile_id.to_string(),
         room: None,
         ws_state,
-        last_pong: Utc::now(),
+        last_pong: OffsetDateTime::now_utc(),
     };
 
     ws::WsResponseBuilder::new(ws_actor, &req, stream)

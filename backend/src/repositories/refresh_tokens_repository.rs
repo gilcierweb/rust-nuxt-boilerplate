@@ -1,6 +1,6 @@
-use chrono::Utc;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
+use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::DBPool;
@@ -109,8 +109,6 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         plaintext_token: &str,
         hash_key: &str,
     ) -> diesel::QueryResult<Option<RefreshToken>> {
-        use chrono::Utc;
-
         use crate::db::schema::refresh_tokens::dsl::*;
         use crate::services::token_service::hash_token;
 
@@ -119,7 +117,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    let now = Utc::now();
+                    let now = OffsetDateTime::now_utc();
 
                     // Fast path: HMAC tokens are deterministic — compute hash and lookup directly
                     let hmac_hash = hash_token(&token, &key);
@@ -159,7 +157,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(refresh_tokens_table::table.find(tid))
-                        .set(revoked_at.eq(Some(chrono::Utc::now())))
+                        .set(revoked_at.eq(Some(OffsetDateTime::now_utc())))
                         .execute(conn)
                         .await
                 })
@@ -174,7 +172,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(refresh_tokens_table::table.filter(user_id.eq(uid)))
-                        .set(revoked_at.eq(Some(chrono::Utc::now())))
+                        .set(revoked_at.eq(Some(OffsetDateTime::now_utc())))
                         .execute(conn)
                         .await
                 })
@@ -196,7 +194,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         self.base
             .run_transaction(move |conn| {
                 Box::pin(async move {
-                    let now = Utc::now();
+                    let now = OffsetDateTime::now_utc();
 
                     // Find the old valid token by verifying against stored hashes
                     // Use FOR UPDATE to prevent race conditions during rotation
@@ -231,7 +229,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                     // Generate new plain token and hash it with the provided salt
                     let new_token_plain = generate_random_token(48);
                     let new_token_hash = hash_token(&new_token_plain, &salt);
-                    let new_expires_at = now + chrono::Duration::seconds(expires_secs);
+                    let new_expires_at = now + Duration::seconds(expires_secs);
 
                     // Create new token preserving user_id, device_info, and ip_address from old token
                     let new_token = NewRefreshToken {

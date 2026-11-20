@@ -2,12 +2,12 @@
 
 use std::sync::Arc;
 
-use chrono::Utc;
 use lettre::AsyncTransport;
 use lettre::message::{Mailbox, Message, MultiPart, SinglePart};
 use lettre::transport::smtp::AsyncSmtpTransport;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use time::OffsetDateTime;
 
 use crate::config::app_config::{AppConfig, EmailTransportKind, Environment, JwtSecretKey};
 use crate::services::email_templates::{EmailTemplateError, EmailTemplates, names as tpl};
@@ -60,7 +60,7 @@ pub fn test_config() -> AppConfig {
         jwt_secret: generate_deterministic_string(32, 0x1234567890ABCDEF),
         jwt_secrets: {
             let secret = generate_deterministic_string(32, 0x1234567890ABCDEF);
-            let now = chrono::Utc::now().naive_utc();
+            let now = OffsetDateTime::now_utc();
             vec![JwtSecretKey {
                 kid: "test-primary".to_string(),
                 secret,
@@ -454,7 +454,7 @@ impl EmailService {
                 text_body: safe_body.clone(),
                 html_body: html,
                 context: serde_json::json!({}),
-                sent_at: Utc::now(),
+                sent_at: OffsetDateTime::now_utc(),
             });
             tracing::debug!(to = %safe_to, subject = %safe_subject, "Email captured (test mode)");
             return Ok(());

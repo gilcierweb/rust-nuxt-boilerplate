@@ -1,8 +1,8 @@
-use chrono::{DateTime, Utc};
 use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 use uuid::Uuid;
 use validator::Validate;
@@ -28,7 +28,7 @@ pub struct AuditLog {
     pub changes: Value,
     #[schema(value_type = Object)]
     pub metadata: Value,
-    pub created_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
     pub prev_hash: Option<String>,
     pub hash: String,
 }

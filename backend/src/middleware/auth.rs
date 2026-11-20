@@ -316,12 +316,12 @@ pub fn create_token_with_kid(
     kid: Option<&str>,
     audience: &str,
 ) -> AppResult<String> {
-    use chrono::Utc;
     use jsonwebtoken::encode;
+    use time::{Duration, OffsetDateTime};
 
-    let now = Utc::now();
-    let exp = (now + chrono::Duration::seconds(expiry_secs)).timestamp() as usize;
-    let iat = now.timestamp() as usize;
+    let now = OffsetDateTime::now_utc();
+    let exp = (now + Duration::seconds(expiry_secs)).unix_timestamp() as usize;
+    let iat = now.unix_timestamp() as usize;
     let jti = uuid::Uuid::new_v4().to_string();
 
     let claims = Claims {
@@ -653,7 +653,7 @@ mod tests {
 
     #[test]
     fn create_token_with_kid_sets_header_kid() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
@@ -663,7 +663,7 @@ mod tests {
         let secret = JwtSecretKey {
             kid: "key-2026-01".to_string(),
             secret: "test-secret-for-kid".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
 
@@ -695,10 +695,10 @@ mod tests {
     /// other required claim is present, so the only reason to refuse the
     /// token is the audience check under test.
     fn hand_minted_token(secret: &str, kid: &str, aud: Option<&str>) -> String {
-        use chrono::Utc;
         use jsonwebtoken::{EncodingKey, Header, encode};
+        use time::OffsetDateTime;
 
-        let now = Utc::now().timestamp();
+        let now = OffsetDateTime::now_utc().unix_timestamp();
         let mut payload = serde_json::json!({
             "sub": uuid::Uuid::new_v4().to_string(),
             "profile_id": uuid::Uuid::new_v4().to_string(),
@@ -735,14 +735,14 @@ mod tests {
 
     #[test]
     fn a_token_without_an_audience_claim_is_rejected() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
         let secret = JwtSecretKey {
             kid: "aud-key".to_string(),
             secret: "audience-secret-value".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
         let token = hand_minted_token(&secret.secret, &secret.kid, None);
@@ -755,14 +755,14 @@ mod tests {
 
     #[test]
     fn a_token_minted_for_another_audience_is_rejected() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
         let secret = JwtSecretKey {
             kid: "aud-key".to_string(),
             secret: "audience-secret-value".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
         let token = hand_minted_token(&secret.secret, &secret.kid, Some("another-service"));
@@ -775,14 +775,14 @@ mod tests {
 
     #[test]
     fn a_minted_token_carries_the_application_audience() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
         let secret = JwtSecretKey {
             kid: "aud-key".to_string(),
             secret: "audience-secret-value".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
         let token = create_token_with_kid(
@@ -807,14 +807,14 @@ mod tests {
 
     #[test]
     fn a_blank_audience_never_accepts_a_token_with_none() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
         let secret = JwtSecretKey {
             kid: "aud-key".to_string(),
             secret: "audience-secret-value".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
         // The hole this closes: a token that names the empty audience,
@@ -830,7 +830,7 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_matches_kid() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
@@ -840,14 +840,14 @@ mod tests {
         let secret_active = JwtSecretKey {
             kid: "active-key".to_string(),
             secret: "active-secret-value".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
         let secret_expired = JwtSecretKey {
             kid: "expired-key".to_string(),
             secret: "expired-secret-value".to_string(),
-            created_at: Utc::now().naive_utc(),
-            expires_at: Some(Utc::now().naive_utc()),
+            created_at: OffsetDateTime::now_utc(),
+            expires_at: Some(OffsetDateTime::now_utc()),
         };
 
         let secrets = vec![secret_expired, secret_active.clone()];
@@ -872,7 +872,7 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_falls_back_to_other_secrets() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
@@ -882,13 +882,13 @@ mod tests {
         let secret1 = JwtSecretKey {
             kid: "key-1".to_string(),
             secret: "secret-number-one".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
         let secret2 = JwtSecretKey {
             kid: "key-2".to_string(),
             secret: "secret-number-two".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
 
@@ -913,7 +913,7 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_rejects_expired_keys() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
@@ -923,8 +923,8 @@ mod tests {
         let expired = JwtSecretKey {
             kid: "expired".to_string(),
             secret: "expired-secret".to_string(),
-            created_at: Utc::now().naive_utc(),
-            expires_at: Some(Utc::now().naive_utc()),
+            created_at: OffsetDateTime::now_utc(),
+            expires_at: Some(OffsetDateTime::now_utc()),
         };
 
         let secrets = vec![expired.clone()];
@@ -945,7 +945,7 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_rejects_wrong_use() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
@@ -955,7 +955,7 @@ mod tests {
         let secret = JwtSecretKey {
             kid: "key-1".to_string(),
             secret: "some-secret".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
 
@@ -978,7 +978,7 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_unknown_kid_falls_back() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
@@ -988,7 +988,7 @@ mod tests {
         let secret = JwtSecretKey {
             kid: "real-key".to_string(),
             secret: "real-secret".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
 
@@ -1014,7 +1014,7 @@ mod tests {
 
     #[test]
     fn verify_token_with_secrets_no_kid_header_falls_back() {
-        use chrono::Utc;
+        use time::OffsetDateTime;
 
         use crate::config::app_config::JwtSecretKey;
 
@@ -1024,7 +1024,7 @@ mod tests {
         let secret = JwtSecretKey {
             kid: "key-no-header".to_string(),
             secret: "some-secret".to_string(),
-            created_at: Utc::now().naive_utc(),
+            created_at: OffsetDateTime::now_utc(),
             expires_at: None,
         };
 

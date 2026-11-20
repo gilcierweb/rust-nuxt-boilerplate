@@ -3,8 +3,8 @@
 use argon2::Argon2;
 use argon2::password_hash::rand_core::OsRng;
 use argon2::password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString};
-use chrono::Utc;
 use diesel::prelude::*;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::config::AppConfig;
@@ -257,7 +257,7 @@ pub fn confirm_email(
             _ => AppError::Database(e),
         })?;
 
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     diesel::update(users.find(user.id))
         .set((
             confirmed_at.eq(Some(now)),
@@ -284,7 +284,7 @@ pub fn record_successful_login(
     ip: Option<String>,
 ) -> Result<(), AppError> {
     use crate::db::schema::users::dsl::*;
-    let now = Utc::now();
+    let now = OffsetDateTime::now_utc();
     let ip_net: Option<ipnet::IpNet> = ip.and_then(|s| s.parse().ok());
     diesel::update(users.find(user.id))
         .set((
@@ -294,7 +294,7 @@ pub fn record_successful_login(
             current_sign_in_at.eq(Some(now)),
             current_sign_in_ip.eq(ip_net),
             failed_attempts.eq(0),
-            locked_at.eq::<Option<chrono::DateTime<Utc>>>(None),
+            locked_at.eq::<Option<OffsetDateTime>>(None),
             updated_at.eq(now),
         ))
         .execute(conn)

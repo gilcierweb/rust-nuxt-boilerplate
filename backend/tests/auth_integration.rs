@@ -18,6 +18,7 @@ use diesel::Connection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde_json::Value;
+use time::OffsetDateTime;
 use uuid::Uuid as UuidType;
 
 mod common;
@@ -189,7 +190,7 @@ fn test_config() -> backend::config::AppConfig {
         jwt_secrets: vec![backend::config::app_config::JwtSecretKey {
             kid: "test-key-1".to_string(),
             secret: jwt_secret,
-            created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
+            created_at: OffsetDateTime::UNIX_EPOCH,
             expires_at: None,
         }],
         cookie_secure_override: false,

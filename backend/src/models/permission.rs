@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
-use chrono::{DateTime, Utc};
 use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -44,8 +44,8 @@ pub struct Permission {
     pub code: String,
     pub name: String,
     pub description: Option<String>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Insertable, AsChangeset, ToSchema)]
@@ -95,7 +95,7 @@ pub struct RolePermissionLink {
     pub role_id: Uuid,
     pub permission_id: Uuid,
     pub effect: i16,
-    pub created_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
 }
 
 /// The fields of a permission the admin interface may write.

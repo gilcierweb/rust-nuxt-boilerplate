@@ -1,6 +1,6 @@
-use chrono::{DateTime, Utc};
 use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::db::schema::refresh_tokens;
@@ -14,10 +14,10 @@ pub struct RefreshToken {
     pub token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
-    pub expires_at: DateTime<Utc>,
-    pub revoked_at: Option<DateTime<Utc>>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub expires_at: OffsetDateTime,
+    pub revoked_at: Option<OffsetDateTime>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Insertable)]
@@ -28,13 +28,13 @@ pub struct NewRefreshToken {
     pub token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
-    pub expires_at: DateTime<Utc>,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub expires_at: OffsetDateTime,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 impl RefreshToken {
     pub fn is_valid(&self) -> bool {
-        self.revoked_at.is_none() && self.expires_at > Utc::now()
+        self.revoked_at.is_none() && self.expires_at > OffsetDateTime::now_utc()
     }
 }

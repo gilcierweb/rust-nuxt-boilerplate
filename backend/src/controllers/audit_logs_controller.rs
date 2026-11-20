@@ -169,8 +169,8 @@ mod tests {
     use actix_web::body::to_bytes;
     use actix_web::http::StatusCode;
     use actix_web::{App, test, web};
-    use chrono::Utc;
     use serde_json::{Value, json};
+    use time::OffsetDateTime;
     use uuid::Uuid;
 
     use super::test_config;
@@ -249,7 +249,7 @@ mod tests {
                     request_id: None,
                     changes: json!({}),
                     metadata: json!({}),
-                    created_at: Utc::now(),
+                    created_at: OffsetDateTime::now_utc(),
                     prev_hash: None,
                     hash: "a".repeat(64),
                 }],
@@ -321,7 +321,7 @@ mod tests {
                     request_id: None,
                     changes: json!({}),
                     metadata: json!({}),
-                    created_at: Utc::now(),
+                    created_at: OffsetDateTime::now_utc(),
                     prev_hash: None,
                     hash: "a".repeat(64),
                 })

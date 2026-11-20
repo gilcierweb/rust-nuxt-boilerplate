@@ -7,9 +7,9 @@
 
 use std::collections::HashMap;
 
-use chrono::Utc;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 /// Canonical roles: five unscoped admin domain roles plus the self scoped
@@ -238,8 +238,8 @@ pub fn ensure_permission(
             code.eq(permission_code),
             name.eq(permission_name),
             description.eq(permission_description),
-            created_at.eq(Utc::now()),
-            updated_at.eq(Utc::now()),
+            created_at.eq(OffsetDateTime::now_utc()),
+            updated_at.eq(OffsetDateTime::now_utc()),
         ))
         .returning(id)
         .get_result(conn)
@@ -279,8 +279,8 @@ pub fn ensure_role(
             name.eq(role_name),
             resource_type.eq(scope_resource_type),
             resource_id.eq(scope_resource_id),
-            created_at.eq(Utc::now()),
-            updated_at.eq(Utc::now()),
+            created_at.eq(OffsetDateTime::now_utc()),
+            updated_at.eq(OffsetDateTime::now_utc()),
         ))
         .returning(id)
         .get_result(conn)
@@ -310,7 +310,7 @@ pub fn ensure_role_permission(
         .values((
             role_id.eq(role_uuid),
             permission_id.eq(permission_uuid),
-            created_at.eq(Utc::now()),
+            created_at.eq(OffsetDateTime::now_utc()),
         ))
         .execute(conn)?;
 

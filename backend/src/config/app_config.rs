@@ -129,8 +129,8 @@ fn required_secret(name: &str) -> Result<String, env::VarError> {
 pub struct JwtSecretKey {
     pub kid: String,
     pub secret: String,
-    pub created_at: chrono::NaiveDateTime,
-    pub expires_at: Option<chrono::NaiveDateTime>,
+    pub created_at: time::OffsetDateTime,
+    pub expires_at: Option<time::OffsetDateTime>,
 }
 
 /// Parse one entry of `JWT_SECRETS`.
@@ -140,7 +140,7 @@ pub struct JwtSecretKey {
 /// without it `is_active()` can never reject the key, so a compromised legacy
 /// secret stays usable forever and the only way to retire it is to remove it
 /// from the environment and restart.
-fn parse_jwt_secret_entry(entry: &str, created_at: chrono::NaiveDateTime) -> Option<JwtSecretKey> {
+fn parse_jwt_secret_entry(entry: &str, created_at: time::OffsetDateTime) -> Option<JwtSecretKey> {
     let mut parts = entry.trim().splitn(3, ':');
     let kid = parts.next()?.trim();
     let secret = parts.next()?.trim();
@@ -150,8 +150,11 @@ fn parse_jwt_secret_entry(entry: &str, created_at: chrono::NaiveDateTime) -> Opt
 
     let expires_at = match parts.next() {
         Some(value) if !value.trim().is_empty() => {
-            match chrono::DateTime::parse_from_rfc3339(value.trim()) {
-                Ok(parsed) => Some(parsed.naive_utc()),
+            match time::OffsetDateTime::parse(
+                value.trim(),
+                &time::format_description::well_known::Rfc3339,
+            ) {
+                Ok(parsed) => Some(parsed),
                 Err(e) => {
                     tracing::warn!(
                         event = "config.jwt_secret_expiry_unparseable",
@@ -178,7 +181,7 @@ fn parse_jwt_secret_entry(entry: &str, created_at: chrono::NaiveDateTime) -> Opt
 
 impl JwtSecretKey {
     pub fn is_active(&self) -> bool {
-        let now = chrono::Utc::now().naive_utc();
+        let now = time::OffsetDateTime::now_utc();
         self.expires_at.is_none_or(|exp| exp > now)
     }
 }
@@ -534,7 +537,7 @@ impl AppConfig {
             jwt_secret: required_secret("JWT_SECRET")?,
             jwt_secrets: {
                 let primary = required_secret("JWT_SECRET")?;
-                let now = chrono::Utc::now().naive_utc();
+                let now = time::OffsetDateTime::now_utc();
                 let mut secrets = vec![JwtSecretKey {
                     kid: env::var("JWT_KID").unwrap_or_else(|_| "primary".to_string()),
                     secret: primary,
@@ -1953,12 +1956,13 @@ mod docker_secrets_tests {
 #[cfg(test)]
 mod jwt_secret_entry_tests {
     use super::*;
+    use time::{Date, OffsetDateTime};
 
-    fn created_at() -> chrono::NaiveDateTime {
-        chrono::NaiveDate::from_ymd_opt(2026, 1, 1)
+    fn created_at() -> OffsetDateTime {
+        Date::from_calendar_date(2026, time::Month::January, 1)
             .unwrap()
-            .and_hms_opt(0, 0, 0)
-            .unwrap()
+            .midnight()
+            .assume_utc()
     }
 
     #[test]
@@ -1981,10 +1985,10 @@ mod jwt_secret_entry_tests {
         assert_eq!(
             entry.expires_at,
             Some(
-                chrono::NaiveDate::from_ymd_opt(2030, 1, 1)
+                Date::from_calendar_date(2030, time::Month::January, 1)
                     .unwrap()
-                    .and_hms_opt(0, 0, 0)
-                    .unwrap()
+                    .midnight()
+                    .assume_utc()
             )
         );
         assert!(entry.is_active(), "a key expiring in 2030 is still active");

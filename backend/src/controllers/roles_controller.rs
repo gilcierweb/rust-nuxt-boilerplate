@@ -667,8 +667,8 @@ mod tests {
     use actix_web::body::to_bytes;
     use actix_web::http::StatusCode;
     use actix_web::{App, test, web};
-    use chrono::Utc;
     use serde_json::Value;
+    use time::OffsetDateTime;
     use uuid::Uuid;
 
     use actix_web::HttpMessage;
@@ -744,8 +744,8 @@ mod tests {
                         name: "admin".to_string(),
                         resource_type: None,
                         resource_id: None,
-                        created_at: Utc::now(),
-                        updated_at: Utc::now(),
+                        created_at: OffsetDateTime::now_utc(),
+                        updated_at: OffsetDateTime::now_utc(),
                     }],
                     1,
                     1,
@@ -782,8 +782,8 @@ mod tests {
                 name: item.name.clone(),
                 resource_type: item.resource_type.clone(),
                 resource_id: item.resource_id,
-                created_at: Utc::now(),
-                updated_at: Utc::now(),
+                created_at: OffsetDateTime::now_utc(),
+                updated_at: OffsetDateTime::now_utc(),
             })
         });
         container.roles = Arc::new(roles_repo);

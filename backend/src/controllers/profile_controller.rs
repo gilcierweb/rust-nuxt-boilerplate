@@ -7,6 +7,7 @@
 
 use actix_web::{HttpResponse, get, patch, web};
 use serde::Deserialize;
+use time::Date;
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -36,7 +37,7 @@ pub struct ProfileUpdateRequest {
     pub bio: Option<String>,
     #[validate(length(max = 500, message = "profile.validation.avatar_invalid"))]
     pub avatar: Option<String>,
-    pub birthday: Option<chrono::NaiveDate>,
+    pub birthday: Option<Date>,
 }
 
 /// Reads the profile of the authenticated subject.

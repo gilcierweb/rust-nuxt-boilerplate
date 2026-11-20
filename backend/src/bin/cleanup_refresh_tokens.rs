@@ -8,10 +8,10 @@
 
 use std::env;
 
-use chrono::Utc;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use diesel::{PgConnection, delete, sql_query};
+use time::{Duration, OffsetDateTime};
 
 #[path = "../db/schema.rs"]
 mod schema;
@@ -37,22 +37,21 @@ fn main() -> CleanupResult<()> {
 
     let mut conn = pool.get()?;
 
-    println!("🧹 Starting refresh token cleanup at {}", Utc::now());
+    let now = OffsetDateTime::now_utc();
+    println!("🧹 Starting refresh token cleanup at {}", now);
 
     // 1. Delete expired tokens (expires_at < NOW)
-    let deleted_expired = delete(
-        refresh_tokens_table::table
-            .filter(refresh_tokens_table::expires_at.lt(Utc::now().naive_utc())),
-    )
-    .execute(&mut conn)?;
+    let deleted_expired =
+        delete(refresh_tokens_table::table.filter(refresh_tokens_table::expires_at.lt(now)))
+            .execute(&mut conn)?;
     println!("  ✅ Deleted {} expired tokens", deleted_expired);
 
     // 2. Delete revoked tokens older than 30 days
-    let thirty_days_ago = Utc::now() - chrono::Duration::days(30);
+    let thirty_days_ago = now - Duration::days(30);
     let deleted_revoked = delete(
         refresh_tokens_table::table
             .filter(refresh_tokens_table::revoked_at.is_not_null())
-            .filter(refresh_tokens_table::revoked_at.lt(thirty_days_ago.naive_utc())),
+            .filter(refresh_tokens_table::revoked_at.lt(thirty_days_ago)),
     )
     .execute(&mut conn)?;
     println!(
@@ -84,7 +83,7 @@ fn main() -> CleanupResult<()> {
     let total = deleted_expired + deleted_revoked + deleted_per_user;
     println!(
         "\n✨ Cleanup complete at {}: {} total tokens removed",
-        Utc::now(),
+        OffsetDateTime::now_utc(),
         total
     );
 

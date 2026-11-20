@@ -4,13 +4,13 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::NaiveDateTime;
 use diesel::QueryResult;
 use diesel::QueryableByName;
 use diesel_async::AsyncPgConnection;
 use futures::future::BoxFuture;
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -62,8 +62,8 @@ pub trait IUserRepository: Send + Sync {
     async fn update_login_info(
         &self,
         id: &Uuid,
-        current_sign_in_at: Option<NaiveDateTime>,
-        last_sign_in_at: Option<NaiveDateTime>,
+        current_sign_in_at: Option<OffsetDateTime>,
+        last_sign_in_at: Option<OffsetDateTime>,
         current_sign_in_ip: Option<IpNet>,
         last_sign_in_ip: Option<IpNet>,
     ) -> QueryResult<User>;
@@ -72,7 +72,7 @@ pub trait IUserRepository: Send + Sync {
         &self,
         id: &Uuid,
         token_digest: Option<String>,
-        sent_at: Option<NaiveDateTime>,
+        sent_at: Option<OffsetDateTime>,
     ) -> QueryResult<usize>;
     async fn update_pending_email(
         &self,
@@ -80,7 +80,7 @@ pub trait IUserRepository: Send + Sync {
         blind_index: &[u8],
         encrypted_email: &[u8],
         token_digest: &str,
-        sent_at: NaiveDateTime,
+        sent_at: OffsetDateTime,
     ) -> QueryResult<usize>;
 
     async fn confirm_email(&self, token_digest: &str) -> QueryResult<usize>;
@@ -123,7 +123,7 @@ pub trait IUserRepository: Send + Sync {
         &self,
         user_id: &Uuid,
         token_digest: &str,
-        sent_at: NaiveDateTime,
+        sent_at: OffsetDateTime,
     ) -> QueryResult<usize>;
     async fn reset_password(&self, token_digest: &str, new_password: &str) -> QueryResult<usize>;
     async fn set_otp_secret(&self, user_id: &Uuid, secret: &str) -> QueryResult<usize>;

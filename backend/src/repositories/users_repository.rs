@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use chrono::NaiveDateTime;
 use diesel::BoolExpressionMethods;
 use diesel::JoinOnDsl;
 use diesel::helper_types::Or;
@@ -9,6 +8,7 @@ use diesel::result::QueryResult;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use ipnet::IpNet;
+use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
 use crate::db::database::DBPool;
@@ -231,8 +231,8 @@ impl IUserRepository for UsersRepository {
     async fn update_login_info(
         &self,
         user_id: &Uuid,
-        current_sign_in_at_val: Option<NaiveDateTime>,
-        last_sign_in_at_val: Option<NaiveDateTime>,
+        current_sign_in_at_val: Option<OffsetDateTime>,
+        last_sign_in_at_val: Option<OffsetDateTime>,
         current_sign_in_ip_val: Option<IpNet>,
         last_sign_in_ip_val: Option<IpNet>,
     ) -> diesel::QueryResult<User> {
@@ -250,7 +250,7 @@ impl IUserRepository for UsersRepository {
                             sign_in_count.eq(diesel::dsl::sql::<diesel::sql_types::Integer>(
                                 "sign_in_count + 1",
                             )),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .returning(User::as_returning())
                         .get_result(conn)
@@ -275,11 +275,11 @@ impl IUserRepository for UsersRepository {
                         .set((
                             encrypted_password.eq(pwd),
                             reset_password_token_digest.eq::<Option<String>>(None),
-                            reset_password_sent_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            reset_password_sent_at.eq::<Option<OffsetDateTime>>(None),
                             failed_attempts.eq(0),
-                            locked_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            locked_at.eq::<Option<OffsetDateTime>>(None),
                             unlock_token_digest.eq::<Option<String>>(None),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -292,7 +292,7 @@ impl IUserRepository for UsersRepository {
         &self,
         user_id: &Uuid,
         token_digest: Option<String>,
-        sent_at: Option<NaiveDateTime>,
+        sent_at: Option<OffsetDateTime>,
     ) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
@@ -303,7 +303,7 @@ impl IUserRepository for UsersRepository {
                         .set((
                             reset_password_token_digest.eq(token_digest),
                             reset_password_sent_at.eq(sent_at),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -318,7 +318,7 @@ impl IUserRepository for UsersRepository {
         blind_index: &[u8],
         encrypted_email: &[u8],
         token_digest: &str,
-        sent_at: NaiveDateTime,
+        sent_at: OffsetDateTime,
     ) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
         let bi = blind_index.to_vec();
@@ -334,7 +334,7 @@ impl IUserRepository for UsersRepository {
                             unconfirmed_email_encrypted.eq(ee),
                             confirmation_token_digest.eq(Some(td)),
                             confirmation_sent_at.eq(Some(sent_at)),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -362,9 +362,9 @@ impl IUserRepository for UsersRepository {
                         unconfirmed_email_blind_index.eq::<Option<Vec<u8>>>(None),
                         unconfirmed_email_encrypted.eq::<Option<Vec<u8>>>(None),
                         confirmation_token_digest.eq::<Option<String>>(None),
-                        confirmation_sent_at.eq::<Option<NaiveDateTime>>(None),
-                        confirmed_at.eq(Some(chrono::Utc::now().naive_utc())),
-                        updated_at.eq(chrono::Utc::now().naive_utc()),
+                        confirmation_sent_at.eq::<Option<PrimitiveDateTime>>(None),
+                        confirmed_at.eq(Some(OffsetDateTime::now_utc())),
+                        updated_at.eq(OffsetDateTime::now_utc()),
                     ))
                     .execute(conn)
                     .await
@@ -416,7 +416,7 @@ impl IUserRepository for UsersRepository {
                             .sql(" THEN ")
                             .bind::<diesel::sql_types::Text, _>(&new_unlock_token_digest)
                             .sql(" ELSE unlock_token_digest END")),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -438,9 +438,9 @@ impl IUserRepository for UsersRepository {
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             failed_attempts.eq(0),
-                            locked_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            locked_at.eq::<Option<PrimitiveDateTime>>(None),
                             unlock_token_digest.eq::<Option<String>>(None),
-                            current_sign_in_at.eq(Some(chrono::Utc::now().naive_utc())),
+                            current_sign_in_at.eq(Some(OffsetDateTime::now_utc())),
                             last_sign_in_at.eq(diesel::dsl::sql::<
                                 diesel::sql_types::Nullable<diesel::sql_types::Timestamptz>,
                             >("current_sign_in_at")),
@@ -448,7 +448,7 @@ impl IUserRepository for UsersRepository {
                             sign_in_count.eq(diesel::dsl::sql::<diesel::sql_types::Integer>(
                                 "sign_in_count + 1",
                             )),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -722,7 +722,7 @@ impl IUserRepository for UsersRepository {
         &self,
         user_id: &Uuid,
         token_digest: &str,
-        sent_at: NaiveDateTime,
+        sent_at: OffsetDateTime,
     ) -> diesel::QueryResult<usize> {
         let tok = token_digest.to_string();
         let user_id = *user_id;
@@ -734,7 +734,7 @@ impl IUserRepository for UsersRepository {
                         .set((
                             reset_password_token_digest.eq(Some(tok)),
                             reset_password_sent_at.eq(Some(sent_at)),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -758,8 +758,8 @@ impl IUserRepository for UsersRepository {
                         .set((
                             encrypted_password.eq(pwd),
                             reset_password_token_digest.eq::<Option<String>>(None),
-                            reset_password_sent_at.eq::<Option<chrono::NaiveDateTime>>(None),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            reset_password_sent_at.eq::<Option<OffsetDateTime>>(None),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -778,7 +778,7 @@ impl IUserRepository for UsersRepository {
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             otp_secret.eq(Some(sec)),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -800,9 +800,9 @@ impl IUserRepository for UsersRepository {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
                         .set((
-                            otp_enabled_at.eq(Some(chrono::Utc::now().naive_utc())),
+                            otp_enabled_at.eq(Some(OffsetDateTime::now_utc())),
                             otp_backup_codes.eq(Some(codes)),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -820,9 +820,9 @@ impl IUserRepository for UsersRepository {
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             otp_secret.eq::<Option<String>>(None),
-                            otp_enabled_at.eq::<Option<chrono::NaiveDateTime>>(None),
+                            otp_enabled_at.eq::<Option<PrimitiveDateTime>>(None),
                             otp_backup_codes.eq::<Option<Vec<String>>>(None),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await
@@ -845,7 +845,7 @@ impl IUserRepository for UsersRepository {
                     diesel::update(users_table::table.find(user_id))
                         .set((
                             otp_backup_codes.eq(Some(codes)),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .execute(conn)
                         .await

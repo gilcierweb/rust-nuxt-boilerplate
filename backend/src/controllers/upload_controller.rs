@@ -190,6 +190,7 @@ mod tests {
     use actix_web::HttpMessage;
     use actix_web::http::StatusCode;
     use actix_web::{App, web};
+    use time::OffsetDateTime;
 
     use super::*;
     use crate::authz::test_helpers::ability_from_codes;
@@ -325,7 +326,7 @@ mod tests {
             jwt_secrets: vec![crate::config::app_config::JwtSecretKey {
                 kid: "test-key-1".to_string(),
                 secret: "test-secret-key-for-unit-tests-32b!".to_string(),
-                created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
+                created_at: OffsetDateTime::UNIX_EPOCH,
                 expires_at: None,
             }],
         }

@@ -7,12 +7,12 @@ use backend::config::AppConfig;
 use backend::security::SecurityService;
 use backend::services::email_service::EmailService;
 use backend::services::rbac_catalog_service;
-use chrono::Utc;
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use faker_rust::name;
 use ipnet::IpNet;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 #[path = "../db/schema.rs"]
@@ -222,6 +222,7 @@ fn ensure_refresh_token(
     seed_index: usize,
 ) -> SeedResult<Uuid> {
     use schema::refresh_tokens::dsl::*;
+    use time::Duration;
 
     let token_hash_value = format!("seed-refresh-token-{seed_index:02}");
 
@@ -241,9 +242,9 @@ fn ensure_refresh_token(
             token_hash.eq(token_hash_value),
             device_info.eq(Some(format!("Seed Device {seed_index:02}"))),
             ip_address.eq(Some("127.0.0.1".to_string())),
-            expires_at.eq(Utc::now() + chrono::Duration::days(30)),
-            created_at.eq(Utc::now()),
-            updated_at.eq(Utc::now()),
+            expires_at.eq(OffsetDateTime::now_utc() + Duration::days(30)),
+            created_at.eq(OffsetDateTime::now_utc()),
+            updated_at.eq(OffsetDateTime::now_utc()),
         ))
         .returning(id)
         .get_result(conn)?)
@@ -275,16 +276,17 @@ fn ensure_user(
         return Ok(existing_id);
     }
 
+    let now = OffsetDateTime::now_utc();
     Ok(diesel::insert_into(users)
         .values((
             id.eq(Uuid::new_v4()),
             email_blind_index.eq(email_bidx),
             email_encrypted.eq(email_enc),
             encrypted_password.eq(pwd_hash),
-            confirmed_at.eq(Some(Utc::now())),
+            confirmed_at.eq(Some(now)),
             encryption_key_version.eq(key_version),
-            created_at.eq(Utc::now()),
-            updated_at.eq(Utc::now()),
+            created_at.eq(now),
+            updated_at.eq(now),
         ))
         .returning(id)
         .get_result(conn)?)
@@ -307,6 +309,7 @@ fn ensure_profile(
         return Ok(existing_id);
     }
 
+    let now = OffsetDateTime::now_utc();
     Ok(diesel::insert_into(profiles)
         .values((
             id.eq(Uuid::new_v4()),
@@ -323,8 +326,8 @@ fn ensure_profile(
             status.eq(true),
             social_network.eq(serde_json::json!({})),
             encryption_key_version.eq(1_i32),
-            created_at.eq(Utc::now()),
-            updated_at.eq(Utc::now()),
+            created_at.eq(now),
+            updated_at.eq(now),
         ))
         .returning(id)
         .get_result(conn)?)
@@ -386,6 +389,7 @@ fn ensure_audit_log(
         return Ok(existing_id);
     }
 
+    let now = OffsetDateTime::now_utc();
     Ok(diesel::insert_into(audit_logs)
         .values((
             id.eq(Uuid::new_v4()),
@@ -403,7 +407,7 @@ fn ensure_audit_log(
             request_id.eq(Some(request_uuid)),
             changes.eq(serde_json::json!({})),
             metadata.eq(serde_json::json!({ "seed": true, "index": seed_index })),
-            created_at.eq(Utc::now()),
+            created_at.eq(now),
         ))
         .returning(id)
         .get_result(conn)?)

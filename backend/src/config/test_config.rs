@@ -6,6 +6,7 @@
 
 use base64::Engine;
 use rand::{Rng, RngCore, SeedableRng};
+use time::OffsetDateTime;
 
 use crate::config::app_config::{AppConfig, EmailTransportKind, Environment, JwtSecretKey};
 
@@ -114,7 +115,7 @@ pub fn test_config() -> AppConfig {
         jwt_secrets: vec![JwtSecretKey {
             kid: "test-key-1".to_string(),
             secret: generate_deterministic_string(32, 0x9E3779B97F4A7C15),
-            created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
+            created_at: OffsetDateTime::from_unix_timestamp(0).unwrap(),
             expires_at: None,
         }],
     }

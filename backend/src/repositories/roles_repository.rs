@@ -6,6 +6,7 @@ use diesel::JoinOnDsl;
 use diesel::expression_methods::NullableExpressionMethods;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::DBPool;
@@ -138,7 +139,7 @@ impl IRoleRepository for RolesRepository {
                             name.eq(item.name),
                             resource_type.eq(item.resource_type),
                             resource_id.eq(item.resource_id),
-                            updated_at.eq(chrono::Utc::now().naive_utc()),
+                            updated_at.eq(OffsetDateTime::now_utc()),
                         ))
                         .returning(Role::as_returning())
                         .get_result(conn)

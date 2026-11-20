@@ -64,11 +64,11 @@ sha2 = "0.10"
 
 async-trait = "0.1.89"
 base64 = "0.22.1"
-chrono = { version = "0.4.44", features = ["serde"] }
 deadpool-redis = "0.23.0"
 derive_more = { version = "2.0", features = ["display", "error"] }
-diesel = { version = "2.3.11", features = ["postgres", "r2d2", "chrono", "uuid", "ipnet-address", "numeric", "64-column-tables", "serde_json"] }
+diesel = { version = "2.3.11", features = ["postgres", "r2d2", "time", "uuid", "ipnet-address", "numeric", "64-column-tables", "serde_json"] }
 diesel-async = { version = "0.9.2", features = ["postgres", "deadpool"] }
+time = { version = "0.3", features = ["serde", "formatting", "parsing", "local-offset", "macros", "large-dates"] }
 
 # 11.x: none of the 11.0 breaking changes touch this app's usage (`Algorithm` is
 # only constructed, `Header`/`EncodingKey`/`DecodingKey` internals are never
@@ -100,7 +100,7 @@ futures = "0.3"
 uuid = { version = "1.16", features = ["v4", "serde"] }
 # -- Logging / Tracing
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "chrono"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "time"] }
 # -- OpenTelemetry / Distributed Tracing
 opentelemetry = "0.32"
 opentelemetry-otlp = { version = "0.32", features = ["grpc-tonic"] }
@@ -116,7 +116,7 @@ totp-rs = { version = "5", features = ["qr", "zeroize", "gen_secret"] }
 # Custom Redis-backed rate limiter (see middleware/rate_limit_middleware.rs)
 # with explicit, configurable limits for different endpoint categories.
 
-utoipa = { version = "6.0.0", features = ["actix_extras", "chrono", "uuid"] }
+utoipa = { version = "6.0.0", features = ["actix_extras", "time", "uuid"] }
 # 10.x builds against zip 9, closing RUSTSEC-2026-0367/0368/0369
 # (symlink, SUID/SGID and permission escapes in `ZipArchive::extract`),
 # all three of which fire on the 9.x build-time dependency.

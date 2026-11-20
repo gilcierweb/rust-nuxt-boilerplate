@@ -398,6 +398,7 @@ mod tests {
     use actix_web::http::StatusCode;
     use actix_web::{App, test, web};
     use serde_json::Value;
+    use time::OffsetDateTime;
     use uuid::Uuid;
 
     use actix_web::HttpMessage;
@@ -456,8 +457,8 @@ mod tests {
                 code: item.code.clone(),
                 name: item.name.clone(),
                 description: item.description.clone(),
-                created_at: chrono::Utc::now(),
-                updated_at: chrono::Utc::now(),
+                created_at: OffsetDateTime::now_utc(),
+                updated_at: OffsetDateTime::now_utc(),
             })
         });
         permissions_repo

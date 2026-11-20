@@ -14,7 +14,7 @@
 // mock_repo.expect_find().returning(|_| Ok(user_fixture()));
 // ```
 
-use chrono::Utc;
+use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::models::audit_log::AuditLog;
@@ -26,6 +26,7 @@ use crate::models::user_role::UserRole;
 
 /// Create a test user fixture.
 pub fn user_fixture() -> User {
+    let now = OffsetDateTime::now_utc();
     User {
         id: Uuid::new_v4(),
         email_blind_index: vec![1, 2, 3, 4],
@@ -40,7 +41,7 @@ pub fn user_fixture() -> User {
         current_sign_in_ip: None,
         last_sign_in_ip: None,
         confirmation_token_digest: None,
-        confirmed_at: Some(Utc::now()),
+        confirmed_at: Some(now),
         confirmation_sent_at: None,
         unconfirmed_email_blind_index: None,
         unconfirmed_email_encrypted: None,
@@ -51,8 +52,8 @@ pub fn user_fixture() -> User {
         otp_enabled_at: None,
         otp_backup_codes: None,
         encryption_key_version: 1,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: now,
+        updated_at: now,
     }
 }
 
@@ -66,13 +67,14 @@ pub fn user_fixture_with_id(id: Uuid) -> User {
 
 /// Create a test role fixture.
 pub fn role_fixture() -> Role {
+    let now = OffsetDateTime::now_utc();
     Role {
         id: Uuid::new_v4(),
         name: "test_role".to_string(),
         resource_type: None,
         resource_id: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: now,
+        updated_at: now,
     }
 }
 
@@ -86,6 +88,7 @@ pub fn role_fixture_with_name(name: &str) -> Role {
 
 /// Create a test profile fixture.
 pub fn profile_fixture() -> Profile {
+    let now = OffsetDateTime::now_utc();
     Profile {
         id: Uuid::new_v4(),
         user_id: Uuid::new_v4(),
@@ -105,8 +108,8 @@ pub fn profile_fixture() -> Profile {
         status: true,
         social_network: serde_json::json!({}),
         encryption_key_version: 1,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: now,
+        updated_at: now,
     }
 }
 
@@ -120,21 +123,23 @@ pub fn profile_fixture_for_user(user_id: Uuid) -> Profile {
 
 /// Create a test refresh token fixture.
 pub fn refresh_token_fixture() -> RefreshToken {
+    let now = OffsetDateTime::now_utc();
     RefreshToken {
         id: Uuid::new_v4(),
         user_id: Uuid::new_v4(),
         token_hash: "test_hash".to_string(),
         device_info: Some("test-device".to_string()),
         ip_address: Some("127.0.0.1/32".parse().unwrap()),
-        expires_at: Utc::now() + chrono::Duration::days(30),
+        expires_at: now + Duration::days(30),
         revoked_at: None,
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
+        created_at: now,
+        updated_at: now,
     }
 }
 
 /// Create a test audit log fixture.
 pub fn audit_log_fixture() -> AuditLog {
+    let now = OffsetDateTime::now_utc();
     AuditLog {
         id: Uuid::new_v4(),
         actor_user_id: Some(Uuid::new_v4()),
@@ -147,7 +152,7 @@ pub fn audit_log_fixture() -> AuditLog {
         request_id: None,
         changes: serde_json::json!({}),
         metadata: serde_json::json!({}),
-        created_at: Utc::now(),
+        created_at: now,
         prev_hash: None,
         hash: "a".repeat(64),
     }

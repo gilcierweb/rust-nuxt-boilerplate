@@ -19,6 +19,7 @@ use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use time::OffsetDateTime;
 
 use backend::AppState;
 use backend::middleware::auth::{JwtAuth, JwtAuthConfig, create_token};
@@ -137,7 +138,7 @@ async fn epoch_revokes_tokens_issued_before_credential_change() {
     .await;
 
     let (user_id, token) = make_token(&config).await;
-    let future_epoch = (chrono::Utc::now().timestamp() + 3600) as u64;
+    let future_epoch = (OffsetDateTime::now_utc().unix_timestamp() + 3600) as u64;
     set_epoch_marker(user_id, future_epoch).await;
 
     let resp = dispatch!(app, || bearer_request(&token));
@@ -163,7 +164,7 @@ async fn epoch_predating_token_does_not_revoke_it() {
     .await;
 
     let (user_id, token) = make_token(&config).await;
-    let past_epoch = (chrono::Utc::now().timestamp() - 3600) as u64;
+    let past_epoch = (OffsetDateTime::now_utc().unix_timestamp() - 3600) as u64;
     set_epoch_marker(user_id, past_epoch).await;
 
     let resp = dispatch!(app, || bearer_request(&token));

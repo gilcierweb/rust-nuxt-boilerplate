@@ -1,21 +1,21 @@
-use chrono::{DateTime, FixedOffset, Utc};
+use time::{OffsetDateTime, UtcOffset};
 
 #[allow(dead_code)]
-pub fn utc_offset() -> FixedOffset {
-    FixedOffset::east_opt(0).expect("UTC offset is always valid")
+pub fn utc_offset() -> UtcOffset {
+    UtcOffset::UTC
 }
 
 #[allow(dead_code)]
-pub fn now_fixed() -> DateTime<FixedOffset> {
-    Utc::now().with_timezone(&utc_offset())
+pub fn now_fixed() -> OffsetDateTime {
+    OffsetDateTime::now_utc()
 }
 
 #[allow(dead_code)]
-pub fn to_fixed(dt: DateTime<Utc>) -> DateTime<FixedOffset> {
-    dt.with_timezone(&utc_offset())
+pub fn to_fixed(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.to_offset(utc_offset())
 }
 
 #[allow(dead_code)]
-pub fn to_utc(dt: DateTime<FixedOffset>) -> DateTime<Utc> {
-    dt.with_timezone(&Utc)
+pub fn to_utc(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.to_offset(UtcOffset::UTC)
 }

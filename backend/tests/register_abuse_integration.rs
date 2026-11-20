@@ -27,6 +27,7 @@ use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use diesel_async::AsyncPgConnection;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use time::OffsetDateTime;
 
 use backend::middleware::rate_limit_middleware::{RATE_API, RATE_AUTH, RateLimiter};
 
@@ -150,7 +151,7 @@ fn limiter_config(register_daily_limit: u64) -> backend::config::AppConfig {
         jwt_secrets: vec![JwtSecretKey {
             kid: "test-key-1".to_string(),
             secret: jwt_secret,
-            created_at: chrono::DateTime::from_timestamp(0, 0).unwrap().naive_utc(),
+            created_at: OffsetDateTime::UNIX_EPOCH,
             expires_at: None,
         }],
         cookie_secure_override: false,

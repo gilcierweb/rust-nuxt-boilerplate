@@ -1,8 +1,8 @@
 use actix_web::http::StatusCode;
 use actix_web::{HttpRequest, HttpResponse, get, web};
-use chrono::Utc;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
+use time::OffsetDateTime;
 use utoipa::ToSchema;
 
 use crate::AppState;
@@ -42,7 +42,9 @@ pub struct HealthResponse {
 pub async fn liveness() -> HttpResponse {
     HttpResponse::Ok().json(HealthResponse {
         status: "ok",
-        timestamp: Utc::now().to_rfc3339(),
+        timestamp: OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default(),
         version: env!("CARGO_PKG_VERSION"),
         db: HealthDependencyStatus {
             status: "skipped",
@@ -170,7 +172,9 @@ pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpR
 
     let response = HealthResponse {
         status: overall_status,
-        timestamp: Utc::now().to_rfc3339(),
+        timestamp: OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .unwrap_or_default(),
         version: env!("CARGO_PKG_VERSION"),
         db: db_status,
         redis: redis_status,

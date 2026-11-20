@@ -32,20 +32,21 @@ pub fn resolve_default_registration_role(candidates: &[Role]) -> Result<Uuid, De
 
 #[cfg(test)]
 mod tests {
-    use chrono::Utc;
+    use time::OffsetDateTime;
     use uuid::Uuid;
 
     use super::{DefaultRoleError, resolve_default_registration_role};
     use crate::models::role::Role;
 
     fn role(id: Uuid, name: &str, resource_type: Option<&str>) -> Role {
+        let now = OffsetDateTime::now_utc();
         Role {
             id,
             name: name.to_string(),
             resource_type: resource_type.map(str::to_string),
             resource_id: None,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
+            created_at: now,
+            updated_at: now,
         }
     }
 

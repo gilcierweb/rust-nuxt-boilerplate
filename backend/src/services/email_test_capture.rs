@@ -13,8 +13,8 @@
 
 use std::sync::Arc;
 
-use chrono::{DateTime, Utc};
 use parking_lot::Mutex;
+use time::OffsetDateTime;
 
 /// A captured email payload. Mirrors the public-facing fields of an outbound
 /// email without exposing raw HTTP request bodies.
@@ -26,7 +26,7 @@ pub struct CapturedEmail {
     pub text_body: String,
     pub html_body: String,
     pub context: serde_json::Value,
-    pub sent_at: DateTime<Utc>,
+    pub sent_at: OffsetDateTime,
 }
 
 /// In-memory email capture backed by a `Mutex<Vec<…>>`.
@@ -101,6 +101,7 @@ impl std::fmt::Debug for TestEmailCapture {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use time::OffsetDateTime;
 
     fn sample(to: &str) -> CapturedEmail {
         CapturedEmail {
@@ -110,7 +111,7 @@ mod tests {
             text_body: "hello".to_string(),
             html_body: "<p>hello</p>".to_string(),
             context: serde_json::json!({"user_name": "Ada"}),
-            sent_at: Utc::now(),
+            sent_at: OffsetDateTime::now_utc(),
         }
     }
 

@@ -202,7 +202,7 @@ impl EmailTemplates {
             ctx.insert("app_name", "Boilerplate App");
         }
         if ctx.get("current_year").is_none() {
-            let year = chrono::Utc::now().format("%Y").to_string();
+            let year = time::OffsetDateTime::now_utc().year().to_string();
             ctx.insert("current_year", &year);
         }
     }

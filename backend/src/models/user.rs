@@ -1,7 +1,7 @@
-use chrono::{DateTime, Utc};
 use diesel::{Queryable, Selectable};
 use ipnet::IpNet;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::db::schema::users;
@@ -18,38 +18,38 @@ pub struct User {
 
     // Recoverable
     pub reset_password_token_digest: Option<String>,
-    pub reset_password_sent_at: Option<DateTime<Utc>>,
+    pub reset_password_sent_at: Option<OffsetDateTime>,
 
     // Rememberable
-    pub remember_created_at: Option<DateTime<Utc>>,
+    pub remember_created_at: Option<OffsetDateTime>,
 
     // Trackable
     pub sign_in_count: i32,
-    pub current_sign_in_at: Option<DateTime<Utc>>,
-    pub last_sign_in_at: Option<DateTime<Utc>>,
+    pub current_sign_in_at: Option<OffsetDateTime>,
+    pub last_sign_in_at: Option<OffsetDateTime>,
     pub current_sign_in_ip: Option<IpNet>,
     pub last_sign_in_ip: Option<IpNet>,
 
     // Confirmable
     pub confirmation_token_digest: Option<String>,
-    pub confirmed_at: Option<DateTime<Utc>>,
-    pub confirmation_sent_at: Option<DateTime<Utc>>,
+    pub confirmed_at: Option<OffsetDateTime>,
+    pub confirmation_sent_at: Option<OffsetDateTime>,
     pub unconfirmed_email_blind_index: Option<Vec<u8>>,
     pub unconfirmed_email_encrypted: Option<Vec<u8>>,
 
     // Lockable
     pub failed_attempts: i32,
     pub unlock_token_digest: Option<String>,
-    pub locked_at: Option<DateTime<Utc>>,
+    pub locked_at: Option<OffsetDateTime>,
 
     // 2FA (TOTP)
     pub otp_secret: Option<String>,
-    pub otp_enabled_at: Option<DateTime<Utc>>,
+    pub otp_enabled_at: Option<OffsetDateTime>,
     pub otp_backup_codes: Option<Vec<Option<String>>>,
     pub encryption_key_version: i32,
 
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -62,8 +62,8 @@ pub struct NewUser {
     pub unconfirmed_email_blind_index: Option<Vec<u8>>,
     pub unconfirmed_email_encrypted: Option<Vec<u8>>,
     pub encryption_key_version: i32,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 impl NewUser {
@@ -74,7 +74,7 @@ impl NewUser {
         confirmation_token_digest: Option<String>,
         encryption_key_version: i32,
     ) -> Self {
-        let now = Utc::now();
+        let now = OffsetDateTime::now_utc();
         Self {
             id: Uuid::new_v4(),
             email_blind_index,

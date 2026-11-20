@@ -1,5 +1,6 @@
 use deadpool_redis::Pool;
 use redis::AsyncCommands;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 pub struct AccessTokenBlacklist {
@@ -189,7 +190,7 @@ impl AccessTokenBlacklist {
     ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
         let mut conn = self.redis.get().await?;
         let key = format!("{}{}", EPOCH_PREFIX, user_id);
-        let now = chrono::Utc::now().timestamp() as u64;
+        let now = OffsetDateTime::now_utc().unix_timestamp() as u64;
         redis::cmd("SET")
             .arg(&key)
             .arg(now)

@@ -1,7 +1,7 @@
-use chrono::{DateTime, NaiveDate, Utc};
 use diesel::{AsChangeset, Insertable, Queryable, Selectable};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use time::{Date, OffsetDateTime};
 use utoipa::ToSchema;
 use uuid::Uuid;
 
@@ -24,7 +24,7 @@ pub struct Profile {
     pub nickname: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<String>,
-    pub birthday: Option<NaiveDate>,
+    pub birthday: Option<Date>,
     #[serde(skip_serializing, default)]
     pub cpf_encrypted: Option<Vec<u8>>,
     #[serde(skip_serializing, default)]
@@ -41,8 +41,8 @@ pub struct Profile {
     pub social_network: Value,
     #[serde(skip_serializing, default = "default_encryption_key_version")]
     pub encryption_key_version: i32,
-    pub created_at: DateTime<Utc>,
-    pub updated_at: DateTime<Utc>,
+    pub created_at: OffsetDateTime,
+    pub updated_at: OffsetDateTime,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Insertable, ToSchema)]
@@ -54,7 +54,7 @@ pub struct NewProfile {
     pub full_name: Option<String>,
     pub nickname: Option<String>,
     pub bio: Option<String>,
-    pub birthday: Option<NaiveDate>,
+    pub birthday: Option<Date>,
     pub cpf_encrypted: Option<Vec<u8>>,
     pub cpf_blind_index: Option<Vec<u8>>,
     pub phone_encrypted: Option<Vec<u8>>,
@@ -78,7 +78,7 @@ pub struct ProfilePatch {
     pub nickname: Option<String>,
     pub bio: Option<String>,
     pub avatar: Option<String>,
-    pub birthday: Option<NaiveDate>,
+    pub birthday: Option<Date>,
 }
 
 impl NewProfile {

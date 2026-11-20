@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use diesel::QueryResult;
 use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
+use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::db::schema::magic_link_tokens as table;
@@ -64,7 +65,7 @@ impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(table::table.find(id))
-                        .set(table::consumed_at.eq(chrono::Utc::now().naive_utc()))
+                        .set(table::consumed_at.eq(OffsetDateTime::now_utc()))
                         .execute(conn)
                         .await
                 })
@@ -78,7 +79,7 @@ impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
                 Box::pin(async move {
                     diesel::delete(
                         table::table
-                            .filter(table::expires_at.lt(chrono::Utc::now().naive_utc()))
+                            .filter(table::expires_at.lt(OffsetDateTime::now_utc()))
                             .filter(table::consumed_at.is_null()),
                     )
                     .execute(conn)

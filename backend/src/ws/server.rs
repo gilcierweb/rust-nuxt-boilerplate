@@ -3,12 +3,13 @@
 use std::collections::HashMap;
 use std::sync::Arc;
 
+use actix::Recipient;
 use actix::prelude::*;
 use actix_web::http::header::SEC_WEBSOCKET_PROTOCOL;
 use actix_web::{HttpRequest, HttpResponse, web};
 use actix_web_actors::ws;
-use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use tokio::sync::Mutex as TokioMutex;
 use uuid::Uuid;
 
@@ -111,7 +112,7 @@ impl<'de> Deserialize<'de> for ConnectionInfo {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PresenceInfo {
     pub active_connections: usize,
-    pub last_seen_at: Option<DateTime<Utc>>,
+    pub last_seen_at: Option<time::OffsetDateTime>,
 }
 
 /// WebSocket state container
@@ -224,7 +225,7 @@ impl WsState {
             }
 
             if entry.active_connections == 0 {
-                let seen_at = Utc::now();
+                let seen_at = OffsetDateTime::now_utc();
                 entry.last_seen_at = Some(seen_at);
                 Some(seen_at)
             } else {
@@ -294,14 +295,14 @@ impl WsState {
         &self,
         profile_id: Uuid,
         is_online: bool,
-        last_seen_at: Option<DateTime<Utc>>,
+        last_seen_at: Option<OffsetDateTime>,
     ) {
         let message = WsMessage::new(
             "presence_changed",
             serde_json::json!({
                 "profile_id": profile_id,
                 "is_online": is_online,
-                "last_seen_at": last_seen_at,
+                "last_seen_at": last_seen_at.map(|dt| dt.format(&time::format_description::well_known::Rfc3339).unwrap_or_default()),
             }),
         );
         self.broadcast_to_all(message).await;
@@ -337,7 +338,7 @@ impl WsMessage {
             msg_type: msg_type.to_string(),
             payload,
             sender: None,
-            timestamp: chrono::Utc::now().timestamp(),
+            timestamp: OffsetDateTime::now_utc().unix_timestamp(),
         }
     }
 
@@ -376,7 +377,7 @@ pub struct WebSocketActor {
     pub username: String,
     pub room: Option<String>,
     pub ws_state: web::Data<WsState>,
-    pub last_pong: chrono::DateTime<chrono::Utc>,
+    pub last_pong: OffsetDateTime,
 }
 
 impl Actor for WebSocketActor {
@@ -401,9 +402,7 @@ impl Actor for WebSocketActor {
         let interval = self.ws_state.limits.heartbeat_interval_secs;
         ctx.run_interval(std::time::Duration::from_secs(interval), |act, ctx| {
             let timeout = act.ws_state.limits.client_timeout_secs;
-            let elapsed = Utc::now()
-                .signed_duration_since(act.last_pong)
-                .num_seconds() as u64;
+            let elapsed = (OffsetDateTime::now_utc() - act.last_pong).whole_seconds() as u64;
 
             if elapsed > timeout {
                 tracing::warn!(
@@ -453,7 +452,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocketActor {
         match msg {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Pong(_)) => {
-                self.last_pong = Utc::now();
+                self.last_pong = OffsetDateTime::now_utc();
             },
             Ok(ws::Message::Text(text)) => self.handle_message(&text, ctx),
             Ok(ws::Message::Binary(_)) => {},
@@ -576,7 +575,7 @@ impl WebSocketActor {
                 let pong = WsMessage::new(
                     "pong",
                     serde_json::json!({
-                        "timestamp": chrono::Utc::now().timestamp(),
+                        "timestamp": OffsetDateTime::now_utc().unix_timestamp(),
                     }),
                 );
                 ctx.text(serde_json::to_string(&pong).unwrap_or_default());
@@ -671,7 +670,7 @@ pub async fn ws_handler(
         username: profile_id.to_string(),
         room: None,
         ws_state,
-        last_pong: Utc::now(),
+        last_pong: OffsetDateTime::now_utc(),
     };
 
     ws::WsResponseBuilder::new(ws_actor, &req, stream)
