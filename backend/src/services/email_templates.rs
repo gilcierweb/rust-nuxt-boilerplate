@@ -17,38 +17,56 @@ use std::sync::Arc;
 
 use rust_i18n::replace_patterns;
 use rust_i18n::t;
-use tera::{Context, Result as TeraResult, Tera, Value};
+use tera::{Context, Error as TeraError, Kwargs, State, Tera, TeraResult, Value};
 
 /// Custom Tera function `t` that resolves an i18n key via rust_i18n with pt-BR locale.
 /// Usage in templates: `{{ t(key="key", arg1="value1", arg2="value2") }}`.
-fn tera_t_function(args: &HashMap<String, Value>) -> TeraResult<Value> {
-    let key = args
-        .get("key")
-        .and_then(|v| v.as_str())
-        .ok_or_else(|| tera::Error::msg("t() requires a `key` argument"))?;
+///
+/// Tera 2 hands the named arguments over as `Kwargs` and the engine state as
+/// `State`; the function returns the resolved message as a string.
+fn tera_t_function(kwargs: Kwargs, _: &State) -> TeraResult<String> {
+    let key = match kwargs.get::<Value>("key") {
+        Ok(Some(value)) => match value.as_str() {
+            Some(key) => key.to_string(),
+            None => return Err(TeraError::message("t() key must be a string")),
+        },
+        Ok(None) => return Err(TeraError::message("t() requires a `key` argument")),
+        Err(error) => {
+            return Err(TeraError::message(format!(
+                "failed to read the key argument: {error}"
+            )));
+        },
+    };
 
-    // Extract additional named arguments for interpolation
-    let mut interp_args = HashMap::new();
-    for (k, v) in args {
-        if k != "key"
-            && let Some(s) = v.as_str()
-        {
-            interp_args.insert(k.clone(), s.to_string());
+    // Every argument other than the key feeds the interpolation of the message.
+    let mut interpolation_args = HashMap::new();
+    for (name, value) in kwargs.iter() {
+        let Some(name) = name.as_str() else {
+            continue;
+        };
+        if name == "key" {
+            continue;
+        }
+        if let Some(text) = value.as_str() {
+            interpolation_args.insert(name.to_string(), text.to_string());
         }
     }
 
     // Use rust_i18n with pt-BR locale (set at startup via rust_i18n::set_locale)
     let raw = t!(key, locale = "pt-BR").into_owned();
-    let message = if interp_args.is_empty() {
+    let message = if interpolation_args.is_empty() {
         raw
     } else {
-        let mut patterns: Vec<&str> = interp_args.keys().map(String::as_str).collect();
+        let mut patterns: Vec<&str> = interpolation_args.keys().map(String::as_str).collect();
         patterns.sort();
-        let values: Vec<String> = patterns.iter().map(|p| interp_args[*p].clone()).collect();
+        let values: Vec<String> = patterns
+            .iter()
+            .map(|pattern| interpolation_args[*pattern].clone())
+            .collect();
         replace_patterns(&raw, &patterns, &values)
     };
 
-    Ok(Value::String(message))
+    Ok(message)
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -59,8 +77,8 @@ pub enum EmailTemplateError {
     Render(String),
 }
 
-impl From<tera::Error> for EmailTemplateError {
-    fn from(err: tera::Error) -> Self {
+impl From<TeraError> for EmailTemplateError {
+    fn from(err: TeraError) -> Self {
         // Tera's Error derefs to std::error::Error; preserve the message.
         Self::Render(err.to_string())
     }
@@ -130,6 +148,10 @@ impl EmailTemplates {
     fn build_tera() -> Result<Tera, tera::Error> {
         let mut tera = Tera::default();
 
+        // Tera 2 resolves the functions while it parses a template, so the
+        // custom function has to be known before any template is added.
+        tera.register_function("t", tera_t_function);
+
         tera.add_raw_template(names::LAYOUT_MAILER, LAYOUT_MAILER_HTML)?;
         tera.add_raw_template(names::USER_WELCOME_HTML, WELCOME_HTML)?;
         tera.add_raw_template(names::USER_WELCOME_TEXT, WELCOME_TEXT)?;
@@ -147,8 +169,6 @@ impl EmailTemplates {
         // Only autoescape HTML templates (text/plain must remain unescaped).
         tera.autoescape_on(vec![".html.tera"]);
 
-        tera.register_function("t", tera_t_function);
-
         Ok(tera)
     }
 
@@ -164,7 +184,11 @@ impl EmailTemplates {
     }
 
     /// Render the named template with the supplied context.
-    pub fn render(&self, template: &str, context: &Value) -> Result<String, EmailTemplateError> {
+    pub fn render(
+        &self,
+        template: &str,
+        context: &serde_json::Value,
+    ) -> Result<String, EmailTemplateError> {
         let mut ctx = Self::context_from_value(context)?;
         self.ensure_defaults(&mut ctx);
         Ok(self.tera.render(template, &ctx)?)
@@ -177,7 +201,7 @@ impl EmailTemplates {
     pub fn render_html_with_layout(
         &self,
         content_template: &str,
-        context: &Value,
+        context: &serde_json::Value,
     ) -> Result<String, EmailTemplateError> {
         let rendered_content = self.render(content_template, context)?;
         let mut ctx = Self::context_from_value(context)?;
@@ -186,11 +210,15 @@ impl EmailTemplates {
         Ok(self.tera.render(names::LAYOUT_MAILER, &ctx)?)
     }
 
-    fn context_from_value(value: &Value) -> Result<Context, EmailTemplateError> {
+    /// Copy the JSON context into a Tera context.
+    ///
+    /// Tera 2 owns its own `Value` type, so every entry is converted from
+    /// JSON before it enters the context.
+    fn context_from_value(value: &serde_json::Value) -> Result<Context, EmailTemplateError> {
         let mut ctx = Context::new();
-        if let Some(obj) = value.as_object() {
-            for (k, v) in obj {
-                ctx.insert(k, v);
+        if let Some(object) = value.as_object() {
+            for (key, item) in object {
+                ctx.insert(key.clone(), &tera::Value::from_serializable(item));
             }
         }
         Ok(ctx)
@@ -209,7 +237,11 @@ impl EmailTemplates {
 
     /// Return a list of all registered template names (useful for previews/diagnostics).
     pub fn template_names(&self) -> Vec<String> {
-        let mut names: Vec<String> = self.tera.templates.keys().cloned().collect();
+        let mut names: Vec<String> = self
+            .tera
+            .get_template_names()
+            .map(|s| s.to_string())
+            .collect();
         names.sort();
         names
     }

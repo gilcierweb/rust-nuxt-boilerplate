@@ -138,7 +138,7 @@ deadpool = { version = "0.13.0", features = ["managed"] }
 reqwest = { version = "0.13", features = ["json", "rustls"] }
 
 # -- Template engine for email mailers
-tera = "1.20"
+tera = "2.4"
 # -- SMTP transport (alternative to Resend API) for local dev with mailcatcher
 #    and production SMTP relays. rustls avoids native OpenSSL deps.
 # RUSTSEC-2026-0560..0565 fixed in >=0.11.24
