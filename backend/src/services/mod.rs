@@ -10,5 +10,6 @@ pub mod email_validation;
 pub mod http_client;
 pub mod metrics_service;
 pub mod rbac_catalog_service;
+pub mod seed_credentials;
 pub mod token;
 pub mod token_service;

@@ -352,6 +352,56 @@ pub enum Environment {
     Test,
 }
 
+impl Environment {
+    /// Parse from env-style string. Case-insensitive; defaults to `Development`
+    /// when unrecognised, so an unset `ENVIRONMENT` reads as development
+    /// instead of failing the boot of a local checkout.
+    pub fn from_env_str(value: &str) -> Self {
+        match value.trim().to_ascii_lowercase().as_str() {
+            "production" => Self::Production,
+            "staging" => Self::Staging,
+            "test" => Self::Test,
+            _ => Self::Development,
+        }
+    }
+
+    /// Whether fake data and development shortcuts are forbidden here. The
+    /// seeder reads this through the enum directly, before the whole config
+    /// can be built.
+    pub fn is_production_like(&self) -> bool {
+        matches!(self, Self::Staging | Self::Production)
+    }
+}
+
+#[cfg(test)]
+mod environment_parse_tests {
+    use super::*;
+
+    #[test]
+    fn parses_the_documented_names_case_insensitively() {
+        assert_eq!(
+            Environment::from_env_str("production"),
+            Environment::Production
+        );
+        assert_eq!(Environment::from_env_str("Staging"), Environment::Staging);
+        assert_eq!(Environment::from_env_str(" Test "), Environment::Test);
+    }
+
+    #[test]
+    fn defaults_an_unset_or_unknown_value_to_development() {
+        assert_eq!(Environment::from_env_str(""), Environment::Development);
+        assert_eq!(Environment::from_env_str("qa"), Environment::Development);
+    }
+
+    #[test]
+    fn only_staging_and_production_are_production_like() {
+        assert!(Environment::Production.is_production_like());
+        assert!(Environment::Staging.is_production_like());
+        assert!(!Environment::Development.is_production_like());
+        assert!(!Environment::Test.is_production_like());
+    }
+}
+
 /// Email transport backend.
 ///
 /// Selects which wire protocol the [`crate::services::EmailService`] uses to
@@ -412,12 +462,7 @@ impl AppConfig {
         // Parse environment first so we can use it for environment-aware defaults
         let environment = {
             let env_var = env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
-            match env_var.to_ascii_lowercase().as_str() {
-                "production" => Environment::Production,
-                "staging" => Environment::Staging,
-                "test" => Environment::Test,
-                _ => Environment::Development,
-            }
+            Environment::from_env_str(&env_var)
         };
 
         // Default Redis pool size depends on environment:
@@ -757,10 +802,7 @@ impl AppConfig {
     }
 
     pub fn is_production_like(&self) -> bool {
-        matches!(
-            self.environment,
-            Environment::Staging | Environment::Production
-        )
+        self.environment.is_production_like()
     }
 
     /// Whether cookies should carry the `Secure` flag.
