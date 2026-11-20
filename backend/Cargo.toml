@@ -141,7 +141,8 @@ reqwest = { version = "0.13", features = ["json", "rustls"] }
 tera = "1.20"
 # -- SMTP transport (alternative to Resend API) for local dev with mailcatcher
 #    and production SMTP relays. rustls avoids native OpenSSL deps.
-lettre = { version = "0.11", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-rustls", "rustls", "rustls-native-certs", "rustls-platform-verifier", "aws-lc-rs"] }
+# RUSTSEC-2026-0560..0565 fixed in >=0.11.24
+lettre = { version = "0.11.24", default-features = false, features = ["builder", "hostname", "smtp-transport", "tokio1", "tokio1-rustls", "rustls", "rustls-native-certs", "rustls-platform-verifier", "aws-lc-rs"] }
 # -- Temp file handling for streaming uploads
 tempfile = "3.10"
 # -- Mutexes for in-process caches compiled into the binary (timing
