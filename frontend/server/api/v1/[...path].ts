@@ -105,13 +105,16 @@ export default defineEventHandler(async (event) => {
           path,
         }),
       )
+      // The client gets one generic message: the detail of an unauthenticated
+      // 502 (the fetch error names the internal backend origin and path) is
+      // topology disclosure, exactly the leak `app/utils/auth-errors.ts`
+      // guards on the auth path. The diagnostics stay in the server log,
+      // where the operator can see them.
       throw createError({
         statusCode: 502,
         statusMessage: 'Backend API unavailable',
         data: {
-          reason: errorName,
-          detail: errorMessage,
-          code: errorCode,
+          reason: 'BACKEND_UNAVAILABLE',
         },
       })
     }

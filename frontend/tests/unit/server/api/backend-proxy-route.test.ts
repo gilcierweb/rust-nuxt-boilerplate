@@ -490,6 +490,32 @@ describe('backend proxy route', () => {
     )
   })
 
+  it('returns the backend-unavailable shape that never names the internal origin or path', async () => {
+    // An ofetch fetch error names the internal origin and path, e.g.
+    // `[GET] "https://backend.example/api/v1/admin/users": fetch failed`:
+    // forwarding it leaks the deployment's topology to unauthenticated
+    // callers of the proxy. With the backend down, every response the proxy
+    // can produce (the wakeup 503 and the exotic 502 of an unclassified
+    // failure) must therefore be the generic shape.
+    const fetchError = Object.assign(
+      new Error('[GET] "https://backend.example/api/v1/admin/users": fetch failed'),
+      { name: 'FetchError', code: 'ECONNREFUSED' },
+    )
+    mocks.rawFetch.mockRejectedValue(fetchError)
+
+    const event = {
+      method: 'GET',
+      context: { params: { path: 'admin/users' } },
+    }
+    const responsePromise = proxyHandler(event)
+    await vi.runAllTimersAsync()
+    const response = await responsePromise as { error: Record<string, unknown> }
+
+    expect([502, 503]).toContain(mocks.setResponseStatus.mock.calls.at(-1)?.[1] as number)
+    expect(JSON.stringify(response)).not.toContain('backend.example')
+    expect(response.error).not.toHaveProperty('detail')
+  })
+
   it('maps session readiness exhaustion to 503 after a non-429 failure', async () => {
     mocks.rawFetch
       .mockRejectedValueOnce(wakeupError())
