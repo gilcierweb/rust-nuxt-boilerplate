@@ -164,6 +164,7 @@
           type="button"
           class="btn btn-soft btn-sm transition-none"
           :aria-label="$t('admin.common.table.firstPage')"
+          :disabled="!canPreviousPage"
           @click="goToPage(1)"
         >
           <span class="icon-[tabler--chevrons-left] size-4"></span>
@@ -172,6 +173,7 @@
           type="button"
           class="btn btn-soft btn-sm transition-none"
           :aria-label="$t('admin.common.table.previousPage')"
+          :disabled="!canPreviousPage"
           @click="goToPage(currentPage - 1)"
         >
           <span class="icon-[tabler--chevron-left] size-4 rtl:rotate-180"></span>
@@ -201,6 +203,7 @@
           type="button"
           class="btn btn-soft btn-sm transition-none"
           :aria-label="$t('admin.common.table.nextPage')"
+          :disabled="!canNextPage"
           @click="goToPage(currentPage + 1)"
         >
           <span class="icon-[tabler--chevron-right] size-5 rtl:rotate-180"></span>
@@ -209,6 +212,7 @@
           type="button"
           class="btn btn-soft btn-sm transition-none"
           :aria-label="$t('admin.common.table.lastPage')"
+          :disabled="!canNextPage"
           @click="goToPage(totalPages)"
         >
           <span class="icon-[tabler--chevrons-right] size-4"></span>
