@@ -44,9 +44,9 @@ pub struct Permission {
     pub code: String,
     pub name: String,
     pub description: Option<String>,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub created_at: OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub updated_at: OffsetDateTime,
 }
 
@@ -97,7 +97,7 @@ pub struct RolePermissionLink {
     pub role_id: Uuid,
     pub permission_id: Uuid,
     pub effect: i16,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub created_at: OffsetDateTime,
 }
 

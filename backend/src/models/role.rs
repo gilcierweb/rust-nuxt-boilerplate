@@ -17,9 +17,9 @@ pub struct Role {
     pub name: String,
     pub resource_type: Option<String>,
     pub resource_id: Option<Uuid>,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub created_at: OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub updated_at: OffsetDateTime,
 }
 

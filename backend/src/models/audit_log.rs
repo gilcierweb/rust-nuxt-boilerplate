@@ -28,7 +28,7 @@ pub struct AuditLog {
     pub changes: Value,
     #[schema(value_type = Object)]
     pub metadata: Value,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub created_at: OffsetDateTime,
     pub prev_hash: Option<String>,
     pub hash: String,

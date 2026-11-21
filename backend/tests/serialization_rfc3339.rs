@@ -2,7 +2,7 @@
 //! format the frontend (and the previous chrono-based models) expect.
 //!
 //! `time::OffsetDateTime` serializes as a tuple of date/time components by
-//! default; `#[serde(with = "time::serde::rfc3339")]` pins the string format.
+//! default; `crate::utils::wire_time` pins the RFC 3339 string format.
 
 use serde_json::Value;
 use time::macros::datetime;

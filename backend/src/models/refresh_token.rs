@@ -14,13 +14,13 @@ pub struct RefreshToken {
     pub token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub expires_at: OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339::option")]
+    #[serde(with = "crate::utils::wire_time::option")]
     pub revoked_at: Option<OffsetDateTime>,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub created_at: OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub updated_at: OffsetDateTime,
 }
 
@@ -32,11 +32,11 @@ pub struct NewRefreshToken {
     pub token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub expires_at: OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub created_at: OffsetDateTime,
-    #[serde(with = "time::serde::rfc3339")]
+    #[serde(with = "crate::utils::wire_time::datetime")]
     pub updated_at: OffsetDateTime,
 }
 

@@ -9,3 +9,4 @@ pub mod sanitize;
 pub mod slug;
 pub mod time;
 pub mod validation;
+pub mod wire_time;
