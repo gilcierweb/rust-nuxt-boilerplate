@@ -26,10 +26,14 @@ services:
   # Map container port 5432 to host port 5432 for dev tooling (psql, DBeaver).
   postgres:
     ports:
-      - "5432:5432"
+      # Loopback only: the database password protects the data, but a
+      # development machine has no reason to publish the port to a network.
+      - "127.0.0.1:5432:5432"
 
   # -- Redis
   # Map container port 6379 to host port 6379 for dev tooling (redis-cli, RDM).
   redis:
     ports:
-      - "6379:6379"
+      # Loopback only: an authenticated Redis is still not something to
+      # publish to the whole LAN from a development machine.
+      - "127.0.0.1:6379:6379"
