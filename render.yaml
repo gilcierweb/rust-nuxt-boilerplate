@@ -49,3 +49,5 @@ services:
         sync: false
       - key: INTERNAL_API_KEYS
         sync: false
+      - key: FRONTEND_URL
+        sync: false
