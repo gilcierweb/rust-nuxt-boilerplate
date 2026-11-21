@@ -4,5 +4,5 @@
 
 <script setup lang="ts">
 const localePath = useLocalePath()
-await navigateTo(localePath('/admin/dashboard'), { redirectCode: 302 })
+throw createError({ statusCode: 404, statusMessage: 'Not Found' })
 </script>

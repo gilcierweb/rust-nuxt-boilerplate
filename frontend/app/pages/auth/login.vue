@@ -69,8 +69,6 @@
       </div>
 
       <div class="flex flex-wrap gap-4 sm:gap-6">
-        <button type="button" class="btn btn-outline btn-primary grow">{{ $t('auth.login.loginAsUser') }}</button>
-        <button type="button" class="btn btn-outline btn-primary grow">{{ $t('auth.login.loginAsAdmin') }}</button>
       </div>
 
       <div>
@@ -132,11 +130,6 @@
       </NuxtLink>
     </p>
 
-    <div class="divider">{{ $t('common.or') }}</div>
-    <button type="button" class="btn btn-text btn-block" disabled>
-      <span class="icon-[tabler--brand-google] size-5"></span>
-      {{ $t('auth.login.submitWithGoogle') }}
-    </button>
   </div>
 </template>
 

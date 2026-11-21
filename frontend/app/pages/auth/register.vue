@@ -175,7 +175,7 @@ const passwordStrength = computed(() => {
   const p = password.value
   if (!p) return 0
   let score = 0
-  if (p.length >= 8) score++
+  if (p.length >= 12) score++
   if (/[A-Z]/.test(p)) score++
   if (/[0-9]/.test(p)) score++
   if (/[^A-Za-z0-9]/.test(p)) score++
@@ -205,6 +205,7 @@ const onSubmit = handleSubmit(async (values) => {
       email: values.email,
       password: values.password,
       password_confirmation: values.password_confirmation,
+      age_confirmed: values.age_confirmed,
       // Only sent when a widget handed a token over (see useCaptchaToken).
       ...(captchaToken.value ? { captcha_token: captchaToken.value } : {}),
     })
