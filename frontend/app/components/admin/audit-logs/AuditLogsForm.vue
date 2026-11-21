@@ -114,7 +114,7 @@
         <NuxtLink :to="localePath('/admin/audit-logs')" class="btn btn-ghost">
           {{ $t('common.actions.cancel') }}
         </NuxtLink>
-        <button type="submit" class="btn btn-primary" :disabled="saving">
+        <button type="submit" class="btn btn-primary" :disabled="saving || props.submitDisabled">
           <span v-if="saving" class="icon-[tabler--loader-2] size-5 animate-spin"></span>
           <span v-else class="icon-[tabler--check] size-5"></span>
           {{ submitLabel }}
@@ -127,7 +127,7 @@
 <script setup lang="ts">
 import * as v from 'valibot'
 import { toTypedSchema } from '@vee-validate/valibot'
-import { formatDateTime } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/format-date'
 import AppAlert from '~/components/AppAlert.vue'
 
 const { t } = useI18n()
@@ -144,6 +144,9 @@ const localePath = useLocalePath()
 
 const props = defineProps<{
   mode: 'create' | 'edit'
+  /** The subject lacks the class-level `audit_logs:create` capability; the
+   * server refuses the call anyway, so the form disables the button. */
+  submitDisabled?: boolean
   initialValues: {
     id?: string
     actor_user_id?: string
