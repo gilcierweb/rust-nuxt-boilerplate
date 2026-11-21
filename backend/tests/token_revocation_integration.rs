@@ -43,27 +43,35 @@ fn redis_pool() -> deadpool_redis::Pool {
 /// SAFETY: tests in this file always write the SAME env values, so races
 /// between concurrent `set_var` calls are benign (idempotent writes).
 fn app_config() -> backend::config::AppConfig {
-    unsafe {
-        std::env::set_var(
+    // The environment is a lookup the test names: no process env mutation, so
+    // the helper is safe whatever the test thread count is.
+    let vars = [
+        (
             "JWT_SECRET",
             "test-jwt-secret-key-for-revocation-tests-32b!",
-        );
-        std::env::set_var(
+        ),
+        (
             "CSRF_SECRET_KEY",
             "test-csrf-secret-key-for-revocation-tests-32b!",
-        );
-        std::env::set_var("DATABASE_URL", "postgres://localhost/test");
-        std::env::set_var("MASTER_KEY", "test-master-key-for-revocation-tests-32b!");
-        std::env::set_var(
+        ),
+        ("DATABASE_URL", "postgres://localhost/test"),
+        ("MASTER_KEY", "test-master-key-for-revocation-tests-32b!"),
+        (
             "BLIND_INDEX_KEY",
             "test-blind-index-key-for-revocation-tests-32b!",
-        );
-        std::env::set_var(
+        ),
+        (
             "REFRESH_TOKEN_HASH_SALT",
             "test-refresh-salt-for-revocation-tests-32b!",
-        );
-    }
-    backend::config::AppConfig::from_env().expect("failed to build test config")
+        ),
+    ];
+
+    backend::config::AppConfig::from_lookup(|key| {
+        vars.iter()
+            .find(|(name, _)| *name == key)
+            .map(|(_, value)| (*value).to_string())
+    })
+    .expect("failed to build test config")
 }
 
 /// App state for the JWT middleware. No database access happens in these

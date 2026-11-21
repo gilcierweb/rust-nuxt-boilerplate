@@ -50,17 +50,22 @@ impl TelemetryConfig {
     /// Build configuration from environment variables with sensible defaults.
     /// OTEL is opt-in: disabled by default in all environments unless explicitly enabled.
     pub fn from_env() -> Self {
-        let enabled = std::env::var(ENV_OTEL_ENABLED)
-            .map(|v| v == "true" || v == "1")
+        Self::from_lookup(|key| std::env::var(key).ok())
+    }
+
+    /// The same resolution through a caller supplied lookup, so a test can
+    /// name its own environment instead of mutating the process one.
+    pub fn from_lookup(read: impl Fn(&str) -> Option<String>) -> Self {
+        let enabled = read(ENV_OTEL_ENABLED)
+            .map(|value| value == "true" || value == "1")
             .unwrap_or(false);
 
-        let endpoint =
-            std::env::var(ENV_OTEL_ENDPOINT).unwrap_or_else(|_| DEFAULT_OTEL_ENDPOINT.to_string());
+        let endpoint = read(ENV_OTEL_ENDPOINT).unwrap_or_else(|| DEFAULT_OTEL_ENDPOINT.to_string());
 
         let sampler = if !enabled {
             SamplerType::AlwaysOff
         } else {
-            Self::resolve_sampler()
+            Self::resolve_sampler_with(&read)
         };
 
         Self {
@@ -71,16 +76,15 @@ impl TelemetryConfig {
     }
 
     /// Resolve sampler type from environment variables.
-    fn resolve_sampler() -> SamplerType {
-        let sampler_str =
-            std::env::var(ENV_OTEL_SAMPLER).unwrap_or_else(|_| "parent_based".to_string());
+    fn resolve_sampler_with(read: impl Fn(&str) -> Option<String>) -> SamplerType {
+        let sampler_str = read(ENV_OTEL_SAMPLER).unwrap_or_else(|| "parent_based".to_string());
 
         match sampler_str.as_str() {
             "always_on" => SamplerType::AlwaysOn,
             "always_off" => SamplerType::AlwaysOff,
             "parent_based" => SamplerType::ParentBased,
             "ratio_based" => {
-                let ratio = Self::read_ratio();
+                let ratio = Self::read_ratio_with(&read);
                 SamplerType::RatioBased(ratio)
             },
             _ => {
@@ -94,11 +98,10 @@ impl TelemetryConfig {
     }
 
     /// Read and validate the sampling ratio from environment.
-    fn read_ratio() -> f64 {
-        std::env::var(ENV_OTEL_SAMPLER_RATIO)
-            .ok()
-            .and_then(|v| v.parse::<f64>().ok())
-            .map(|r| r.clamp(MIN_RATIO, MAX_RATIO))
+    fn read_ratio_with(read: impl Fn(&str) -> Option<String>) -> f64 {
+        read(ENV_OTEL_SAMPLER_RATIO)
+            .and_then(|value| value.parse::<f64>().ok())
+            .map(|ratio| ratio.clamp(MIN_RATIO, MAX_RATIO))
             .unwrap_or(DEFAULT_PROD_RATIO)
     }
 
@@ -147,163 +150,127 @@ impl Default for TelemetryConfig {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
+    use std::collections::HashMap;
 
-    use super::*;
+    use super::{
+        DEFAULT_OTEL_ENDPOINT, DEFAULT_PROD_RATIO, ENV_OTEL_ENABLED, ENV_OTEL_ENDPOINT,
+        ENV_OTEL_SAMPLER, ENV_OTEL_SAMPLER_RATIO, SamplerType, TelemetryConfig,
+    };
+
+    /// The lookup the production code reads: only the given variables exist.
+    fn source(vars: &[(&str, &str)]) -> impl Fn(&str) -> Option<String> {
+        let map: HashMap<String, String> = vars
+            .iter()
+            .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+            .collect();
+        move |key| map.get(key).cloned()
+    }
 
     #[test]
-    #[serial]
     fn from_env_defaults() {
-        unsafe {
-            std::env::remove_var(ENV_OTEL_ENABLED);
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-            std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
-        }
+        let read = source(&[]);
 
-        let config = TelemetryConfig::from_env();
+        let config = TelemetryConfig::from_lookup(&read);
         assert!(!config.enabled);
         assert_eq!(config.endpoint, DEFAULT_OTEL_ENDPOINT);
         assert_eq!(config.sampler, SamplerType::AlwaysOff);
     }
 
     #[test]
-    #[serial]
     fn disabled_when_env_false() {
-        unsafe { std::env::set_var(ENV_OTEL_ENABLED, "false") };
-        let config = TelemetryConfig::from_env();
+        let read = source(&[(ENV_OTEL_ENABLED, "false")]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert!(!config.enabled);
         assert_eq!(config.sampler, SamplerType::AlwaysOff);
-        unsafe { std::env::remove_var(ENV_OTEL_ENABLED) };
     }
 
     #[test]
-    #[serial]
     fn disabled_when_env_zero() {
-        unsafe { std::env::set_var(ENV_OTEL_ENABLED, "0") };
-        let config = TelemetryConfig::from_env();
+        let read = source(&[(ENV_OTEL_ENABLED, "0")]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert!(!config.enabled);
-        unsafe { std::env::remove_var(ENV_OTEL_ENABLED) };
     }
 
     #[test]
-    #[serial]
     fn always_on_sampler() {
-        unsafe {
-            std::env::set_var(ENV_OTEL_ENABLED, "true");
-            std::env::set_var(ENV_OTEL_SAMPLER, "always_on");
-        }
-        let config = TelemetryConfig::from_env();
+        let read = source(&[(ENV_OTEL_ENABLED, "true"), (ENV_OTEL_SAMPLER, "always_on")]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.sampler, SamplerType::AlwaysOn);
-        unsafe {
-            std::env::remove_var(ENV_OTEL_ENABLED);
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-        }
     }
 
     #[test]
-    #[serial]
     fn always_off_sampler() {
-        unsafe {
-            std::env::set_var(ENV_OTEL_ENABLED, "true");
-            std::env::set_var(ENV_OTEL_SAMPLER, "always_off");
-        }
-        let config = TelemetryConfig::from_env();
+        let read = source(&[(ENV_OTEL_ENABLED, "true"), (ENV_OTEL_SAMPLER, "always_off")]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.sampler, SamplerType::AlwaysOff);
-        unsafe {
-            std::env::remove_var(ENV_OTEL_ENABLED);
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-        }
     }
 
     #[test]
-    #[serial]
     fn ratio_based_custom() {
-        unsafe {
-            std::env::set_var(ENV_OTEL_ENABLED, "true");
-            std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
-            std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "0.25");
-        }
-        let config = TelemetryConfig::from_env();
+        let read = source(&[
+            (ENV_OTEL_ENABLED, "true"),
+            (ENV_OTEL_SAMPLER, "ratio_based"),
+            (ENV_OTEL_SAMPLER_RATIO, "0.25"),
+        ]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.sampler, SamplerType::RatioBased(0.25));
-        unsafe {
-            std::env::remove_var(ENV_OTEL_ENABLED);
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-            std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
-        }
     }
 
     #[test]
-    #[serial]
     fn ratio_based_clamped_max() {
-        unsafe {
-            std::env::set_var(ENV_OTEL_ENABLED, "true");
-            std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
-            std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "5.0");
-        }
-        let config = TelemetryConfig::from_env();
+        let read = source(&[
+            (ENV_OTEL_ENABLED, "true"),
+            (ENV_OTEL_SAMPLER, "ratio_based"),
+            (ENV_OTEL_SAMPLER_RATIO, "2.0"),
+        ]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.sampler, SamplerType::RatioBased(1.0));
-        unsafe {
-            std::env::remove_var(ENV_OTEL_ENABLED);
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-            std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
-        }
     }
 
     #[test]
-    #[serial]
     fn ratio_based_clamped_min() {
-        unsafe {
-            std::env::set_var(ENV_OTEL_ENABLED, "true");
-            std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
-            std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "-1.0");
-        }
-        let config = TelemetryConfig::from_env();
+        let read = source(&[
+            (ENV_OTEL_ENABLED, "true"),
+            (ENV_OTEL_SAMPLER, "ratio_based"),
+            (ENV_OTEL_SAMPLER_RATIO, "-1.0"),
+        ]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.sampler, SamplerType::RatioBased(0.0));
-        unsafe {
-            std::env::remove_var(ENV_OTEL_ENABLED);
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-            std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
-        }
     }
 
     #[test]
-    #[serial]
     fn ratio_based_invalid_falls_back() {
-        unsafe {
-            std::env::set_var(ENV_OTEL_ENABLED, "true");
-            std::env::set_var(ENV_OTEL_SAMPLER, "ratio_based");
-            std::env::set_var(ENV_OTEL_SAMPLER_RATIO, "not_a_number");
-        }
-        let config = TelemetryConfig::from_env();
+        let read = source(&[
+            (ENV_OTEL_ENABLED, "true"),
+            (ENV_OTEL_SAMPLER, "ratio_based"),
+            (ENV_OTEL_SAMPLER_RATIO, "abc"),
+        ]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.sampler, SamplerType::RatioBased(DEFAULT_PROD_RATIO));
-        unsafe {
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-            std::env::remove_var(ENV_OTEL_SAMPLER_RATIO);
-        }
     }
 
     #[test]
-    #[serial]
     fn unknown_sampler_falls_back_to_parent_based() {
-        unsafe {
-            std::env::set_var(ENV_OTEL_ENABLED, "true");
-            std::env::set_var(ENV_OTEL_SAMPLER, "unknown_sampler");
-        }
-        let config = TelemetryConfig::from_env();
+        let read = source(&[(ENV_OTEL_ENABLED, "true"), (ENV_OTEL_SAMPLER, "nonsense")]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.sampler, SamplerType::ParentBased);
-        unsafe {
-            std::env::remove_var(ENV_OTEL_ENABLED);
-            std::env::remove_var(ENV_OTEL_SAMPLER);
-        }
     }
 
     #[test]
-    #[serial]
     fn custom_endpoint() {
-        unsafe { std::env::set_var(ENV_OTEL_ENDPOINT, "http://collector:4318") };
-        let config = TelemetryConfig::from_env();
+        let read = source(&[(ENV_OTEL_ENDPOINT, "http://collector:4318")]);
+
+        let config = TelemetryConfig::from_lookup(&read);
         assert_eq!(config.endpoint, "http://collector:4318");
-        unsafe { std::env::remove_var(ENV_OTEL_ENDPOINT) };
     }
 
     #[test]

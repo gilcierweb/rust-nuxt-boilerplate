@@ -14,29 +14,35 @@ use backend::config::AppConfig;
 use backend::middleware::csrf_protection::CsrfProtection;
 
 fn make_config() -> AppConfig {
-    // SAFETY: these tests run single-threaded; env vars are only read during
-    // AppConfig::from_env() construction and are not shared across test threads.
-    unsafe {
-        std::env::set_var(
+    // The environment is a lookup the test names: no process env mutation, so
+    // the helper is safe whatever the test thread count is.
+    let vars = [
+        (
             "CSRF_SECRET_KEY",
             "test-csrf-secret-key-for-integration-tests-32b!",
-        );
-        std::env::set_var(
+        ),
+        (
             "JWT_SECRET",
             "test-jwt-secret-key-for-integration-tests-32b!",
-        );
-        std::env::set_var("DATABASE_URL", "postgres://localhost/test");
-        std::env::set_var("MASTER_KEY", "test-master-key-for-integration-tests-32b!");
-        std::env::set_var(
+        ),
+        ("DATABASE_URL", "postgres://localhost/test"),
+        ("MASTER_KEY", "test-master-key-for-integration-tests-32b!"),
+        (
             "BLIND_INDEX_KEY",
             "test-blind-index-key-for-integration-tests-32b!",
-        );
-        std::env::set_var(
+        ),
+        (
             "REFRESH_TOKEN_HASH_SALT",
             "test-refresh-token-hash-salt-for-integration-32b!",
-        );
-    }
-    AppConfig::from_env().expect("failed to build test config")
+        ),
+    ];
+
+    AppConfig::from_lookup(|key| {
+        vars.iter()
+            .find(|(name, _)| *name == key)
+            .map(|(_, value)| (*value).to_string())
+    })
+    .expect("failed to build test config")
 }
 
 async fn state_changing_handler(_req: HttpRequest) -> actix_web::HttpResponse {

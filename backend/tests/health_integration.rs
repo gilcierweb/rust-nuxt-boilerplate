@@ -26,34 +26,40 @@ const UNREACHABLE_REDIS_URL: &str = "redis://127.0.0.1:1";
 const INTERNAL_API_KEY: &str = "internal-key-for-health-tests";
 
 fn config_with_api_keys() -> AppConfig {
-    // SAFETY: these tests run single-threaded; the env vars are only read
-    // during AppConfig::from_env() construction.
-    unsafe {
-        std::env::set_var("DATABASE_URL", UNREACHABLE_DB_URL);
-        std::env::set_var("REDIS_URL", UNREACHABLE_REDIS_URL);
-        std::env::set_var(
+    // The environment is a lookup the test names: no process env mutation, so
+    // the helper is safe whatever the test thread count is.
+    let vars = [
+        ("DATABASE_URL", UNREACHABLE_DB_URL),
+        ("REDIS_URL", UNREACHABLE_REDIS_URL),
+        (
             "JWT_SECRET",
             "test-jwt-secret-key-for-integration-tests-32b!",
-        );
-        std::env::set_var(
+        ),
+        (
             "MASTER_KEY",
             "dGVzdC1tYXN0ZXIta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0cw==",
-        );
-        std::env::set_var(
+        ),
+        (
             "BLIND_INDEX_KEY",
             "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLWludGVncmF0aW9uLXRlc3Rz",
-        );
-        std::env::set_var(
+        ),
+        (
             "CSRF_SECRET_KEY",
             "test-csrf-secret-key-for-integration-tests-32b!",
-        );
-        std::env::set_var(
+        ),
+        (
             "REFRESH_TOKEN_HASH_SALT",
             "test-refresh-token-hash-salt-for-integration-32b!",
-        );
-        std::env::set_var("INTERNAL_API_KEYS", INTERNAL_API_KEY);
-    }
-    AppConfig::from_env().expect("failed to build test config")
+        ),
+        ("INTERNAL_API_KEYS", INTERNAL_API_KEY),
+    ];
+
+    AppConfig::from_lookup(|key| {
+        vars.iter()
+            .find(|(name, _)| *name == key)
+            .map(|(_, value)| (*value).to_string())
+    })
+    .expect("failed to build test config")
 }
 
 fn app_state(config: AppConfig) -> web::Data<AppState> {

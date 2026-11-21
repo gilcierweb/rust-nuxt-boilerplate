@@ -36,14 +36,18 @@ use base64::Engine as _;
 /// echo "supersecret" | docker secret create jwt_secret -
 /// export JWT_SECRET_FILE=/run/secrets/jwt_secret
 /// ```
-fn secret_from_env_or_file(name: &str, default: &str) -> String {
-    if let Some(value) = secret_from_files(name) {
+/// The same resolution through a caller supplied lookup, so a test can name
+/// its own environment instead of mutating the process one.
+fn secret_from_env_or_file_with(
+    name: &str,
+    default: &str,
+    read: impl Fn(&str) -> Option<String>,
+) -> String {
+    if let Some(value) = secret_from_files_with(name, &read) {
         return value;
     }
 
-    if let Ok(value) = env::var(name)
-        && !value.is_empty()
-    {
+    if let Some(value) = read(name).filter(|value| !value.is_empty()) {
         return value;
     }
 
@@ -55,9 +59,9 @@ fn secret_from_env_or_file(name: &str, default: &str) -> String {
 /// `docker-compose.yml` documents `DOCKER_SECRETS_ENABLED=1` for production.
 /// Without the flag a stale `.env` silently overrides a rotated `/run/secrets`
 /// value, which defeats the point of mounting the file at all.
-fn use_docker_secrets() -> bool {
+fn use_docker_secrets_with(read: impl Fn(&str) -> Option<String>) -> bool {
     matches!(
-        env::var("DOCKER_SECRETS_ENABLED")
+        read("DOCKER_SECRETS_ENABLED")
             .unwrap_or_default()
             .trim()
             .to_ascii_lowercase()
@@ -73,13 +77,13 @@ fn use_docker_secrets() -> bool {
 /// 2. `/run/secrets/<lowercase_name>` (Compose `secrets:` mount convention)
 ///
 /// Returns `None` when the flag is off or no file is readable.
-fn secret_from_files(name: &str) -> Option<String> {
-    if !use_docker_secrets() {
+fn secret_from_files_with(name: &str, read: impl Fn(&str) -> Option<String>) -> Option<String> {
+    if !use_docker_secrets_with(&read) {
         return None;
     }
 
     let file_var = format!("{}_FILE", name);
-    if let Ok(file_path) = env::var(&file_var) {
+    if let Some(file_path) = read(&file_var) {
         match fs::read_to_string(&file_path) {
             Ok(content) => {
                 let trimmed = content.trim().to_string();
@@ -113,13 +117,20 @@ fn secret_from_files(name: &str) -> Option<String> {
 
 /// Read a required secret from environment or file.
 /// Returns error if not found in either location.
-fn required_secret(name: &str) -> Result<String, env::VarError> {
-    if let Some(value) = secret_from_files(name) {
+/// Reads a required secret through `read`, after the Docker secret files.
+///
+/// The lookup is a parameter so a test can supply its own environment source
+/// instead of mutating the process environment.
+fn required_secret_from(
+    name: &str,
+    read: impl Fn(&str) -> Option<String>,
+) -> Result<String, env::VarError> {
+    if let Some(value) = secret_from_files_with(name, &read) {
         return Ok(value);
     }
 
-    match env::var(name) {
-        Ok(value) if !value.is_empty() => Ok(value),
+    match read(name) {
+        Some(value) if !value.is_empty() => Ok(value),
         _ => Err(env::VarError::NotPresent),
     }
 }
@@ -461,10 +472,10 @@ const REDIS_POOL_DEFAULT_PRODUCTION: usize = REDIS_POOL_RECOMMENDED_PRODUCTION;
 pub const DB_STATEMENT_TIMEOUT_DEFAULT_SECS: u64 = 30;
 
 impl AppConfig {
-    pub fn from_env() -> Result<Self, env::VarError> {
+    pub fn from_lookup(read: impl Fn(&str) -> Option<String>) -> Result<Self, env::VarError> {
         // Parse environment first so we can use it for environment-aware defaults
         let environment = {
-            let env_var = env::var("ENVIRONMENT").unwrap_or_else(|_| "development".to_string());
+            let env_var = read("ENVIRONMENT").unwrap_or_else(|| "development".to_string());
             Environment::from_env_str(&env_var)
         };
 
@@ -480,16 +491,16 @@ impl AppConfig {
         };
 
         Ok(Self {
-            host: env::var("HOST").unwrap_or_else(|_| "0.0.0.0".to_string()),
-            port: env::var("PORT")
-                .unwrap_or_else(|_| "8080".to_string())
+            host: read("HOST").unwrap_or_else(|| "0.0.0.0".to_string()),
+            port: read("PORT")
+                .unwrap_or_else(|| "8080".to_string())
                 .parse()
                 .unwrap_or(8080),
-            https_port: env::var("HTTPS_PORT")
-                .unwrap_or_else(|_| "8443".to_string())
+            https_port: read("HTTPS_PORT")
+                .unwrap_or_else(|| "8443".to_string())
                 .parse()
                 .unwrap_or(8443),
-            tls_enabled: env::var("TLS_ENABLED")
+            tls_enabled: read("TLS_ENABLED")
                 .map(|v| {
                     matches!(
                         v.trim().to_lowercase().as_str(),
@@ -497,49 +508,42 @@ impl AppConfig {
                     )
                 })
                 .unwrap_or(false),
-            tls_cert_path: env::var("TLS_CERT_PATH").unwrap_or_else(|_| "cert.pem".to_string()),
-            tls_key_path: env::var("TLS_KEY_PATH").unwrap_or_else(|_| "key.pem".to_string()),
-            frontend_url: env::var("FRONTEND_URL")
-                .unwrap_or_else(|_| "http://localhost:3000".to_string()),
+            tls_cert_path: read("TLS_CERT_PATH").unwrap_or_else(|| "cert.pem".to_string()),
+            tls_key_path: read("TLS_KEY_PATH").unwrap_or_else(|| "key.pem".to_string()),
+            frontend_url: read("FRONTEND_URL")
+                .unwrap_or_else(|| "http://localhost:3000".to_string()),
 
             environment,
 
-            database_url: required_secret("DATABASE_URL")?,
-            db_pool_size: env::var("DB_POOL_SIZE")
-                .unwrap_or_else(|_| "10".to_string())
+            database_url: required_secret_from("DATABASE_URL", &read)?,
+            db_pool_size: read("DB_POOL_SIZE")
+                .unwrap_or_else(|| "10".to_string())
                 .parse()
                 .unwrap_or(10),
-            db_pool_min_idle: env::var("DB_POOL_MIN_IDLE")
-                .ok()
-                .and_then(|s| s.parse::<u32>().ok()),
-            db_pool_max_lifetime_secs: env::var("DB_POOL_MAX_LIFETIME_SECS")
-                .ok()
+            db_pool_min_idle: read("DB_POOL_MIN_IDLE").and_then(|s| s.parse::<u32>().ok()),
+            db_pool_max_lifetime_secs: read("DB_POOL_MAX_LIFETIME_SECS")
                 .and_then(|s| s.parse::<u64>().ok()),
-            db_pool_idle_timeout_secs: env::var("DB_POOL_IDLE_TIMEOUT_SECS")
-                .ok()
+            db_pool_idle_timeout_secs: read("DB_POOL_IDLE_TIMEOUT_SECS")
                 .and_then(|s| s.parse::<u64>().ok()),
-            db_pool_connection_timeout_secs: env::var("DB_POOL_CONNECTION_TIMEOUT_SECS")
-                .unwrap_or_else(|_| "10".to_string())
+            db_pool_connection_timeout_secs: read("DB_POOL_CONNECTION_TIMEOUT_SECS")
+                .unwrap_or_else(|| "10".to_string())
                 .parse()
                 .unwrap_or(10),
-            db_statement_timeout_secs: env::var("DB_STATEMENT_TIMEOUT_SECS")
-                .ok()
+            db_statement_timeout_secs: read("DB_STATEMENT_TIMEOUT_SECS")
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(DB_STATEMENT_TIMEOUT_DEFAULT_SECS),
 
-            redis_url: env::var("REDIS_URL")
-                .unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string()),
-            redis_pool_size: env::var("REDIS_POOL_SIZE")
-                .ok()
+            redis_url: read("REDIS_URL").unwrap_or_else(|| "redis://127.0.0.1:6379".to_string()),
+            redis_pool_size: read("REDIS_POOL_SIZE")
                 .and_then(|s| s.parse::<usize>().ok())
                 .unwrap_or(redis_pool_default),
 
-            jwt_secret: required_secret("JWT_SECRET")?,
+            jwt_secret: required_secret_from("JWT_SECRET", &read)?,
             jwt_secrets: {
-                let primary = required_secret("JWT_SECRET")?;
+                let primary = required_secret_from("JWT_SECRET", &read)?;
                 let now = time::OffsetDateTime::now_utc();
                 let mut secrets = vec![JwtSecretKey {
-                    kid: env::var("JWT_KID").unwrap_or_else(|_| "primary".to_string()),
+                    kid: read("JWT_KID").unwrap_or_else(|| "primary".to_string()),
                     secret: primary,
                     created_at: now,
                     expires_at: None,
@@ -547,7 +551,7 @@ impl AppConfig {
 
                 // Support additional rotation secrets via
                 // JWT_SECRETS=old_kid:old_secret,prev_kid:prev_secret[:expires_at]
-                if let Ok(extra) = env::var("JWT_SECRETS") {
+                if let Some(extra) = read("JWT_SECRETS") {
                     secrets.extend(
                         extra
                             .split(',')
@@ -558,9 +562,8 @@ impl AppConfig {
 
                 secrets
             },
-            jwt_public_key: env::var("JWT_PUBLIC_KEY").ok(),
-            jwt_audience: env::var("JWT_AUDIENCE")
-                .ok()
+            jwt_public_key: read("JWT_PUBLIC_KEY"),
+            jwt_audience: read("JWT_AUDIENCE")
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty())
                 .unwrap_or_else(|| crate::middleware::auth::DEFAULT_TOKEN_AUDIENCE.to_string()),
@@ -569,76 +572,76 @@ impl AppConfig {
 
             // All secrets are required - fail fast if missing in any environment
             // Use ./scripts/generate-secrets.sh to generate secure values
-            master_key: required_secret("MASTER_KEY")?,
-            blind_index_key: required_secret("BLIND_INDEX_KEY")?,
-            current_encryption_key_version: env::var("CURRENT_ENCRYPTION_KEY_VERSION")
-                .unwrap_or_else(|_| "1".to_string())
+            master_key: required_secret_from("MASTER_KEY", &read)?,
+            blind_index_key: required_secret_from("BLIND_INDEX_KEY", &read)?,
+            current_encryption_key_version: read("CURRENT_ENCRYPTION_KEY_VERSION")
+                .unwrap_or_else(|| "1".to_string())
                 .parse()
                 .unwrap_or(1),
-            internal_api_keys: env::var("INTERNAL_API_KEYS")
+            internal_api_keys: read("INTERNAL_API_KEYS")
                 .unwrap_or_default()
                 .split(',')
                 .map(str::trim)
                 .filter(|value| !value.is_empty())
                 .map(str::to_owned)
                 .collect(),
-            csrf_secret_key: required_secret("CSRF_SECRET_KEY")?,
-            refresh_token_hash_salt: required_secret("REFRESH_TOKEN_HASH_SALT")?,
+            csrf_secret_key: required_secret_from("CSRF_SECRET_KEY", &read)?,
+            refresh_token_hash_salt: required_secret_from("REFRESH_TOKEN_HASH_SALT", &read)?,
 
             // Account lockout - default 15 minutes
-            account_lockout_duration_secs: env::var("ACCOUNT_LOCKOUT_DURATION_SECS")
-                .ok()
+            account_lockout_duration_secs: read("ACCOUNT_LOCKOUT_DURATION_SECS")
                 .and_then(|s| s.parse::<i64>().ok())
                 .unwrap_or(15 * 60),
 
-            resend_api_key: secret_from_env_or_file("RESEND_API_KEY", ""),
-            email_from: env::var("EMAIL_FROM")
-                .unwrap_or_else(|_| "noreply@boilerplate-rust-nuxt.com".to_string()),
-            email_from_name: env::var("EMAIL_FROM_NAME")
-                .unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
+            resend_api_key: secret_from_env_or_file_with("RESEND_API_KEY", "", &read),
+            email_from: read("EMAIL_FROM")
+                .unwrap_or_else(|| "noreply@boilerplate-rust-nuxt.com".to_string()),
+            email_from_name: read("EMAIL_FROM_NAME")
+                .unwrap_or_else(|| "Boilerplate Rust Nuxt".to_string()),
             email_transport: EmailTransportKind::from_env_str(
-                &env::var("EMAIL_TRANSPORT").unwrap_or_else(|_| "resend".to_string()),
+                &read("EMAIL_TRANSPORT").unwrap_or_else(|| "resend".to_string()),
             ),
-            smtp_url: env::var("SMTP_URL").unwrap_or_default(),
-            smtp_timeout_secs: env::var("SMTP_TIMEOUT_SECS")
-                .ok()
+            smtp_url: read("SMTP_URL").unwrap_or_default(),
+            smtp_timeout_secs: read("SMTP_TIMEOUT_SECS")
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(30),
 
-            bunny_storage_zone: env::var("BUNNY_STORAGE_ZONE").unwrap_or_default(),
-            bunny_storage_key: env::var("BUNNY_STORAGE_KEY").unwrap_or_default(),
-            bunny_cdn_url: env::var("BUNNY_CDN_URL")
-                .unwrap_or_else(|_| "https://cdn.boilerplate-rust-nuxt.com".to_string()),
-            bunny_token_key: env::var("BUNNY_TOKEN_KEY").unwrap_or_default(),
+            bunny_storage_zone: read("BUNNY_STORAGE_ZONE").unwrap_or_default(),
+            bunny_storage_key: read("BUNNY_STORAGE_KEY").unwrap_or_default(),
+            bunny_cdn_url: read("BUNNY_CDN_URL")
+                .unwrap_or_else(|| "https://cdn.boilerplate-rust-nuxt.com".to_string()),
+            bunny_token_key: read("BUNNY_TOKEN_KEY").unwrap_or_default(),
 
-            bunny_stream_library_id: env::var("BUNNY_STREAM_LIBRARY_ID").unwrap_or_default(),
-            bunny_stream_key: env::var("BUNNY_STREAM_KEY").unwrap_or_default(),
-            bunny_stream_webhook_secret: env::var("BUNNY_STREAM_WEBHOOK_SECRET")
-                .unwrap_or_default(),
+            bunny_stream_library_id: read("BUNNY_STREAM_LIBRARY_ID").unwrap_or_default(),
+            bunny_stream_key: read("BUNNY_STREAM_KEY").unwrap_or_default(),
+            bunny_stream_webhook_secret: read("BUNNY_STREAM_WEBHOOK_SECRET").unwrap_or_default(),
 
-            b2_key_id: env::var("B2_KEY_ID").unwrap_or_default(),
-            b2_application_key: env::var("B2_APPLICATION_KEY").unwrap_or_default(),
-            b2_bucket_id: env::var("B2_BUCKET_ID").unwrap_or_default(),
-            b2_bucket_name: env::var("B2_BUCKET_NAME").unwrap_or_default(),
-            b2_endpoint: env::var("B2_ENDPOINT")
-                .unwrap_or_else(|_| "https://s3.us-west-004.backblazeb2.com".to_string()),
+            b2_key_id: read("B2_KEY_ID").unwrap_or_default(),
+            b2_application_key: read("B2_APPLICATION_KEY").unwrap_or_default(),
+            b2_bucket_id: read("B2_BUCKET_ID").unwrap_or_default(),
+            b2_bucket_name: read("B2_BUCKET_NAME").unwrap_or_default(),
+            b2_endpoint: read("B2_ENDPOINT")
+                .unwrap_or_else(|| "https://s3.us-west-004.backblazeb2.com".to_string()),
 
-            stripe_secret_key: secret_from_env_or_file("STRIPE_SECRET_KEY", ""),
-            stripe_webhook_secret: secret_from_env_or_file("STRIPE_WEBHOOK_SECRET", ""),
-            stripe_publishable_key: secret_from_env_or_file("STRIPE_PUBLISHABLE_KEY", ""),
+            stripe_secret_key: secret_from_env_or_file_with("STRIPE_SECRET_KEY", "", &read),
+            stripe_webhook_secret: secret_from_env_or_file_with("STRIPE_WEBHOOK_SECRET", "", &read),
+            stripe_publishable_key: secret_from_env_or_file_with(
+                "STRIPE_PUBLISHABLE_KEY",
+                "",
+                &read,
+            ),
 
-            pix_webhook_secret: secret_from_env_or_file("PIX_WEBHOOK_SECRET", ""),
+            pix_webhook_secret: secret_from_env_or_file_with("PIX_WEBHOOK_SECRET", "", &read),
 
-            platform_commission_percent: env::var("PLATFORM_COMMISSION_PERCENT")
-                .unwrap_or_else(|_| "20.0".to_string())
+            platform_commission_percent: read("PLATFORM_COMMISSION_PERCENT")
+                .unwrap_or_else(|| "20.0".to_string())
                 .parse()
                 .unwrap_or(20.0),
             min_subscription_price_cents: 500,
             max_subscription_price_cents: 50_000,
             min_withdrawal_amount_cents: 2_000,
 
-            totp_issuer: env::var("TOTP_ISSUER")
-                .unwrap_or_else(|_| "Boilerplate Rust Nuxt".to_string()),
+            totp_issuer: read("TOTP_ISSUER").unwrap_or_else(|| "Boilerplate Rust Nuxt".to_string()),
 
             max_video_size_bytes: 10 * 1024 * 1024 * 1024, // 10 GB
             max_photo_size_bytes: 50 * 1024 * 1024,        // 50 MB
@@ -646,26 +649,22 @@ impl AppConfig {
 
             // Default JSON payload limit is 16 MB - sufficient for file upload metadata
             // Form payload limit is 20 MB for multipart form-data with metadata
-            json_payload_limit: env::var("JSON_PAYLOAD_LIMIT")
-                .ok()
+            json_payload_limit: read("JSON_PAYLOAD_LIMIT")
                 .and_then(|s| s.parse::<usize>().ok())
                 .unwrap_or(16 * 1024 * 1024),
-            form_payload_limit: env::var("FORM_PAYLOAD_LIMIT")
-                .ok()
+            form_payload_limit: read("FORM_PAYLOAD_LIMIT")
                 .and_then(|s| s.parse::<usize>().ok())
                 .unwrap_or(20 * 1024 * 1024),
 
             // Rate limiting - enabled by default in all environments
             // Can be disabled via RATE_LIMIT_ENABLED=false
-            rate_limit_enabled: env::var("RATE_LIMIT_ENABLED")
-                .ok()
+            rate_limit_enabled: read("RATE_LIMIT_ENABLED")
                 .and_then(|s| s.parse::<bool>().ok())
                 .unwrap_or(true),
 
             // Global daily register ceiling (all IPs combined), for
             // distributed-registration protection. Default 2000/day.
-            register_daily_limit: env::var("REGISTER_DAILY_LIMIT")
-                .ok()
+            register_daily_limit: read("REGISTER_DAILY_LIMIT")
                 .and_then(|s| s.parse::<u64>().ok())
                 .unwrap_or(crate::middleware::rate_limit_middleware::DEFAULT_REGISTER_DAILY_LIMIT),
 
@@ -673,30 +672,28 @@ impl AppConfig {
             // 30 seconds. A mistyped percentage or a zero window becomes a
             // value that validate() refuses, so a typo cannot silently
             // disarm the alert the way the 429 storm went unnoticed.
-            alert_429_enabled: env::var("ALERT_429_ENABLED")
-                .ok()
+            alert_429_enabled: read("ALERT_429_ENABLED")
                 .and_then(|s| s.parse::<bool>().ok())
                 .unwrap_or(true),
-            alert_429_threshold_share: match env::var("ALERT_429_SHARE_PCT") {
-                Ok(raw) => match raw.parse::<f64>() {
+            alert_429_threshold_share: match read("ALERT_429_SHARE_PCT") {
+                Some(raw) => match raw.parse::<f64>() {
                     Ok(pct) if pct > 0.0 && pct <= 100.0 => pct / 100.0,
                     _ => 0.0,
                 },
-                Err(_) => 0.10,
+                None => 0.10,
             },
-            alert_429_window_secs: match env::var("ALERT_429_WINDOW_SECS") {
-                Ok(raw) => match raw.parse::<u64>() {
+            alert_429_window_secs: match read("ALERT_429_WINDOW_SECS") {
+                Some(raw) => match raw.parse::<u64>() {
                     Ok(secs) if secs > 0 => secs,
                     _ => 0,
                 },
-                Err(_) => 30,
+                None => 30,
             },
 
             // Role assigned to a new registration, resolved by name. The
             // customer role is the default: the account starts with the self
             // service permissions and nothing else.
-            register_default_role: env::var("REGISTER_DEFAULT_ROLE")
-                .ok()
+            register_default_role: read("REGISTER_DEFAULT_ROLE")
                 .filter(|name| !name.trim().is_empty())
                 .unwrap_or_else(|| "customer".to_string()),
 
@@ -704,33 +701,29 @@ impl AppConfig {
             // disabled unless CAPTCHA_PROVIDER names a supported provider.
             // An unknown provider name must refuse the boot instead of
             // silently disabling the protection it was configured for.
-            captcha_provider: match env::var("CAPTCHA_PROVIDER") {
-                Ok(raw) => crate::security::captcha::CaptchaProvider::from_str(&raw)
+            captcha_provider: match read("CAPTCHA_PROVIDER") {
+                Some(raw) => crate::security::captcha::CaptchaProvider::from_str(&raw)
                     .unwrap_or_else(|error| {
                         panic!(
                             "CAPTCHA_PROVIDER must be none, turnstile or recaptcha, got '{error}'"
                         )
                     }),
-                Err(_) => crate::security::captcha::CaptchaProvider::None,
+                None => crate::security::captcha::CaptchaProvider::None,
             },
-            captcha_secret: env::var("CAPTCHA_SECRET")
-                .ok()
+            captcha_secret: read("CAPTCHA_SECRET")
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty()),
             // Endpoint for the `custom` CAPTCHA provider (and for deployments
             // that speak the site-verify protocol through their own service).
-            captcha_verify_url: env::var("CAPTCHA_VERIFY_URL")
-                .ok()
+            captcha_verify_url: read("CAPTCHA_VERIFY_URL")
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty()),
 
             // Disposable-mail policy — opt-in (see the struct docs).
-            disposable_email_blocking: env::var("DISPOSABLE_EMAIL_BLOCKING")
-                .ok()
+            disposable_email_blocking: read("DISPOSABLE_EMAIL_BLOCKING")
                 .and_then(|value| value.parse::<bool>().ok())
                 .unwrap_or(false),
-            extra_disposable_domains: env::var("DISPOSABLE_EMAIL_DOMAINS")
-                .ok()
+            extra_disposable_domains: read("DISPOSABLE_EMAIL_DOMAINS")
                 .map(|value| {
                     value
                         .split(',')
@@ -742,12 +735,10 @@ impl AppConfig {
 
             // Mail-exchanger check — opt-in, and vendor-neutral: the operator
             // chooses the DNS-over-HTTPS resolver the app may query.
-            email_mx_check_enabled: env::var("EMAIL_MX_CHECK_ENABLED")
-                .ok()
+            email_mx_check_enabled: read("EMAIL_MX_CHECK_ENABLED")
                 .and_then(|value| value.parse::<bool>().ok())
                 .unwrap_or(false),
-            email_dns_resolver_url: env::var("EMAIL_DNS_RESOLVER_URL")
-                .ok()
+            email_dns_resolver_url: read("EMAIL_DNS_RESOLVER_URL")
                 .map(|value| value.trim().to_string())
                 .filter(|value| !value.is_empty()),
 
@@ -755,29 +746,24 @@ impl AppConfig {
             // Set COOKIE_SECURE=true when using ngrok/Cloudflare Tunnel in dev
             // so that cookies are not sent in plaintext over the tunnel edge.
             // In staging/production, the flag is always set regardless of this value.
-            cookie_secure_override: env::var("COOKIE_SECURE")
-                .ok()
+            cookie_secure_override: read("COOKIE_SECURE")
                 .and_then(|s| s.parse::<bool>().ok())
                 .unwrap_or(false),
 
             // Argon2 password hashing parameters
-            argon2_m_cost: env::var("ARGON2_M_COST")
-                .ok()
+            argon2_m_cost: read("ARGON2_M_COST")
                 .and_then(|s| s.parse::<u32>().ok())
                 .unwrap_or(65536),
-            argon2_t_cost: env::var("ARGON2_T_COST")
-                .ok()
+            argon2_t_cost: read("ARGON2_T_COST")
                 .and_then(|s| s.parse::<u32>().ok())
                 .unwrap_or(3),
-            argon2_p_cost: env::var("ARGON2_P_COST")
-                .ok()
+            argon2_p_cost: read("ARGON2_P_COST")
                 .and_then(|s| s.parse::<u32>().ok())
                 .unwrap_or(1),
 
             // Trusted proxies for X-Forwarded-For / Forwarded header support
             // Comma-separated list of CIDR ranges (e.g., "10.0.0.0/8,172.16.0.0/12,192.168.0.0/16")
-            trusted_proxies: env::var("TRUSTED_PROXIES")
-                .ok()
+            trusted_proxies: read("TRUSTED_PROXIES")
                 .map(|s| {
                     s.split(',')
                         .filter_map(|part| part.trim().parse::<ipnet::IpNet>().ok())
@@ -785,6 +771,10 @@ impl AppConfig {
                 })
                 .unwrap_or_default(),
         })
+    }
+
+    pub fn from_env() -> Result<Self, env::VarError> {
+        Self::from_lookup(|key| std::env::var(key).ok())
     }
 
     pub fn is_production(&self) -> bool {
@@ -1165,12 +1155,18 @@ impl AppConfig {
 
 #[cfg(test)]
 mod placeholder_tests {
-    //! SECURITY_AUDIT.md I7 — placeholder rejection tests.
+    //! SECURITY_AUDIT.md I7: placeholder rejection tests.
     //!
     //! These tests assert that production builds refuse placeholder secrets
     //! such as "changeme_*" (POSTGRES_PASSWORD, REDIS_PASSWORD) and
     //! "REPLACE_WITH_*" (JWT_SECRET, encryption keys). The development
     //! environment intentionally allows these markers.
+    //!
+    //! The environment is a lookup each test names explicitly: no test mutates
+    //! the process environment, so the module needs neither serialization nor
+    //! restore-on-drop machinery.
+    use std::collections::HashMap;
+
     use super::*;
     use crate::security::captcha::CaptchaProvider;
 
@@ -1180,170 +1176,51 @@ mod placeholder_tests {
         base64::engine::general_purpose::STANDARD.encode([7u8; 32])
     }
 
-    #[derive(Default)]
-    struct EnvBackup {
-        database_url: Option<String>,
-        db_pool_size: Option<String>,
-        db_statement_timeout_secs: Option<String>,
-        db_pool_min_idle: Option<String>,
-        db_pool_max_lifetime_secs: Option<String>,
-        db_pool_idle_timeout_secs: Option<String>,
-        db_pool_connection_timeout_secs: Option<String>,
-        redis_url: Option<String>,
-        redis_pool_size: Option<String>,
-        environment: Option<String>,
-        jwt_secret: Option<String>,
-        master_key: Option<String>,
-        postgres_password: Option<String>,
-        max_video_size_bytes: Option<String>,
-        max_photo_size_bytes: Option<String>,
-        max_audio_size_bytes: Option<String>,
-        json_payload_limit: Option<String>,
-        form_payload_limit: Option<String>,
-        csrf_secret_key: Option<String>,
-        refresh_token_hash_salt: Option<String>,
-        blind_index_key: Option<String>,
-        rate_limit_enabled: Option<String>,
-        register_daily_limit: Option<String>,
-        register_default_role: Option<String>,
-        captcha_provider: Option<String>,
-        captcha_secret: Option<String>,
-        captcha_verify_url: Option<String>,
-        disposable_email_blocking: Option<String>,
-        disposable_email_domains: Option<String>,
-        email_mx_check_enabled: Option<String>,
-        email_dns_resolver_url: Option<String>,
+    /// The environment every test starts from: the required secrets with
+    /// valid, placeholder-free values. A test adds its own variables on top.
+    fn base_vars() -> Vec<(String, String)> {
+        let valid = minimal_valid_secret();
+        [
+            ("DATABASE_URL", "postgres://u:p@localhost:5432/d"),
+            ("DB_POOL_SIZE", "10"),
+            ("DB_STATEMENT_TIMEOUT_SECS", "30"),
+            ("DB_POOL_MIN_IDLE", "2"),
+            ("DB_POOL_MAX_LIFETIME_SECS", "1800"),
+            ("DB_POOL_IDLE_TIMEOUT_SECS", "600"),
+            ("DB_POOL_CONNECTION_TIMEOUT_SECS", "10"),
+            ("REDIS_URL", "redis://localhost:6379"),
+            ("REDIS_POOL_SIZE", "10"),
+            ("MAX_VIDEO_SIZE_BYTES", "1000"),
+            ("MAX_PHOTO_SIZE_BYTES", "1000"),
+            ("MAX_AUDIO_SIZE_BYTES", "1000"),
+            ("JSON_PAYLOAD_LIMIT", "1048576"),
+            ("FORM_PAYLOAD_LIMIT", "2097152"),
+            ("CSRF_SECRET_KEY", valid.as_str()),
+            ("REFRESH_TOKEN_HASH_SALT", valid.as_str()),
+            ("BLIND_INDEX_KEY", valid.as_str()),
+            ("MASTER_KEY", valid.as_str()),
+        ]
+        .into_iter()
+        .map(|(key, value)| (key.to_string(), value.to_string()))
+        .collect()
     }
 
-    impl EnvBackup {
-        fn new() -> Self {
-            let read = |k: &str| std::env::var(k).ok();
-            Self {
-                database_url: read("DATABASE_URL"),
-                db_pool_size: read("DB_POOL_SIZE"),
-                db_statement_timeout_secs: read("DB_STATEMENT_TIMEOUT_SECS"),
-                db_pool_min_idle: read("DB_POOL_MIN_IDLE"),
-                db_pool_max_lifetime_secs: read("DB_POOL_MAX_LIFETIME_SECS"),
-                db_pool_idle_timeout_secs: read("DB_POOL_IDLE_TIMEOUT_SECS"),
-                db_pool_connection_timeout_secs: read("DB_POOL_CONNECTION_TIMEOUT_SECS"),
-                redis_url: read("REDIS_URL"),
-                redis_pool_size: read("REDIS_POOL_SIZE"),
-                environment: read("ENVIRONMENT"),
-                jwt_secret: read("JWT_SECRET"),
-                master_key: read("MASTER_KEY"),
-                postgres_password: read("POSTGRES_PASSWORD"),
-                max_video_size_bytes: read("MAX_VIDEO_SIZE_BYTES"),
-                max_photo_size_bytes: read("MAX_PHOTO_SIZE_BYTES"),
-                max_audio_size_bytes: read("MAX_AUDIO_SIZE_BYTES"),
-                json_payload_limit: read("JSON_PAYLOAD_LIMIT"),
-                form_payload_limit: read("FORM_PAYLOAD_LIMIT"),
-                csrf_secret_key: read("CSRF_SECRET_KEY"),
-                refresh_token_hash_salt: read("REFRESH_TOKEN_HASH_SALT"),
-                blind_index_key: read("BLIND_INDEX_KEY"),
-                rate_limit_enabled: read("RATE_LIMIT_ENABLED"),
-                register_daily_limit: read("REGISTER_DAILY_LIMIT"),
-                register_default_role: read("REGISTER_DEFAULT_ROLE"),
-                captcha_provider: read("CAPTCHA_PROVIDER"),
-                captcha_secret: read("CAPTCHA_SECRET"),
-                captcha_verify_url: read("CAPTCHA_VERIFY_URL"),
-                disposable_email_blocking: read("DISPOSABLE_EMAIL_BLOCKING"),
-                disposable_email_domains: read("DISPOSABLE_EMAIL_DOMAINS"),
-                email_mx_check_enabled: read("EMAIL_MX_CHECK_ENABLED"),
-                email_dns_resolver_url: read("EMAIL_DNS_RESOLVER_URL"),
-            }
-        }
+    /// Builds a configuration from the base environment plus the given vars.
+    fn config_with(extra: &[(&str, &str)]) -> Result<AppConfig, env::VarError> {
+        let mut vars: HashMap<String, String> = base_vars().into_iter().collect();
+        vars.extend(
+            extra
+                .iter()
+                .map(|(key, value)| ((*key).to_string(), (*value).to_string())),
+        );
+
+        AppConfig::from_lookup(|key: &str| vars.get(key).cloned())
     }
 
-    impl Drop for EnvBackup {
-        fn drop(&mut self) {
-            let set = |k: &str, v: Option<String>| {
-                if let Some(v) = v {
-                    unsafe { std::env::set_var(k, v) };
-                } else {
-                    unsafe { std::env::remove_var(k) };
-                }
-            };
-            set("DATABASE_URL", self.database_url.take());
-            set("DB_POOL_SIZE", self.db_pool_size.take());
-            set(
-                "DB_STATEMENT_TIMEOUT_SECS",
-                self.db_statement_timeout_secs.take(),
-            );
-            set("DB_POOL_MIN_IDLE", self.db_pool_min_idle.take());
-            set(
-                "DB_POOL_MAX_LIFETIME_SECS",
-                self.db_pool_max_lifetime_secs.take(),
-            );
-            set(
-                "DB_POOL_IDLE_TIMEOUT_SECS",
-                self.db_pool_idle_timeout_secs.take(),
-            );
-            set(
-                "DB_POOL_CONNECTION_TIMEOUT_SECS",
-                self.db_pool_connection_timeout_secs.take(),
-            );
-            set("REDIS_URL", self.redis_url.take());
-            set("REDIS_POOL_SIZE", self.redis_pool_size.take());
-            set("ENVIRONMENT", self.environment.take());
-            set("JWT_SECRET", self.jwt_secret.take());
-            set("MASTER_KEY", self.master_key.take());
-            set("POSTGRES_PASSWORD", self.postgres_password.take());
-            set("MAX_VIDEO_SIZE_BYTES", self.max_video_size_bytes.take());
-            set("MAX_PHOTO_SIZE_BYTES", self.max_photo_size_bytes.take());
-            set("MAX_AUDIO_SIZE_BYTES", self.max_audio_size_bytes.take());
-            set("JSON_PAYLOAD_LIMIT", self.json_payload_limit.take());
-            set("FORM_PAYLOAD_LIMIT", self.form_payload_limit.take());
-            set("CSRF_SECRET_KEY", self.csrf_secret_key.take());
-            set(
-                "REFRESH_TOKEN_HASH_SALT",
-                self.refresh_token_hash_salt.take(),
-            );
-            set("BLIND_INDEX_KEY", self.blind_index_key.take());
-            set("RATE_LIMIT_ENABLED", self.rate_limit_enabled.take());
-            set("REGISTER_DAILY_LIMIT", self.register_daily_limit.take());
-            set("REGISTER_DEFAULT_ROLE", self.register_default_role.take());
-            set("CAPTCHA_PROVIDER", self.captcha_provider.take());
-            set("CAPTCHA_SECRET", self.captcha_secret.take());
-            set("CAPTCHA_VERIFY_URL", self.captcha_verify_url.take());
-            set(
-                "DISPOSABLE_EMAIL_BLOCKING",
-                self.disposable_email_blocking.take(),
-            );
-            set(
-                "DISPOSABLE_EMAIL_DOMAINS",
-                self.disposable_email_domains.take(),
-            );
-            set("EMAIL_MX_CHECK_ENABLED", self.email_mx_check_enabled.take());
-            set("EMAIL_DNS_RESOLVER_URL", self.email_dns_resolver_url.take());
-        }
-    }
-
-    /// Env vars that `AppConfig::from_env` requires with non-empty values.
-    /// Each test sets these fresh — they must NOT be shared via leaked env vars
-    /// from previous tests (which is what caused test ordering issues).
-    fn setup_minimal_env() {
-        use base64::Engine as _;
-        let valid = base64::engine::general_purpose::STANDARD.encode([7u8; 32]);
-
-        let set = |k: &str, v: &str| unsafe { std::env::set_var(k, v) };
-        set("DATABASE_URL", "postgres://u:p@localhost:5432/d");
-        set("DB_POOL_SIZE", "10");
-        set("DB_STATEMENT_TIMEOUT_SECS", "30");
-        set("DB_POOL_MIN_IDLE", "2");
-        set("DB_POOL_MAX_LIFETIME_SECS", "1800");
-        set("DB_POOL_IDLE_TIMEOUT_SECS", "600");
-        set("DB_POOL_CONNECTION_TIMEOUT_SECS", "10");
-        set("REDIS_URL", "redis://localhost:6379");
-        set("REDIS_POOL_SIZE", "10");
-        set("MAX_VIDEO_SIZE_BYTES", "1000");
-        set("MAX_PHOTO_SIZE_BYTES", "1000");
-        set("MAX_AUDIO_SIZE_BYTES", "1000");
-        set("JSON_PAYLOAD_LIMIT", "1048576");
-        set("FORM_PAYLOAD_LIMIT", "2097152");
-        set("CSRF_SECRET_KEY", &valid);
-        set("REFRESH_TOKEN_HASH_SALT", &valid);
-        set("BLIND_INDEX_KEY", &valid);
-        set("MASTER_KEY", &valid);
+    /// The production overrides the production cases share: the environment
+    /// marker and the pool size production requires.
+    fn production_vars() -> Vec<(&'static str, &'static str)> {
+        vec![("ENVIRONMENT", "production"), ("REDIS_POOL_SIZE", "100")]
     }
 
     // ---------------------------------------------------------------------------
@@ -1351,45 +1228,36 @@ mod placeholder_tests {
     // ---------------------------------------------------------------------------
 
     #[test]
-    #[serial_test::serial]
     fn captcha_defaults_to_disabled() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::remove_var("CAPTCHA_PROVIDER") };
-        unsafe { std::env::remove_var("CAPTCHA_SECRET") };
+        let secret = minimal_valid_secret();
+        let vars = [("JWT_SECRET", secret.as_str())];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert_eq!(config.captcha_provider, CaptchaProvider::None);
         assert!(config.captcha_secret.is_none());
         assert!(!config.captcha_enabled());
     }
 
     #[test]
-    #[serial_test::serial]
     fn captcha_provider_and_secret_enable_human_verification() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "turnstile") };
-        unsafe { std::env::set_var("CAPTCHA_SECRET", "0x0000000000000000000000000000") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("CAPTCHA_PROVIDER", "turnstile"),
+            ("CAPTCHA_SECRET", "0x0000000000000000000000000000"),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert_eq!(config.captcha_provider, CaptchaProvider::Turnstile);
         assert!(config.captcha_enabled());
     }
 
     #[test]
-    #[serial_test::serial]
     fn the_rejection_share_alert_defaults_to_a_conservative_threshold() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::remove_var("ALERT_429_SHARE_PCT") };
-        unsafe { std::env::remove_var("ALERT_429_WINDOW_SECS") };
-        unsafe { std::env::remove_var("ALERT_429_ENABLED") };
+        let secret = minimal_valid_secret();
+        let vars = [("JWT_SECRET", secret.as_str())];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert!(config.alert_429_enabled, "the alert ships on");
         assert!(
             (config.alert_429_threshold_share - 0.10).abs() < 1e-9,
@@ -1401,16 +1269,16 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn the_rejection_share_alert_honours_custom_values() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("ALERT_429_SHARE_PCT", "25") };
-        unsafe { std::env::set_var("ALERT_429_WINDOW_SECS", "15") };
-        unsafe { std::env::set_var("ALERT_429_ENABLED", "false") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("ALERT_429_SHARE_PCT", "25"),
+            ("ALERT_429_WINDOW_SECS", "15"),
+            ("ALERT_429_ENABLED", "false"),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert!(!config.alert_429_enabled, "the alert can be turned off");
         assert!(
             (config.alert_429_threshold_share - 0.25).abs() < 1e-9,
@@ -1422,54 +1290,45 @@ mod placeholder_tests {
             config.validate().is_empty(),
             "custom valid values must validate"
         );
-
-        unsafe { std::env::remove_var("ALERT_429_SHARE_PCT") };
-        unsafe { std::env::remove_var("ALERT_429_WINDOW_SECS") };
-        unsafe { std::env::remove_var("ALERT_429_ENABLED") };
     }
 
     #[test]
-    #[serial_test::serial]
     fn a_mistyped_threshold_is_rejected_instead_of_defaulting() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("ALERT_429_SHARE_PCT", "0") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("ALERT_429_SHARE_PCT", "0"),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert!(
             !config.validate().is_empty(),
             "a zero threshold must be refused: a typo must not silently disarm the alert"
         );
-
-        unsafe { std::env::remove_var("ALERT_429_SHARE_PCT") };
     }
 
     #[test]
-    #[serial_test::serial]
     fn jwt_audience_defaults_to_the_canonical_service_name() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::remove_var("JWT_AUDIENCE") };
+        let secret = minimal_valid_secret();
+        let vars = [("JWT_SECRET", secret.as_str())];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert_eq!(config.jwt_audience, "rust-nuxt-boilerplate");
     }
 
     #[test]
-    #[serial_test::serial]
     fn jwt_audience_follows_the_environment_and_an_empty_value_never_disables_it() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        let secret = minimal_valid_secret();
 
-        unsafe { std::env::set_var("JWT_AUDIENCE", "custom-api") };
-        let config = AppConfig::from_env().expect("config builds");
+        let custom = [
+            ("JWT_SECRET", secret.as_str()),
+            ("JWT_AUDIENCE", "custom-api"),
+        ];
+        let config = config_with(&custom).expect("config builds");
         assert_eq!(config.jwt_audience, "custom-api");
 
-        unsafe { std::env::set_var("JWT_AUDIENCE", "   ") };
-        let config = AppConfig::from_env().expect("config builds");
+        let blank = [("JWT_SECRET", secret.as_str()), ("JWT_AUDIENCE", "   ")];
+        let config = config_with(&blank).expect("config builds");
         assert_eq!(
             config.jwt_audience, "rust-nuxt-boilerplate",
             "a blank value falls back to the default instead of disabling the check"
@@ -1477,20 +1336,16 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn captcha_enabled_without_secret_is_a_production_validation_error() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("ENVIRONMENT", "production") };
-        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
-        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
-        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "recaptcha") };
-        unsafe { std::env::remove_var("CAPTCHA_SECRET") };
+        let mut vars = production_vars();
+        vars.push(("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d"));
+        vars.push(("POSTGRES_PASSWORD", "good_secret_xyz"));
+        let secret = minimal_valid_secret();
+        vars.push(("JWT_SECRET", secret.as_str()));
+        vars.push(("MASTER_KEY", secret.as_str()));
+        vars.push(("CAPTCHA_PROVIDER", "recaptcha"));
 
-        let config = AppConfig::from_env().expect("config builds");
+        let config = config_with(&vars).expect("config builds");
         let errors = config.validate();
         assert!(
             errors
@@ -1502,14 +1357,14 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn unknown_captcha_provider_names_refuse_to_boot() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "bogus") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("CAPTCHA_PROVIDER", "bogus"),
+        ];
 
-        let result = std::panic::catch_unwind(AppConfig::from_env);
+        let result = std::panic::catch_unwind(|| config_with(&vars));
         let error = result.expect_err("unknown providers must fail");
         let message = error
             .downcast_ref::<String>()
@@ -1523,16 +1378,16 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn custom_captcha_provider_uses_the_configured_verify_url() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "custom") };
-        unsafe { std::env::set_var("CAPTCHA_SECRET", "secret-value") };
-        unsafe { std::env::set_var("CAPTCHA_VERIFY_URL", "https://captcha.example/siteverify") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("CAPTCHA_PROVIDER", "custom"),
+            ("CAPTCHA_SECRET", "secret-value"),
+            ("CAPTCHA_VERIFY_URL", "https://captcha.example/siteverify"),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert_eq!(config.captcha_provider, CaptchaProvider::Custom);
         assert!(config.captcha_enabled());
         assert_eq!(
@@ -1542,21 +1397,17 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn custom_captcha_provider_without_verify_url_is_a_production_validation_error() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("ENVIRONMENT", "production") };
-        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
-        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
-        unsafe { std::env::set_var("CAPTCHA_PROVIDER", "custom") };
-        unsafe { std::env::set_var("CAPTCHA_SECRET", "secret-value") };
-        unsafe { std::env::remove_var("CAPTCHA_VERIFY_URL") };
+        let mut vars = production_vars();
+        vars.push(("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d"));
+        vars.push(("POSTGRES_PASSWORD", "good_secret_xyz"));
+        let secret = minimal_valid_secret();
+        vars.push(("JWT_SECRET", secret.as_str()));
+        vars.push(("MASTER_KEY", secret.as_str()));
+        vars.push(("CAPTCHA_PROVIDER", "custom"));
+        vars.push(("CAPTCHA_SECRET", "secret-value"));
 
-        let config = AppConfig::from_env().expect("config builds");
+        let config = config_with(&vars).expect("config builds");
         let errors = config.validate();
         assert!(
             errors.iter().any(|e| e.contains("CAPTCHA_VERIFY_URL")),
@@ -1566,15 +1417,11 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn disposable_email_policy_is_opt_in() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::remove_var("DISPOSABLE_EMAIL_BLOCKING") };
-        unsafe { std::env::remove_var("DISPOSABLE_EMAIL_DOMAINS") };
+        let secret = minimal_valid_secret();
+        let vars = [("JWT_SECRET", secret.as_str())];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert!(
             !config.disposable_email_blocking,
             "the boilerplate must not impose a disposable-mail policy by default"
@@ -1583,15 +1430,15 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn disposable_email_policy_can_be_enabled_with_extra_domains() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("DISPOSABLE_EMAIL_BLOCKING", "true") };
-        unsafe { std::env::set_var("DISPOSABLE_EMAIL_DOMAINS", "spam.test, Other.test") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("DISPOSABLE_EMAIL_BLOCKING", "true"),
+            ("DISPOSABLE_EMAIL_DOMAINS", "spam.test, Other.test"),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert!(config.disposable_email_blocking);
         assert_eq!(
             config.extra_disposable_domains,
@@ -1601,19 +1448,16 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn production_refuses_disabled_rate_limiting() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("ENVIRONMENT", "production") };
-        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
-        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
-        unsafe { std::env::set_var("RATE_LIMIT_ENABLED", "false") };
+        let mut vars = production_vars();
+        vars.push(("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d"));
+        vars.push(("POSTGRES_PASSWORD", "good_secret_xyz"));
+        let secret = minimal_valid_secret();
+        vars.push(("JWT_SECRET", secret.as_str()));
+        vars.push(("MASTER_KEY", secret.as_str()));
+        vars.push(("RATE_LIMIT_ENABLED", "false"));
 
-        let config = AppConfig::from_env().expect("config builds");
+        let config = config_with(&vars).expect("config builds");
         let errors = config.validate();
         assert!(
             errors.iter().any(|e| e.contains("RATE_LIMIT_ENABLED")),
@@ -1623,15 +1467,14 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn development_may_disable_rate_limiting() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::remove_var("ENVIRONMENT") };
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("RATE_LIMIT_ENABLED", "false") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("RATE_LIMIT_ENABLED", "false"),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert!(!config.rate_limit_enabled);
         assert!(
             !config
@@ -1643,15 +1486,11 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn mail_exchanger_check_is_opt_in_and_needs_a_resolver() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::remove_var("EMAIL_MX_CHECK_ENABLED") };
-        unsafe { std::env::remove_var("EMAIL_DNS_RESOLVER_URL") };
+        let secret = minimal_valid_secret();
 
-        let config = AppConfig::from_env().expect("config builds");
+        let opt_in = [("JWT_SECRET", secret.as_str())];
+        let config = config_with(&opt_in).expect("config builds");
         assert!(!config.email_mx_check_enabled);
         assert!(config.email_dns_resolver_url.is_none());
         assert!(
@@ -1661,8 +1500,11 @@ mod placeholder_tests {
 
         // Enabling the check without telling the app where to resolve DNS is a
         // misconfiguration, not a silent no-op.
-        unsafe { std::env::set_var("EMAIL_MX_CHECK_ENABLED", "true") };
-        let config = AppConfig::from_env().expect("config builds");
+        let without_resolver = [
+            ("JWT_SECRET", secret.as_str()),
+            ("EMAIL_MX_CHECK_ENABLED", "true"),
+        ];
+        let config = config_with(&without_resolver).expect("config builds");
         let errors = config.validate();
         assert!(
             errors.iter().any(|e| e.contains("EMAIL_DNS_RESOLVER_URL")),
@@ -1670,8 +1512,12 @@ mod placeholder_tests {
             errors
         );
 
-        unsafe { std::env::set_var("EMAIL_DNS_RESOLVER_URL", "https://dns.example/dns-query") };
-        let config = AppConfig::from_env().expect("config builds");
+        let with_resolver = [
+            ("JWT_SECRET", secret.as_str()),
+            ("EMAIL_MX_CHECK_ENABLED", "true"),
+            ("EMAIL_DNS_RESOLVER_URL", "https://dns.example/dns-query"),
+        ];
+        let config = config_with(&with_resolver).expect("config builds");
         assert!(config.email_mx_check_enabled);
         assert!(
             config.validate().is_empty(),
@@ -1681,14 +1527,11 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn the_default_registration_role_is_the_customer_role() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::remove_var("REGISTER_DEFAULT_ROLE") };
+        let secret = minimal_valid_secret();
+        let vars = [("JWT_SECRET", secret.as_str())];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert_eq!(
             config.register_default_role, "customer",
             "a registration must land on the customer role by default"
@@ -1696,26 +1539,26 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn the_default_registration_role_is_configurable() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("REGISTER_DEFAULT_ROLE", "trial") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("REGISTER_DEFAULT_ROLE", "trial"),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert_eq!(config.register_default_role, "trial");
     }
 
     #[test]
-    #[serial_test::serial]
     fn a_blank_default_registration_role_falls_back_to_the_customer_role() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("REGISTER_DEFAULT_ROLE", "   ") };
+        let secret = minimal_valid_secret();
+        let vars = [
+            ("JWT_SECRET", secret.as_str()),
+            ("REGISTER_DEFAULT_ROLE", "   "),
+        ];
+        let config = config_with(&vars).expect("config builds");
 
-        let config = AppConfig::from_env().expect("config builds");
         assert_eq!(
             config.register_default_role, "customer",
             "a blank role name must not reach the resolver"
@@ -1723,23 +1566,18 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn production_rejects_postgres_password_changeme() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("ENVIRONMENT", "production") };
-        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
-        unsafe { std::env::set_var("POSTGRES_PASSWORD", "changeme_secure_password") };
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        // DATABASE_URL interpolates POSTGRES_PASSWORD; URL embeds the placeholder.
-        unsafe {
-            std::env::set_var(
-                "DATABASE_URL",
-                "postgres://u:changeme_secure_password@localhost:5432/d",
-            )
-        };
+        let mut vars = production_vars();
+        vars.push(("POSTGRES_PASSWORD", "changeme_secure_password"));
+        // DATABASE_URL interpolates POSTGRES_PASSWORD; the URL embeds it.
+        vars.push((
+            "DATABASE_URL",
+            "postgres://u:changeme_secure_password@localhost:5432/d",
+        ));
+        let secret = minimal_valid_secret();
+        vars.push(("JWT_SECRET", secret.as_str()));
 
-        let cfg = AppConfig::from_env().expect("config builds");
+        let cfg = config_with(&vars).expect("config builds");
         let errors = cfg.validate();
 
         assert!(
@@ -1752,21 +1590,16 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn production_replaces_with_jwt_secret_placeholder() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("ENVIRONMENT", "production") };
-        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
-        // Provide GOOD values for everything except JWT_SECRET.
-        // Importantly DON'T set POSTGRES_PASSWORD = "changeme_*" so the ping-pong
-        // between this and test #1 doesn't leak state.
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
-        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
-        unsafe { std::env::set_var("JWT_SECRET", "REPLACE_WITH_GENERATED_64_CHAR_BASE64_SECRET") };
-        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
+        let mut vars = production_vars();
+        // Good values for everything except JWT_SECRET.
+        vars.push(("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d"));
+        vars.push(("POSTGRES_PASSWORD", "good_secret_xyz"));
+        vars.push(("JWT_SECRET", "REPLACE_WITH_GENERATED_64_CHAR_BASE64_SECRET"));
+        let secret = minimal_valid_secret();
+        vars.push(("MASTER_KEY", secret.as_str()));
 
-        let cfg = AppConfig::from_env().expect("config builds");
+        let cfg = config_with(&vars).expect("config builds");
         let errors = cfg.validate();
 
         assert!(
@@ -1779,26 +1612,21 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn production_rejects_refresh_salt_placeholder() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("ENVIRONMENT", "production") };
-        unsafe { std::env::set_var("REDIS_POOL_SIZE", "100") }; // meet prod minimum
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d") };
-        unsafe { std::env::set_var("POSTGRES_PASSWORD", "good_secret_xyz") };
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
-        unsafe { std::env::set_var("MASTER_KEY", minimal_valid_secret()) };
-        // The literal shipped in the repo's local .env docs — long enough to
+        let mut vars = production_vars();
+        vars.push(("DATABASE_URL", "postgres://u:good_pwd@localhost:5432/d"));
+        vars.push(("POSTGRES_PASSWORD", "good_secret_xyz"));
+        let secret = minimal_valid_secret();
+        vars.push(("JWT_SECRET", secret.as_str()));
+        vars.push(("MASTER_KEY", secret.as_str()));
+        // The literal shipped in the repo's local .env docs: long enough to
         // pass the length check but publicly known, so it must be rejected.
-        unsafe {
-            std::env::set_var(
-                "REFRESH_TOKEN_HASH_SALT",
-                "refresh_token_hash_salt_change_in_production",
-            )
-        };
+        vars.push((
+            "REFRESH_TOKEN_HASH_SALT",
+            "refresh_token_hash_salt_change_in_production",
+        ));
 
-        let cfg = AppConfig::from_env().expect("config builds");
+        let cfg = config_with(&vars).expect("config builds");
         let errors = cfg.validate();
 
         assert!(
@@ -1811,24 +1639,22 @@ mod placeholder_tests {
     }
 
     #[test]
-    #[serial_test::serial]
     fn development_allows_changeme_placeholders() {
-        let _backup = EnvBackup::new();
-        setup_minimal_env();
-        unsafe { std::env::set_var("ENVIRONMENT", "development") };
-        // All-good values (no `changeme_` or `REPLACE_`).
-        unsafe { std::env::set_var("DATABASE_URL", "postgres://u:dev_pwd@localhost:5432/d") };
-        unsafe { std::env::set_var("POSTGRES_PASSWORD", "dev_pwd_xyz") };
-        unsafe { std::env::set_var("JWT_SECRET", minimal_valid_secret()) };
+        let mut vars = vec![("ENVIRONMENT", "development")];
+        // All-good values (no changeme_ or REPLACE_).
+        vars.push(("DATABASE_URL", "postgres://u:dev_pwd@localhost:5432/d"));
+        vars.push(("POSTGRES_PASSWORD", "dev_pwd_xyz"));
+        let secret = minimal_valid_secret();
+        vars.push(("JWT_SECRET", secret.as_str()));
 
-        let cfg = AppConfig::from_env().expect("config builds");
+        let cfg = config_with(&vars).expect("config builds");
         let errors = cfg.validate();
 
-        for e in &errors {
+        for error in &errors {
             assert!(
-                !e.contains("placeholder"),
+                !error.contains("placeholder"),
                 "dev config should NOT trigger placeholder error: {}",
-                e
+                error
             );
         }
     }
@@ -1840,50 +1666,19 @@ mod docker_secrets_tests {
     //!
     //! docker-compose.yml documents the flag for production so that a stale
     //! `.env` cannot silently override a rotated `/run/secrets` value.
+    //!
+    //! The environment source is a lookup the test supplies: no test mutates
+    //! the process environment, so the module needs no serialization and no
+    //! restore-on-drop machinery.
 
-    use serial_test::serial;
+    use std::collections::HashMap;
 
-    use super::{required_secret, secret_from_env_or_file};
+    use super::{required_secret_from, secret_from_env_or_file_with};
 
     const SECRET_NAME: &str = "DOCKER_SECRETS_TEST_VALUE";
     const FILE_VAR: &str = "DOCKER_SECRETS_TEST_VALUE_FILE";
     const FILE_CONTENT: &str = "value-from-mounted-secret-file";
     const ENV_CONTENT: &str = "value-from-environment";
-
-    /// Restores every env var the tests touch, so the shared process state does
-    /// not leak into other tests in the same binary.
-    struct EnvBackup {
-        secret: Option<String>,
-        file_var: Option<String>,
-        flag: Option<String>,
-    }
-
-    impl EnvBackup {
-        fn capture() -> Self {
-            Self {
-                secret: std::env::var(SECRET_NAME).ok(),
-                file_var: std::env::var(FILE_VAR).ok(),
-                flag: std::env::var("DOCKER_SECRETS_ENABLED").ok(),
-            }
-        }
-    }
-
-    impl Drop for EnvBackup {
-        fn drop(&mut self) {
-            unsafe {
-                restore_env(SECRET_NAME, &self.secret);
-                restore_env(FILE_VAR, &self.file_var);
-                restore_env("DOCKER_SECRETS_ENABLED", &self.flag);
-            }
-        }
-    }
-
-    unsafe fn restore_env(key: &str, value: &Option<String>) {
-        match value {
-            Some(value) => unsafe { std::env::set_var(key, value) },
-            None => unsafe { std::env::remove_var(key) },
-        }
-    }
 
     /// Writes the secret content to a temp file and returns its path.
     fn write_secret_file() -> tempfile::TempPath {
@@ -1892,64 +1687,77 @@ mod docker_secrets_tests {
         file.into_temp_path()
     }
 
+    /// The lookup the production code reads: only the given variables exist.
+    fn source(vars: &[(&str, &str)]) -> impl Fn(&str) -> Option<String> {
+        let map: HashMap<String, String> = vars
+            .iter()
+            .map(|(key, value)| ((*key).to_string(), (*value).to_string()))
+            .collect();
+        move |key| map.get(key).cloned()
+    }
+
     #[test]
-    #[serial]
     fn docker_secrets_enabled_prefers_the_mounted_file() {
-        let _backup = EnvBackup::capture();
         let path = write_secret_file();
-        unsafe {
-            std::env::set_var(SECRET_NAME, ENV_CONTENT);
-            std::env::set_var(FILE_VAR, path.to_str().unwrap());
-            std::env::set_var("DOCKER_SECRETS_ENABLED", "1");
-        }
-
-        assert_eq!(secret_from_env_or_file(SECRET_NAME, "unused"), FILE_CONTENT);
-        assert_eq!(required_secret(SECRET_NAME).unwrap(), FILE_CONTENT);
-    }
-
-    #[test]
-    #[serial]
-    fn without_the_flag_the_environment_variable_still_wins() {
-        let _backup = EnvBackup::capture();
-        let path = write_secret_file();
-        unsafe {
-            std::env::set_var(SECRET_NAME, ENV_CONTENT);
-            std::env::set_var(FILE_VAR, path.to_str().unwrap());
-            std::env::remove_var("DOCKER_SECRETS_ENABLED");
-        }
-
-        assert_eq!(secret_from_env_or_file(SECRET_NAME, "unused"), ENV_CONTENT);
-        assert_eq!(required_secret(SECRET_NAME).unwrap(), ENV_CONTENT);
-    }
-
-    #[test]
-    #[serial]
-    fn the_flag_falls_back_to_the_environment_when_no_file_exists() {
-        let _backup = EnvBackup::capture();
-        unsafe {
-            std::env::set_var(SECRET_NAME, ENV_CONTENT);
-            std::env::remove_var(FILE_VAR);
-            std::env::set_var("DOCKER_SECRETS_ENABLED", "true");
-        }
-
-        assert_eq!(secret_from_env_or_file(SECRET_NAME, "unused"), ENV_CONTENT);
-    }
-
-    #[test]
-    #[serial]
-    fn the_flag_falls_back_to_the_default_when_nothing_is_configured() {
-        let _backup = EnvBackup::capture();
-        unsafe {
-            std::env::remove_var(SECRET_NAME);
-            std::env::remove_var(FILE_VAR);
-            std::env::set_var("DOCKER_SECRETS_ENABLED", "yes");
-        }
+        let file_var = path.to_str().expect("utf-8 path").to_string();
+        let vars = [
+            (SECRET_NAME, ENV_CONTENT),
+            (FILE_VAR, file_var.as_str()),
+            ("DOCKER_SECRETS_ENABLED", "1"),
+        ];
+        let read = source(&vars);
 
         assert_eq!(
-            secret_from_env_or_file(SECRET_NAME, "the-default"),
+            secret_from_env_or_file_with(SECRET_NAME, "unused", &read),
+            FILE_CONTENT
+        );
+        assert_eq!(
+            required_secret_from(SECRET_NAME, &read).unwrap(),
+            FILE_CONTENT
+        );
+    }
+
+    #[test]
+    fn without_the_flag_the_environment_variable_still_wins() {
+        let path = write_secret_file();
+        let file_var = path.to_str().expect("utf-8 path").to_string();
+        let vars = [(SECRET_NAME, ENV_CONTENT), (FILE_VAR, file_var.as_str())];
+        let read = source(&vars);
+
+        assert_eq!(
+            secret_from_env_or_file_with(SECRET_NAME, "unused", &read),
+            ENV_CONTENT
+        );
+        assert_eq!(
+            required_secret_from(SECRET_NAME, &read).unwrap(),
+            ENV_CONTENT
+        );
+    }
+
+    #[test]
+    fn the_flag_falls_back_to_the_environment_when_no_file_exists() {
+        let vars = [
+            (SECRET_NAME, ENV_CONTENT),
+            ("DOCKER_SECRETS_ENABLED", "true"),
+        ];
+        let read = source(&vars);
+
+        assert_eq!(
+            secret_from_env_or_file_with(SECRET_NAME, "unused", &read),
+            ENV_CONTENT
+        );
+    }
+
+    #[test]
+    fn the_flag_falls_back_to_the_default_when_nothing_is_configured() {
+        let vars = [("DOCKER_SECRETS_ENABLED", "yes")];
+        let read = source(&vars);
+
+        assert_eq!(
+            secret_from_env_or_file_with(SECRET_NAME, "the-default", &read),
             "the-default"
         );
-        assert!(required_secret(SECRET_NAME).is_err());
+        assert!(required_secret_from(SECRET_NAME, &read).is_err());
     }
 }
 
