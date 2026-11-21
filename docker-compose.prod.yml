@@ -1,0 +1,64 @@
+# Production overlay: docker compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# The header of the base file documents this path, and the file itself was
+# missing: an operator improvising ran `docker compose up`, which auto-loads
+# the DEV override and publishes the database, Redis, Prometheus and Grafana
+# on every interface. This overlay is the intended production posture:
+#
+# 1. Only nginx publishes a port (80/443); every other service is reachable
+#    on the compose network only.
+# 2. No `env_file: .env`: production reads its credentials from /run/secrets
+#    (DOCKER_SECRETS_ENABLED=1), so a stale .env cannot override a rotated
+#    secret file.
+# 3. The dev-tools profile services (mailcatcher, portainer) stay off.
+#
+# Compose merges the lists per service, so each `ports:` here replaces the
+# base list for that service rather than appending to it.
+
+services:
+  postgres:
+    ports: []
+    env_file: []
+
+  redis:
+    ports: []
+    env_file: []
+
+  backend:
+    ports: []
+    env_file: []
+    environment:
+      DOCKER_SECRETS_ENABLED: "1"
+      ENVIRONMENT: production
+
+  frontend:
+    ports: []
+    env_file: []
+    environment:
+      NODE_ENV: production
+
+  nginx:
+    ports:
+      # The only published service: the TLS terminator and the single ingress.
+      - "80:80"
+      - "443:443"
+    env_file: []
+
+  meilisearch:
+    ports: []
+    env_file: []
+
+  prometheus:
+    ports: []
+    env_file: []
+
+  grafana:
+    ports: []
+    env_file: []
+
+  metrics-proxy:
+    ports: []
+    env_file: []
+
+  migrate:
+    env_file: []
