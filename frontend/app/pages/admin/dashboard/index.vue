@@ -60,7 +60,7 @@
         </div>
         <BarChart
           :data="auditActionCounts"
-          :categories="barCategories"
+          :categories="auditCountCategories"
           :y-axis="['count']"
           x-axis="action"
           :height="260"
@@ -75,9 +75,10 @@
       </div>
       <BarChart
         :data="auditByDay"
-        :categories="auditActivityCategories"
+        :categories="auditCountCategories"
         :y-axis="['count']"
         x-axis="date"
+        :x-formatter="formatChartDate"
         :height="260"
         empty-label="—"
       />
@@ -91,6 +92,7 @@
         :data="auditCumulative"
         :categories="auditCumulativeCategories"
         x-axis="date"
+        :x-formatter="formatChartDate"
         :height="260"
         empty-label="—"
       />
@@ -162,13 +164,12 @@
 </template>
 
 <script setup lang="ts">
-
 // Unique component name: NuxtPage collects keepalive page names globally, so
 // two pages sharing the inferred filename name break KeepAlive routing.
 defineOptions({ name: 'AdminDashboardPage' })
 
-import { formatDateTime } from '~/utils/admin-ui'
-import { extractPaginationMeta, normalizeResourceResponse, toAuditDashboardPayload } from '~/utils/admin-resources'
+import { formatDateTime } from '~/utils/format-date'
+import { useAdminDashboard } from '~/composables/useAdminDashboard'
 
 const { t } = useI18n()
 const localePath = useLocalePath()
@@ -179,136 +180,18 @@ definePageMeta({
 
 const breadcrumbItems = computed(() => [{ label: t('admin.common.dashboard') }])
 
-const usersFetch = await useApiFetch<any>('/admin/users', { key: 'admin-dashboard-users', server: true, default: () => [] })
-const rolesFetch = await useApiFetch<any>('/admin/roles', { key: 'admin-dashboard-roles', server: true, default: () => [] })
-const auditLogsFetch = await useApiFetch<any>('/admin/audit-logs', { key: 'admin-dashboard-audit-logs', server: true, default: () => [], query: { per_page: 100 }, transform: toAuditDashboardPayload })
-
-const users = computed<any[]>(() => normalizeResourceResponse(usersFetch.data.value))
-const roles = computed<any[]>(() => normalizeResourceResponse(rolesFetch.data.value))
-const auditLogs = computed<any[]>(() => normalizeResourceResponse(auditLogsFetch.data.value))
-
-const pendingAny = computed(() =>
-  usersFetch.pending.value
-  || rolesFetch.pending.value
-  || auditLogsFetch.pending.value,
-)
-
-function parseDate(value?: string): number {
-  if (!value) return 0
-  const parsed = new Date(value).getTime()
-  return Number.isNaN(parsed) ? 0 : parsed
-}
-
-const stats = computed(() => {
-  // The totals come from the pagination metadata of each endpoint, not from
-  // the loaded page: a page holds at most per_page rows.
-  const totalUsers = extractPaginationMeta(usersFetch.data.value).total
-  const totalRoles = extractPaginationMeta(rolesFetch.data.value).total
-  const totalAuditLogs = extractPaginationMeta(auditLogsFetch.data.value).total
-
-  return {
-    totalUsers,
-    totalRoles,
-    totalAuditLogs,
-  }
-})
-
-const auditActionCounts = computed(() => {
-  const counts = new Map<string, number>()
-
-  for (const item of auditLogs.value) {
-    const action = String(item?.action || 'unknown')
-    counts.set(action, (counts.get(action) ?? 0) + 1)
-  }
-
-  return [...counts.entries()]
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, 6)
-    .map(([action, count]) => ({ action, count }))
-})
-
-const auditByDay = computed(() => {
-  const counts = new Map<string, number>()
-
-  for (const item of auditLogs.value) {
-    const rawDate = item?.created_at
-    if (!rawDate) continue
-
-    const date = new Date(rawDate)
-    if (Number.isNaN(date.getTime())) continue
-
-    const key = date.toISOString().slice(0, 10)
-    counts.set(key, (counts.get(key) ?? 0) + 1)
-  }
-
-  return [...counts.entries()]
-    .sort((left, right) => left[0].localeCompare(right[0]))
-    .slice(-14)
-    .map(([date, count]) => ({ date, count }))
-})
-
-const auditCumulative = computed(() => {
-  let running = 0
-  return auditByDay.value.map((item) => {
-    running += item.count
-    return { date: item.date, cumulative: running }
-  })
-})
-
-const auditCumulativeCategories = computed(() => ({
-  cumulative: { name: t('admin.dashboard.totalAuditLogs') },
-}))
-
-const resourceDistribution = computed(() => ([
-  { resource: t('admin.dashboard.totalUsers'), count: stats.value.totalUsers },
-  { resource: t('admin.dashboard.totalRoles'), count: stats.value.totalRoles },
-  { resource: t('admin.dashboard.totalAuditLogs'), count: stats.value.totalAuditLogs },
-]))
-
-const resourceCategories = computed(() => ({
-  count: { name: t('admin.common.total') },
-}))
-
-const barCategories = computed(() => ({
-  count: { name: t('admin.dashboard.auditLogCount') },
-}))
-
-const auditActivityCategories = computed(() => ({
-  count: { name: t('admin.dashboard.auditLogCount') },
-}))
-
-const recentActivity = computed(() => {
-  const userActivity = users.value.slice(0, 3).map((item) => ({
-    key: `user-${item.id}`,
-    date: item.updated_at || item.created_at,
-    title: t('admin.dashboard.activityUser'),
-    description: `${item.first_name || ''} ${item.last_name || ''}`.trim() || item.email || item.id,
-  }))
-
-  const roleActivity = roles.value.slice(0, 3).map((item) => ({
-    key: `role-${item.id}`,
-    date: item.updated_at || item.created_at,
-    title: t('admin.dashboard.activityRole'),
-    description: item.name || item.id,
-  }))
-
-  const auditActivity = auditLogs.value.slice(0, 3).map((item) => ({
-    key: `audit-${item.id}`,
-    date: item.created_at,
-    title: t('admin.dashboard.activityAudit'),
-    description: `${item.action} - ${item.resource_type || ''}`.trim(),
-  }))
-
-  return [...userActivity, ...roleActivity, ...auditActivity]
-    .sort((left, right) => parseDate(right.date) - parseDate(left.date))
-    .slice(0, 8)
-})
-
-async function refreshDashboard() {
-  await Promise.all([
-    usersFetch.refresh(),
-    rolesFetch.refresh(),
-    auditLogsFetch.refresh(),
-  ])
-}
+const {
+  pendingAny,
+  stats,
+  auditActionCounts,
+  auditByDay,
+  auditCumulative,
+  auditCumulativeCategories,
+  resourceDistribution,
+  resourceCategories,
+  auditCountCategories,
+  recentActivity,
+  formatChartDate,
+  refreshDashboard,
+} = await useAdminDashboard()
 </script>
