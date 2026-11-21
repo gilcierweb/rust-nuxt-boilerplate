@@ -83,7 +83,8 @@
         "selectAll": "Select all records on this page",
         "selectRow": "Select record",
         "deleteSelected": "Delete selected"
-      }
+      },
+      "id": "ID"
     },
     "roles": {
       "title": "Roles",
@@ -261,6 +262,13 @@
       "completedPayments": "Completed Payments",
       "visibleToCustomer": "Visible to Customer",
       "noRecentActivity": "No recent activity."
+    },
+    "footer": {
+      "workspaceDescription": "admin workspace for operations and telemetry oversight.",
+      "apiDocs": "API Docs",
+      "contact": "Contact",
+      "privacy": "Privacy",
+      "terms": "Terms"
     }
   }
 }

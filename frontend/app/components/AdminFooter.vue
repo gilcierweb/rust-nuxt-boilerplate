@@ -4,14 +4,14 @@
       <p class="text-base-content text-center">
         &copy;{{ currentYear }}
         <span class="text-primary">{{ appName }}</span>
-        , admin workspace for operations and telemetry oversight.
+        , {{ $t('admin.footer.workspaceDescription') }}
       </p>
 
       <div class="justify-enter flex items-center gap-4 max-sm:flex-col">
-        <a href="/swagger-ui/" class="link link-primary link-animated font-normal" target="_blank">API Docs</a>
-        <NuxtLink :to="localePath('/contact')" class="link link-primary link-animated font-normal">Contact</NuxtLink>
-        <NuxtLink :to="localePath('/privacy')" class="link link-primary link-animated font-normal">Privacy</NuxtLink>
-        <NuxtLink :to="localePath('/terms')" class="link link-primary link-animated font-normal">Terms</NuxtLink>
+        <a href="/swagger-ui/" class="link link-primary link-animated font-normal" target="_blank">{{ $t('admin.footer.apiDocs') }}</a>
+        <NuxtLink :to="localePath('/contact')" class="link link-primary link-animated font-normal">{{ $t('admin.footer.contact') }}</NuxtLink>
+        <NuxtLink :to="localePath('/privacy')" class="link link-primary link-animated font-normal">{{ $t('admin.footer.privacy') }}</NuxtLink>
+        <NuxtLink :to="localePath('/terms')" class="link link-primary link-animated font-normal">{{ $t('admin.footer.terms') }}</NuxtLink>
       </div>
     </div>
   </footer>

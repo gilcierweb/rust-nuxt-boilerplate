@@ -16,22 +16,22 @@
                     <a
                         class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-95 transition-transform px-3 py-2 rounded"
                         href="#"
-                        >Hardware</a
+                        >{{ $t('landing.navbar.hardware') }}</a
                     >
                     <a
                         class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-95 transition-transform px-3 py-2 rounded"
                         href="#"
-                        >API</a
+                        >{{ $t('landing.navbar.api') }}</a
                     >
                     <a
                         class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-95 transition-transform px-3 py-2 rounded"
                         href="#"
-                        >Mentorship</a
+                        >{{ $t('landing.navbar.mentorship') }}</a
                     >
                     <a
                         class="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-800/50 active:scale-95 transition-transform px-3 py-2 rounded"
                         href="#"
-                        >Dashboard</a
+                        >{{ $t('landing.navbar.dashboard') }}</a
                     >
                 </nav>
                 <button

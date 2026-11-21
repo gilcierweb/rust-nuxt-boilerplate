@@ -47,7 +47,7 @@
     <div v-else class="rounded-box border border-base-content/10 bg-base-100 p-6 shadow-md shadow-base-content/5">
       <div class="grid gap-6 md:grid-cols-2">
         <div>
-          <p class="text-sm font-semibold text-base-content/70">ID</p>
+          <p class="text-sm font-semibold text-base-content/70">{{ $t('admin.common.id') }}</p>
           <p class="mt-1 break-all text-base-content">{{ item.id }}</p>
         </div>
         <div>

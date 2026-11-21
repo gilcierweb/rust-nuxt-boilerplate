@@ -204,7 +204,12 @@
       "contact": "Contato",
       "login": "Entrar",
       "getStarted": "Começar",
-      "brand": "RustNuxt"
+      "brand": "RustNuxt",
+      "hardware": "Hardware",
+      "api": "API",
+      "mentorship": "Mentoria",
+      "dashboard": "Painel",
+      "portalAccess": "Acesso ao portal"
     },
     "auto": {
       "index": {

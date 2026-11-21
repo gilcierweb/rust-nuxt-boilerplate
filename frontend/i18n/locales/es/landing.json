@@ -204,7 +204,12 @@
       "contact": "Contacto",
       "login": "Iniciar sesión",
       "getStarted": "Comenzar",
-      "brand": "RustNuxt"
+      "brand": "RustNuxt",
+      "hardware": "Hardware",
+      "api": "API",
+      "mentorship": "Mentoría",
+      "dashboard": "Panel",
+      "portalAccess": "Acceso al portal"
     },
     "auto": {
       "index": {

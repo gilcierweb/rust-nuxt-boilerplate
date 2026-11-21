@@ -83,7 +83,8 @@
         "selectAll": "Seleccionar todos los registros de esta página",
         "selectRow": "Seleccionar registro",
         "deleteSelected": "Eliminar seleccionados"
-      }
+      },
+      "id": "ID"
     },
     "roles": {
       "title": "Roles",
@@ -216,6 +217,13 @@
       "chartAuditActivity": "Actividad de auditoría en el tiempo",
       "chartAuditActivityCumulative": "Volumen acumulado de auditoría en el tiempo",
       "auditLogCount": "Logs de auditoría"
+    },
+    "footer": {
+      "workspaceDescription": "espacio de trabajo de administración para operaciones y supervisión de telemetría.",
+      "apiDocs": "Documentación API",
+      "contact": "Contacto",
+      "privacy": "Privacidad",
+      "terms": "Términos"
     }
   }
 }
