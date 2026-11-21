@@ -5,6 +5,7 @@ use diesel::QueryResult;
 use uuid::Uuid;
 
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
+use crate::repositories::refresh_tokens_repository::RotationOutcome;
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -26,14 +27,18 @@ pub trait IRefreshTokenRepository: Send + Sync {
         hash_key: &str,
     ) -> QueryResult<Option<RefreshToken>>;
 
-    /// Atomically revoke an existing token and create a new one in a single transaction.
-    /// Takes the old token plaintext, expiry seconds, and hash salt.
-    /// Returns the new RefreshToken (with hash) and the new plain token for the cookie.
-    /// Returns None if the old token was not found, already revoked, or expired.
+    /// Atomically revoke an existing token and create a new one in a single
+    /// transaction. Takes the old token plaintext, expiry seconds, and hash salt.
+    ///
+    /// The outcome distinguishes the cases the caller must treat differently:
+    /// `Rotated` carries the new row and its plaintext, `ReuseDetected` means
+    /// the presented token had already been revoked inside the grace window
+    /// (the whole family is now revoked and the caller must invalidate the
+    /// user's access tokens), and `NotFound` means nothing matched.
     async fn rotate_token(
         &self,
         old_token_plaintext: &str,
         expires_in_seconds: i64,
         salt: &str,
-    ) -> QueryResult<Option<(RefreshToken, String)>>;
+    ) -> QueryResult<RotationOutcome>;
 }

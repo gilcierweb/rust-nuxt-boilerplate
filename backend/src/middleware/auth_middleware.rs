@@ -14,9 +14,7 @@ use crate::authz::grants::RoleGrant;
 use crate::middleware::auth::{
     ACCESS_TOKEN_USE, Claims, JwtVerifyOutcome, verify_token_with_secrets,
 };
-use crate::repositories::access_token_blacklist::{
-    AccessTokenBlacklist, is_token_revoked_by_epoch,
-};
+use crate::repositories::access_token_blacklist::AccessTokenBlacklist;
 use crate::repositories::container::AppContainer;
 
 #[derive(Clone)]
@@ -150,38 +148,17 @@ where
                     t!("middleware.missing_header").into_owned(),
                 )),
                 Some(token) => {
-                    if !config.skip_blacklist_check
-                        && let Some(blacklist) = &config.token_blacklist
-                    {
-                        let token_hash =
-                            crate::repositories::access_token_blacklist::hash_token_for_blacklist(
-                                &token,
-                            );
-                        match blacklist.is_blacklisted(&token_hash).await {
-                            Ok(true) => {
-                                return Err(actix_web::error::InternalError::from_response(
-                                    "token_revoked",
-                                    token_revoked_response(),
-                                )
-                                .into());
-                            },
-                            Ok(false) => {},
-                            Err(error) => {
-                                // Fail CLOSED: if revocation status cannot be
-                                // checked, the token must not be accepted.
-                                tracing::error!(
-                                    event = "auth.blacklist_unavailable",
-                                    error = %error,
-                                    "Token revocation status unavailable (Redis); failing closed"
-                                );
-                                return Err(actix_web::error::InternalError::from_response(
-                                    "auth_status_unavailable",
-                                    auth_status_unavailable_response(),
-                                )
-                                .into());
-                            },
-                        }
-                    }
+                    // The blacklist half of the shared revocation rule is
+                    // collected before the signature is verified; the epoch
+                    // half needs the claims, so it is collected right after
+                    // verification. `decide_revocation` decides from both,
+                    // exactly like the WebSocket handshake now does.
+                    let blacklist_answer = blacklist_answer_for(
+                        config.skip_blacklist_check,
+                        config.token_blacklist.as_ref(),
+                        &token,
+                    )
+                    .await;
 
                     // Optimized JWT secrets lookup:
                     // 1. Single `app_data` lookup for `AppState` (the common case)
@@ -236,47 +213,59 @@ where
                                 }
                             }
 
-                            // Reject tokens issued before the user's last
-                            // credential change (password/2FA). The epoch
-                            // marker lives in Redis with a TTL matching the
-                            // access-token lifetime, so it disappears once
-                            // every pre-change token has expired naturally.
-                            if !config.skip_blacklist_check
-                                && let Some(blacklist) = &config.token_blacklist
-                            {
-                                match blacklist.credential_epoch(&result.claims.sub).await {
-                                    Ok(epoch)
-                                        if is_token_revoked_by_epoch(result.claims.iat, epoch) =>
+                            // The one revocation rule, decided from both
+                            // answers together.
+                            let epoch_answer = match (
+                                &config.token_blacklist,
+                                config.skip_blacklist_check,
+                            ) {
+                                (Some(blacklist), false) => {
+                                    blacklist.credential_epoch(&result.claims.sub).await
+                                },
+                                _ => Ok(None),
+                            };
+                            let revocation_answers =
+                                crate::middleware::token_revocation::RevocationAnswers {
+                                    blacklisted: blacklist_answer,
+                                    epoch: epoch_answer,
+                                };
+                            match crate::middleware::token_revocation::decide_revocation(
+                                &revocation_answers,
+                                result.claims.iat,
+                            ) {
+                                crate::middleware::token_revocation::RevocationOutcome::Revoked => {
+                                    tracing::info!(
+                                        event = "auth.token_revoked",
+                                        user_id = %result.claims.sub,
+                                        "Token rejected by the revocation rule"
+                                    );
+                                    return Err(
+                                        actix_web::error::InternalError::from_response(
+                                            "token_revoked",
+                                            token_revoked_response(),
+                                        )
+                                        .into(),
+                                    );
+                                },
+                                crate::middleware::token_revocation::RevocationOutcome::Indeterminate => {
+                                    if let Some((event, error)) =
+                                        revocation_answers.indeterminacy_cause()
                                     {
-                                        tracing::info!(
-                                            event = "auth.token_revoked_by_epoch",
-                                            user_id = %result.claims.sub,
-                                            "Access token predates credential change; rejecting"
-                                        );
-                                        return Err(
-                                            actix_web::error::InternalError::from_response(
-                                                "token_revoked",
-                                                token_revoked_response(),
-                                            )
-                                            .into(),
-                                        );
-                                    },
-                                    Ok(_) => {},
-                                    Err(error) => {
                                         tracing::error!(
-                                            event = "auth.epoch_unavailable",
+                                            event,
                                             error = %error,
-                                            "Credential epoch unavailable (Redis); failing closed"
+                                            "Revocation status unavailable (Redis); failing closed"
                                         );
-                                        return Err(
-                                            actix_web::error::InternalError::from_response(
-                                                "auth_status_unavailable",
-                                                auth_status_unavailable_response(),
-                                            )
-                                            .into(),
-                                        );
-                                    },
-                                }
+                                    }
+                                    return Err(
+                                        actix_web::error::InternalError::from_response(
+                                            "auth_status_unavailable",
+                                            auth_status_unavailable_response(),
+                                        )
+                                        .into(),
+                                    );
+                                },
+                                crate::middleware::token_revocation::RevocationOutcome::Valid => {},
                             }
 
                             req.extensions_mut().insert(result.claims.clone());
@@ -359,6 +348,28 @@ async fn load_grants(req: &ServiceRequest, subject: &uuid::Uuid) -> Vec<RoleGran
 /// 401 response for tokens rejected by revocation checks (blacklist or
 /// credential epoch). The `TOKEN_REVOKED` code tells the frontend to skip
 /// its refresh-retry path — the refresh tokens are revoked alongside.
+/// The blacklist half of the shared revocation rule.
+///
+/// A context without the store, or one that skips the checks (test setups
+/// without Redis), answers "not blacklisted": the shared rule then treats
+/// the token as live, which is what the skip flag always meant.
+async fn blacklist_answer_for(
+    skip_blacklist_check: bool,
+    token_blacklist: Option<&std::sync::Arc<crate::repositories::access_token_blacklist::AccessTokenBlacklist>>,
+    token: &str,
+) -> Result<bool, crate::middleware::token_revocation::RevocationError> {
+    if skip_blacklist_check {
+        return Ok(false);
+    }
+
+    let Some(blacklist) = token_blacklist else {
+        return Ok(false);
+    };
+
+    let token_hash = crate::repositories::access_token_blacklist::hash_token_for_blacklist(token);
+    blacklist.is_blacklisted(&token_hash).await
+}
+
 fn token_revoked_response() -> actix_web::HttpResponse {
     actix_web::HttpResponse::Unauthorized().json(json!({
         "error": {

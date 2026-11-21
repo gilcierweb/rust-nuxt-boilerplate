@@ -59,15 +59,26 @@ impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
             .await
     }
 
+    /// Claim the token for consumption.
+    ///
+    /// The claim filters on `consumed_at IS NULL`, so the affected-row count
+    /// is the race verdict: one row means this request consumed the token,
+    /// zero means a concurrent verification did it first and the caller must
+    /// not issue a session. A bare update would consume an already-consumed
+    /// row again and report success to both requests.
     async fn mark_consumed(&self, id: &Uuid) -> QueryResult<usize> {
         let id = *id;
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    diesel::update(table::table.find(id))
-                        .set(table::consumed_at.eq(OffsetDateTime::now_utc()))
-                        .execute(conn)
-                        .await
+                    diesel::update(
+                        table::table
+                            .find(id)
+                            .filter(table::consumed_at.is_null()),
+                    )
+                    .set(table::consumed_at.eq(OffsetDateTime::now_utc()))
+                    .execute(conn)
+                    .await
                 })
             })
             .await

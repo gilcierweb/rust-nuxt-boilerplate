@@ -1,4 +1,4 @@
-use diesel::{ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
 use diesel_async::RunQueryDsl;
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
@@ -20,6 +20,47 @@ impl RefreshTokensRepository {
         Self {
             base: BaseRepo::new(pool),
         }
+    }
+}
+
+/// The rotation grace window.
+///
+/// A token revoked more than this ago belongs to a lineage that already
+/// rotated legitimately long before: presenting it now says nothing about a
+/// compromise and only the normal rejection applies. Inside the window the
+/// row was rotated recently, so the old plaintext coming back is either a
+/// client race between two tabs or a thief replaying a stolen cookie. The
+/// two are indistinguishable, and both cost the family everything.
+pub const ROTATION_GRACE_SECS: i64 = 3600;
+
+/// What a rotation request found.
+#[derive(Debug, Clone)]
+pub enum RotationOutcome {
+    /// The presented token rotated: the old row is revoked and a new one
+    /// created.
+    Rotated {
+        token: RefreshToken,
+        plaintext: String,
+    },
+    /// The presented token matches a row revoked inside the grace window:
+    /// every refresh token of the named user is already revoked by the
+    /// rotation itself, and the caller must also invalidate the user's
+    /// access tokens.
+    ReuseDetected {
+        user_id: Uuid,
+    },
+    /// No row matches the presented token: unknown or an expired lineage.
+    NotFound,
+}
+
+/// Whether the matched row is a token revoked inside the grace window, the
+/// situation that reads as a reuse.
+pub fn matched_token_is_reuse(matched: &RefreshToken, now: OffsetDateTime) -> bool {
+    match matched.revoked_at {
+        Some(revoked_instant) => {
+            (now - revoked_instant).whole_seconds() <= ROTATION_GRACE_SECS
+        },
+        None => false,
     }
 }
 
@@ -185,7 +226,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         old_token_plaintext: &str,
         expires_in_secs: i64,
         hash_salt: &str,
-    ) -> diesel::QueryResult<Option<(RefreshToken, String)>> {
+    ) -> diesel::QueryResult<RotationOutcome> {
         let plaintext = old_token_plaintext.to_string();
         let expires_secs = expires_in_secs;
         let salt = hash_salt.to_string();
@@ -194,13 +235,18 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         self.base
             .run_transaction(move |conn| {
                 Box::pin(async move {
-                    let now = OffsetDateTime::now_utc();
+                    use crate::db::schema::refresh_tokens::dsl::user_id;
 
-                    // Find the old valid token by verifying against stored hashes
-                    // Use FOR UPDATE to prevent race conditions during rotation
+                    let now = OffsetDateTime::now_utc();
+                    let grace_start = now - Duration::seconds(ROTATION_GRACE_SECS);
+
+                    // The candidates include the rows revoked inside the grace
+                    // window: a token presented again within the window is the
+                    // reuse signal, which lives precisely in a revoked row. Use
+                    // FOR UPDATE to prevent race conditions during rotation.
                     let candidates: Vec<RefreshToken> = refresh_tokens_table::table
-                        .filter(revoked_at.is_null())
                         .filter(expires_at.gt(now))
+                        .filter(revoked_at.is_null().or(revoked_at.gt(grace_start)))
                         .select(RefreshToken::as_select())
                         .for_update()
                         .load::<RefreshToken>(conn)
@@ -212,12 +258,22 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
 
                     let existing_token = match existing_token {
                         Some(t) => t,
-                        None => return Ok(None),
+                        None => return Ok(RotationOutcome::NotFound),
                     };
 
-                    // Verify token is still valid (not revoked by concurrent request)
-                    if existing_token.revoked_at.is_some() {
-                        return Ok(None);
+                    // A row revoked inside the grace window means the lineage
+                    // already rotated: the old plaintext coming back is a
+                    // replay, so the whole family dies here, atomically.
+                    if matched_token_is_reuse(&existing_token, now) {
+                        diesel::update(
+                            refresh_tokens_table::table.filter(user_id.eq(existing_token.user_id)),
+                        )
+                        .set(revoked_at.eq(Some(now)))
+                        .execute(conn)
+                        .await?;
+                        return Ok(RotationOutcome::ReuseDetected {
+                            user_id: existing_token.user_id,
+                        });
                     }
 
                     // Immediately revoke the old token
@@ -250,9 +306,74 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                             .get_result(conn)
                             .await?;
 
-                    Ok(Some((created_token, new_token_plain)))
+                    Ok(RotationOutcome::Rotated {
+                        token: created_token,
+                        plaintext: new_token_plain,
+                    })
                 })
             })
             .await
+    }
+}
+
+#[cfg(test)]
+mod rotation_outcome_tests {
+    use super::*;
+    use time::Duration;
+
+    fn stored_token(revoked_instant: Option<OffsetDateTime>) -> RefreshToken {
+        RefreshToken {
+            id: Uuid::new_v4(),
+            user_id: Uuid::new_v4(),
+            token_hash: "hmac:deadbeef".to_string(),
+            device_info: None,
+            ip_address: None,
+            expires_at: OffsetDateTime::now_utc() + Duration::days(30),
+            revoked_at: revoked_instant,
+            created_at: OffsetDateTime::now_utc(),
+            updated_at: OffsetDateTime::now_utc(),
+        }
+    }
+
+    #[test]
+    fn a_token_revoked_inside_the_grace_window_signals_a_reuse() {
+        let now = OffsetDateTime::now_utc();
+        let matched = stored_token(Some(now - Duration::seconds(60)));
+        assert!(matched_token_is_reuse(&matched, now));
+    }
+
+    #[test]
+    fn a_token_revoked_outside_the_grace_window_is_an_expired_lineage() {
+        let now = OffsetDateTime::now_utc();
+        let matched = stored_token(Some(
+            now - Duration::seconds(ROTATION_GRACE_SECS + 60),
+        ));
+        assert!(!matched_token_is_reuse(&matched, now));
+    }
+
+    #[test]
+    fn a_live_token_is_never_a_reuse() {
+        let now = OffsetDateTime::now_utc();
+        assert!(!matched_token_is_reuse(&stored_token(None), now));
+    }
+
+    #[test]
+    fn a_row_revoked_in_the_future_is_treated_as_inside_the_window() {
+        // A clock skew backwards must not reopen a replayed token.
+        let now = OffsetDateTime::now_utc();
+        let matched = stored_token(Some(now + Duration::seconds(30)));
+        assert!(matched_token_is_reuse(&matched, now));
+    }
+
+    #[test]
+    fn the_reuse_outcome_names_the_user_whose_family_must_be_revoked() {
+        let expected_user_id = Uuid::new_v4();
+        let outcome = RotationOutcome::ReuseDetected {
+            user_id: expected_user_id,
+        };
+        match outcome {
+            RotationOutcome::ReuseDetected { user_id } => assert_eq!(user_id, expected_user_id),
+            other => panic!("unexpected outcome: {other:?}"),
+        }
     }
 }

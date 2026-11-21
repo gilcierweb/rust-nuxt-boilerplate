@@ -23,6 +23,7 @@ use crate::models::profile::NewProfile;
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
 use crate::models::user::{NewUser, User};
 use crate::repositories::container::AppContainer;
+use crate::repositories::refresh_tokens_repository::RotationOutcome;
 use crate::repositories::traits::users_trait::IUserRepositoryTransaction;
 use crate::security::SecurityService;
 use crate::services::auth_service::{
@@ -633,7 +634,10 @@ pub async fn login(
     {
         Ok(Some(u)) => u,
         Ok(None) => {
-            let users_total = container.users.count().await.unwrap_or(-1).to_string();
+            // The fingerprint of the blind index is enough to correlate a
+            // retry across log lines. The total user count used to be logged
+            // here too: a row count on every unknown-address attempt is both an
+            // enumeration aid and a needless full-table count per failure.
             let key_version = container.config.current_encryption_key_version;
             let key_fingerprint = fingerprint_value(container.config.blind_index_key.as_bytes());
             tracing::warn!(
@@ -641,7 +645,6 @@ pub async fn login(
                 email_fingerprint = %fingerprint_value(&email_lookup.blind_index),
                 key_fingerprint = %key_fingerprint,
                 key_version = key_version,
-                users_total = %users_total,
                 ip = request_ip.map(|ip| ip.to_string()).as_deref().unwrap_or("unknown"),
                 user_agent = user_agent.as_deref().unwrap_or("unknown"),
                 "login failed: user not found"
@@ -718,6 +721,11 @@ pub async fn login(
             }
 
             if !backup_code_valid {
+                container
+                    .users
+                    .record_failed_login(&user.id, 10, &container.config.refresh_token_hash_salt)
+                    .await
+                    .map_err(AppError::Database)?;
                 tracing::warn!(
                     event = "auth.login.invalid_backup_code",
                     user_id = %user.id,
@@ -758,6 +766,15 @@ pub async fn login(
                         t!("auth.2fa.invalid_secret").into_owned(),
                     ))?;
                     if let Err(error) = verify_totp(secret, code) {
+                        // The second factor counts toward the lockout exactly
+                        // like the password: a throttled password with an
+                        // unthrottled OTP leaves the second factor
+                        // brute-forceable.
+                        container
+                            .users
+                            .record_failed_login(&user.id, 10, &container.config.refresh_token_hash_salt)
+                            .await
+                            .map_err(AppError::Database)?;
                         tracing::warn!(
                             event = "auth.login.invalid_otp",
                             user_id = %user.id,
@@ -979,13 +996,12 @@ pub async fn refresh(
     let mut rotated_result = None;
 
     // Try each refresh token cookie until we find one that can be rotated
-    // rotate_token atomically validates the token (exists, not revoked, not expired),
-    // revokes it, and creates a new token preserving device_info and ip_address
+    // rotate_token atomically validates the token (exists, not revoked, not
+    // expired), revokes it, and creates a new token preserving device_info and
+    // ip_address. A token revoked inside the grace window is a reuse: its
+    // family is already revoked by the rotation itself, and the access tokens
+    // of the user are invalidated here so the stolen session dies completely.
     for refresh_token in refresh_tokens {
-        // Try to atomically rotate the token using plaintext verification
-        // rotate_token verifies the plaintext token against stored Argon2id hashes,
-        // immediately revokes the old one, generates a new token, hashes it,
-        // stores it, and returns both the stored RefreshToken and new plain token
         match container
             .refresh_tokens
             .rotate_token(
@@ -995,11 +1011,38 @@ pub async fn refresh(
             )
             .await
         {
-            Ok(Some((rotated, new_plain))) => {
-                rotated_result = Some((rotated, new_plain));
+            Ok(RotationOutcome::Rotated { token, plaintext }) => {
+                rotated_result = Some((token, plaintext));
                 break;
             },
-            Ok(None) => continue, // Token was already revoked/expired or not found
+            Ok(RotationOutcome::NotFound) => continue,
+            Ok(RotationOutcome::ReuseDetected { user_id }) => {
+                tracing::warn!(
+                    event = "auth.refresh.token_reuse_detected",
+                    user_id = %user_id,
+                    ip = extract_client_ip(&req, &container.config.trusted_proxies)
+                        .map(|ip| ip.to_string())
+                        .unwrap_or_else(|| "unknown".to_string()),
+                    "Refresh token replayed after rotation; the session family was revoked"
+                );
+                // The access tokens minted for this user must not outlive the
+                // refresh family: the epoch marker rejects every token issued
+                // before now until it naturally expires.
+                container
+                    .access_token_blacklist
+                    .set_credential_epoch(&user_id, container.config.jwt_access_expiry_secs as u64)
+                    .await
+                    .map_err(|error| {
+                        tracing::error!(
+                            event = "auth.refresh.epoch_write_failed",
+                            user_id = %user_id,
+                            error = %error,
+                            "Failed to invalidate access tokens after reuse detection"
+                        );
+                        AppError::Internal("Failed to invalidate the session".to_string())
+                    })?;
+                return Err(AppError::Unauthorized("Invalid refresh token".to_string()));
+            },
             Err(e) => return Err(AppError::Database(e)),
         }
     }
@@ -1446,8 +1489,13 @@ pub async fn reset_password(
         ));
     }
 
-    // At this point, we have a valid user_id
-    let user_id = user_id.expect("valid reset should have user_id");
+    // At this point, we have a valid user_id: the branch above refused every
+    // invalid token, so the refusal repeats here instead of asserting.
+    let Some(user_id) = user_id else {
+        return Err(AppError::BadRequest(
+            t!("auth.reset.token_invalid").into_owned(),
+        ));
+    };
 
     validate_password_strength(&body.password, &locale)?;
     let hashed_password = hash_password(&body.password, container.config.as_ref())?;
@@ -1552,12 +1600,18 @@ pub async fn setup_2fa(
     let security = SecurityService::from_config(container.config.as_ref())?;
     let current_email = security.decrypt_user_email(&user_data)?;
 
+    // The secret is stored base32-encoded; a value an operator wrote by hand
+    // must fail the request, not abort the process.
+    let secret_bytes = secret
+        .to_bytes()
+        .map_err(|e| AppError::Internal(format!("Invalid TOTP secret: {}", e)))?;
+
     let totp = TOTP::new(
         TotpAlgorithm::SHA256,
         6,
         1,
         30,
-        secret.to_bytes().unwrap(),
+        secret_bytes,
         Some(container.config.totp_issuer.clone()),
         current_email,
     )
@@ -2347,12 +2401,25 @@ pub async fn verify_magic_link(
         ));
     }
 
-    // Mark token as consumed
-    container
+    // Mark token as consumed. The claim filters on `consumed_at IS NULL`, so the
+    // affected-row count is the race verdict: zero rows means a concurrent
+    // verification issued the session first, and this request must stop here
+    // instead of minting a second one.
+    let claimed_rows = container
         .magic_link_tokens
         .mark_consumed(&magic_token.id)
         .await
         .map_err(AppError::Database)?;
+    if claimed_rows == 0 {
+        tracing::warn!(
+            event = "auth.magic_link.verify.consumed",
+            user_id = %magic_token.user_id,
+            "magic link verification failed: token consumed concurrently"
+        );
+        return Err(AppError::Unauthorized(
+            t!("auth.magic_link.already_used").into_owned(),
+        ));
+    }
 
     // Fetch user
     let user = container
@@ -2512,7 +2579,9 @@ mod tests {
     use crate::models::user::User;
     use crate::repositories::mocks::{mock_app_config, mock_container};
     use crate::repositories::profiles_repository::MockIProfileRepository;
-    use crate::repositories::refresh_tokens_repository::MockIRefreshTokenRepository;
+    use crate::models::magic_link_token::MagicLinkToken;
+    use crate::repositories::magic_link_token_repository::MockIMagicLinkTokenRepository;
+    use crate::repositories::refresh_tokens_repository::{MockIRefreshTokenRepository, RotationOutcome};
     use crate::repositories::traits::users_trait::RoleGrantRow;
     use crate::repositories::users_repository::MockIUserRepository;
     use crate::security::SecurityService;
@@ -2631,7 +2700,8 @@ mod tests {
             .times(1)
             .returning(|_| Ok(None));
 
-        mock_users.expect_count().times(1).returning(|| Ok(0));
+        // The unknown-address path performs no other repository call: it used
+        // to count the whole users table to log a total.
 
         let mut container = mock_container();
         container.users = Arc::new(mock_users);
@@ -2694,6 +2764,157 @@ mod tests {
 
         // Ensure invalid password gets 401
         assert_eq!(resp.status(), actix_web::http::StatusCode::UNAUTHORIZED);
+    }
+
+    #[actix_web::test]
+    async fn test_login_invalid_otp_records_a_failed_login() {
+        // The second factor is the only throttle-free half of the credential
+        // check: the password path records every failure, so the OTP path must
+        // count too, or ten wrong codes never lock the account.
+        let mut user = test_user("otp-user@example.com");
+        user.otp_secret = Some("JBSWY3DPEHPK3PXP".to_string());
+        user.otp_enabled_at = Some(OffsetDateTime::now_utc());
+
+        let mut mock_users = MockIUserRepository::new();
+        mock_users
+            .expect_find_by_email()
+            .times(1)
+            .returning(move |_| Ok(Some(user.clone())));
+        mock_users
+            .expect_record_failed_login()
+            .times(1)
+            .returning(|_, _, _| Ok(1));
+
+        let mut container = mock_container();
+        container.users = Arc::new(mock_users);
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .service(login),
+        )
+        .await;
+
+        let req = test::TestRequest::post()
+            .uri("/login")
+            .set_json(json!({
+                "email": "otp-user@example.com",
+                "password": "CorrectPassword1",
+                "otp_code": "000000"
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(
+            resp.status(),
+            actix_web::http::StatusCode::UNAUTHORIZED,
+            "an invalid OTP is refused"
+        );
+    }
+
+    #[actix_web::test]
+    async fn test_login_invalid_backup_code_records_a_failed_login() {
+        let mut user = test_user("backup-user@example.com");
+        user.otp_secret = Some("JBSWY3DPEHPK3PXP".to_string());
+        user.otp_enabled_at = Some(OffsetDateTime::now_utc());
+        user.otp_backup_codes = Some(vec![Some(
+            hash_password("12345678", &mock_app_config()).unwrap(),
+        )]);
+
+        let mut mock_users = MockIUserRepository::new();
+        mock_users
+            .expect_find_by_email()
+            .times(1)
+            .returning(move |_| Ok(Some(user.clone())));
+        mock_users
+            .expect_record_failed_login()
+            .times(1)
+            .returning(|_, _, _| Ok(1));
+
+        let mut container = mock_container();
+        container.users = Arc::new(mock_users);
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .service(login),
+        )
+        .await;
+
+        let req = test::TestRequest::post()
+            .uri("/login")
+            .set_json(json!({
+                "email": "backup-user@example.com",
+                "password": "CorrectPassword1",
+                "backup_code": "87654321"
+            }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(
+            resp.status(),
+            actix_web::http::StatusCode::UNAUTHORIZED,
+            "an invalid backup code is refused"
+        );
+    }
+
+    #[actix_web::test]
+    async fn test_verify_magic_link_rejects_a_token_consumed_concurrently() {
+        // The single-use guarantee is atomic, not advisory: two concurrent
+        // verifications of the same token both read `consumed_at: null` and
+        // both consume. The write therefore claims the row
+        // (`WHERE consumed_at IS NULL`), and a claim that returns zero rows
+        // means the session was issued by the other request already.
+        let user = test_user("magic-link@example.com");
+        let user_id = user.id;
+        let now = OffsetDateTime::now_utc();
+
+        let mut mock_magic_links = MockIMagicLinkTokenRepository::new();
+        mock_magic_links
+            .expect_find_by_digest()
+            .times(1)
+            .returning(move |_| {
+                Ok(Some(MagicLinkToken {
+                    id: Uuid::new_v4(),
+                    user_id,
+                    token_digest: "digest".to_string(),
+                    request_ip: None,
+                    user_agent: None,
+                    expires_at: OffsetDateTime::now_utc() + time::Duration::hours(1),
+                    consumed_at: None,
+                    created_at: OffsetDateTime::now_utc(),
+                }))
+            });
+        // The concurrent request claimed the row first: zero rows affected.
+        mock_magic_links
+            .expect_mark_consumed()
+            .times(1)
+            .returning(|_| Ok(0));
+
+        let mut container = mock_container();
+        container.magic_link_tokens = Arc::new(mock_magic_links);
+        // No user, profile or token repository is expected to be touched: a
+        // rejected replay must not reach the session machinery.
+
+        let app = test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .service(verify_magic_link),
+        )
+        .await;
+
+        let req = test::TestRequest::post()
+            .uri("/magic-link/verify")
+            .set_json(json!({ "token": "a".repeat(48) }))
+            .to_request();
+
+        let resp = test::call_service(&app, req).await;
+        assert_eq!(
+            resp.status(),
+            actix_web::http::StatusCode::UNAUTHORIZED,
+            "a concurrently consumed token must be refused"
+        );
+        let _ = now;
     }
 
     #[actix_web::test]
@@ -3037,7 +3258,10 @@ mod tests {
             .expect_rotate_token()
             .times(1)
             .returning(move |_, _, _| {
-                Ok(Some((rotated_token.clone(), "new-plain-token".to_string())))
+                Ok(RotationOutcome::Rotated {
+                    token: rotated_token.clone(),
+                    plaintext: "new-plain-token".to_string(),
+                })
             });
 
         let mut container = mock_container();
@@ -3425,14 +3649,14 @@ mod login_timing_tests {
         let wrong_password = login_elapsed(container, "known@example.com", "NotThePassword1").await;
 
         // An unregistered address: the lookup finds nothing and the dummy
-        // Argon2 verification is what the timing is measured against.
+        // Argon2 verification is what the timing is measured against. Neither
+        // path counts the users table anymore, so the comparison stays honest.
         let mut container = mock_container();
         let mut mock_users = crate::repositories::users_repository::MockIUserRepository::new();
         mock_users
             .expect_find_by_email()
             .times(1)
             .returning(|_| Ok(None));
-        mock_users.expect_count().times(1).returning(|| Ok(0));
         container.users = Arc::new(mock_users);
 
         let unknown_account =
