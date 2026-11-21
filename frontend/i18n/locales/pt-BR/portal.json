@@ -27,6 +27,11 @@
     },
     "sidebar": {
       "clientArea": "Área do cliente"
+    },
+    "support": {
+      "quickContact": "Para atendimento rápido, entre em contato via WhatsApp.",
+      "openWhatsApp": "Abrir WhatsApp",
+      "defaultWhatsAppText": "Olá, preciso de suporte no portal do cliente."
     }
   }
 }

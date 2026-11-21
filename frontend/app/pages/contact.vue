@@ -7,13 +7,13 @@
         <div class="max-w-[1440px] mx-auto px-6 text-center relative z-10">
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
             <span class="icon-[tabler--mail] text-sm"></span>
-            Get in Touch
+            {{ $t('landing.auto.contact.1') }}
           </div>
           <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight max-w-4xl mx-auto">
-            We'd Love to Hear from You
+            {{ $t('landing.auto.contact.2') }}
           </h1>
           <p class="font-body-lg text-body-lg text-on-surface-variant mb-10 max-w-2xl mx-auto">
-            Have questions about the boilerplate? Need enterprise support? Want to contribute? Our team is here to help.
+            {{ $t('landing.auto.contact.3') }}
           </p>
         </div>
       </section>
@@ -29,12 +29,12 @@
                 <div class="w-12 h-12 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                   <span class="icon-[tabler--mail] text-2xl"></span>
                 </div>
-                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Email</h3>
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.contact.4') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
-                  Response within 24 hours
+                  {{ $t('landing.auto.contact.5') }}
                 </p>
                 <a href="mailto:hello@boilerplate.dev" class="text-primary font-medium hover:underline">
-                  hello@boilerplate.dev
+                  {{ $t('landing.auto.contact.6') }}
                 </a>
               </div>
 
@@ -43,13 +43,13 @@
                 <div class="w-12 h-12 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
                   <span class="icon-[tabler--code] text-2xl"></span>
                 </div>
-                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">GitHub</h3>
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.contact.7') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
-                  Issues, discussions, contributions
+                  {{ $t('landing.auto.contact.8') }}
                 </p>
                 <a href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank" class="text-secondary font-medium hover:underline flex items-center gap-1">
                   <span class="icon-[tabler--external-link] text-sm"></span>
-                  View Repository
+                  {{ $t('landing.auto.contact.9') }}
                 </a>
               </div>
 
@@ -58,13 +58,13 @@
                 <div class="w-12 h-12 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
                   <span class="icon-[tabler--message] text-2xl"></span>
                 </div>
-                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Discord Community</h3>
+                <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.contact.10') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant mb-3">
-                  Real-time help and discussion
+                  {{ $t('landing.auto.contact.11') }}
                 </p>
                 <a href="https://discord.gg/your-invite" target="_blank" class="text-tertiary font-medium hover:underline flex items-center gap-1">
                   <span class="icon-[tabler--external-link] text-sm"></span>
-                  Join Server
+                  {{ $t('landing.auto.contact.12') }}
                 </a>
               </div>
             </div>
@@ -73,7 +73,7 @@
             <div class="lg:col-span-2">
               <div class="bg-surface-container-lowest p-8 rounded-2xl border border-outline-variant/30">
                 <h2 class="font-headline-lg text-headline-lg text-on-surface mb-6">
-                  Send a Message
+                  {{ $t('landing.auto.contact.13') }}
                 </h2>
                 
                 <form class="space-y-6" @submit.prevent="handleSubmit">
@@ -81,7 +81,7 @@
                     <!-- Name -->
                     <div class="form-control">
                       <label class="label-text font-semibold" for="contactName">
-                        Full Name <span class="text-error">*</span>
+                        {{ $t('landing.auto.contact.14') }} <span class="text-error">*</span>
                       </label>
                       <input
                         id="contactName"
@@ -96,7 +96,7 @@
                     <!-- Email -->
                     <div class="form-control">
                       <label class="label-text font-semibold" for="contactEmail">
-                        Email <span class="text-error">*</span>
+                        {{ $t('landing.auto.contact.15') }} <span class="text-error">*</span>
                       </label>
                       <input
                         id="contactEmail"
@@ -112,7 +112,7 @@
                   <div class="grid md:grid-cols-2 gap-6">
                     <!-- Company/Org (optional) -->
                     <div class="form-control">
-                      <label class="label-text font-semibold" for="contactCompany">Company / Organization</label>
+                      <label class="label-text font-semibold" for="contactCompany">{{ $t('landing.auto.contact.16') }}</label>
                       <input
                         id="contactCompany"
                         v-model="form.company"
@@ -125,16 +125,16 @@
                     <!-- Subject -->
                     <div class="form-control">
                       <label class="label-text font-semibold" for="contactSubject">
-                        Subject <span class="text-error">*</span>
+                        {{ $t('landing.auto.contact.17') }} <span class="text-error">*</span>
                       </label>
                       <select id="contactSubject" v-model="form.subject" class="select w-full" required>
-                        <option value="">Select a topic...</option>
-                        <option value="general">General Inquiry</option>
-                        <option value="support">Technical Support</option>
-                        <option value="enterprise">Enterprise / Custom Features</option>
-                        <option value="security">Security Issue</option>
-                        <option value="contribution">Contribution / Partnership</option>
-                        <option value="other">Other</option>
+                        <option value="">{{ $t('landing.auto.contact.18') }}</option>
+                        <option value="general">{{ $t('landing.auto.contact.19') }}</option>
+                        <option value="support">{{ $t('landing.auto.contact.20') }}</option>
+                        <option value="enterprise">{{ $t('landing.auto.contact.21') }}</option>
+                        <option value="security">{{ $t('landing.auto.contact.22') }}</option>
+                        <option value="contribution">{{ $t('landing.auto.contact.23') }}</option>
+                        <option value="other">{{ $t('landing.auto.contact.24') }}</option>
                       </select>
                     </div>
                   </div>
@@ -142,7 +142,7 @@
                   <!-- Message -->
                   <div class="form-control">
                     <label class="label-text font-semibold" for="contactMessage">
-                      Message <span class="text-error">*</span>
+                      {{ $t('landing.auto.contact.25') }} <span class="text-error">*</span>
                     </label>
                     <textarea
                       id="contactMessage"
@@ -158,7 +158,7 @@
                     <label class="flex items-start gap-3 cursor-pointer">
                       <input v-model="form.privacy" type="checkbox" class="checkbox checkbox-primary" required />
                       <span class="label-text text-on-surface-variant">
-                        I agree to the <NuxtLink to="/privacy" class="text-primary hover:underline">Privacy Policy</NuxtLink> and understand my data will be used to respond to this inquiry.
+                        {{ $t('landing.auto.contact.26') }} <NuxtLink to="/privacy" class="text-primary hover:underline">{{ $t('landing.auto.contact.27') }}</NuxtLink> {{ $t('landing.auto.contact.28') }}
                       </span>
                     </label>
                   </div>
@@ -177,12 +177,12 @@
                     
                     <span v-if="success" class="text-success flex items-center gap-2">
                       <span class="icon-[tabler--circle-check]"></span>
-                      Message sent successfully! We'll get back to you soon.
+                      {{ $t('landing.auto.contact.29') }}
                     </span>
                     
                     <span v-if="error" class="text-error flex items-center gap-2">
                       <span class="icon-[tabler--alert-circle]"></span>
-                      Failed to send. Please try again or email us directly.
+                      {{ $t('landing.auto.contact.30') }}
                     </span>
                   </div>
                 </form>
@@ -196,9 +196,9 @@
       <section class="py-24 bg-surface-container-low border-y border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Frequently Asked Questions</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.contact.31') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Quick answers to common questions about the boilerplate.
+              {{ $t('landing.auto.contact.32') }}
             </p>
           </div>
 
@@ -207,10 +207,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-primary"></span>
-                Is this production-ready?
+                {{ $t('landing.auto.contact.33') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Yes! The boilerplate includes authentication, authorization, admin panel, database migrations, Docker setup, and comprehensive tests. It's designed for production use from day one.
+                {{ $t('landing.auto.contact.34') }}
               </p>
             </div>
 
@@ -218,10 +218,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-secondary"></span>
-                Can I use this for commercial projects?
+                {{ $t('landing.auto.contact.35') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Absolutely! The project is MIT licensed, which permits commercial use, modification, distribution, and private use without attribution requirements.
+                {{ $t('landing.auto.contact.36') }}
               </p>
             </div>
 
@@ -229,10 +229,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-tertiary"></span>
-                How do I get support?
+                {{ $t('landing.auto.contact.37') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Community support is available via GitHub Discussions and Discord. For enterprise customers, we offer dedicated support channels with SLA guarantees and priority response times.
+                {{ $t('landing.auto.contact.38') }}
               </p>
             </div>
 
@@ -240,10 +240,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-success"></span>
-                Does it work with my existing database?
+                {{ $t('landing.auto.contact.39') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Yes! The boilerplate uses Diesel ORM with PostgreSQL. You can connect to any PostgreSQL-compatible database (AWS RDS, Supabase, Neon, Cloud SQL, etc.) by updating the DATABASE_URL environment variable.
+                {{ $t('landing.auto.contact.40') }}
               </p>
             </div>
 
@@ -251,10 +251,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-warning"></span>
-                Can I remove features I don't need?
+                {{ $t('landing.auto.contact.41') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Yes! The modular architecture makes it easy to remove unused modules. Each feature (auth, admin, websockets, etc.) is isolated. Simply remove the routes, controllers, and dependencies you don't need.
+                {{ $t('landing.auto.contact.42') }}
               </p>
             </div>
 
@@ -262,10 +262,10 @@
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-info"></span>
-                How do I deploy this?
+                {{ $t('landing.auto.contact.43') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                The boilerplate includes Docker multi-stage builds and docker-compose for local development. For production, deploy the Docker images to any container platform (Kubernetes, ECS, Cloud Run, Fly.io, Railway, etc.). Health checks and graceful shutdown are built-in.
+                {{ $t('landing.auto.contact.44') }}
               </p>
             </div>
           </div>
@@ -280,18 +280,18 @@
             <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>
             
             <div class="relative z-10">
-              <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Need Enterprise Support?</h2>
+              <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.contact.45') }}</h2>
               <p class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-2xl mx-auto">
-                Dedicated support, custom feature development, security audits, migration assistance, and SLA-backed response times.
+                {{ $t('landing.auto.contact.46') }}
               </p>
               <div class="flex flex-wrap justify-center gap-4">
                 <NuxtLink to="/contact" class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
                   <span class="icon-[tabler--briefcase]"></span>
-                  Contact Sales
+                  {{ $t('landing.auto.contact.47') }}
                 </NuxtLink>
                 <NuxtLink to="https://github.com/gilcierweb/rust-nuxt-boilerplate/discussions" target="_blank" class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
                   <span class="icon-[tabler--messages]"></span>
-                  Community Forum
+                  {{ $t('landing.auto.contact.48') }}
                 </NuxtLink>
               </div>
             </div>

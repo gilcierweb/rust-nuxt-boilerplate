@@ -7,13 +7,13 @@
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
           <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
             <span class="icon-[tabler--player-play] text-sm"></span>
-            Getting Started Guide
+            {{ $t('landing.auto.how_work.1') }}
           </div>
           <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight max-w-4xl mx-auto">
-            From Zero to Production in Minutes
+            {{ $t('landing.auto.how_work.2') }}
           </h1>
           <p class="font-body-lg text-body-lg text-on-surface-variant mb-10 max-w-2xl mx-auto">
-            Follow these 5 simple steps to have a fully functional full-stack application with authentication, admin panel, and type-safe API.
+            {{ $t('landing.auto.how_work.3') }}
           </p>
         </div>
       </section>
@@ -31,22 +31,22 @@
                 <div class="w-16 h-16 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 mt-4 text-primary">
                   <span class="icon-[tabler--download] text-3xl"></span>
                 </div>
-                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Clone & Install</h3>
+                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.how_work.4') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
-                  Clone the repository and start the full stack with Docker Compose.
+                  {{ $t('landing.auto.how_work.5') }}
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-primary text-sm"></span>
-                    Git clone the repo
+                    {{ $t('landing.auto.how_work.6') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-primary text-sm"></span>
-                    Docker Compose up
+                    {{ $t('landing.auto.how_work.7') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-primary text-sm"></span>
-                    Auto-migrations run
+                    {{ $t('landing.auto.how_work.8') }}
                   </li>
                 </ul>
               </div>
@@ -61,22 +61,22 @@
                 <div class="w-16 h-16 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 mt-4 text-secondary">
                   <span class="icon-[tabler--adjustments] text-3xl"></span>
                 </div>
-                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Configure Environment</h3>
+                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.how_work.9') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
-                  Set up your environment variables for database, auth, and external services.
+                  {{ $t('landing.auto.how_work.10') }}
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-secondary text-sm"></span>
-                    Copy .env.example
+                    {{ $t('landing.auto.how_work.11') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-secondary text-sm"></span>
-                    Set DATABASE_URL
+                    {{ $t('landing.auto.how_work.12') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-secondary text-sm"></span>
-                    Configure JWT secrets
+                    {{ $t('landing.auto.how_work.13') }}
                   </li>
                 </ul>
               </div>
@@ -91,22 +91,22 @@
                 <div class="w-16 h-16 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 mt-4 text-tertiary">
                   <span class="icon-[tabler--user-plus] text-3xl"></span>
                 </div>
-                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Create Admin User</h3>
+                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.how_work.14') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
-                  Run the seed script to create your first admin account with secure credentials.
+                  {{ $t('landing.auto.how_work.15') }}
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-tertiary text-sm"></span>
-                    Run seed command
+                    {{ $t('landing.auto.how_work.16') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-tertiary text-sm"></span>
-                    Admin user created
+                    {{ $t('landing.auto.how_work.17') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-tertiary text-sm"></span>
-                    Default roles assigned
+                    {{ $t('landing.auto.how_work.18') }}
                   </li>
                 </ul>
               </div>
@@ -121,22 +121,22 @@
                 <div class="w-16 h-16 rounded-xl bg-success-container/10 flex items-center justify-center mb-6 mt-4 text-success">
                   <span class="icon-[tabler--shield-cog] text-3xl"></span>
                 </div>
-                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Explore Admin Panel</h3>
+                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.how_work.19') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
-                  Log in and explore the dashboard, user management, audit logs, and system health.
+                  {{ $t('landing.auto.how_work.20') }}
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-success text-sm"></span>
-                    Dashboard with metrics
+                    {{ $t('landing.auto.how_work.21') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-success text-sm"></span>
-                    User & role management
+                    {{ $t('landing.auto.how_work.22') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-success text-sm"></span>
-                    Audit logs & health
+                    {{ $t('landing.auto.how_work.23') }}
                   </li>
                 </ul>
               </div>
@@ -151,22 +151,22 @@
                 <div class="w-16 h-16 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 mt-4 text-primary">
                   <span class="icon-[tabler--rocket] text-3xl"></span>
                 </div>
-                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Start Building</h3>
+                <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.how_work.24') }}</h3>
                 <p class="font-body-md text-body-md text-on-surface-variant">
-                  Your foundation is ready. Add your domain logic, deploy, and ship features.
+                  {{ $t('landing.auto.how_work.25') }}
                 </p>
                 <ul class="mt-4 space-y-2 font-body-sm text-body-sm text-on-surface-variant">
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-primary text-sm"></span>
-                    Add domain models
+                    {{ $t('landing.auto.how_work.26') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-primary text-sm"></span>
-                    Create API endpoints
+                    {{ $t('landing.auto.how_work.27') }}
                   </li>
                   <li class="flex items-center gap-2">
                     <span class="icon-[tabler--check] text-primary text-sm"></span>
-                    Deploy to production
+                    {{ $t('landing.auto.how_work.28') }}
                   </li>
                 </ul>
 </div>
@@ -179,9 +179,9 @@
       <section id="features" class="py-24 bg-surface">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12 md:mb-16">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Key Capabilities</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.how_work.29') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Everything you need to build a modern full-stack application, pre-configured and production-ready.
+              {{ $t('landing.auto.how_work.30') }}
             </p>
           </div>
 
@@ -190,9 +190,9 @@
               <div class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
                 <span class="icon-[tabler--shield] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Authentication System</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.31') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                JWT access/refresh tokens, Paseto for email verification, Argon2id password hashing, TOTP 2FA, OAuth2 providers ready.
+                {{ $t('landing.auto.how_work.32') }}
               </p>
             </div>
 
@@ -200,9 +200,9 @@
               <div class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
                 <span class="icon-[tabler--shield-cog] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">RBAC Authorization</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.33') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Resource-level permissions, role hierarchies, resource scoping, grant-based authorization with visual editor.
+                {{ $t('landing.auto.how_work.34') }}
               </p>
             </div>
 
@@ -210,9 +210,9 @@
               <div class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
                 <span class="icon-[tabler--database] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Type-Safe Database</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.35') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Diesel ORM with compile-time SQL verification, migrations, connection pooling, repository pattern, and query builder.
+                {{ $t('landing.auto.how_work.36') }}
               </p>
             </div>
 
@@ -220,9 +220,9 @@
               <div class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
                 <span class="icon-[tabler--api] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">OpenAPI + Type Gen</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.37') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Auto-generated OpenAPI 3.1 spec with TypeScript client types. Zero-drift API contracts between backend and frontend.
+                {{ $t('landing.auto.how_work.38') }}
               </p>
             </div>
 
@@ -230,9 +230,9 @@
               <div class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
                 <span class="icon-[tabler--chart-bar] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Admin Dashboard</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.39') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Real-time metrics, user management, role editor, audit logs, system health, and Prometheus metrics endpoint.
+                {{ $t('landing.auto.how_work.40') }}
               </p>
             </div>
 
@@ -240,9 +240,9 @@
               <div class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
                 <span class="icon-[tabler--file-code-2] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Developer Experience</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.41') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Hot reload for Rust + Vue, VS Code debug configs, auto-generated types, CLI tools for migrations/seeds, Swagger UI.
+                {{ $t('landing.auto.how_work.42') }}
               </p>
             </div>
 
@@ -250,9 +250,9 @@
               <div class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
                 <span class="icon-[tabler--shield-lock] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Data Protection</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.43') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Field-level encryption, blind indexes for PII, key rotation, audit trails, GDPR/LGPD compliance helpers.
+                {{ $t('landing.auto.how_work.44') }}
               </p>
             </div>
 
@@ -260,9 +260,9 @@
               <div class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
                 <span class="icon-[tabler--cloud] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Deployment Ready</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.45') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Multi-stage Docker builds, health checks, graceful shutdown, Kubernetes configs, any cloud provider.
+                {{ $t('landing.auto.how_work.46') }}
               </p>
             </div>
 
@@ -270,9 +270,9 @@
               <div class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
                 <span class="icon-[tabler--puzzle] text-3xl"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Extensible Core</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.how_work.47') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Plugin architecture, custom middleware, event system, background jobs, WebSocket server, modular architecture.
+                {{ $t('landing.auto.how_work.48') }}
               </p>
             </div>
           </div>
@@ -284,38 +284,38 @@
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase mb-4 block">Clean Architecture</span>
-              <h2 class="font-display-xl text-display-xl text-on-surface mb-6">Layers That Scale.</h2>
+              <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase mb-4 block">{{ $t('landing.auto.how_work.49') }}</span>
+              <h2 class="font-display-xl text-display-xl text-on-surface mb-6">{{ $t('landing.auto.how_work.50') }}</h2>
               <p class="font-body-lg text-body-lg text-on-surface-variant mb-8">
-                Domain-driven design with clear boundaries. Each layer has a single responsibility and can be tested in isolation.
+                {{ $t('landing.auto.how_work.51') }}
               </p>
               <div class="space-y-6">
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
                   <div class="mt-1 text-secondary"><span class="icon-[tabler--building]"></span></div>
                   <div>
-                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Domain Layer</h4>
-                    <p class="font-body-md text-body-md text-on-surface-variant">Entities, value objects, domain events, business rules. Pure Rust, zero dependencies.</p>
+                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">{{ $t('landing.auto.how_work.52') }}</h4>
+                    <p class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.how_work.53') }}</p>
                   </div>
                 </div>
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
                   <div class="mt-1 text-secondary"><span class="icon-[tabler--server]"></span></div>
                   <div>
-                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Data Layer</h4>
-                    <p class="font-body-md text-body-md text-on-surface-variant">Diesel repositories, migrations, connection pooling, query builder. Type-safe SQL.</p>
+                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">{{ $t('landing.auto.how_work.54') }}</h4>
+                    <p class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.how_work.55') }}</p>
                   </div>
                 </div>
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
                   <div class="mt-1 text-secondary"><span class="icon-[tabler--tool]"></span></div>
                   <div>
-                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Application Layer</h4>
-                    <p class="font-body-md text-body-md text-on-surface-variant">Services, use cases, DTOs, transaction management. Orchestrates domain and data.</p>
+                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">{{ $t('landing.auto.how_work.56') }}</h4>
+                    <p class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.how_work.57') }}</p>
                   </div>
                 </div>
                 <div class="bg-surface p-6 rounded-2xl border border-outline-variant/20 shadow-sm flex gap-4">
                   <div class="mt-1 text-secondary"><span class="icon-[tabler--cloud]"></span></div>
                   <div>
-                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">Interface Layer</h4>
-                    <p class="font-body-md text-body-md text-on-surface-variant">Actix Web controllers, middleware, OpenAPI docs, WebSocket server, Nuxt frontend.</p>
+                    <h4 class="font-headline-md text-headline-md text-on-surface mb-1">{{ $t('landing.auto.how_work.58') }}</h4>
+                    <p class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.how_work.59') }}</p>
                   </div>
                 </div>
               </div>
@@ -329,23 +329,23 @@
                     <svg viewBox="0 0 400 400" class="w-full h-full max-w-full" style="max-width: 400px; max-height: 400px;">
                       <!-- Domain Layer (center) -->
                       <circle cx="200" cy="200" r="60" fill="#E3F2FD" stroke="#1976D2" stroke-width="2" />
-                      <text x="200" y="205" text-anchor="middle" font-size="14" fill="#1976D2" font-weight="bold" font-family="system-ui">Domain</text>
-                      <text x="200" y="220" text-anchor="middle" font-size="11" fill="#1976D2" font-family="system-ui">Entities • Rules</text>
+                      <text x="200" y="205" text-anchor="middle" font-size="14" fill="#1976D2" font-weight="bold" font-family="system-ui">{{ $t('landing.auto.how_work.60') }}</text>
+                      <text x="200" y="220" text-anchor="middle" font-size="11" fill="#1976D2" font-family="system-ui">{{ $t('landing.auto.how_work.61') }}</text>
                       
                       <!-- Data Layer -->
                       <ellipse cx="200" cy="200" rx="110" ry="90" fill="none" stroke="#388E3C" stroke-width="2" stroke-dasharray="5,5" />
-                      <text x="200" y="110" text-anchor="middle" font-size="12" fill="#388E3C" font-weight="bold" font-family="system-ui">Data Layer</text>
-                      <text x="200" y="125" text-anchor="middle" font-size="10" fill="#388E3C" font-family="system-ui">Repositories • Migrations</text>
+                      <text x="200" y="110" text-anchor="middle" font-size="12" fill="#388E3C" font-weight="bold" font-family="system-ui">{{ $t('landing.auto.how_work.62') }}</text>
+                      <text x="200" y="125" text-anchor="middle" font-size="10" fill="#388E3C" font-family="system-ui">{{ $t('landing.auto.how_work.63') }}</text>
                       
                       <!-- Application Layer -->
                       <ellipse cx="200" cy="200" rx="160" ry="130" fill="none" stroke="#F57C00" stroke-width="2" stroke-dasharray="5,5" />
-                      <text x="200" y="320" text-anchor="middle" font-size="12" fill="#F57C00" font-weight="bold" font-family="system-ui">Application Layer</text>
-                      <text x="200" y="335" text-anchor="middle" font-size="10" fill="#F57C00" font-family="system-ui">Services • DTOs • Transactions</text>
+                      <text x="200" y="320" text-anchor="middle" font-size="12" fill="#F57C00" font-weight="bold" font-family="system-ui">{{ $t('landing.auto.how_work.64') }}</text>
+                      <text x="200" y="335" text-anchor="middle" font-size="10" fill="#F57C00" font-family="system-ui">{{ $t('landing.auto.how_work.65') }}</text>
                       
                       <!-- Interface Layer -->
                       <ellipse cx="200" cy="200" rx="200" ry="165" fill="none" stroke="#7B1FA2" stroke-width="2" stroke-dasharray="5,5" />
-                      <text x="380" y="205" text-anchor="middle" font-size="12" fill="#7B1FA2" font-weight="bold" font-family="system-ui">Interface</text>
-                      <text x="380" y="220" text-anchor="middle" font-size="10" fill="#7B1FA2" font-family="system-ui">API • WebSocket • UI</text>
+                      <text x="380" y="205" text-anchor="middle" font-size="12" fill="#7B1FA2" font-weight="bold" font-family="system-ui">{{ $t('landing.auto.how_work.66') }}</text>
+                      <text x="380" y="220" text-anchor="middle" font-size="10" fill="#7B1FA2" font-family="system-ui">{{ $t('landing.auto.how_work.67') }}</text>
                       
                       <!-- Arrows showing dependency direction -->
                       <path d="M260 200 L300 200" stroke="#7B1FA2" stroke-width="2" marker-end="url(#arrowhead)" />
@@ -372,10 +372,10 @@
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="grid lg:grid-cols-2 gap-16 items-center">
             <div>
-              <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase mb-4 block">Integrations</span>
-              <h2 class="font-display-xl text-display-xl text-on-surface mb-6">Connect with Your Favorite Tools</h2>
+              <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase mb-4 block">{{ $t('landing.auto.how_work.68') }}</span>
+              <h2 class="font-display-xl text-display-xl text-on-surface mb-6">{{ $t('landing.auto.how_work.69') }}</h2>
               <p class="font-body-lg text-body-lg text-on-surface-variant mb-8">
-                Pre-built integrations and easy extensibility for the services you already use.
+                {{ $t('landing.auto.how_work.70') }}
               </p>
               
               <div class="space-y-4">
@@ -384,8 +384,8 @@
                     <span class="icon-[tabler--credit-card] text-2xl"></span>
                   </div>
                   <div>
-                    <h4 class="font-headline-sm text-headline-sm text-on-surface">Payment Gateways</h4>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Stripe, MercadoPago, PagSeguro, PayPal ready</p>
+                    <h4 class="font-headline-sm text-headline-sm text-on-surface">{{ $t('landing.auto.how_work.71') }}</h4>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.how_work.72') }}</p>
                   </div>
                 </div>
 
@@ -394,8 +394,8 @@
                     <span class="icon-[tabler--message] text-2xl"></span>
                   </div>
                   <div>
-                    <h4 class="font-headline-sm text-headline-sm text-on-surface">SMS & WhatsApp</h4>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Twilio, Vonage, Zenvia, WhatsApp Business API</p>
+                    <h4 class="font-headline-sm text-headline-sm text-on-surface">{{ $t('landing.auto.how_work.73') }}</h4>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.how_work.74') }}</p>
                   </div>
                 </div>
 
@@ -404,8 +404,8 @@
                     <span class="icon-[tabler--building-bank] text-2xl"></span>
                   </div>
                   <div>
-                    <h4 class="font-headline-sm text-headline-sm text-on-surface">Accounting & ERP</h4>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">Export to ContaAzul, QuickBooks, Xero, NFe</p>
+                    <h4 class="font-headline-sm text-headline-sm text-on-surface">{{ $t('landing.auto.how_work.75') }}</h4>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.how_work.76') }}</p>
                   </div>
                 </div>
 
@@ -414,8 +414,8 @@
                     <span class="icon-[tabler--cloud] text-2xl"></span>
                   </div>
                   <div>
-                    <h4 class="font-headline-sm text-headline-sm text-on-surface">Storage Providers</h4>
-                    <p class="font-body-sm text-body-sm text-on-surface-variant">AWS S3, Cloudflare R2, Backblaze B2, MinIO</p>
+                    <h4 class="font-headline-sm text-headline-sm text-on-surface">{{ $t('landing.auto.how_work.77') }}</h4>
+                    <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.how_work.78') }}</p>
                   </div>
                 </div>
               </div>
@@ -427,9 +427,9 @@
                 <div class="aspect-square bg-surface-container-low rounded-2xl flex items-center justify-center">
                   <div class="text-center">
                     <span class="icon-[tabler--router] text-8xl text-primary/30 mb-4"></span>
-                    <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Open API</h3>
+                    <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">{{ $t('landing.auto.how_work.79') }}</h3>
                     <p class="font-body-md text-body-md text-on-surface-variant max-w-xs">
-                      Build custom integrations with our REST API and auto-generated TypeScript client.
+                      {{ $t('landing.auto.how_work.80') }}
                     </p>
                   </div>
                 </div>
@@ -443,63 +443,63 @@
       <section id="pricing" class="py-24 bg-surface-container-lowest">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-16">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Simple, Transparent Licensing</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.how_work.81') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant">
-Choose the option that fits your needs. All tiers include the complete source code.
+{{ $t('landing.auto.how_work.82') }}
             </p>
           </div>
           <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div class="bg-surface border border-outline-variant/30 rounded-3xl p-8 flex flex-col">
-              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Community</h3>
-              <p class="font-body-md text-body-md text-on-surface-variant mb-6">For individuals and open source projects.</p>
+              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">{{ $t('landing.auto.how_work.83') }}</h3>
+              <p class="font-body-md text-body-md text-on-surface-variant mb-6">{{ $t('landing.auto.how_work.84') }}</p>
               <div class="mb-6">
-                <span class="text-4xl font-bold text-on-surface font-display-xl">FREE</span>
+                <span class="text-4xl font-bold text-on-surface font-display-xl">{{ $t('landing.auto.how_work.85') }}</span>
               </div>
               <ul class="space-y-4 mb-8 flex-1">
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Full source code access</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">All core features included</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Community Discord support</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">MIT License - commercial use OK</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.86') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.87') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.88') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.89') }}</span></li>
               </ul>
               <a href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank" class="w-full py-3 rounded-xl border border-primary text-primary font-headline-md text-headline-md hover:bg-primary/5 transition-colors">
-                View on GitHub
+                {{ $t('landing.auto.how_work.90') }}
               </a>
             </div>
             <div class="bg-primary text-on-primary border border-primary rounded-3xl p-8 flex flex-col relative shadow-xl shadow-primary/20 transform md:-translate-y-4">
               <div class="absolute top-0 right-8 transform -translate-y-1/2 bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full font-label-sm text-label-sm">
-                Recommended
+                {{ $t('landing.auto.how_work.91') }}
               </div>
-              <h3 class="font-headline-lg text-headline-lg mb-2">Pro Support</h3>
-              <p class="font-body-md text-body-md text-primary-fixed mb-6">For teams shipping production applications.</p>
+              <h3 class="font-headline-lg text-headline-lg mb-2">{{ $t('landing.auto.how_work.92') }}</h3>
+              <p class="font-body-md text-body-md text-primary-fixed mb-6">{{ $t('landing.auto.how_work.93') }}</p>
               <div class="mb-6">
-                <span class="text-4xl font-bold font-display-xl">Contact Us</span>
+                <span class="text-4xl font-bold font-display-xl">{{ $t('landing.auto.how_work.94') }}</span>
               </div>
               <ul class="space-y-4 mb-8 flex-1">
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Priority email support</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Dedicated Slack channel</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Security advisory notifications</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Migration assistance</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">Architecture review (annual)</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.95') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.96') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.97') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.98') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary-fixed text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.99') }}</span></li>
               </ul>
               <button class="w-full py-3 rounded-xl bg-on-primary text-primary font-headline-md text-headline-md hover:bg-white/90 transition-colors">
-                Get Pro Support
+                {{ $t('landing.auto.how_work.100') }}
               </button>
             </div>
             <div class="bg-surface border border-outline-variant/30 rounded-3xl p-8 flex flex-col">
-              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">Enterprise</h3>
-              <p class="font-body-md text-body-md text-on-surface-variant mb-6">For organizations with custom requirements.</p>
+              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-2">{{ $t('landing.auto.how_work.101') }}</h3>
+              <p class="font-body-md text-body-md text-on-surface-variant mb-6">{{ $t('landing.auto.how_work.102') }}</p>
               <div class="mb-6">
-                <span class="text-4xl font-bold text-on-surface font-display-xl">Custom</span>
+                <span class="text-4xl font-bold text-on-surface font-display-xl">{{ $t('landing.auto.how_work.103') }}</span>
               </div>
               <ul class="space-y-4 mb-8 flex-1">
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">SLA with guaranteed response times</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Custom feature development</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Security audit assistance</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">On-premise deployment support</span></li>
-                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">Team training & workshops</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.104') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.105') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.106') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.107') }}</span></li>
+                <li class="flex items-center gap-3"><span class="icon-[tabler--check] text-primary text-sm"></span><span class="font-body-md text-sm">{{ $t('landing.auto.how_work.108') }}</span></li>
               </ul>
               <button class="w-full py-3 rounded-xl border border-primary text-primary font-headline-md text-headline-md hover:bg-primary/5 transition-colors">
-                Contact Sales
+                {{ $t('landing.auto.how_work.109') }}
               </button>
             </div>
           </div>
@@ -510,9 +510,9 @@ Choose the option that fits your needs. All tiers include the complete source co
       <section id="faq" class="py-24 bg-surface border-y border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Frequently Asked Questions</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.how_work.110') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Quick answers to common questions about the boilerplate.
+              {{ $t('landing.auto.how_work.111') }}
             </p>
           </div>
 
@@ -520,80 +520,80 @@ Choose the option that fits your needs. All tiers include the complete source co
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-primary"></span>
-                Can I use this for commercial projects?
+                {{ $t('landing.auto.how_work.112') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Yes! The boilerplate is MIT licensed. You can use it commercially, modify it, distribute it, and even sell products built with it without any attribution requirements.
+                {{ $t('landing.auto.how_work.113') }}
               </p>
             </div>
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-secondary"></span>
-                What Rust version is required?
+                {{ $t('landing.auto.how_work.114') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Rust 1.75+ (stable). We track the latest stable Rust release and update the MSRV (Minimum Supported Rust Version) conservatively.
+                {{ $t('landing.auto.how_work.115') }}
               </p>
             </div>
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-tertiary"></span>
-                Can I use a different database?
+                {{ $t('landing.auto.how_work.116') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Diesel supports PostgreSQL, MySQL, and SQLite. The boilerplate uses PostgreSQL by default but can be adapted. Diesel's query builder abstracts most differences.
+                {{ $t('landing.auto.how_work.117') }}
               </p>
             </div>
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-success"></span>
-                How does the authentication work?
+                {{ $t('landing.auto.how_work.118') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                JWT access tokens (short-lived) + refresh tokens (long-lived, revocable). Paseto for email verification. Argon2id for password hashing. Optional TOTP 2FA. OAuth2 providers can be added via the auth service.
+                {{ $t('landing.auto.how_work.119') }}
               </p>
             </div>
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-warning"></span>
-                Can I remove features I don't need?
+                {{ $t('landing.auto.how_work.120') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Absolutely. The modular architecture makes it easy to remove unused modules (e.g., WebSocket server, admin panel, specific API routes) without affecting the core.
+                {{ $t('landing.auto.how_work.121') }}
               </p>
             </div>
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-info"></span>
-                How do I deploy to production?
+                {{ $t('landing.auto.how_work.122') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Use the provided Docker Compose or Kubernetes manifests. The multi-stage Dockerfile creates minimal images. Health checks, graceful shutdown, and env-based config are built-in.
+                {{ $t('landing.auto.how_work.123') }}
               </p>
             </div>
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-purple"></span>
-                Is there a migration guide from v0.x?
+                {{ $t('landing.auto.how_work.124') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Yes, see the MIGRATION.md file in the repository. The v1.0 release includes breaking changes for improved architecture, but we provide step-by-step upgrade instructions.
+                {{ $t('landing.auto.how_work.125') }}
               </p>
             </div>
 
             <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30">
               <h3 class="font-headline-md text-headline-md text-on-surface mb-3 flex items-center gap-2">
                 <span class="icon-[tabler--help] text-pink"></span>
-                How can I contribute?
+                {{ $t('landing.auto.how_work.126') }}
               </h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                We welcome contributions! See CONTRIBUTING.md for guidelines. Areas: bug fixes, new features, documentation, translations, security audits, and testing improvements.
+                {{ $t('landing.auto.how_work.127') }}
               </p>
             </div>
           </div>
@@ -608,18 +608,18 @@ Choose the option that fits your needs. All tiers include the complete source co
             <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>
             
             <div class="relative z-10">
-              <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Ready to Start Building?</h2>
+              <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.how_work.128') }}</h2>
               <p class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-2xl mx-auto">
-                Clone the repository, follow the quick start guide, and have a running full-stack application in minutes.
+                {{ $t('landing.auto.how_work.129') }}
               </p>
               <div class="flex flex-wrap justify-center gap-4">
                 <a href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank" class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
                   <span class="icon-[tabler--rocket]"></span>
-                  Star on GitHub
+                  {{ $t('landing.auto.how_work.130') }}
                 </a>
                 <a href="#steps" class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
                   <span class="icon-[tabler--player-play]"></span>
-                  View Quick Start
+                  {{ $t('landing.auto.how_work.131') }}
                 </a>
               </div>
             </div>

@@ -119,7 +119,10 @@
     "support": {
       "title": "Support",
       "messageLabel": "Message",
-      "messagePlaceholder": "Describe your question or issue"
+      "messagePlaceholder": "Describe your question or issue",
+      "quickContact": "For quick support, contact us via WhatsApp.",
+      "openWhatsApp": "Open WhatsApp",
+      "defaultWhatsAppText": "Hello, I need support in the client portal."
     },
     "sidebar": {
       "clientArea": "Client area"

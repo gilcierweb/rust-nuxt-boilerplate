@@ -9,14 +9,13 @@
           <div
               class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
             <span class="icon-[tabler--info-circle] text-sm"></span>
-            About This Boilerplate
+            {{ $t('landing.auto.about.1') }}
           </div>
           <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight max-w-4xl mx-auto">
-            A Modern Foundation for Full-Stack Applications
+            {{ $t('landing.auto.about.2') }}
           </h1>
           <p class="font-body-lg text-body-lg text-on-surface-variant mb-10 max-w-2xl mx-auto">
-            Built by developers, for developers. This boilerplate eliminates months of setup work so you can focus on
-            building your product.
+            {{ $t('landing.auto.about.3') }}
           </p>
         </div>
       </section>
@@ -32,10 +31,9 @@
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-6 text-primary">
                 <span class="icon-[tabler--rocket] text-3xl"></span>
               </div>
-              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Mission</h3>
+              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.about.4') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Empower developers to ship production-ready full-stack applications in days, not months, by providing a
-                battle-tested, type-safe foundation.
+                {{ $t('landing.auto.about.5') }}
               </p>
             </div>
 
@@ -46,10 +44,9 @@
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-6 text-secondary">
                 <span class="icon-[tabler--eye] text-3xl"></span>
               </div>
-              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Vision</h3>
+              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.about.6') }}</h3>
               <p class="font-body-md text-body-md text-on-surface-variant">
-                Become the standard starting point for Rust + Nuxt applications, recognized for reliability, developer
-                experience, and architectural excellence.
+                {{ $t('landing.auto.about.7') }}
               </p>
             </div>
 
@@ -60,27 +57,27 @@
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-6 text-tertiary">
                 <span class="icon-[tabler--circle-check] text-3xl"></span>
               </div>
-              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">Values</h3>
+              <h3 class="font-headline-lg text-headline-lg text-on-surface mb-3">{{ $t('landing.auto.about.8') }}</h3>
               <ul class="space-y-2 font-body-md text-body-md text-on-surface-variant">
                 <li class="flex items-center gap-2">
                   <span class="icon-[tabler--check] text-primary text-sm"></span>
-                  Type safety across the stack
+                  {{ $t('landing.auto.about.9') }}
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="icon-[tabler--check] text-primary text-sm"></span>
-                  Security by default
+                  {{ $t('landing.auto.about.10') }}
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="icon-[tabler--check] text-primary text-sm"></span>
-                  Clean architecture principles
+                  {{ $t('landing.auto.about.11') }}
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="icon-[tabler--check] text-primary text-sm"></span>
-                  Developer experience first
+                  {{ $t('landing.auto.about.12') }}
                 </li>
                 <li class="flex items-center gap-2">
                   <span class="icon-[tabler--check] text-primary text-sm"></span>
-                  Open source sustainability
+                  {{ $t('landing.auto.about.13') }}
                 </li>
               </ul>
             </div>
@@ -92,9 +89,9 @@
       <section class="py-24 bg-surface-container-low border-y border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12 md:mb-16">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Project Milestones</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.about.14') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              From initial concept to production-ready boilerplate.
+              {{ $t('landing.auto.about.15') }}
             </p>
           </div>
 
@@ -109,11 +106,10 @@
                 <div class="md:w-1/2 md:text-right md:pr-12">
                   <div
                       class="bg-surface p-6 rounded-2xl border border-outline-variant/30 shadow-sm inline-block text-left md:text-right">
-                    <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase">2024 Q1</span>
-                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">Project Inception</h3>
+                    <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase">{{ $t('landing.auto.about.16') }}</span>
+                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">{{ $t('landing.auto.about.17') }}</h3>
                     <p class="font-body-md text-body-md text-on-surface-variant mt-2">
-                      Identified the need for a Rust + Nuxt boilerplate after building multiple full-stack apps from
-                      scratch.
+                      {{ $t('landing.auto.about.18') }}
                     </p>
                   </div>
                 </div>
@@ -127,11 +123,10 @@
                 <div class="w-4 h-4 rounded-full bg-secondary border-4 border-surface z-10"></div>
                 <div class="md:w-1/2 md:text-left md:pl-12">
                   <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 shadow-sm inline-block">
-                    <span class="font-label-sm text-label-sm text-secondary tracking-widest uppercase">2024 Q2</span>
-                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">Core Architecture</h3>
+                    <span class="font-label-sm text-label-sm text-secondary tracking-widest uppercase">{{ $t('landing.auto.about.19') }}</span>
+                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">{{ $t('landing.auto.about.20') }}</h3>
                     <p class="font-body-md text-body-md text-on-surface-variant mt-2">
-                      Designed clean architecture layers: domain, data, application, interface. Implemented Diesel +
-                      Actix Web foundation.
+                      {{ $t('landing.auto.about.21') }}
                     </p>
                   </div>
                 </div>
@@ -142,10 +137,10 @@
                 <div class="md:w-1/2 md:text-right md:pr-12">
                   <div
                       class="bg-surface p-6 rounded-2xl border border-outline-variant/30 shadow-sm inline-block text-left md:text-right">
-                    <span class="font-label-sm text-label-sm text-tertiary tracking-widest uppercase">2024 Q3</span>
-                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">Frontend Integration</h3>
+                    <span class="font-label-sm text-label-sm text-tertiary tracking-widest uppercase">{{ $t('landing.auto.about.22') }}</span>
+                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">{{ $t('landing.auto.about.23') }}</h3>
                     <p class="font-body-md text-body-md text-on-surface-variant mt-2">
-                      Built Nuxt 4 + Vue 3 frontend with TypeScript, Tailwind 4, Pinia, and auto-generated API types.
+                      {{ $t('landing.auto.about.24') }}
                     </p>
                   </div>
                 </div>
@@ -159,11 +154,10 @@
                 <div class="w-4 h-4 rounded-full bg-primary border-4 border-surface z-10"></div>
                 <div class="md:w-1/2 md:text-left md:pl-12">
                   <div class="bg-surface p-6 rounded-2xl border border-outline-variant/30 shadow-sm inline-block">
-                    <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase">2024 Q4</span>
-                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">Auth & Admin Panel</h3>
+                    <span class="font-label-sm text-label-sm text-primary tracking-widest uppercase">{{ $t('landing.auto.about.25') }}</span>
+                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">{{ $t('landing.auto.about.26') }}</h3>
                     <p class="font-body-md text-body-md text-on-surface-variant mt-2">
-                      Implemented JWT/Paseto auth, RBAC permissions, audit logging, admin dashboard, and OpenAPI
-                      generation.
+                      {{ $t('landing.auto.about.27') }}
                     </p>
                   </div>
                 </div>
@@ -174,10 +168,10 @@
                 <div class="md:w-1/2 md:text-right md:pr-12">
                   <div
                       class="bg-surface p-6 rounded-2xl border border-outline-variant/30 shadow-sm inline-block text-left md:text-right">
-                    <span class="font-label-sm text-label-sm text-success tracking-widest uppercase">2025 Q1</span>
-                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">Production Hardening</h3>
+                    <span class="font-label-sm text-label-sm text-success tracking-widest uppercase">{{ $t('landing.auto.about.28') }}</span>
+                    <h3 class="font-headline-lg text-headline-lg text-on-surface mt-2">{{ $t('landing.auto.about.29') }}</h3>
                     <p class="font-body-md text-body-md text-on-surface-variant mt-2">
-                      Added Docker deployment, CI/CD pipelines, comprehensive tests, seed scripts, and documentation.
+                      {{ $t('landing.auto.about.30') }}
                     </p>
                   </div>
                 </div>
@@ -193,9 +187,9 @@
       <section class="py-24 bg-surface-container-lowest">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12 md:mb-16">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Design Principles</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.about.31') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Every architectural decision follows these guiding principles.
+              {{ $t('landing.auto.about.32') }}
             </p>
           </div>
 
@@ -205,9 +199,9 @@
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--shield] text-4xl text-primary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Security First</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.33') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                Encryption, authentication, and authorization built into every layer by default.
+                {{ $t('landing.auto.about.34') }}
               </p>
             </div>
 
@@ -217,9 +211,9 @@
                   class="w-24 h-24 rounded-full bg-secondary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--code] text-4xl text-secondary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Type Safety</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.35') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                End-to-end type safety from database to UI. Compile-time guarantees prevent runtime errors.
+                {{ $t('landing.auto.about.36') }}
               </p>
             </div>
 
@@ -229,9 +223,9 @@
                   class="w-24 h-24 rounded-full bg-tertiary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--topology-star] text-4xl text-tertiary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Clean Architecture</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.37') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                Separation of concerns with domain-driven design. Testable, maintainable, scalable.
+                {{ $t('landing.auto.about.38') }}
               </p>
             </div>
 
@@ -240,9 +234,9 @@
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--bolt] text-4xl text-primary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Developer Experience</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.39') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                Hot reload, auto-generated types, comprehensive tooling. Optimized for productivity.
+                {{ $t('landing.auto.about.40') }}
               </p>
             </div>
           </div>
@@ -253,9 +247,9 @@
       <section class="py-24 bg-surface border-y border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12 md:mb-16">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Technology Choices</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.about.41') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Each technology selected for specific reasons: performance, safety, ecosystem, and long-term support.
+              {{ $t('landing.auto.about.42') }}
             </p>
           </div>
 
@@ -266,10 +260,9 @@
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                 <span class="icon-[tabler--brand-rust] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Rust + Actix Web</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.43') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-Memory safety without GC, async runtime,
-                compiled speed. Actix for high-performance HTTP.
+{{ $t('landing.auto.about.44') }}
 </p>
             </div>
 
@@ -279,10 +272,9 @@ Memory safety without GC, async runtime,
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
                 <span class="icon-[tabler--database-cog] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Diesel ORM</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.45') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-Compile-time checked SQL, migrations,
-                connection pooling. Type-safe database access.
+{{ $t('landing.auto.about.46') }}
 </p>
             </div>
 
@@ -292,10 +284,9 @@ Compile-time checked SQL, migrations,
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
                 <span class="icon-[tabler--database] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">PostgreSQL</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.47') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-Robust, ACID-compliant, JSON support,
-                excellent ecosystem. Production-proven at scale.
+{{ $t('landing.auto.about.48') }}
 </p>
             </div>
 
@@ -305,10 +296,9 @@ Robust, ACID-compliant, JSON support,
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                 <span class="icon-[tabler--server] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Redis</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.49') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-Caching, sessions, rate limiting, WebSocket
-                pub/sub. High-performance in-memory store.
+{{ $t('landing.auto.about.50') }}
 </p>
             </div>
 
@@ -318,10 +308,9 @@ Caching, sessions, rate limiting, WebSocket
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
                 <span class="icon-[tabler--brand-nuxt] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Nuxt 4 + Vue 3</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.51') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-SSR, auto-imports, file-based routing,
-                composables. Modern Vue with TypeScript.
+{{ $t('landing.auto.about.52') }}
 </p>
             </div>
 
@@ -331,10 +320,9 @@ SSR, auto-imports, file-based routing,
                   class="w-14 h-14 rounded-xl bg-tertiary-container/10 flex items-center justify-center mb-4 text-tertiary">
                 <span class="icon-[tabler--brand-tailwind] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Tailwind CSS 4</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.53') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-Utility-first, CSS-first config, lightning
-                fast, dark mode, design tokens.
+{{ $t('landing.auto.about.54') }}
 </p>
             </div>
 
@@ -344,10 +332,9 @@ Utility-first, CSS-first config, lightning
                   class="w-14 h-14 rounded-xl bg-primary-container/10 flex items-center justify-center mb-4 text-primary">
                 <span class="icon-[tabler--stack-2] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Pinia</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.55') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-Lightweight, type-safe state management.
-                DevTools support, SSR compatible.
+{{ $t('landing.auto.about.56') }}
 </p>
             </div>
 
@@ -357,10 +344,9 @@ Lightweight, type-safe state management.
                   class="w-14 h-14 rounded-xl bg-secondary-container/10 flex items-center justify-center mb-4 text-secondary">
                 <span class="icon-[tabler--brand-docker] w-8 h-8"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">Docker</h3>
+              <h3 class="font-headline-md text-headline-md text-on-surface mb-2">{{ $t('landing.auto.about.57') }}</h3>
               <p class="font-body-sm text-body-sm text-on-surface-variant">
-Consistent dev/prod environments, multi-stage
-                builds, compose for local stack.
+{{ $t('landing.auto.about.58') }}
 </p>
             </div>
           </div>
@@ -371,9 +357,9 @@ Consistent dev/prod environments, multi-stage
       <section class="py-24 bg-surface-container-lowest">
         <div class="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8">
           <div class="text-center mb-12 md:mb-16">
-            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Maintainers & Contributors</h2>
+            <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.about.59') }}</h2>
             <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-              Open source project maintained by a dedicated team and amazing community contributors.
+              {{ $t('landing.auto.about.60') }}
             </p>
           </div>
 
@@ -383,10 +369,10 @@ Consistent dev/prod environments, multi-stage
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--user] text-4xl text-primary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Core Team</h3>
-              <p class="font-body-sm text-body-sm text-primary mt-1">Lead Maintainers</p>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.61') }}</h3>
+              <p class="font-body-sm text-body-sm text-primary mt-1">{{ $t('landing.auto.about.62') }}</p>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                Architecture, security, releases, and community.
+                {{ $t('landing.auto.about.63') }}
               </p>
             </div>
 
@@ -396,10 +382,10 @@ Consistent dev/prod environments, multi-stage
                   class="w-24 h-24 rounded-full bg-secondary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--users] text-4xl text-secondary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Contributors</h3>
-              <p class="font-body-sm text-body-sm text-secondary mt-1">Code & Documentation</p>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.64') }}</h3>
+              <p class="font-body-sm text-body-sm text-secondary mt-1">{{ $t('landing.auto.about.65') }}</p>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                Features, bug fixes, translations, and improvements.
+                {{ $t('landing.auto.about.66') }}
               </p>
             </div>
 
@@ -409,10 +395,10 @@ Consistent dev/prod environments, multi-stage
                   class="w-24 h-24 rounded-full bg-tertiary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--bug] text-4xl text-tertiary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Security Researchers</h3>
-              <p class="font-body-sm text-body-sm text-tertiary mt-1">Responsible Disclosure</p>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.67') }}</h3>
+              <p class="font-body-sm text-body-sm text-tertiary mt-1">{{ $t('landing.auto.about.68') }}</p>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                Reporting vulnerabilities to keep the ecosystem safe.
+                {{ $t('landing.auto.about.69') }}
               </p>
             </div>
 
@@ -421,10 +407,10 @@ Consistent dev/prod environments, multi-stage
               <div class="w-24 h-24 rounded-full bg-primary-container/20 mx-auto mb-4 flex items-center justify-center">
                 <span class="icon-[tabler--heart] text-4xl text-primary"></span>
               </div>
-              <h3 class="font-headline-md text-headline-md text-on-surface">Sponsors</h3>
-              <p class="font-body-sm text-body-sm text-primary mt-1">Financial Support</p>
+              <h3 class="font-headline-md text-headline-md text-on-surface">{{ $t('landing.auto.about.70') }}</h3>
+              <p class="font-body-sm text-body-sm text-primary mt-1">{{ $t('landing.auto.about.71') }}</p>
               <p class="font-body-sm text-body-sm text-on-surface-variant mt-3">
-                Enabling sustainable development and infrastructure.
+                {{ $t('landing.auto.about.72') }}
               </p>
             </div>
           </div>
@@ -437,19 +423,19 @@ Consistent dev/prod environments, multi-stage
           <div class="grid grid-cols-2 md:grid-cols-4 gap-6 lg:gap-8">
             <div class="text-center">
               <div class="font-display-xl text-display-xl text-primary mb-2">15+</div>
-              <div class="font-body-md text-body-md text-on-surface-variant">Built-in Modules</div>
+              <div class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.about.73') }}</div>
             </div>
             <div class="text-center">
               <div class="font-display-xl text-display-xl text-secondary mb-2">3</div>
-              <div class="font-body-md text-body-md text-on-surface-variant">Architecture Layers</div>
+              <div class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.about.74') }}</div>
             </div>
             <div class="text-center">
               <div class="font-display-xl text-display-xl text-tertiary mb-2">100%</div>
-              <div class="font-body-md text-body-md text-on-surface-variant">Type-Safe Stack</div>
+              <div class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.about.75') }}</div>
             </div>
             <div class="text-center">
-              <div class="font-display-xl text-display-xl text-success mb-2">MIT</div>
-              <div class="font-body-md text-body-md text-on-surface-variant">Open Source License</div>
+              <div class="font-display-xl text-display-xl text-success mb-2">{{ $t('landing.auto.about.76') }}</div>
+              <div class="font-body-md text-body-md text-on-surface-variant">{{ $t('landing.auto.about.77') }}</div>
             </div>
           </div>
         </div>
@@ -464,21 +450,20 @@ Consistent dev/prod environments, multi-stage
             <div class="absolute -left-20 -bottom-20 w-64 h-64 bg-secondary/5 rounded-full blur-3xl"></div>
 
             <div class="relative z-10">
-              <h2 class="font-display-xl text-display-xl text-on-surface mb-4">Ready to Build?</h2>
+              <h2 class="font-display-xl text-display-xl text-on-surface mb-4">{{ $t('landing.auto.about.78') }}</h2>
               <p class="font-body-lg text-body-lg text-on-surface-variant mb-8 max-w-2xl mx-auto">
-                Clone the repository, follow the quick start guide, and have a running full-stack application in
-                minutes.
+                {{ $t('landing.auto.about.79') }}
               </p>
               <div class="flex flex-wrap justify-center gap-4">
                 <NuxtLink
 to="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank"
                           class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2">
-                  View on GitHub <span class="icon-[tabler--arrow-right]"></span>
+                  {{ $t('landing.auto.about.80') }} <span class="icon-[tabler--arrow-right]"></span>
                 </NuxtLink>
                 <NuxtLink
 to="/contact"
                           class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50">
-                  Get in Touch
+                  {{ $t('landing.auto.about.81') }}
                 </NuxtLink>
               </div>
             </div>

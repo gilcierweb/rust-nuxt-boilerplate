@@ -8,13 +8,13 @@
           <div class="max-w-3xl">
             <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary-container/10 text-primary-fixed-variant text-label-sm font-label-sm mb-6 border border-primary-container/20">
               <span class="icon-[tabler--shield] text-sm"></span>
-              Sua Privacidade é Importante
+              {{ $t('landing.auto.privacy.1') }}
             </div>
             <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight">
-              Política de Privacidade
+              {{ $t('landing.auto.privacy.2') }}
             </h1>
             <p class="font-body-lg text-body-lg text-on-surface-variant">
-              Última atualização: 3 de Maio de 2026
+              {{ $t('landing.auto.privacy.3') }}
             </p>
           </div>
         </div>
@@ -27,28 +27,28 @@
             <!-- Sidebar Navigation -->
             <div class="hidden lg:block lg:col-span-1">
               <div class="sticky top-24 bg-surface-container-lowest p-6 rounded-2xl border border-outline-variant/30">
-                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-4">Índice</h3>
+                <h3 class="font-headline-sm text-headline-sm text-on-surface mb-4">{{ $t('landing.auto.privacy.4') }}</h3>
                 <nav class="space-y-2">
                   <a href="#coleta" class="block py-2 px-3 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
-                    1. Coleta de Dados
+                    {{ $t('landing.auto.privacy.5') }}
                   </a>
                   <a href="#uso" class="block py-2 px-3 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
-                    2. Uso das Informações
+                    {{ $t('landing.auto.privacy.6') }}
                   </a>
                   <a href="#compartilhamento" class="block py-2 px-3 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
-                    3. Compartilhamento
+                    {{ $t('landing.auto.privacy.7') }}
                   </a>
                   <a href="#seguranca" class="block py-2 px-3 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
-                    4. Segurança
+                    {{ $t('landing.auto.privacy.8') }}
                   </a>
                   <a href="#direitos" class="block py-2 px-3 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
-                    5. Seus Direitos
+                    {{ $t('landing.auto.privacy.9') }}
                   </a>
                   <a href="#cookies" class="block py-2 px-3 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
-                    6. Cookies
+                    {{ $t('landing.auto.privacy.10') }}
                   </a>
                   <a href="#contato" class="block py-2 px-3 rounded-lg font-body-md text-body-md text-on-surface-variant hover:bg-surface-container hover:text-on-surface transition-colors">
-                    7. Contato
+                    {{ $t('landing.auto.privacy.11') }}
                   </a>
                 </nav>
               </div>
@@ -60,7 +60,7 @@
                 <!-- Intro -->
                 <div class="prose prose-lg max-w-none">
                   <p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
-                    A iLaundry está comprometida em proteger sua privacidade. Esta política descreve como coletamos, usamos, armazenamos e protegemos suas informações pessoais quando você utiliza nossa plataforma de gestão de lavanderias.
+                    {{ $t('landing.auto.privacy.12') }}
                   </p>
                 </div>
 
@@ -70,28 +70,28 @@
                     <div class="w-10 h-10 rounded-lg bg-primary-container/10 flex items-center justify-center text-primary flex-shrink-0">
                       <span class="icon-[tabler--database]"></span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface">1. Coleta de Dados</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">{{ $t('landing.auto.privacy.13') }}</h2>
                   </div>
                   <div class="pl-0 md:pl-14 space-y-4">
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                      Coletamos as seguintes categorias de informações:
+                      {{ $t('landing.auto.privacy.14') }}
                     </p>
                     <ul class="space-y-3 font-body-md text-body-md text-on-surface-variant">
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--circle-check] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Informações de Cadastro:</strong> Nome, e-mail, telefone, CNPJ/CPF e endereço da lavanderia.</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.15') }}</strong> {{ $t('landing.auto.privacy.16') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--circle-check] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Dados Operacionais:</strong> Informações sobre pedidos, clientes, estoque e transações financeiras.</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.17') }}</strong> {{ $t('landing.auto.privacy.18') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--circle-check] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Dados de Uso:</strong> Logs de acesso, páginas visitadas, tempo de sessão e interações com a plataforma.</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.19') }}</strong> {{ $t('landing.auto.privacy.20') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--circle-check] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Informações Técnicas:</strong> IP, tipo de navegador, dispositivo e sistema operacional.</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.21') }}</strong> {{ $t('landing.auto.privacy.22') }}</span>
                       </li>
                     </ul>
                   </div>
@@ -103,32 +103,32 @@
                     <div class="w-10 h-10 rounded-lg bg-secondary-container/10 flex items-center justify-center text-secondary">
                       <span class="icon-[tabler--apps]"></span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface">2. Uso das Informações</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">{{ $t('landing.auto.privacy.23') }}</h2>
                   </div>
                   <div class="pl-0 md:pl-14 space-y-4">
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                      Utilizamos suas informações para:
+                      {{ $t('landing.auto.privacy.24') }}
                     </p>
                     <ul class="space-y-3 font-body-md text-body-md text-on-surface-variant">
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--arrow-right] text-secondary mt-0.5"></span>
-                        <span>Fornecer, manter e melhorar nossos serviços de gestão de lavanderia</span>
+                        <span>{{ $t('landing.auto.privacy.25') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--arrow-right] text-secondary mt-0.5"></span>
-                        <span>Processar transações e enviar notificações relacionadas</span>
+                        <span>{{ $t('landing.auto.privacy.26') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--arrow-right] text-secondary mt-0.5"></span>
-                        <span>Enviar atualizações, newsletters e comunicações de suporte</span>
+                        <span>{{ $t('landing.auto.privacy.27') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--arrow-right] text-secondary mt-0.5"></span>
-                        <span>Analisar padrões de uso para melhorar a experiência do usuário</span>
+                        <span>{{ $t('landing.auto.privacy.28') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--arrow-right] text-secondary mt-0.5"></span>
-                        <span>Prevenir fraudes e garantir a segurança da plataforma</span>
+                        <span>{{ $t('landing.auto.privacy.29') }}</span>
                       </li>
                     </ul>
                   </div>
@@ -140,24 +140,24 @@
                     <div class="w-10 h-10 rounded-lg bg-tertiary-container/10 flex items-center justify-center text-tertiary">
                       <span class="icon-[tabler--share]"></span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface">3. Compartilhamento de Dados</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">{{ $t('landing.auto.privacy.30') }}</h2>
                   </div>
                   <div class="pl-0 md:pl-14 space-y-4">
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                      Não vendemos suas informações pessoais. Compartilhamos dados apenas:
+                      {{ $t('landing.auto.privacy.31') }}
                     </p>
                     <ul class="space-y-3 font-body-md text-body-md text-on-surface-variant">
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--check] text-tertiary mt-0.5"></span>
-                        <span>Com prestadores de serviço essenciais (processamento de pagamento, SMS, hospedagem)</span>
+                        <span>{{ $t('landing.auto.privacy.32') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--check] text-tertiary mt-0.5"></span>
-                        <span>Quando necessário para cumprir obrigações legais ou ordens judiciais</span>
+                        <span>{{ $t('landing.auto.privacy.33') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--check] text-tertiary mt-0.5"></span>
-                        <span>Em caso de fusão, aquisição ou venda de ativos da empresa</span>
+                        <span>{{ $t('landing.auto.privacy.34') }}</span>
                       </li>
                     </ul>
                   </div>
@@ -169,32 +169,32 @@
                     <div class="w-10 h-10 rounded-lg bg-success-container/10 flex items-center justify-center text-success">
                       <span class="icon-[tabler--shield-lock]"></span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface">4. Segurança dos Dados</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">{{ $t('landing.auto.privacy.35') }}</h2>
                   </div>
                   <div class="pl-0 md:pl-14 space-y-4">
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                      Implementamos medidas de segurança robustas:
+                      {{ $t('landing.auto.privacy.36') }}
                     </p>
                     <div class="grid md:grid-cols-2 gap-4">
                       <div class="bg-surface p-4 rounded-xl border border-outline-variant/20">
                         <span class="icon-[tabler--lock] text-success mb-2"></span>
-                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">Criptografia</h4>
-                        <p class="font-body-sm text-body-sm text-on-surface-variant">SSL/TLS em trânsito e AES-256 em repouso</p>
+                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">{{ $t('landing.auto.privacy.37') }}</h4>
+                        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.privacy.38') }}</p>
                       </div>
                       <div class="bg-surface p-4 rounded-xl border border-outline-variant/20">
                         <span class="icon-[tabler--user-check] text-success mb-2"></span>
-                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">Autenticação</h4>
-                        <p class="font-body-sm text-body-sm text-on-surface-variant">2FA e controle de acesso baseado em função</p>
+                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">{{ $t('landing.auto.privacy.39') }}</h4>
+                        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.privacy.40') }}</p>
                       </div>
                       <div class="bg-surface p-4 rounded-xl border border-outline-variant/20">
                         <span class="icon-[tabler--database-export] text-success mb-2"></span>
-                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">Backups</h4>
-                        <p class="font-body-sm text-body-sm text-on-surface-variant">Cópias automáticas diárias em múltiplas regiões</p>
+                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">{{ $t('landing.auto.privacy.41') }}</h4>
+                        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.privacy.42') }}</p>
                       </div>
                       <div class="bg-surface p-4 rounded-xl border border-outline-variant/20">
                         <span class="icon-[tabler--activity] text-success mb-2"></span>
-                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">Monitoramento</h4>
-                        <p class="font-body-sm text-body-sm text-on-surface-variant">Detecção 24/7 de atividades suspeitas</p>
+                        <h4 class="font-headline-sm text-headline-sm text-on-surface mb-1">{{ $t('landing.auto.privacy.43') }}</h4>
+                        <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.privacy.44') }}</p>
                       </div>
                     </div>
                   </div>
@@ -206,32 +206,32 @@
                     <div class="w-10 h-10 rounded-lg bg-primary-container/10 flex items-center justify-center text-primary">
                       <span class="icon-[tabler--gavel]"></span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface">5. Seus Direitos</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">{{ $t('landing.auto.privacy.45') }}</h2>
                   </div>
                   <div class="pl-0 md:pl-14 space-y-4">
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                      De acordo com a LGPD e GDPR, você tem direito a:
+                      {{ $t('landing.auto.privacy.46') }}
                     </p>
                     <ul class="space-y-3 font-body-md text-body-md text-on-surface-variant">
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--eye] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Acesso:</strong> Solicitar cópia dos seus dados</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.47') }}</strong> {{ $t('landing.auto.privacy.48') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--edit] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Correção:</strong> Atualizar informações incorretas</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.49') }}</strong> {{ $t('landing.auto.privacy.50') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--trash] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Exclusão:</strong> Solicitar remoção dos dados (direito ao esquecimento)</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.51') }}</strong> {{ $t('landing.auto.privacy.52') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--ban] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Restrição:</strong> Limitar o processamento de dados</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.53') }}</strong> {{ $t('landing.auto.privacy.54') }}</span>
                       </li>
                       <li class="flex items-start gap-3">
                         <span class="icon-[tabler--download] text-primary mt-0.5"></span>
-                        <span><strong class="text-on-surface">Portabilidade:</strong> Exportar dados em formato legível</span>
+                        <span><strong class="text-on-surface">{{ $t('landing.auto.privacy.55') }}</strong> {{ $t('landing.auto.privacy.56') }}</span>
                       </li>
                     </ul>
                   </div>
@@ -243,11 +243,11 @@
                     <div class="w-10 h-10 rounded-lg bg-secondary-container/10 flex items-center justify-center text-secondary">
                       <span class="icon-[tabler--cookie]"></span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface">6. Cookies e Tecnologias Similares</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">{{ $t('landing.auto.privacy.57') }}</h2>
                   </div>
                   <div class="pl-0 md:pl-14 space-y-4">
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                      Utilizamos cookies para:
+                      {{ $t('landing.auto.privacy.58') }}
                     </p>
                     <div class="space-y-3">
                       <div class="flex items-start gap-4 p-4 bg-surface rounded-xl border border-outline-variant/20">
@@ -255,8 +255,8 @@
                           <span class="icon-[tabler--check] text-primary text-sm"></span>
                         </div>
                         <div>
-                          <h4 class="font-headline-sm text-headline-sm text-on-surface">Essenciais</h4>
-                          <p class="font-body-sm text-body-sm text-on-surface-variant">Autenticação e segurança. Não podem ser desativados.</p>
+                          <h4 class="font-headline-sm text-headline-sm text-on-surface">{{ $t('landing.auto.privacy.59') }}</h4>
+                          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.privacy.60') }}</p>
                         </div>
                       </div>
                       <div class="flex items-start gap-4 p-4 bg-surface rounded-xl border border-outline-variant/20">
@@ -264,8 +264,8 @@
                           <span class="icon-[tabler--check] text-secondary text-sm"></span>
                         </div>
                         <div>
-                          <h4 class="font-headline-sm text-headline-sm text-on-surface">Funcionais</h4>
-                          <p class="font-body-sm text-body-sm text-on-surface-variant">Preferências de idioma e personalização.</p>
+                          <h4 class="font-headline-sm text-headline-sm text-on-surface">{{ $t('landing.auto.privacy.61') }}</h4>
+                          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.privacy.62') }}</p>
                         </div>
                       </div>
                       <div class="flex items-start gap-4 p-4 bg-surface rounded-xl border border-outline-variant/20">
@@ -273,8 +273,8 @@
                           <span class="icon-[tabler--check] text-tertiary text-sm"></span>
                         </div>
                         <div>
-                          <h4 class="font-headline-sm text-headline-sm text-on-surface">Analíticos</h4>
-                          <p class="font-body-sm text-body-sm text-on-surface-variant">Melhorias na plataforma baseadas em uso.</p>
+                          <h4 class="font-headline-sm text-headline-sm text-on-surface">{{ $t('landing.auto.privacy.63') }}</h4>
+                          <p class="font-body-sm text-body-sm text-on-surface-variant">{{ $t('landing.auto.privacy.64') }}</p>
                         </div>
                       </div>
                     </div>
@@ -287,17 +287,17 @@
                     <div class="w-10 h-10 rounded-lg bg-tertiary-container/10 flex items-center justify-center text-tertiary">
                       <span class="icon-[tabler--help-circle]"></span>
                     </div>
-                    <h2 class="font-headline-lg text-headline-lg text-on-surface">7. Contato</h2>
+                    <h2 class="font-headline-lg text-headline-lg text-on-surface">{{ $t('landing.auto.privacy.65') }}</h2>
                   </div>
                   <div class="pl-0 md:pl-14 space-y-4">
                     <p class="font-body-md text-body-md text-on-surface-variant">
-                      Para exercer seus direitos ou esclarecer dúvidas sobre privacidade:
+                      {{ $t('landing.auto.privacy.66') }}
                     </p>
                     <div class="bg-surface p-6 rounded-xl border border-outline-variant/20">
                       <div class="space-y-3">
                         <div class="flex items-center gap-3">
                           <span class="icon-[tabler--mail] text-tertiary"></span>
-                          <span class="font-body-md text-body-md text-on-surface">privacidade@ilaundry.com</span>
+                          <span class="font-body-md text-body-md text-on-surface">{{ $t('landing.auto.privacy.67') }}</span>
                         </div>
                         <div class="flex items-center gap-3">
                           <span class="icon-[tabler--phone] text-tertiary"></span>
@@ -305,12 +305,12 @@
                         </div>
                         <div class="flex items-center gap-3">
                           <span class="icon-[tabler--map-pin] text-tertiary"></span>
-                          <span class="font-body-md text-body-md text-on-surface">Av. Paulista, 1000 - São Paulo, SP</span>
+                          <span class="font-body-md text-body-md text-on-surface">{{ $t('landing.auto.privacy.68') }}</span>
                         </div>
                       </div>
                     </div>
                     <p class="font-body-sm text-body-sm text-on-surface-variant">
-                      Responderemos em até 15 dias úteis conforme exigido pela legislação.
+                      {{ $t('landing.auto.privacy.69') }}
                     </p>
                   </div>
                 </div>
@@ -323,7 +323,7 @@
                   @click="scrollToTop"
                 >
                   <span class="icon-[tabler--arrow-up]"></span>
-                  Voltar ao topo
+                  {{ $t('landing.auto.privacy.70') }}
                 </button>
               </div>
             </div>
@@ -335,16 +335,16 @@
       <section class="py-16 bg-surface-container-lowest border-t border-outline-variant/20">
         <div class="max-w-[1440px] mx-auto px-6 text-center">
           <p class="font-body-md text-body-md text-on-surface-variant mb-4">
-            Ao continuar usando nossa plataforma, você concorda com esta Política de Privacidade.
+            {{ $t('landing.auto.privacy.71') }}
           </p>
           <div class="flex flex-wrap justify-center gap-4">
             <NuxtLink to="/terms" class="btn btn-outline btn-primary">
               <span class="icon-[tabler--file-text] mr-2"></span>
-              Termos de Uso
+              {{ $t('landing.auto.privacy.72') }}
             </NuxtLink>
             <NuxtLink to="/contact" class="btn btn-ghost">
               <span class="icon-[tabler--help-circle] mr-2"></span>
-              Falar com DPO
+              {{ $t('landing.auto.privacy.73') }}
             </NuxtLink>
           </div>
         </div>
