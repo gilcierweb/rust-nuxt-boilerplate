@@ -41,8 +41,25 @@ type ProfileFragmentPredicate = Or<
     FragmentMatch<profiles::nickname>,
 >;
 
+/// Escape the LIKE wildcards a search term may carry.
+///
+/// Without the escape a term of `%` matches every row (a full table scan the
+/// caller did not ask for), and `_` matches any single character. Postgres
+/// treats a backslash as the default LIKE escape character, so prefixing the
+/// three specials turns a wildcard into the literal it was typed as.
+fn escape_like_fragment(term: &str) -> String {
+    let mut escaped = String::with_capacity(term.len() + 4);
+    for character in term.chars() {
+        if matches!(character, '\\' | '%' | '_') {
+            escaped.push('\\');
+        }
+        escaped.push(character);
+    }
+    escaped
+}
+
 fn profile_fragment_predicate(term: &str) -> ProfileFragmentPredicate {
-    let pattern = format!("%{}%", term.to_lowercase());
+    let pattern = format!("%{}%", escape_like_fragment(&term.to_lowercase()));
     matches_fragment(profiles::full_name, &pattern)
         .or(matches_fragment(profiles::first_name, &pattern))
         .or(matches_fragment(profiles::last_name, &pattern))
@@ -1103,5 +1120,35 @@ impl IUserRepositoryTransaction for UsersRepository {
         E: From<diesel::result::Error> + Send + 'static,
     {
         self.base.run_transaction(f).await
+    }
+}
+
+#[cfg(test)]
+mod like_escape_tests {
+    use super::escape_like_fragment;
+
+    #[test]
+    fn a_plain_term_is_untouched() {
+        assert_eq!(escape_like_fragment("maria"), "maria");
+    }
+
+    #[test]
+    fn the_wildcards_become_literals() {
+        assert_eq!(escape_like_fragment("%"), "\\%");
+        assert_eq!(escape_like_fragment("100%"), "100\\%");
+        assert_eq!(escape_like_fragment("a_b"), "a\\_b");
+    }
+
+    #[test]
+    fn the_escape_character_itself_is_escaped() {
+        assert_eq!(escape_like_fragment("a\\b"), "a\\\\b");
+    }
+
+    #[test]
+    fn a_term_of_only_wildcards_cannot_scan_the_table() {
+        // The pattern the predicate builds wraps the escaped term, so a bare
+        // `%` term now asks for a literal percent sign inside a name.
+        let pattern = format!("%{}%", escape_like_fragment("%"));
+        assert_eq!(pattern, "%\\%%");
     }
 }
