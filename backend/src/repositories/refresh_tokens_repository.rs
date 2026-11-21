@@ -11,7 +11,7 @@ use crate::db::schema::refresh_tokens::dsl::{expires_at, revoked_at};
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
 use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::refresh_tokens_trait::IRefreshTokenRepository;
-use crate::services::token_service::{generate_random_token, hash_token, verify_token_hash};
+use crate::services::token_service::{generate_random_token, hash_token};
 
 pub struct RefreshTokensRepository {
     base: BaseRepo,
@@ -240,10 +240,12 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                     let now = OffsetDateTime::now_utc();
                     let grace_start = now - Duration::seconds(ROTATION_GRACE_SECS);
 
-                    // Fast path: HMAC tokens carry a deterministic hash, so the
-                    // matching row (active or revoked inside the grace window)
-                    // can be found and locked directly instead of taking FOR
-                    // UPDATE over every non-revoked row in the table.
+                    // Refresh tokens are stored as HMAC-SHA256 hashes, which are
+                    // deterministic for a given plaintext and salt, so the matching
+                    // row (active or revoked inside the grace window) can be
+                    // found and locked directly. There is no legacy Argon2id
+                    // path here: `verify_token_hash` rejects any stored hash
+                    // without the `hmac:` prefix, so a scan could never match.
                     let hmac_hash = hash_token(&plaintext, &key);
                     let existing_token: Option<RefreshToken> = refresh_tokens_table::table
                         .filter(token_hash_col.eq(&hmac_hash))
@@ -254,25 +256,6 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
                         .first::<RefreshToken>(conn)
                         .await
                         .optional()?;
-
-                    // Slow path: legacy Argon2id tokens have no deterministic
-                    // hash, so the candidate set is scanned. This only runs for
-                    // rows that predate the HMAC migration.
-                    let existing_token = match existing_token {
-                        Some(token) => Some(token),
-                        None => {
-                            let candidates: Vec<RefreshToken> = refresh_tokens_table::table
-                                .filter(expires_at.gt(now))
-                                .filter(revoked_at.is_null().or(revoked_at.gt(grace_start)))
-                                .select(RefreshToken::as_select())
-                                .for_update()
-                                .load::<RefreshToken>(conn)
-                                .await?;
-                            candidates.into_iter().find(|token| {
-                                verify_token_hash(&plaintext, &token.token_hash, &key)
-                            })
-                        },
-                    };
 
                     let existing_token = match existing_token {
                         Some(token) => token,
