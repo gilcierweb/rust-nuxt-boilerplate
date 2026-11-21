@@ -799,8 +799,7 @@
         "15": "Quick Start",
         "16": "Legal",
         "17": "política de privacidad",
-        "18": "Términos de servicio",
-        "19": "© {{ new Date().getFullYear() }} RustNuxt Boilerplate. "
+        "18": "Términos de servicio"
       },
       "PortalFooter": {}
     },

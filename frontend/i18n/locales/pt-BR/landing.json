@@ -799,8 +799,7 @@
         "15": "Quick Start",
         "16": "Legal",
         "17": "Privacy Policy",
-        "18": "Terms of Service",
-        "19": "&copy; {{ new Date().getFullYear() }} RustNuxt Boilerplate. MIT Licensed. All rights reserved."
+        "18": "Terms of Service"
       },
       "PortalFooter": {}
     },
