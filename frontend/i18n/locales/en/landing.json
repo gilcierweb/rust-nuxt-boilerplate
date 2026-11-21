@@ -10,10 +10,13 @@
     },
     "hero": {
       "badge": "Edition 2024 / Industrial Management",
-      "heading": "Command Your Construction with",
+      "heading": "Build Full-Stack Apps Faster.",
       "highlight": "Absolute Precision.",
-      "description": "The new frontier of civil engineering where data and execution converge in a single high-performance panoramic view.",
-      "cta": "Request Demo"
+      "description": "A production-ready Rust (Actix Web) + Nuxt 4 boilerplate with authentication, authorization, admin panel, and modern developer experience. Clone, configure, and ship.",
+      "cta": "Request Demo",
+      "badgeRelease": "v1.0 Released: Production-Ready Boilerplate",
+      "viewOnGitHub": "View on GitHub",
+      "exploreFeatures": "Explore Features"
     },
     "features": {
       "sectionTitle": "Differentials",

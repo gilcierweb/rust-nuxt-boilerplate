@@ -12,25 +12,22 @@
               <span class="relative flex h-2 w-2"><span
                   class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span><span
                   class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span></span>
-              v1.0 Released: Production-Ready Boilerplate
+              {{ $t('landing.hero.badgeRelease') }}
             </div>
             <h1 class="font-display-xl text-display-xl text-on-surface mb-6 leading-tight">
-Build Full-Stack Apps
-              Faster.
+{{ $t('landing.hero.heading') }}
 </h1>
             <p class="font-body-lg text-body-lg text-on-surface-variant mb-10">
-A production-ready Rust (Actix Web) +
-              Nuxt 4 boilerplate with authentication, authorization, admin panel, and modern developer experience.
-              Clone, configure, and ship.
+{{ $t('landing.hero.description') }}
 </p>
             <div class="flex flex-wrap items-center gap-4">
               <a
 class="bg-primary text-on-primary px-8 py-4 rounded-xl font-headline-md text-headline-md font-medium hover:bg-primary-container hover:text-on-primary-container hover:-translate-y-0.5 active:scale-95 transition-all shadow-sm shadow-primary/20 flex items-center gap-2"
-                 href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank">View on GitHub <span
+                 href="https://github.com/gilcierweb/rust-nuxt-boilerplate" target="_blank">{{ $t('landing.hero.viewOnGitHub') }} <span
                   class="icon-[tabler--arrow-right]"></span></a>
               <a
 class="px-8 py-4 rounded-xl font-headline-md text-headline-md text-on-surface hover:bg-surface-container transition-colors flex items-center gap-2 border border-outline-variant/50"
-                 href="#features">Explore Features <span class="icon-[tabler--compass]"></span></a>
+                 href="#features">{{ $t('landing.hero.exploreFeatures') }} <span class="icon-[tabler--compass]"></span></a>
             </div>
           </div>
           <div
