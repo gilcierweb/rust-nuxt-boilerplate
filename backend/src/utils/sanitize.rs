@@ -47,6 +47,20 @@ pub fn strip_html(input: &str) -> String {
         .to_string()
 }
 
+/// Mask an address for a delivery log line: the domain and the first
+/// character of the mailbox, so two senders stay distinguishable without
+/// writing a personal address into every log.
+pub fn mask_email_for_log(address: &str) -> String {
+    match address.split_once('@') {
+        Some((local, domain)) => {
+            let visible: String = local.chars().take(1).collect();
+            format!("{visible}***@{domain}")
+        },
+        // A malformed address carries no mailbox to protect.
+        None => "***".to_string(),
+    }
+}
+
 pub fn sanitize_for_email(input: &str) -> String {
     ammonia::Builder::new()
         .tags(HashSet::new())
@@ -208,6 +222,21 @@ mod tests {
     #[test]
     fn strip_html_empty_input() {
         assert_eq!(strip_html(""), "");
+    }
+
+    #[test]
+    fn a_logged_address_keeps_the_domain_and_drops_the_mailbox() {
+        assert_eq!(mask_email_for_log("user@example.com"), "u***@example.com");
+    }
+
+    #[test]
+    fn a_single_character_mailbox_stays_masked() {
+        assert_eq!(mask_email_for_log("a@example.com"), "a***@example.com");
+    }
+
+    #[test]
+    fn a_malformed_address_leaves_no_part_of_it_behind() {
+        assert_eq!(mask_email_for_log("not-an-address"), "***");
     }
 
     #[test]

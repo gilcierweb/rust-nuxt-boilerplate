@@ -3,6 +3,7 @@
 use std::sync::Arc;
 
 use lettre::AsyncTransport;
+use crate::utils::sanitize::mask_email_for_log;
 use lettre::message::{Mailbox, Message, MultiPart, SinglePart};
 use lettre::transport::smtp::AsyncSmtpTransport;
 use serde::{Deserialize, Serialize};
@@ -476,7 +477,11 @@ impl EmailService {
         let safe_to = sanitize_for_email(to);
         let safe_subject = sanitize_for_email(subject);
         let safe_body = sanitize_for_html_email(body);
-        let log_to = safe_to.clone();
+        // The recipient is personal data: the delivery log keeps the domain
+        // and the first character of the mailbox, enough to tell two senders
+        // apart in a support conversation without writing the address into
+        // every log line.
+        let log_to = mask_email_for_log(&safe_to);
         let log_subject = safe_subject.clone();
 
         let html = html_body
