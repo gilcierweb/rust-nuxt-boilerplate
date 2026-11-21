@@ -39,7 +39,7 @@
               class="dropdown-toggle avatar"
               aria-haspopup="menu"
               aria-expanded="false"
-              aria-label="$t('portal.navbar.userMenu')"
+              :aria-label="$t('portal.navbar.userMenu')"
             >
               <span class="bg-primary text-primary-content rounded-field flex size-9.5 items-center justify-center text-sm font-semibold">
                 {{ initials }}
