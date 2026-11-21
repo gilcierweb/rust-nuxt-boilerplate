@@ -20,7 +20,7 @@
         v-if="dismissible"
         type="button"
         class="ms-auto cursor-pointer leading-none opacity-60 hover:opacity-100 transition-opacity"
-        aria-label="Close Button"
+        aria-label="Close"
         @click="closeAlert"
       >
         <span class="icon-[tabler--x] size-5"></span>

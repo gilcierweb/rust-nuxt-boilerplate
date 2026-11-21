@@ -24,7 +24,7 @@
           <p class="flex-1 text-sm font-medium text-base-content">{{ toast.message }}</p>
           <button
             class="ms-auto cursor-pointer leading-none opacity-60 hover:opacity-100 transition-opacity"
-            aria-label="Close Button"
+            :aria-label="$t('common.close')"
             @click="dismiss(toast.id)"
           >
             <span class="icon-[tabler--x] size-5"></span>

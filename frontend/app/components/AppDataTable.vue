@@ -113,17 +113,17 @@
           </tr>
           <tr v-if="loading && !rows.length">
             <td :colspan="visibleColumnCount">
-              <AppDataTableStatus state="loading" :label="loadingLabel ?? 'Carregando registros...'" />
+              <AppDataTableStatus state="loading" :label="loadingLabel ?? $t('admin.common.loadingRecords')" />
             </td>
           </tr>
           <tr v-if="error">
             <td :colspan="visibleColumnCount">
-              <AppDataTableStatus state="error" :label="errorLabel ?? error ?? 'Erro ao carregar dados'" />
+              <AppDataTableStatus state="error" :label="errorLabel ?? error ?? $t('admin.common.errorLoadingData')" />
             </td>
           </tr>
           <tr v-if="!loading && !error && !rows.length">
             <td :colspan="visibleColumnCount">
-              <AppDataTableStatus state="empty" :label="emptyLabel ?? 'Nenhum registro encontrado.'" />
+              <AppDataTableStatus state="empty" :label="emptyLabel ?? $t('admin.common.noRecords')" />
             </td>
           </tr>
         </tbody>
@@ -293,7 +293,7 @@ const props = withDefaults(defineProps<Props>(), {
   showToolbar: true,
   showTotal: true,
   showRefresh: false,
-  refreshLabel: 'Atualizar',
+  refreshLabel: 'Refresh',
   showPagination: true,
   page: 1,
   pageSize: 10,
