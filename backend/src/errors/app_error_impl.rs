@@ -12,9 +12,14 @@ impl From<DieselError> for AppError {
 }
 
 impl From<JwtError> for AppError {
-    fn from(error: JwtError) -> Self {
-        let msg = t!("errors.token_error", error = error.to_string()).into_owned();
-        AppError::Unauthorized(msg)
+    fn from(_error: JwtError) -> Self {
+        // The raw jsonwebtoken message distinguishes an expired token from a
+        // forged one and from an audience mismatch: free reconnaissance for a
+        // client probing the verifier. The reason goes to the log, the client
+        // reads one generic unauthorized message. The production verify path
+        // already mapped every failure to this message.
+        tracing::debug!(error = %_error, "jwt verification failed");
+        AppError::Unauthorized(t!("errors.token_error").into_owned())
     }
 }
 
