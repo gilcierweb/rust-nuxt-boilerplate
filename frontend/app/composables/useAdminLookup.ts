@@ -114,6 +114,10 @@ export function useAdminLookup() {
     return loadingByEntity.value[entity] || false
   }
 
+  function isLoaded(entity: LookupEntity): boolean {
+    return loadedByEntity.value[entity] || false
+  }
+
   function resolveLabel(entity: LookupEntity, id?: string | null): string {
     if (!id) return '-'
     const item = getItems(entity).find((entry) => entry.id === id)
@@ -136,7 +140,9 @@ export function useAdminLookup() {
   return {
     load,
     getItems,
+    getError,
     isLoading,
+    isLoaded,
     resolveLabel,
     invalidate,
   }
