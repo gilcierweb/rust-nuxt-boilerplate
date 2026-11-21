@@ -1,5 +1,8 @@
 name: Keep backend warm
 
+permissions:
+  contents: read
+
 # Render free tier sleeps after 15 min of inactivity and takes 30-90s to boot.
 # A ping from a Cloudflare Worker (this app's own edge) cannot wake a sleeping
 # service because Render's front does not forward it to the origin. GitHub
@@ -24,6 +27,7 @@ jobs:
             echo "Set it in Settings -> Secrets -> Actions -> BACKEND_URL"
             exit 0
           fi
-          echo "Pinging $URL/health"
+          echo "::add-mask::$URL"
+          echo "Pinging the backend health endpoint"
           curl -sS --max-time 120 -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
             -A "keep-alive/1.0" "$URL/health" || echo "Ping failed (service may be suspended)"

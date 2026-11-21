@@ -1,5 +1,11 @@
 name: CI
 
+# Least privilege: the default token is read/write on contents in a repository
+# that never opted into the read-only default, and a pull_request from a public
+# fork runs untrusted code. This workflow only ever reads the tree.
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main, master]
@@ -328,6 +334,15 @@ jobs:
           DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
 
+      - name: Run refresh reuse tests
+        # Runs after the auth cycle suite on purpose: both suites register
+        # subjects in the same database, and the reuse flow asserts on the
+        # session family the rotation leaves behind.
+        run: cargo test --features seed --test refresh_reuse_integration -- --test-threads=1
+        env:
+          DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/test_db
+          REDIS_URL: redis://localhost:6379
+
       - name: Run permissions admin tests
         # Runs before the catalog migration suite on purpose: it detaches and
         # deletes a canonical permission row, and the catalog suite re-seeds it
@@ -476,6 +491,21 @@ jobs:
           chmod +x backend/target/release/backend
           chmod +x backend/target/debug/seed
 
+      - name: Derive ephemeral test credentials
+        # The `|| fallback` pattern used to publish real-shaped secrets in the
+        # workflow and gave fork PRs (where secrets are unavailable) a
+        # committed, never-rotated key. The values are now generated per run
+        # and live only in the job environment.
+        run: |
+          {
+            echo "TEST_JWT_SECRET=$(openssl rand -hex 32)"
+            echo "TEST_MASTER_KEY=$(openssl rand -base64 32)"
+            echo "TEST_BLIND_INDEX_KEY=$(openssl rand -base64 32)"
+            echo "TEST_CSRF_SECRET_KEY=$(openssl rand -hex 32)"
+            echo "TEST_REFRESH_TOKEN_HASH_SALT=$(openssl rand -hex 32)"
+            echo "BACKEND_API_KEY=$(openssl rand -hex 32)"
+          } >> "$GITHUB_ENV"
+
       - name: Run diesel migrations (E2E DB)
         run: diesel migration run --database-url postgres://postgres:postgres@localhost:5432/test_db
         working-directory: ./backend
@@ -489,11 +519,11 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'ci-test-jwt-secret-32-chars-long!!' }}
-          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY || 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtMzItYnl0ZXMtbG9uZw==' }}
-          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY || 'dGVzdC1ibGluZC1pbmRleC1rZXktMzItYnl0ZXMtbG9uZw==' }}
-          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY || 'ci-test-csrf-secret-32-chars-long!' }}
-          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT || 'ci-test-refresh-salt-32-chars-long!' }}
+          JWT_SECRET: ${{ env.TEST_JWT_SECRET }}
+          MASTER_KEY: ${{ env.TEST_MASTER_KEY }}
+          BLIND_INDEX_KEY: ${{ env.TEST_BLIND_INDEX_KEY }}
+          CSRF_SECRET_KEY: ${{ env.TEST_CSRF_SECRET_KEY }}
+          REFRESH_TOKEN_HASH_SALT: ${{ env.TEST_REFRESH_TOKEN_HASH_SALT }}
           FRONTEND_URL: "http://localhost:3000"
           ENVIRONMENT: "Test"
 
@@ -505,11 +535,11 @@ jobs:
         env:
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/test_db
           REDIS_URL: redis://localhost:6379
-          JWT_SECRET: ${{ secrets.TEST_JWT_SECRET || 'ci-test-jwt-secret-32-chars-long!!' }}
-          MASTER_KEY: ${{ secrets.TEST_MASTER_KEY || 'dGVzdC1tYXN0ZXIta2V5LXRlc3QtMzItYnl0ZXMtbG9uZw==' }}
-          BLIND_INDEX_KEY: ${{ secrets.TEST_BLIND_INDEX_KEY || 'dGVzdC1ibGluZC1pbmRleC1rZXktMzItYnl0ZXMtbG9uZw==' }}
-          CSRF_SECRET_KEY: ${{ secrets.TEST_CSRF_SECRET_KEY || 'ci-test-csrf-secret-32-chars-long!' }}
-          REFRESH_TOKEN_HASH_SALT: ${{ secrets.TEST_REFRESH_TOKEN_HASH_SALT || 'ci-test-refresh-salt-32-chars-long!' }}
+          JWT_SECRET: ${{ env.TEST_JWT_SECRET }}
+          MASTER_KEY: ${{ env.TEST_MASTER_KEY }}
+          BLIND_INDEX_KEY: ${{ env.TEST_BLIND_INDEX_KEY }}
+          CSRF_SECRET_KEY: ${{ env.TEST_CSRF_SECRET_KEY }}
+          REFRESH_TOKEN_HASH_SALT: ${{ env.TEST_REFRESH_TOKEN_HASH_SALT }}
           FRONTEND_URL: "http://localhost:3000"
           ENVIRONMENT: "Test"
           RUST_LOG: "debug"
@@ -567,7 +597,7 @@ jobs:
           echo "FRONTEND_PID=$!" >> $GITHUB_ENV
         working-directory: ./frontend
         env:
-          NUXT_BACKEND_API_KEY: ${{ secrets.BACKEND_API_KEY || '856dcbbb713e119963ff8de320f1f1f282889eafd68a6a54293fc24db290e531' }}
+          NUXT_BACKEND_API_KEY: ${{ env.BACKEND_API_KEY }}
           NUXT_BACKEND_API_BASE: "http://localhost:8080/api/v1"
 
       - name: Wait for frontend to be ready
