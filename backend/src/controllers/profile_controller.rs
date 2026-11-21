@@ -23,6 +23,54 @@ use crate::utils::validation::first_validation_error_message;
 /// The identity fields (the user id, the status) and the encrypted attributes
 /// (cpf, phone, whatsapp) are absent on purpose: the first belong to the user,
 /// the second need the key material of their own flow.
+/// The avatar is an image URL the app renders as a link.
+///
+/// Only `http` and `https` are accepted: the length check alone let a
+/// `javascript:` or `data:` value through, and every client that reads the
+/// profile echoes it back.
+pub fn validate_avatar_url(avatar: &str) -> Result<(), validator::ValidationError> {
+    let scheme = avatar
+        .split(':')
+        .next()
+        .unwrap_or_default()
+        .to_ascii_lowercase();
+    if matches!(scheme.as_str(), "http" | "https") {
+        return Ok(());
+    }
+
+    let mut error = validator::ValidationError::new("profile.validation.avatar_invalid");
+    error.message = Some("profile.validation.avatar_invalid".into());
+    Err(error)
+}
+
+#[cfg(test)]
+mod avatar_url_tests {
+    use super::*;
+
+    #[test]
+    fn an_http_or_https_avatar_is_accepted() {
+        assert!(validate_avatar_url("https://cdn.example.com/a.png").is_ok());
+        assert!(validate_avatar_url("http://localhost:8000/a.png").is_ok());
+        assert!(validate_avatar_url("HTTPS://CDN.EXAMPLE.COM/a.png").is_ok());
+    }
+
+    #[test]
+    fn a_dangerous_scheme_is_refused() {
+        // The profile is echoed back to every reader: a javascript: or data:
+        // avatar turns the profile render into an execution sink.
+        assert!(validate_avatar_url("javascript:alert(1)").is_err());
+        assert!(validate_avatar_url("data:image/svg+xml,<svg onload=alert(1)>").is_err());
+        assert!(validate_avatar_url("vbscript:msgbox").is_err());
+    }
+
+    #[test]
+    fn a_scheme_less_value_is_refused() {
+        assert!(validate_avatar_url("cdn.example.com/a.png").is_err());
+        assert!(validate_avatar_url("//cdn.example.com/a.png").is_err());
+        assert!(validate_avatar_url("/avatars/a.png").is_err());
+    }
+}
+
 #[derive(Debug, Deserialize, Validate, ToSchema)]
 pub struct ProfileUpdateRequest {
     #[validate(length(max = 100, message = "profile.validation.first_name_invalid"))]
@@ -35,7 +83,10 @@ pub struct ProfileUpdateRequest {
     pub nickname: Option<String>,
     #[validate(length(max = 2000, message = "profile.validation.bio_invalid"))]
     pub bio: Option<String>,
-    #[validate(length(max = 500, message = "profile.validation.avatar_invalid"))]
+    #[validate(
+        length(max = 500, message = "profile.validation.avatar_invalid"),
+        custom(function = "validate_avatar_url", message = "profile.validation.avatar_invalid")
+    )]
     pub avatar: Option<String>,
     pub birthday: Option<Date>,
 }

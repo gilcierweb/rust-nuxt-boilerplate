@@ -98,6 +98,18 @@ pub async fn get_audit_log(
     Ok(HttpResponse::Ok().json(item))
 }
 
+/// The size ceiling of the JSON documents of an audit entry.
+///
+/// An unbounded `changes` document turns one admin write into an unbounded
+/// audit row: the two documents are bounded alike.
+const AUDIT_JSON_DOCUMENT_LIMIT_BYTES: usize = 64 * 1024;
+
+fn audit_json_document_is_too_large(document: &serde_json::Value) -> bool {
+    serde_json::to_string(document)
+        .map(|serialized| serialized.len() > AUDIT_JSON_DOCUMENT_LIMIT_BYTES)
+        .unwrap_or(true)
+}
+
 /// Create a new audit log entry.
 ///
 /// Requires the `audit_logs:create` authority.
@@ -142,6 +154,13 @@ pub async fn create_audit_log(
     payload
         .validate()
         .map_err(|error| AppError::Validation(first_validation_error_message(&error)))?;
+    if audit_json_document_is_too_large(&payload.changes)
+        || audit_json_document_is_too_large(&payload.metadata)
+    {
+        return Err(AppError::Validation(
+            t!("audit_logs.validation.document_too_large").into_owned(),
+        ));
+    }
     let created = container
         .domain_audit_logs
         .create(&payload)
@@ -165,6 +184,43 @@ pub fn test_config(cfg: &mut web::ServiceConfig) {
 mod tests {
     use std::sync::Arc;
 
+    #[actix_web::test]
+    async
+    fn a_request_body_cannot_set_the_chain_fields() {
+        // The hash chain is the repository's to compute: a posted `prev_hash`
+        // or `hash` is ignored, so a client cannot place an entry at an
+        // arbitrary position of the chain.
+        let payload: crate::models::audit_log::NewAuditLog = serde_json::from_str(
+            r#"{
+                "action": "user.created",
+                "resource_type": "user",
+                "changes": {},
+                "metadata": {},
+                "prev_hash": "forged-prev",
+                "hash": "forged-hash"
+            }"#,
+        )
+        .expect("the payload deserializes");
+        assert!(payload.prev_hash.is_none());
+        assert!(payload.hash.is_empty());
+    }
+
+    #[actix_web::test]
+    async
+    fn an_oversized_json_document_is_refused() {
+        // An unbounded `changes` document turns one admin write into an
+        // unbounded audit row: the two documents are bounded alike.
+        let oversized: serde_json::Value = serde_json::json!({ "payload": "x".repeat(70 * 1024) });
+        assert!(audit_json_document_is_too_large(&oversized));
+        assert!(audit_json_document_is_too_large(&serde_json::json!({
+            "changes": { "nested": "y".repeat(65 * 1024) }
+        })));
+
+        let ordinary: serde_json::Value =
+            serde_json::json!({ "before": null, "after": { "email": "a@b.c" } });
+        assert!(!audit_json_document_is_too_large(&ordinary));
+    }
+
     use actix_web::HttpMessage;
     use actix_web::body::to_bytes;
     use actix_web::http::StatusCode;
@@ -173,7 +229,7 @@ mod tests {
     use time::OffsetDateTime;
     use uuid::Uuid;
 
-    use super::test_config;
+    use super::{audit_json_document_is_too_large, test_config};
     use crate::authz::test_helpers::ability_from_codes;
     use crate::middleware::auth::{Claims, create_token};
     use crate::models::audit_log::AuditLog;
