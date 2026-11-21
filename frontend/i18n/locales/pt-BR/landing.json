@@ -54,7 +54,7 @@
       }
     },
     "investor": {
-      "badge": "Investor Insight",
+      "badge": "Visão do Investidor",
       "title": "Portal do Investidor",
       "assetOnSite": "Patrimônio em Obra",
       "description": "Acompanhe o ROI da sua construção com gráficos de evolução física versus financeira. Transparência que valoriza seu investimento.",
@@ -130,7 +130,7 @@
         "description": "O BuildTrack emite certificados de gestão de resíduos em tempo real para auditorias de sustentabilidade."
       },
       "impact": "IMPACTO",
-      "metric": "{value} Ton"
+      "metric": "{value} t"
     },
     "security": {
       "title": "Imutabilidade de Dados",
@@ -143,7 +143,7 @@
     },
     "testimonials": {
       "title": "Vozes do Mercado",
-      "badge": "Customer Stories",
+      "badge": "Histórias de Clientes",
       "quote1": {
         "quote": "A transparência do BuildTrack zerou os ruídos de comunicação com nossos investidores. O portal do comprador tornou-se nossa principal ferramenta de fechamento.",
         "author": "Carlos Mendes",

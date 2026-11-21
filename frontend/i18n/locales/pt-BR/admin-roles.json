@@ -55,9 +55,9 @@
     "memberships": {
       "roles": {
         "admin": "Admin",
-        "manager": "Manager",
+        "manager": "Gerente",
         "editor": "Editor",
-        "viewer": "Viewer"
+        "viewer": "Visualizador"
       },
       "status": {
         "active": "Ativo",
@@ -73,7 +73,7 @@
       },
       "index": {
         "header": {
-          "section": "Admin / Memberships",
+          "section": "Admin / Associações",
           "title": "Vínculos Usuário-Empresa"
         },
         "actions": {
@@ -99,7 +99,7 @@
       },
       "new": {
         "header": {
-          "section": "Admin / Memberships",
+          "section": "Admin / Associações",
           "title": "Novo vínculo"
         },
         "actions": {
@@ -108,7 +108,7 @@
       },
       "edit": {
         "header": {
-          "section": "Admin / Memberships",
+          "section": "Admin / Associações",
           "title": "Editar vínculo"
         },
         "actions": {
@@ -117,7 +117,7 @@
       },
       "show": {
         "header": {
-          "section": "Admin / Memberships",
+          "section": "Admin / Associações",
           "title": "Detalhes do vínculo"
         },
         "actions": {
@@ -135,18 +135,18 @@
         },
         "fields": {
           "userId": {
-            "label": "User ID"
+            "label": "ID do usuário"
           },
           "companyId": {
-            "label": "Company ID"
+            "label": "ID da empresa"
           },
           "membershipRole": {
             "label": "Papel no vínculo",
             "options": {
               "admin": "Admin",
-              "manager": "Manager",
+              "manager": "Gerente",
               "editor": "Editor",
-              "viewer": "Viewer"
+              "viewer": "Visualizador"
             }
           },
           "status": {

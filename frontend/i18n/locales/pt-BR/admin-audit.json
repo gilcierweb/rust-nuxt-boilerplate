@@ -60,16 +60,16 @@
         },
         "fields": {
           "companyId": {
-            "label": "Company ID"
+            "label": "ID da empresa"
           },
           "actorUserId": {
-            "label": "Actor User ID"
+            "label": "ID do usuário executor"
           },
           "actorRoleSnapshot": {
             "label": "Snapshot do papel do ator"
           },
           "targetCustomerId": {
-            "label": "Target Customer ID"
+            "label": "ID do cliente de destino"
           },
           "action": {
             "label": "Ação"
@@ -78,26 +78,26 @@
             "label": "Tipo do recurso"
           },
           "resourceId": {
-            "label": "Resource ID"
+            "label": "ID do recurso"
           },
           "ipAddress": {
-            "label": "IP Address"
+            "label": "Endereço IP"
           },
           "userAgent": {
-            "label": "User agent"
+            "label": "Agente de usuário"
           },
           "requestId": {
-            "label": "Request ID"
+            "label": "ID da requisição"
           },
           "createdAt": {
             "label": "Criado em"
           },
           "changesJson": {
-            "label": "Changes JSON",
+            "label": "JSON de alterações",
             "placeholder": "JSON com alterações aplicadas"
           },
           "metadataJson": {
-            "label": "Metadata JSON",
+            "label": "JSON de metadados",
             "placeholder": "JSON com metadados extras do evento"
           }
         },

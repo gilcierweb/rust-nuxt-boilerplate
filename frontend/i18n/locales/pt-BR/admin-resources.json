@@ -178,11 +178,11 @@
         "action": "Ação",
         "resourceType": "Tipo de recurso",
         "resourceId": "ID do recurso",
-        "requestId": "Request ID",
+        "requestId": "ID da requisição",
         "ipAddress": "IP",
-        "userAgent": "User agent",
-        "changes": "Changes",
-        "metadata": "Metadata",
+        "userAgent": "Agente de usuário",
+        "changes": "Alterações",
+        "metadata": "Metadados",
         "createdAt": "Criado em"
       },
       "messages": {
