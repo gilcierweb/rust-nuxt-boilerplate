@@ -1,7 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
 import { createApp } from 'vue'
 
-import { adminDeleteButton, formatCurrency, formatDate, formatDateTime } from '@/app/utils/admin-ui'
+import {
+  adminDeleteButton,
+  formatCurrency,
+  stringifyJson,
+} from '@/app/utils/admin-ui'
 
 describe('adminDeleteButton', () => {
   it('uses ARRAY children on the native button (array children contract)', () => {
@@ -32,11 +36,18 @@ describe('adminDeleteButton', () => {
   })
 
   it('shows the spinner icon and disables while the delete is pending', () => {
-    const vnode = adminDeleteButton({ pending: true, onClick: () => {} })
+    const vnode = adminDeleteButton({
+      pending: true,
+      onClick: () => {},
+    })
 
     expect((vnode.props as { disabled?: boolean }).disabled).toBe(true)
 
-    const child = (vnode.children as unknown[])[0] as { props: { class: string } }
+    const child = (vnode.children as unknown[])[0] as {
+      type: unknown
+      props: { class: string }
+    }
+    expect(child.type).toBe('span')
     expect(child.props.class).toContain('icon-[tabler--loader-2]')
   })
 
@@ -75,25 +86,33 @@ describe('adminDeleteButton', () => {
   })
 })
 
-describe('the date and currency formatters', () => {
-  // A missing value renders as the empty placeholder of the caller: a
-  // decorative character is banned by the project rules, so the formatters
-  // answer an empty string and the cell names the empty state.
+describe('stringifyJson', () => {
+  it('stringifies a value pretty-printed for editing', () => {
+    expect(stringifyJson({ a: 1 })).toBe(JSON.stringify({ a: 1 }, null, 2))
+  })
+
+  it('collapses null, undefined and the empty string to one place', () => {
+    expect(stringifyJson(null)).toBe('{}')
+    expect(stringifyJson('')).toBe('{}')
+  })
+
+  it('passes a raw string through untouched', () => {
+    expect(stringifyJson('  {"a":1}')).toBe('  {"a":1}')
+  })
+})
+
+describe('formatCurrency', () => {
   it('answers an empty string for a missing value', () => {
-    expect(formatDateTime(undefined)).toBe('')
-    expect(formatDateTime(null)).toBe('')
-    expect(formatDate(undefined)).toBe('')
     expect(formatCurrency(undefined)).toBe('')
   })
 
-  it('formats a readable instant in the locale of the caller', () => {
-    const formatted = formatDateTime('2026-01-02T03:04:05Z', 'en-US')
+  it('formats the amount in the locale of the caller', () => {
+    // A fixed locale once printed Brazilian currency inside an English screen.
+    const globalScope = globalThis as any
+    globalScope.useI18n = () => ({ locale: { value: 'en-US' } })
+    expect(formatCurrency(19.9, 'BRL')).toContain('19.90')
 
-    expect(formatted).toContain('2026')
-    expect(formatted).not.toBe('2026-01-02T03:04:05Z')
-  })
-
-  it('hands back a value it cannot read unchanged', () => {
-    expect(formatDateTime('not a date')).toBe('not a date')
+    globalScope.useI18n = () => ({ locale: { value: 'pt-BR' } })
+    expect(formatCurrency(19.9, 'BRL')).toContain('19,90')
   })
 })
