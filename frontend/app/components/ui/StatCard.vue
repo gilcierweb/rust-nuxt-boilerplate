@@ -70,7 +70,7 @@ const props = defineProps<{
 }>()
 
 // The icon prop names a tabler icon: the span then carries the CSS mask the
-// project uses everywhere (`icon-[tabler--name]`), with the same fallback of the
+// project uses everywhere (the tabler icon classes), with the same fallback of the
 // previous Icon component for a stat without an icon.
 const iconClass = computed(() => `icon-[tabler--${props.stat?.icon ?? 'chart-bar'}]`)
 
