@@ -173,23 +173,32 @@
       }
     },
     "footer": {
-      "platform": {
-        "title": "Platform",
-        "teamPortal": "Team Portal",
-        "buyerApp": "Buyer App",
-        "apiIntegrations": "API Integrations",
-        "esgSecurity": "ESG Security"
-      },
-      "company": {
-        "title": "Company",
-        "aboutUs": "About Us",
-        "careers": "Careers",
-        "privacy": "Privacy",
-        "contact": "Contact"
-      },
-      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. ALL RIGHTS RESERVED.",
-      "cnpj": "CNPJ {number}",
-      "location": "{city}, {state}"
+      "tagline": "A production-ready Rust (Actix Web) + Nuxt 4 boilerplate with authentication, RBAC, admin panel, and modern developer experience.",
+      "product": "Product",
+      "company": "Company",
+      "resources": "Resources",
+      "legal": "Legal",
+      "features": "Features",
+      "techStack": "Tech Stack",
+      "architecture": "Architecture",
+      "security": "Security",
+      "about": "About",
+      "howItWorks": "How It Works",
+      "contact": "Contact",
+      "github": "GitHub",
+      "apiDocs": "API Docs",
+      "quickStart": "Quick Start",
+      "privacy": "Privacy Policy",
+      "terms": "Terms of Service",
+      "copyright": "RustNuxt Boilerplate. MIT Licensed. All rights reserved."
+    },
+    "navbar": {
+      "features": "Features",
+      "techStack": "Tech Stack",
+      "architecture": "Architecture",
+      "contact": "Contact",
+      "login": "Login",
+      "getStarted": "Get Started"
     }
   },
   "about": {
