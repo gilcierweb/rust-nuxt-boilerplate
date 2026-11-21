@@ -397,11 +397,8 @@ export const useAuthStore = defineStore('auth', {
 
     _setSessionUser(user: User) {
       this.user = {
-        id: user.id,
-        email: user.email,
-        profile_id: user.profile_id,
-        roles: user.roles,
-        is_otp_enabled: user.is_otp_enabled,
+        ...(this.user ?? {}),
+        ...user,
       }
     },
 
