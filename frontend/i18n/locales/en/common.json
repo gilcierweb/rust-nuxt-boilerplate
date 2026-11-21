@@ -1,5 +1,13 @@
 {
+  "timeAgo": {
+    "now": "just now",
+    "minutes": " min ago",
+    "hours": " h ago",
+    "days": " d ago",
+    "weeks": " w ago"
+  },
   "common": {
+    "appName": "Rust Nuxt Boilerplate",
     "success": "Success",
     "error": "Error",
     "errorExtended": {

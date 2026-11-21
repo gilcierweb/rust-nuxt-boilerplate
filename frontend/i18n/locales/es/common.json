@@ -1,4 +1,11 @@
 {
+  "timeAgo": {
+    "now": "ahora",
+    "minutes": " min",
+    "hours": " h",
+    "days": " d",
+    "weeks": " sem"
+  },
   "common": {
     "appName": "Boilerplate Rust Nuxt",
     "success": "Éxito",

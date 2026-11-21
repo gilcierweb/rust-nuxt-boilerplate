@@ -1,5 +1,7 @@
 {
   "admin": {
+    "section": "Administración",
+    "title": "Panel",
     "sidebar": {
       "closeSidebar": "Cerrar barra lateral",
       "permissions": "Permisos",

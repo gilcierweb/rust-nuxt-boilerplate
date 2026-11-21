@@ -5,19 +5,19 @@
       class="mb-6"
       tone="error"
       variant="soft"
-      :title="$t('admin.roles.form.error_title', 'Erro')"
+      :title="$t('admin.roles.form.error_title')"
       :message="formAlertMessage"
     />
     <div class="space-y-6">
       <div v-if="mode === 'edit' && initialValues.id" class="md:w-1/2">
-        <label class="label-text font-semibold" for="roleId">{{ $t('admin.roles.form.id', 'ID') }}</label>
+        <label class="label-text font-semibold" for="roleId">{{ $t('admin.roles.form.id') }}</label>
         <input id="roleId" :value="initialValues.id" type="text" class="input input-disabled w-full bg-base-200" disabled />
       </div>
 
       <div class="grid gap-6 md:grid-cols-2">
         <div>
           <label class="label-text font-semibold" for="roleName">
-            {{ $t('admin.roles.form.name', 'Nome') }} <span class="text-error">*</span>
+            {{ $t('admin.roles.form.name') }} <span class="text-error">*</span>
           </label>
           <input id="roleName" v-model="name" type="text" placeholder="admin" class="input w-full" :class="{ 'is-invalid': errors.name }" :aria-required="true" :aria-invalid="errors.name ? 'true' : 'false'" :aria-describedby="errors.name ? 'roleNameError' : 'roleNameHint'" />
           <span v-if="errors.name" id="roleNameError" role="alert" class="text-error text-xs mt-1 block">{{ errors.name }}</span>
@@ -25,14 +25,14 @@
         </div>
 
         <div>
-          <label class="label-text font-semibold" for="roleResourceType">{{ $t('admin.roles.form.resource_type', 'Tipo de recurso') }}</label>
+          <label class="label-text font-semibold" for="roleResourceType">{{ $t('admin.roles.form.resource_type') }}</label>
           <input id="roleResourceType" v-model="resourceType" type="text" placeholder="company" class="input w-full" :class="{ 'is-invalid': errors.resource_type }" :aria-invalid="errors.resource_type ? 'true' : 'false'" :aria-describedby="errors.resource_type ? 'roleResourceTypeError' : 'roleResourceTypeHint'" />
           <span v-if="errors.resource_type" id="roleResourceTypeError" role="alert" class="text-error text-xs mt-1 block">{{ errors.resource_type }}</span>
           <span v-else id="roleResourceTypeHint" class="text-base-content/60 text-xs mt-1 block">{{ $t('admin.roles.form.scope_hint') }}</span>
         </div>
 
         <div>
-          <label class="label-text font-semibold" for="roleResourceId">{{ $t('admin.roles.form.resource_id', 'ID do recurso') }}</label>
+          <label class="label-text font-semibold" for="roleResourceId">{{ $t('admin.roles.form.resource_id') }}</label>
           <input id="roleResourceId" v-model="resourceId" type="text" class="input w-full" :class="{ 'is-invalid': errors.resource_id }" :aria-invalid="errors.resource_id ? 'true' : 'false'" :aria-describedby="errors.resource_id ? 'roleResourceIdError' : 'roleResourceIdHint'" />
           <span v-if="errors.resource_id" id="roleResourceIdError" role="alert" class="text-error text-xs mt-1 block">{{ errors.resource_id }}</span>
           <span v-else id="roleResourceIdHint" class="text-base-content/60 text-xs mt-1 block">{{ $t('admin.roles.form.scope_hint') }}</span>
@@ -41,18 +41,18 @@
 
       <div v-if="mode === 'edit' && initialValues.created_at" class="grid gap-6 md:grid-cols-2 pt-4 border-t border-base-content/10">
         <div>
-          <label class="label-text font-semibold" for="roleCreatedAt">{{ $t('admin.roles.form.created_at', 'Criado em') }}</label>
+          <label class="label-text font-semibold" for="roleCreatedAt">{{ $t('admin.roles.form.created_at') }}</label>
           <input id="roleCreatedAt" :value="formatDateTime(initialValues.created_at)" type="text" class="input input-disabled w-full bg-base-200" disabled />
         </div>
         <div>
-          <label class="label-text font-semibold" for="roleUpdatedAt">{{ $t('admin.roles.form.updated_at', 'Atualizado em') }}</label>
+          <label class="label-text font-semibold" for="roleUpdatedAt">{{ $t('admin.roles.form.updated_at') }}</label>
           <input id="roleUpdatedAt" :value="formatDateTime(initialValues.updated_at)" type="text" class="input input-disabled w-full bg-base-200" disabled />
         </div>
       </div>
 
       <div class="flex items-center justify-end gap-3 pt-4 border-t border-base-content/10">
-        <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">{{ $t('admin.roles.form.cancel', 'Cancelar') }}</NuxtLink>
-        <button type="submit" class="btn btn-primary" :disabled="saving">
+        <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">{{ $t('admin.roles.form.cancel') }}</NuxtLink>
+        <button type="submit" class="btn btn-primary" :disabled="saving || props.submitDisabled">
           <span v-if="saving" class="icon-[tabler--loader-2] size-5 animate-spin"></span>
           <span v-else class="icon-[tabler--check] size-5"></span>
           {{ submitLabel }}
@@ -65,7 +65,7 @@
 <script setup lang="ts">
 import * as v from 'valibot'
 import { toTypedSchema } from '@vee-validate/valibot'
-import { formatDateTime } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/format-date'
 import AppAlert from '~/components/AppAlert.vue'
 
 const { t } = useI18n()
@@ -83,6 +83,13 @@ const props = defineProps<{
     updated_at?: string
   }
   saving?: boolean
+  /**
+   * The subject lacks the class-level capability the form needs
+   * (`roles:create` in create mode, `roles:update` in edit mode). The
+   * server refuses the call anyway; the form disables the button so the
+   * honest outcome is an active choice instead of a late refusal.
+   */
+  submitDisabled?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -101,7 +108,7 @@ const schema = computed(() =>
         id: v.optional(v.string()),
         name: v.pipe(
           v.string(),
-          v.nonEmpty(t('admin.roles.validation.name_required', 'O nome é obrigatório')),
+          v.nonEmpty(t('admin.roles.validation.name_required')),
           v.maxLength(50, t('admin.roles.validation.name_invalid')),
         ),
         resource_type: v.optional(
@@ -151,8 +158,8 @@ watch(
 )
 
 const submitLabel = computed(() => {
-  if (props.saving) return t('admin.roles.form.saving', 'Salvando...')
-  return props.mode === 'create' ? t('admin.roles.form.create_role', 'Criar cargo') : t('admin.roles.form.save_changes', 'Salvar alterações')
+  if (props.saving) return t('admin.roles.form.saving')
+  return props.mode === 'create' ? t('admin.roles.form.create_role') : t('admin.roles.form.save_changes')
 })
 
 const submit = handleSubmit((values) => {

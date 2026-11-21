@@ -106,9 +106,9 @@ export function mapAuthError(
       case 'ACCOUNT_LOCKED':
         return t('auth.login.error.accountLocked')
       case 'EMAIL_ALREADY_EXISTS':
-        return t('auth.register.error.emailExists')
+        return t('auth.register.errors.emailExists')
       case 'WEAK_PASSWORD':
-        return t('auth.register.error.weakPassword')
+        return t('auth.register.errors.weakPassword')
       case 'OTP_REQUIRED':
       case 'OTP_INVALID':
         return t('auth.login.otp.invalidCode')
