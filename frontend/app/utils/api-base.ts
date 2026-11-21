@@ -10,17 +10,33 @@
  * configured, which skips the proxy round-trip for client-initiated requests.
  */
 export function resolveApiBase(
-  config: { public?: { apiBase?: string; apiDirectBase?: string } },
+  config: unknown,
   isServer: boolean,
 ): string {
   if (isServer) {
     return '/api/v1'
   }
 
-  const directBase = config.public?.apiDirectBase?.replace(/\/+$/, '')
+  // The Nuxt runtime config types `public` as an index signature, so the
+  // values are read defensively instead of through a brittle cast.
+  const publicConfig =
+    config && typeof config === 'object'
+      ? (config as { public?: unknown }).public
+      : undefined
+  const configured =
+    publicConfig && typeof publicConfig === 'object'
+      ? (publicConfig as Record<string, unknown>)
+      : {}
+
+  const directBase =
+    typeof configured.apiDirectBase === 'string'
+      ? configured.apiDirectBase.replace(/\/+$/, '')
+      : ''
   if (directBase) {
     return directBase
   }
 
-  return config.public?.apiBase || '/api/v1'
+  return typeof configured.apiBase === 'string' && configured.apiBase
+    ? configured.apiBase
+    : '/api/v1'
 }

@@ -1,5 +1,6 @@
 import { isAuthPath } from '~~/shared/utils/auth-paths'
 import { csrfTokenFromCookieHeader } from '~~/shared/utils/csrf'
+import { resolveApiBase } from '~/utils/api-base'
 
 function isAuthRequest(request: unknown) {
   // Single source of truth shared with the Nitro proxy
@@ -24,20 +25,17 @@ export default defineNuxtPlugin((nuxtApp) => {
   const publicConfig = config.public;
   
   /**
-   * Decide which base URL to use based on execution context:
-   * - Server-side (SSR): use relative `/api/v1` so the Nitro proxy routes the
-   *   request through `server/api/v1/[...path].ts`. This is required because
-   *   SSR fetches run inside the Nitro server process, and only the proxy can
-   *   attach the correct internal cookies/headers.
-   * - Client-side (CSR): use the absolute public API base URL
-   *   (`NUXT_PUBLIC_API_BASE`), which bypasses the Nitro proxy round-trip for
-   *   non-SSR requests. This reduces latency for client-initiated requests by
-   *   going directly to the backend. The backend still receives the same
-   *   cookies via `credentials: "include"` and any auth headers set below.
+   * The base every request goes through, decided by the one shared resolver
+   * (`utils/api-base.ts`) so the imperative client and `useApiFetch` cannot
+   * drift into two topologies:
+   * - Server-side (SSR): always the relative `/api/v1`, which routes through
+   *   the Nitro proxy: a server render runs inside the Nitro process, and
+   *   only the proxy attaches the cookies and the access token it resolves
+   *   from the refresh cookie.
+   * - Client-side (CSR): the direct backend base when
+   *   `NUXT_PUBLIC_API_BASE` is configured, otherwise the same proxy base.
    */
-  const baseURL = import.meta.server
-    ? "/api/v1"
-    : String(publicConfig.apiBase || "/api/v1").replace(/\/+$/, "");
+  const baseURL = resolveApiBase(publicConfig, import.meta.server);
 
 // The pinia instance the app carries.
 //
