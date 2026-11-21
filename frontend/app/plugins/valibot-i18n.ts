@@ -5,7 +5,7 @@ export default defineNuxtPlugin((nuxtApp) => {
   const { locale } = i18n
 
   const configureValibot = (lang: string) => {
-    // Sincroniza o Valibot sempre com pt-BR quando o idioma for português
+    // Sync Valibot with pt-BR whenever the active language is Portuguese
     if (lang.startsWith('pt')) {
       setGlobalConfig({ lang: 'pt-BR' })
     } else {
@@ -13,10 +13,10 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   }
 
-  // Inicializa
+  // Initialize
   configureValibot(locale.value)
 
-  // Observa mudanças
+  // Watch for changes
   watch(locale, (newLocale) => {
     configureValibot(newLocale)
   })

@@ -44,6 +44,6 @@ export default defineNuxtPlugin(() => {
   // early — the DOM is not yet stable when FlyonUI tries to bind event listeners.
   // This matches the official FlyonUI Nuxt integration guide exactly.
   router.afterEach(() => {
-    setTimeout(() => window.HSStaticMethods.autoInit())
+    setTimeout(() => window.HSStaticMethods?.autoInit?.())
   })
 })

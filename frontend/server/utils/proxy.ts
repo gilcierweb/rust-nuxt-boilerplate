@@ -116,18 +116,20 @@ export function requireBackendProxyConfig(
   const backendApiKey = String(runtimeBackendApiKey || config.backendApiKey || '')
 
   // Diagnostic: emit the resolved backend URL (sanitized, no API key) so a
-  // `wrangler tail` run shows exactly what the worker is talking to. This is
-  // the single most useful line when debugging a 503 in production.
+  // `wrangler tail` run shows exactly what the worker is talking to. Kept at
+  // debug level and only in development to avoid flooding production logs.
   const resolvedBase = backendApiBases[0] || '(none)'
   const envSource = runtimeBackendApiBase ? 'runtime-env' : 'baked-config'
-  console.warn(
-    '[proxy] backend base:',
-    resolvedBase,
-    '| source:',
-    envSource,
-    '| baked:',
-    config.backendApiBase || '(none)',
-  )
+  if (import.meta.dev) {
+    console.debug(
+      '[proxy] backend base:',
+      resolvedBase,
+      '| source:',
+      envSource,
+      '| baked:',
+      config.backendApiBase || '(none)',
+    )
+  }
 
   // Fail fast when the backend URL is still the localhost default that Nuxt
   // bakes at build time. Hitting localhost from a Cloudflare Worker can never
