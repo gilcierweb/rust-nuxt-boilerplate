@@ -1,21 +1,15 @@
 <script setup lang="ts">
-withDefaults(
-  defineProps<{
-    open: boolean
-    title: string
-    /** The name of the target and the consequence of the confirmation. */
-    message: string
-    confirmLabel?: string
-    cancelLabel?: string
-    /** The confirmed action is running: the buttons stand down until it ends. */
-    pending?: boolean
-  }>(),
-  {
-    confirmLabel: 'Confirmar',
-    cancelLabel: 'Cancelar',
-    pending: false,
-  },
-)
+const { t } = useI18n()
+defineProps<{
+  open: boolean
+  title: string
+  /** The name of the target and the consequence of the confirmation. */
+  message: string
+  confirmLabel?: string
+  cancelLabel?: string
+  /** The confirmed action is running: the buttons stand down until it ends. */
+  pending?: boolean
+}>()
 
 const emit = defineEmits<{
   confirm: []
@@ -48,7 +42,7 @@ const emit = defineEmits<{
           data-testid="confirm-cancel"
           @click="emit('cancel')"
         >
-          {{ cancelLabel }}
+          {{ cancelLabel || t('common.cancel') }}
         </button>
         <button
           type="button"
@@ -58,7 +52,7 @@ const emit = defineEmits<{
           @click="emit('confirm')"
         >
           <span v-if="pending" class="icon-[tabler--loader-2] size-4 animate-spin"></span>
-          {{ confirmLabel }}
+          {{ confirmLabel || t('common.confirm') }}
         </button>
       </div>
     </div>

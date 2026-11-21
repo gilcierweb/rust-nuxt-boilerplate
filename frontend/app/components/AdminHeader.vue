@@ -127,7 +127,7 @@ const localePath = useLocalePath()
 const search = useState('admin-shell-search', () => '')
 
 const appName = computed(() => runtimeConfig.public.appName || 'Telosync')
-const userEmail = computed(() => authStore.user?.email || 'admin@telosync.local')
+const userEmail = computed(() => authStore.user?.email || t('common.emptyValue'))
 const rolesLabel = computed(() => authStore.user?.roles?.join(' / ') || 'admin')
 const initials = computed(() => userEmail.value.slice(0, 2).toUpperCase())
 const displayName = computed(() => `${appName.value} Admin`)

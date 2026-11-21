@@ -3,7 +3,7 @@
     v-if="sidebarOpen"
     type="button"
     class="fixed inset-0 z-40 bg-base-content/40 lg:hidden"
-    aria-label="Fechar menu"
+    :aria-label="t('common.closeMenu')"
     @click="sidebarOpen = false"
   ></button>
 
@@ -15,12 +15,12 @@
       <div class="flex items-center justify-between border-b border-base-content/10 px-4 py-4">
         <div>
           <p class="text-sm font-semibold text-base-content">{{ appName }}</p>
-          <p class="text-xs text-base-content/60">Área do cliente</p>
+          <p class="text-xs text-base-content/60">{{ t('portal.sidebar.clientArea') }}</p>
         </div>
         <button
           type="button"
           class="btn btn-circle btn-ghost btn-sm lg:hidden"
-          aria-label="Fechar"
+          :aria-label="t('common.close')"
           @click="sidebarOpen = false"
         >
           <span class="icon-[tabler--x] size-4"></span>
@@ -47,6 +47,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 const runtimeConfig = useRuntimeConfig()
 const route = useRoute()
 const sidebarState = useState('portal-sidebar-open', () => false)

@@ -135,7 +135,7 @@ const authStore = useAuthStore()
 const localePath = useLocalePath()
 
 const appName = computed(() => runtimeConfig.public.appName || 'Rust Nuxt Boilerplate')
-const userEmail = computed(() => authStore.user?.email || 'admin@example.com')
+const userEmail = computed(() => authStore.user?.email || t('common.emptyValue'))
 const initials = computed(() => userEmail.value.slice(0, 2).toUpperCase())
 
 const currentSlug = computed(() => {
