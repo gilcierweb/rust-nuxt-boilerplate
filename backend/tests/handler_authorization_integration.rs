@@ -319,8 +319,12 @@ async fn a_scoped_deny_rule_refuses_the_roles_of_the_user_it_names() {
 
     let other = subject_with_roles(&db, &[]).await;
     let subject = subject_with_roles(&db, &["viewer"]).await;
-    link_role_by_name(&db, subject, &role_denying_user(&db, "users:read", other).await)
-        .await;
+    link_role_by_name(
+        &db,
+        subject,
+        &role_denying_user(&db, "users:read", other).await,
+    )
+    .await;
 
     let app = admin_app!(&db);
 

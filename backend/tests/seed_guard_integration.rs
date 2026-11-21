@@ -14,14 +14,17 @@ fn run_seed(environment: &str, configured_password: Option<&str>) -> Output {
     command.env("ENVIRONMENT", environment);
     // An unreachable database proves the guard fires first: a run that touches
     // Postgres fails with a connection error, never with the guard message.
-    command.env("DATABASE_URL", "postgres://invalid:invalid@127.0.0.1:1/none");
+    command.env(
+        "DATABASE_URL",
+        "postgres://invalid:invalid@127.0.0.1:1/none",
+    );
     match configured_password {
         Some(password) => {
             command.env("SEED_ADMIN_PASSWORD", password);
-        }
+        },
         None => {
             command.env_remove("SEED_ADMIN_PASSWORD");
-        }
+        },
     }
     command
         .output()

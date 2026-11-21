@@ -71,14 +71,10 @@ impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
         self.base
             .run(move |conn| {
                 Box::pin(async move {
-                    diesel::update(
-                        table::table
-                            .find(id)
-                            .filter(table::consumed_at.is_null()),
-                    )
-                    .set(table::consumed_at.eq(OffsetDateTime::now_utc()))
-                    .execute(conn)
-                    .await
+                    diesel::update(table::table.find(id).filter(table::consumed_at.is_null()))
+                        .set(table::consumed_at.eq(OffsetDateTime::now_utc()))
+                        .execute(conn)
+                        .await
                 })
             })
             .await

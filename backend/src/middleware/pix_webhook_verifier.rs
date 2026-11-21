@@ -157,10 +157,7 @@ where
                                 "message": t!("webhooks.pix.missing_signature").into_owned(),
                             }
                         }));
-                        return Ok(ServiceResponse::new(
-                            req,
-                            response.map_into_boxed_body(),
-                        ));
+                        return Ok(ServiceResponse::new(req, response.map_into_boxed_body()));
                     };
                     let body_bytes = Bytes::from(body_bytes);
                     let is_valid =

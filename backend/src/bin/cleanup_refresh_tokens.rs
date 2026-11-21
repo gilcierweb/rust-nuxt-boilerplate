@@ -28,9 +28,8 @@ fn main() -> CleanupResult<()> {
     // The URL is required: a hardcoded fallback with credentials in it would
     // point a maintenance job at whichever database the binary happened to be
     // compiled against, instead of the one the operator meant.
-    let database_url = env::var("DATABASE_URL").map_err(|_| {
-        "DATABASE_URL is not set: the cleanup job refuses to guess a database"
-    })?;
+    let database_url = env::var("DATABASE_URL")
+        .map_err(|_| "DATABASE_URL is not set: the cleanup job refuses to guess a database")?;
 
     let manager = ConnectionManager::<PgConnection>::new(database_url);
     let pool = r2d2::Pool::builder()

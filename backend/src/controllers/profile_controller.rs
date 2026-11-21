@@ -85,7 +85,10 @@ pub struct ProfileUpdateRequest {
     pub bio: Option<String>,
     #[validate(
         length(max = 500, message = "profile.validation.avatar_invalid"),
-        custom(function = "validate_avatar_url", message = "profile.validation.avatar_invalid")
+        custom(
+            function = "validate_avatar_url",
+            message = "profile.validation.avatar_invalid"
+        )
     )]
     pub avatar: Option<String>,
     pub birthday: Option<Date>,

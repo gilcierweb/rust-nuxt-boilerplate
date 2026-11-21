@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use lettre::AsyncTransport;
 use crate::utils::sanitize::mask_email_for_log;
+use lettre::AsyncTransport;
 use lettre::message::{Mailbox, Message, MultiPart, SinglePart};
 use lettre::transport::smtp::AsyncSmtpTransport;
 use serde::{Deserialize, Serialize};

@@ -239,10 +239,11 @@ impl Ability {
             (Some(_), None) => false,
             // Self scope: only the authenticated subject itself.
             (Some(scope), Some(target)) => {
-                scope_names_user(scope) && match scope.resource_id {
-                    None => target == self.subject,
-                    Some(explicit) => target == explicit,
-                }
+                scope_names_user(scope)
+                    && match scope.resource_id {
+                        None => target == self.subject,
+                        Some(explicit) => target == explicit,
+                    }
             },
         }
     }

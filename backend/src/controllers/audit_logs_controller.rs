@@ -185,8 +185,7 @@ mod tests {
     use std::sync::Arc;
 
     #[actix_web::test]
-    async
-    fn a_request_body_cannot_set_the_chain_fields() {
+    async fn a_request_body_cannot_set_the_chain_fields() {
         // The hash chain is the repository's to compute: a posted `prev_hash`
         // or `hash` is ignored, so a client cannot place an entry at an
         // arbitrary position of the chain.
@@ -206,8 +205,7 @@ mod tests {
     }
 
     #[actix_web::test]
-    async
-    fn an_oversized_json_document_is_refused() {
+    async fn an_oversized_json_document_is_refused() {
         // An unbounded `changes` document turns one admin write into an
         // unbounded audit row: the two documents are bounded alike.
         let oversized: serde_json::Value = serde_json::json!({ "payload": "x".repeat(70 * 1024) });

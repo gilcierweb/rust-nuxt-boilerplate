@@ -52,7 +52,7 @@ pub fn decide_revocation(answers: &RevocationAnswers, issued_at: usize) -> Revoc
     match &answers.blacklisted {
         Err(_) => return RevocationOutcome::Indeterminate,
         Ok(true) => return RevocationOutcome::Revoked,
-        Ok(false) => {}
+        Ok(false) => {},
     }
 
     match &answers.epoch {
@@ -83,13 +83,19 @@ mod tests {
             // The epoch answer would accept the token: it must never matter.
             epoch: Ok(None),
         };
-        assert_eq!(decide_revocation(&answers, 1_000), RevocationOutcome::Revoked);
+        assert_eq!(
+            decide_revocation(&answers, 1_000),
+            RevocationOutcome::Revoked
+        );
     }
 
     #[test]
     fn a_token_issued_before_the_credential_change_is_revoked() {
         let answers = ok_answers(false, Some(2_000));
-        assert_eq!(decide_revocation(&answers, 1_000), RevocationOutcome::Revoked);
+        assert_eq!(
+            decide_revocation(&answers, 1_000),
+            RevocationOutcome::Revoked
+        );
     }
 
     #[test]

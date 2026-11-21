@@ -21,8 +21,8 @@ use deadpool::managed::Pool;
 use deadpool_redis::{Config as RedisConfig, Runtime};
 use diesel::Connection;
 use diesel_async::AsyncPgConnection;
-use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use diesel_async::RunQueryDsl;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use serde_json::Value;
 use uuid::Uuid as UuidType;
 
@@ -253,7 +253,10 @@ async fn a_replayed_refresh_token_kills_the_whole_family() {
     // The legitimate rotation: the first cookie becomes the second one.
     let csrf = csrf_pair!(app, first_cookie);
     let resp = call_refresh!(app, first_cookie, csrf);
-    assert!(resp.status().is_success(), "the first rotation must succeed");
+    assert!(
+        resp.status().is_success(),
+        "the first rotation must succeed"
+    );
     let second_cookie = extract_cookie(&resp, "refresh_token").expect("rotation sets a new cookie");
     assert_ne!(
         second_cookie, first_cookie,
@@ -263,7 +266,11 @@ async fn a_replayed_refresh_token_kills_the_whole_family() {
     // The replay: the already-rotated cookie comes back. This is the reuse the
     // audit found unreported: the request must be refused.
     let resp = call_refresh!(app, first_cookie, csrf);
-    assert_eq!(resp.status(), 401, "a replayed refresh token must be refused");
+    assert_eq!(
+        resp.status(),
+        401,
+        "a replayed refresh token must be refused"
+    );
 
     // The family dies with it: the token the legitimate client now holds is
     // revoked as well, because the lineage is compromised by definition.

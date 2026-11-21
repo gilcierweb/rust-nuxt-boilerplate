@@ -87,9 +87,9 @@ mod tests {
         // `Option` (prelude type) and our `wire_time::option` submodule coexist:
         // the type resolves to core::option::Option, the path resolves to our module.
         let value: Option<OffsetDateTime> = Some(datetime!(2026-01-01 00:00:00 UTC));
-        let decoded: Option<OffsetDateTime> = super::option::deserialize(&mut serde_json::Deserializer::from_str(
-            "\"2026-01-01T00:00:00Z\"",
-        ))
+        let decoded: Option<OffsetDateTime> = super::option::deserialize(
+            &mut serde_json::Deserializer::from_str("\"2026-01-01T00:00:00Z\""),
+        )
         .expect("deserialize through the option module");
         assert_eq!(value, decoded);
     }

@@ -8,7 +8,7 @@ use backend::security::SecurityService;
 use backend::services::email_service::EmailService;
 use backend::services::rbac_catalog_service;
 use backend::services::seed_credentials::{
-    resolve_seed_admin_password, seed_environment_is_production_like, SEED_PASSWORD_ENV_VAR,
+    SEED_PASSWORD_ENV_VAR, resolve_seed_admin_password, seed_environment_is_production_like,
 };
 use diesel::dsl::count_star;
 use diesel::prelude::*;

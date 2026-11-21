@@ -215,15 +215,13 @@ where
 
                             // The one revocation rule, decided from both
                             // answers together.
-                            let epoch_answer = match (
-                                &config.token_blacklist,
-                                config.skip_blacklist_check,
-                            ) {
-                                (Some(blacklist), false) => {
-                                    blacklist.credential_epoch(&result.claims.sub).await
-                                },
-                                _ => Ok(None),
-                            };
+                            let epoch_answer =
+                                match (&config.token_blacklist, config.skip_blacklist_check) {
+                                    (Some(blacklist), false) => {
+                                        blacklist.credential_epoch(&result.claims.sub).await
+                                    },
+                                    _ => Ok(None),
+                                };
                             let revocation_answers =
                                 crate::middleware::token_revocation::RevocationAnswers {
                                     blacklisted: blacklist_answer,
@@ -355,7 +353,9 @@ async fn load_grants(req: &ServiceRequest, subject: &uuid::Uuid) -> Vec<RoleGran
 /// the token as live, which is what the skip flag always meant.
 async fn blacklist_answer_for(
     skip_blacklist_check: bool,
-    token_blacklist: Option<&std::sync::Arc<crate::repositories::access_token_blacklist::AccessTokenBlacklist>>,
+    token_blacklist: Option<
+        &std::sync::Arc<crate::repositories::access_token_blacklist::AccessTokenBlacklist>,
+    >,
     token: &str,
 ) -> Result<bool, crate::middleware::token_revocation::RevocationError> {
     if skip_blacklist_check {

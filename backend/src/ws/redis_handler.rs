@@ -305,7 +305,9 @@ pub async fn ws_handler(
                                 epoch: blacklist.credential_epoch(&result.claims.sub).await,
                             }
                         },
-                        None => crate::middleware::token_revocation::RevocationAnswers::unavailable(),
+                        None => {
+                            crate::middleware::token_revocation::RevocationAnswers::unavailable()
+                        },
                     };
 
                     match crate::middleware::token_revocation::decide_revocation(

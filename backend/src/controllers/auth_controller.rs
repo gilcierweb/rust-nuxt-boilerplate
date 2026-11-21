@@ -772,7 +772,11 @@ pub async fn login(
                         // brute-forceable.
                         container
                             .users
-                            .record_failed_login(&user.id, 10, &container.config.refresh_token_hash_salt)
+                            .record_failed_login(
+                                &user.id,
+                                10,
+                                &container.config.refresh_token_hash_salt,
+                            )
                             .await
                             .map_err(AppError::Database)?;
                         tracing::warn!(
@@ -2573,15 +2577,17 @@ mod tests {
     use serde_json::json;
 
     use super::*;
+    use crate::models::magic_link_token::MagicLinkToken;
     use crate::models::profile::Profile;
     use crate::models::refresh_token::RefreshToken;
     use crate::models::role::ROLE_VIEWER;
     use crate::models::user::User;
+    use crate::repositories::magic_link_token_repository::MockIMagicLinkTokenRepository;
     use crate::repositories::mocks::{mock_app_config, mock_container};
     use crate::repositories::profiles_repository::MockIProfileRepository;
-    use crate::models::magic_link_token::MagicLinkToken;
-    use crate::repositories::magic_link_token_repository::MockIMagicLinkTokenRepository;
-    use crate::repositories::refresh_tokens_repository::{MockIRefreshTokenRepository, RotationOutcome};
+    use crate::repositories::refresh_tokens_repository::{
+        MockIRefreshTokenRepository, RotationOutcome,
+    };
     use crate::repositories::traits::users_trait::RoleGrantRow;
     use crate::repositories::users_repository::MockIUserRepository;
     use crate::security::SecurityService;

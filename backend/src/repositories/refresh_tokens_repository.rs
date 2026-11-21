@@ -1,4 +1,6 @@
-use diesel::{BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper};
+use diesel::{
+    BoolExpressionMethods, ExpressionMethods, OptionalExtension, QueryDsl, SelectableHelper,
+};
 use diesel_async::RunQueryDsl;
 use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
@@ -46,9 +48,7 @@ pub enum RotationOutcome {
     /// every refresh token of the named user is already revoked by the
     /// rotation itself, and the caller must also invalidate the user's
     /// access tokens.
-    ReuseDetected {
-        user_id: Uuid,
-    },
+    ReuseDetected { user_id: Uuid },
     /// No row matches the presented token: unknown or an expired lineage.
     NotFound,
 }
@@ -57,9 +57,7 @@ pub enum RotationOutcome {
 /// situation that reads as a reuse.
 pub fn matched_token_is_reuse(matched: &RefreshToken, now: OffsetDateTime) -> bool {
     match matched.revoked_at {
-        Some(revoked_instant) => {
-            (now - revoked_instant).whole_seconds() <= ROTATION_GRACE_SECS
-        },
+        Some(revoked_instant) => (now - revoked_instant).whole_seconds() <= ROTATION_GRACE_SECS,
         None => false,
     }
 }
@@ -345,9 +343,7 @@ mod rotation_outcome_tests {
     #[test]
     fn a_token_revoked_outside_the_grace_window_is_an_expired_lineage() {
         let now = OffsetDateTime::now_utc();
-        let matched = stored_token(Some(
-            now - Duration::seconds(ROTATION_GRACE_SECS + 60),
-        ));
+        let matched = stored_token(Some(now - Duration::seconds(ROTATION_GRACE_SECS + 60)));
         assert!(!matched_token_is_reuse(&matched, now));
     }
 

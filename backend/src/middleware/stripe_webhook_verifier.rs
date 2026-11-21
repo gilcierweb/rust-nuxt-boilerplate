@@ -149,17 +149,13 @@ where
                 let Some(signature) = stripe_signature else {
                     // The branch above already refused a missing header: the
                     // refusal repeats instead of asserting.
-                    let response = HttpResponse::BadRequest()
-                        .json(serde_json::json!({
-                            "error": {
-                                "code": "STRIPE_SIGNATURE_MISSING",
-                                "message": t!("webhooks.stripe.missing_signature").into_owned(),
-                            }
-                        }));
-                    return Ok(ServiceResponse::new(
-                        req,
-                        response.map_into_boxed_body(),
-                    ));
+                    let response = HttpResponse::BadRequest().json(serde_json::json!({
+                        "error": {
+                            "code": "STRIPE_SIGNATURE_MISSING",
+                            "message": t!("webhooks.stripe.missing_signature").into_owned(),
+                        }
+                    }));
+                    return Ok(ServiceResponse::new(req, response.map_into_boxed_body()));
                 };
                 let body_bytes = Bytes::from(body_bytes);
                 let is_valid =
@@ -194,10 +190,9 @@ where
                     .unwrap_or_else(|| "unknown".to_string());
                 req.headers_mut().insert(
                     actix_web::http::header::HeaderName::from_static("stripe-event-type"),
-                    actix_web::http::header::HeaderValue::from_str(&event_type)
-                        .unwrap_or_else(|_| {
-                            actix_web::http::header::HeaderValue::from_static("unknown")
-                        }),
+                    actix_web::http::header::HeaderValue::from_str(&event_type).unwrap_or_else(
+                        |_| actix_web::http::header::HeaderValue::from_static("unknown"),
+                    ),
                 );
                 return svc.call(req).await;
             }
@@ -561,22 +556,22 @@ mod tests {
 
         let container = container_with_webhook_secret("whsec_event_type");
         let app = actix_web::test::init_service(
-            App::new()
-                .app_data(web::Data::new(container))
-                .service(
-                    web::scope("/api/v1/webhooks/stripe")
-                        .wrap(StripeWebhookVerifier::new())
-                        .route("", web::post().to(|req: actix_web::HttpRequest| async move {
+            App::new().app_data(web::Data::new(container)).service(
+                web::scope("/api/v1/webhooks/stripe")
+                    .wrap(StripeWebhookVerifier::new())
+                    .route(
+                        "",
+                        web::post().to(|req: actix_web::HttpRequest| async move {
                             let event_type = req
                                 .headers()
                                 .get("stripe-event-type")
                                 .and_then(|value| value.to_str().ok())
                                 .unwrap_or("absent")
                                 .to_string();
-                            HttpResponse::Ok()
-                                .json(serde_json::json!({ "event_type": event_type }))
-                        })),
-                ),
+                            HttpResponse::Ok().json(serde_json::json!({ "event_type": event_type }))
+                        }),
+                    ),
+            ),
         )
         .await;
 

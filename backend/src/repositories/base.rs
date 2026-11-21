@@ -73,41 +73,41 @@ impl BaseRepo {
     }
 
     /// Whether a row with `value` in `column` of `table` exists.
-///
-/// When the table is known at compile time, prefer the query builder: Diesel
-/// spells the identifiers from the schema module, so nothing is interpolated.
-/// The idiom, already used by `auth_service`, is
-/// `diesel::select(diesel::dsl::exists(table.filter(column.eq(value))))`.
-///
-/// This helper stays for the case where the table is only known at runtime,
-/// which the builder cannot express: the identifiers are then interpolated,
-/// and the value stays a bound parameter. The two identifiers are validated as
-/// plain lowercase identifiers first, so even a caller passing request data
-/// verbatim cannot smuggle SQL into the FROM or WHERE clause.
-#[allow(dead_code)]
-pub async fn exists(&self, table: &str, column: &str, value: &str) -> QueryResult<bool> {
-    let tbl = table.to_string();
-    let col = column.to_string();
-    let val = value.to_string();
+    ///
+    /// When the table is known at compile time, prefer the query builder: Diesel
+    /// spells the identifiers from the schema module, so nothing is interpolated.
+    /// The idiom, already used by `auth_service`, is
+    /// `diesel::select(diesel::dsl::exists(table.filter(column.eq(value))))`.
+    ///
+    /// This helper stays for the case where the table is only known at runtime,
+    /// which the builder cannot express: the identifiers are then interpolated,
+    /// and the value stays a bound parameter. The two identifiers are validated as
+    /// plain lowercase identifiers first, so even a caller passing request data
+    /// verbatim cannot smuggle SQL into the FROM or WHERE clause.
+    #[allow(dead_code)]
+    pub async fn exists(&self, table: &str, column: &str, value: &str) -> QueryResult<bool> {
+        let tbl = table.to_string();
+        let col = column.to_string();
+        let val = value.to_string();
 
-    if !is_sql_identifier(&tbl) || !is_sql_identifier(&col) {
-        return Err(diesel::result::Error::QueryBuilderError(
-            "the table and the column must be plain lowercase identifiers".into(),
-        ));
-    }
+        if !is_sql_identifier(&tbl) || !is_sql_identifier(&col) {
+            return Err(diesel::result::Error::QueryBuilderError(
+                "the table and the column must be plain lowercase identifiers".into(),
+            ));
+        }
 
-    self.run(move |conn| {
-        Box::pin(async move {
-            let query = format!("SELECT EXISTS(SELECT 1 FROM {tbl} WHERE {col} = $1) AS flag");
-            let result = sql_query(query)
-                .bind::<diesel::sql_types::Text, _>(&val)
-                .get_result::<ExistsResult>(conn)
-                .await?;
-            Ok(result.flag)
+        self.run(move |conn| {
+            Box::pin(async move {
+                let query = format!("SELECT EXISTS(SELECT 1 FROM {tbl} WHERE {col} = $1) AS flag");
+                let result = sql_query(query)
+                    .bind::<diesel::sql_types::Text, _>(&val)
+                    .get_result::<ExistsResult>(conn)
+                    .await?;
+                Ok(result.flag)
+            })
         })
-    })
-    .await
-}
+        .await
+    }
 }
 
 /// Whether a string can only ever be read as a SQL identifier.
@@ -122,9 +122,9 @@ pub fn is_sql_identifier(candidate: &str) -> bool {
     if !first.is_ascii_lowercase() && first != '_' {
         return false;
     }
-    characters.all(
-        |character| character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_',
-    )
+    characters.all(|character| {
+        character.is_ascii_lowercase() || character.is_ascii_digit() || character == '_'
+    })
 }
 
 #[cfg(test)]
