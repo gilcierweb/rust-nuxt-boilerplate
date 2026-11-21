@@ -7,7 +7,7 @@
 use uuid::Uuid;
 
 use super::engine::Ability;
-use super::types::{PermissionEffect, RoleScope};
+use super::types::{AbilityResource, PermissionEffect, RoleScope};
 use crate::authz::grants::RoleGrant;
 
 /// Builds the ability of `subject` from its grants.
@@ -53,7 +53,7 @@ fn scope_of(grant: &RoleGrant) -> Option<RoleScope> {
     match (&grant.resource_type, grant.resource_id) {
         (None, None) => None,
         (Some(resource_type), resource_id) => Some(RoleScope {
-            resource_type: resource_type.clone(),
+            resource_type: canonical_scope_type(resource_type),
             resource_id,
         }),
         // Malformed scope (a target without a resource type): the rule stays
@@ -62,6 +62,21 @@ fn scope_of(grant: &RoleGrant) -> Option<RoleScope> {
             resource_type: String::new(),
             resource_id: Some(resource_id),
         }),
+    }
+}
+
+/// The canonical code of a scope type.
+///
+/// The self scope convention writes `user` (singular) while the admin surface
+/// and the permission catalog write `users`; the engine compares one value,
+/// so the reading boundary folds both onto the catalog code. A type outside
+/// the catalog is kept verbatim and simply never matches an instance check.
+fn canonical_scope_type(resource_type: &str) -> String {
+    match resource_type {
+        "user" => AbilityResource::Users.as_code().to_string(),
+        other => AbilityResource::from_code(other)
+            .map(|resource| resource.as_code().to_string())
+            .unwrap_or_else(|| other.to_string()),
     }
 }
 
@@ -207,6 +222,24 @@ mod tests {
     }
 
     #[test]
+    fn a_scope_of_another_type_grants_nothing_on_the_user_instance() {
+        // B-L19, end to end: a role scoped to an audit log must not open
+        // users:read on the user that happens to carry the same id.
+        let target = other();
+        let grants = vec![scoped_grant(
+            "auditor",
+            "users:read",
+            "audit_logs",
+            Some(target),
+        )];
+
+        let ability = build_ability_from_grants(subject(), &grants);
+
+        assert!(!ability.can_check_subject(AbilityAction::Read, AbilityResource::Users, target));
+        assert!(!ability.can_check(AbilityAction::Read, AbilityResource::Users));
+    }
+
+    #[test]
     fn unknown_code_is_ignored() {
         let grants = vec![grant("admin", "documents:read", 0)];
 
@@ -226,13 +259,22 @@ mod tests {
     }
 
     #[test]
+    fn scope_of_folds_the_self_scope_convention_onto_the_catalog_code() {
+        let singular = scoped_grant("customer", "profiles:read", "user", None);
+        assert_eq!(scope_of(&singular).expect("scope").resource_type, "users");
+
+        let canonical = scoped_grant("manager", "users:read", "users", None);
+        assert_eq!(scope_of(&canonical).expect("scope").resource_type, "users");
+    }
+
+    #[test]
     fn scope_of_reads_the_role_scope() {
         let unscoped = grant("admin", "users:read", 0);
         assert_eq!(scope_of(&unscoped), None);
 
         let scoped = scoped_grant("customer", "profiles:read", "user", None);
         let scope = scope_of(&scoped).expect("self scoped role");
-        assert_eq!(scope.resource_type, "user");
+        assert_eq!(scope.resource_type, "users");
         assert_eq!(scope.resource_id, None);
     }
 }

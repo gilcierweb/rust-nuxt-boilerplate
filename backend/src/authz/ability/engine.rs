@@ -77,7 +77,7 @@ impl Ability {
             action,
             resource,
             RoleScope {
-                resource_type: "user".to_string(),
+                resource_type: AbilityResource::Users.as_code().to_string(),
                 resource_id: None,
             },
         );
@@ -102,7 +102,7 @@ impl Ability {
             action,
             resource,
             RoleScope {
-                resource_type: "user".to_string(),
+                resource_type: AbilityResource::Users.as_code().to_string(),
                 resource_id: None,
             },
         );
@@ -238,12 +238,24 @@ impl Ability {
             // Class check: scoped rules never participate.
             (Some(_), None) => false,
             // Self scope: only the authenticated subject itself.
-            (Some(scope), Some(target)) => match scope.resource_id {
-                None => target == self.subject,
-                Some(explicit) => target == explicit,
+            (Some(scope), Some(target)) => {
+                scope_names_user(scope) && match scope.resource_id {
+                    None => target == self.subject,
+                    Some(explicit) => target == explicit,
+                }
             },
         }
     }
+}
+
+/// Whether a scope names the type of the target of an instance check.
+///
+/// Every instance check targets a user id, so only a scope on the user
+/// resource can ever match: a scope on another type, or a malformed scope
+/// without a type, is bound to nothing instead of matching by id alone
+/// (B-L19).
+fn scope_names_user(scope: &RoleScope) -> bool {
+    AbilityResource::from_code(&scope.resource_type) == Some(AbilityResource::Users)
 }
 
 fn matches_rule(rule: &AbilityRule, action: AbilityAction, resource: AbilityResource) -> bool {
@@ -386,13 +398,65 @@ mod tests {
             Read,
             Users,
             RoleScope {
-                resource_type: "user".into(),
+                resource_type: "users".into(),
                 resource_id: Some(target),
             },
         );
         assert!(ability.can_check_subject(Read, Users, target));
         assert!(!ability.can_check_subject(Read, Users, subject()));
         assert!(!ability.can_check(Read, Users));
+    }
+
+    #[test]
+    fn a_scope_of_another_resource_type_never_matches_an_instance() {
+        // B-L19: the scope names an audit log, the check targets a user. The
+        // target id alone must not open the rule.
+        let target = other_uuid();
+        let mut ability = Ability::new(subject());
+        ability.can_scoped(
+            Read,
+            Users,
+            RoleScope {
+                resource_type: "audit_logs".into(),
+                resource_id: Some(target),
+            },
+        );
+        assert!(!ability.can_check_subject(Read, Users, target));
+        assert!(!ability.can_check_subject(Read, Profiles, target));
+    }
+
+    #[test]
+    fn a_scope_without_a_resource_type_never_matches_an_instance() {
+        // B-L19: a malformed scope (a target id with no type) stays bound to
+        // nothing instead of widening to that target.
+        let target = other_uuid();
+        let mut ability = Ability::new(subject());
+        ability.can_scoped(
+            Read,
+            Users,
+            RoleScope {
+                resource_type: String::new(),
+                resource_id: Some(target),
+            },
+        );
+        assert!(!ability.can_check_subject(Read, Users, target));
+    }
+
+    #[test]
+    fn the_canonical_user_code_scopes_an_instance() {
+        // The admin UI writes the catalog code ("users"), the self scope
+        // convention writes "user": both name the same target type.
+        let target = other_uuid();
+        let mut ability = Ability::new(subject());
+        ability.can_scoped(
+            Read,
+            Users,
+            RoleScope {
+                resource_type: "users".into(),
+                resource_id: Some(target),
+            },
+        );
+        assert!(ability.can_check_subject(Read, Users, target));
     }
 
     #[test]
@@ -403,7 +467,7 @@ mod tests {
             Read,
             Users,
             RoleScope {
-                resource_type: "user".into(),
+                resource_type: "users".into(),
                 resource_id: Some(subject()),
             },
         );
