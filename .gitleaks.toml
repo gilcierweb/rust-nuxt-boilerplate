@@ -1,8 +1,9 @@
 [allowlist]
   description = "Global allowlist"
+  # The tracked surfaces a real secret is most likely to be pasted into by
+  # accident (.env.example, README.md) are NOT here: the scan gate exists to
+  # catch exactly that paste. Only the deliberate fixture files are.
   paths = [
-    '''\.env\.example$''',
-    '''README\.md$''',
     '''test_utils\.rs$''',
     '''test_repositories\.rs$''',
     '''test_security\.rs$''',
@@ -12,5 +13,5 @@
   id = "generic-api-key"
   description = "Ignore test fixtures with fake keys"
   regex = '''(?i)(master_key|blind_index_key|csrf_secret_key|backend_api_key|refresh_token_hash_salt)'''
-  path = '''(test_|\.example|README)'''
+  path = '''test_'''
   tags = ["test", "fixture"]
