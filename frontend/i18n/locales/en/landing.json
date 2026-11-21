@@ -194,7 +194,8 @@
       "privacy": "Privacy Policy",
       "terms": "Terms of Service",
       "copyright": "RustNuxt Boilerplate. MIT Licensed. All rights reserved.",
-      "clientPortal": "Client Portal"
+      "clientPortal": "Client Portal",
+      "brand": "RustNuxt Boilerplate"
     },
     "navbar": {
       "features": "Features",
@@ -202,7 +203,8 @@
       "architecture": "Architecture",
       "contact": "Contact",
       "login": "Login",
-      "getStarted": "Get Started"
+      "getStarted": "Get Started",
+      "brand": "RustNuxt"
     },
     "auto": {
       "index": {
@@ -783,6 +785,12 @@
         "73": "Falar com DPO"
       },
       "PortalFooter": {}
+    },
+    "contact": {
+      "namePlaceholder": "Your name",
+      "emailPlaceholder": "you@example.com",
+      "companyPlaceholder": "Your company (optional)",
+      "messagePlaceholder": "How can we help you?"
     }
   },
   "about": {

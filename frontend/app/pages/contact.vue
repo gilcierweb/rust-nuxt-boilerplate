@@ -87,7 +87,7 @@
                         id="contactName"
                         v-model="form.name"
                         type="text"
-                        placeholder="Your name"
+                        :placeholder="$t('landing.contact.namePlaceholder')"
                         class="input w-full"
                         required
                       />
@@ -102,7 +102,7 @@
                         id="contactEmail"
                         v-model="form.email"
                         type="email"
-                        placeholder="you@example.com"
+                        :placeholder="$t('landing.contact.emailPlaceholder')"
                         class="input w-full"
                         required
                       />
@@ -117,7 +117,7 @@
                         id="contactCompany"
                         v-model="form.company"
                         type="text"
-                        placeholder="Your company (optional)"
+                        :placeholder="$t('landing.contact.companyPlaceholder')"
                         class="input w-full"
                       />
                     </div>
@@ -147,7 +147,7 @@
                     <textarea
                       id="contactMessage"
                       v-model="form.message"
-                      placeholder="How can we help you?"
+                      :placeholder="$t('landing.contact.messagePlaceholder')"
                       class="textarea w-full min-h-[150px]"
                       required
                     ></textarea>
