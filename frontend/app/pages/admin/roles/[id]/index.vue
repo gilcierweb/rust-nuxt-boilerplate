@@ -115,7 +115,7 @@
         </div>
 
         <RolePermissionsEditor
-          v-else
+          v-else-if="can('roles:update')"
           class="mt-4"
           :permissions="catalog"
           :assignments="assignments"
@@ -165,8 +165,9 @@
 defineOptions({ name: 'AdminRoleDetailPage' })
 
 import { useAdminRbac } from '~/composables/useAdminRbac'
+import { useRbac } from '~/composables/useRbac'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
-import { formatDateTime } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/format-date'
 import { mapAdminError } from '~/utils/admin-errors'
 import AppEmptyState from '~/components/admin/AppEmptyState.vue'
 import RolePermissionsEditor from '~/components/admin/roles/RolePermissionsEditor.vue'
@@ -223,6 +224,7 @@ const members = computed(() => data.value?.members ?? [])
 const membersPending = computed(() => permissionsPending.value)
 
 const saving = ref(false)
+const { can } = useRbac()
 
 async function handleSave(next: PermissionAssignment[]) {
   if (!roleId.value) return

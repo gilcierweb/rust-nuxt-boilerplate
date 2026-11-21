@@ -98,7 +98,8 @@
 // two pages sharing the inferred filename name break KeepAlive routing.
 defineOptions({ name: 'AdminAuditLogDetailPage' })
 
-import { formatDateTime, stringifyJson } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/format-date'
+import { stringifyJson } from '~/utils/admin-ui'
 
 interface AuditLogItem {
   id: string

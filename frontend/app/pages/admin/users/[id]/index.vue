@@ -90,7 +90,7 @@
         </div>
 
         <AdminRoleSelector
-          v-else
+          v-else-if="can('roles:update')"
           class="mt-4"
           :roles="availableRoles"
           :selected-ids="assignedIds"
@@ -110,6 +110,7 @@
 defineOptions({ name: 'AdminUserDetailPage' })
 
 import { useAdminRbac } from '~/composables/useAdminRbac'
+import { useRbac } from '~/composables/useRbac'
 import { normalizeResourceResponse } from '~/utils/admin-resources'
 import { mapAdminError } from '~/utils/admin-errors'
 import AdminRoleSelector from '~/components/admin/AdminRoleSelector.vue'
@@ -165,6 +166,7 @@ const assignedIds = computed(() => (data.value?.assigned ?? []).map((role) => ro
 const availableRoles = computed<Role[]>(() => data.value?.catalog ?? [])
 const rolesError = ref('')
 const saving = ref(false)
+const { can } = useRbac()
 
 async function handleSave(roleIds: string[]) {
   if (!itemId.value) return
