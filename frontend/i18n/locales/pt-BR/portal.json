@@ -24,6 +24,9 @@
       "cards": {
         "documents": "Documentos"
       }
+    },
+    "sidebar": {
+      "clientArea": "Área do cliente"
     }
   }
 }

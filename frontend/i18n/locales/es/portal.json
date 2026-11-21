@@ -120,6 +120,9 @@
       "title": "Soporte",
       "messageLabel": "Mensaje",
       "messagePlaceholder": "Describa su duda o problema"
+    },
+    "sidebar": {
+      "clientArea": "Área del cliente"
     }
   }
 }

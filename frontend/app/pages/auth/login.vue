@@ -11,7 +11,6 @@
         <h2 class="text-xl font-bold text-base-content">{{ $t('common.appName') }}</h2>
       </NuxtLink>
     </div>
-
     <div>
       <h3 class="mb-1.5 text-2xl font-semibold text-base-content">{{ $t('auth.login.title') }}</h3>
       <p class="text-base-content/80">
@@ -21,7 +20,6 @@
         </NuxtLink>
       </p>
     </div>
-
     <AppAlert
       v-if="errorMsg"
       tone="error"
@@ -59,7 +57,6 @@
         <template v-else>{{ $t('auth.login.otp.title') }}</template>
       </button>
     </div>
-
     <form v-else novalidate class="space-y-4" @submit.prevent="onSubmit">
       <div class="flex items-center gap-3">
         <span class="text-base-content/80 text-sm">{{ $t('auth.login.loginWith') }}</span>
@@ -67,10 +64,8 @@
           {{ $t('auth.login.magicLink') }}
         </button>
       </div>
-
       <div class="flex flex-wrap gap-4 sm:gap-6">
       </div>
-
       <div>
         <label class="label-text" for="email">{{ $t('auth.login.email') }}*</label>
         <input
@@ -85,7 +80,6 @@
         />
         <span v-if="errors.email" class="text-error text-xs mt-1 block">{{ errors.email }}</span>
       </div>
-
       <div>
         <label class="label-text mb-1.5 block" for="password">{{ $t('auth.login.password') }}*</label>
         <div class="relative">
@@ -106,7 +100,6 @@
         </div>
         <span v-if="errors.password" class="text-error text-xs mt-1 block">{{ errors.password }}</span>
       </div>
-
       <div class="flex items-center justify-between gap-2">
         <label class="flex cursor-pointer items-center gap-2">
           <input type="checkbox" class="checkbox checkbox-primary checkbox-sm" />
@@ -116,7 +109,6 @@
           {{ $t('auth.login.forgotPassword') }}
         </NuxtLink>
       </div>
-
       <button type="submit" :disabled="isLoading || !meta.valid" class="btn btn-lg btn-primary btn-gradient btn-block">
         <span v-if="isLoading" class="icon-[tabler--loader-2] size-5 animate-spin"></span>
         <template v-else>{{ $t('auth.login.submit') }}</template>
@@ -129,7 +121,6 @@
         {{ $t('auth.login.createAccount') }}
       </NuxtLink>
     </p>
-
   </div>
 </template>
 

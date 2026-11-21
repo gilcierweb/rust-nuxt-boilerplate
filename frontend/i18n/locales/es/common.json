@@ -42,6 +42,9 @@
     },
     "table": {
       "actions": "Acciones"
-    }
+    },
+    "closeMenu": "Cerrar menú",
+    "confirm": "Confirmar",
+    "emptyValue": "—"
   }
 }
