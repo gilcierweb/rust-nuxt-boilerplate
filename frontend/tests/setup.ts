@@ -5,6 +5,16 @@ import '@testing-library/jest-dom/vitest'
 // identity translation keeps the assertions on the i18n keys, not on sentences
 // of a specific locale.
 const globalScope = globalThis as any
+
+// Nuxt `useState` auto-import: keyed singletons backed by the real ref, the
+// way the client behaves. Tests that model the server/client distinction use
+// a fresh map themselves (see `useToast.spec`).
+import { ref } from 'vue'
+const useStateStates = new Map<string, any>()
+globalScope.useState = <T,>(key: string, init: () => T) => {
+  if (!useStateStates.has(key)) useStateStates.set(key, ref(init()))
+  return useStateStates.get(key)
+}
 globalScope.useI18n = () => ({ t: (key: string) => key })
 globalScope.useLocalePath = () => (path: string) => path
 // The Vue APIs a template compiler emits for slots and attributes.
@@ -129,17 +139,13 @@ vi.mock('pinia', () => ({
   }),
 }))
 
-vi.mock('vue', async () => {
-  const actual = await vi.importActual('vue')
-  return {
-    ...actual,
-    ref: <T>(value: T) => ({ value } as any),
-    computed: (fn: any) => ({ value: fn() } as any),
-    reactive: (obj: any) => obj,
-    onMounted: (fn: any) => fn(),
-    watch: () => {},
-  }
-})
+// Vue is NOT mocked here. The previous shim replaced `ref`, `computed` and
+// `watch` with non reactive stand-ins, so every watcher in a mounted
+// component was a no-op and the suite reported green while none of the
+// reactive contracts (a form seeded by the row that answered last, a
+// selection cleared on page change) was exercised. The real reactivity runs
+// everywhere; a test that needs a Nuxt auto-import resolves it from the
+// global scope the way the app does.
 
 const mockDefinePageMeta = () => {}
 vi.mock('nuxt/app', () => ({
