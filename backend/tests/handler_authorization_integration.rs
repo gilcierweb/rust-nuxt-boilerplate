@@ -264,6 +264,97 @@ async fn viewer_lists_users_but_cannot_delete_roles() {
     assert_eq!(resp.status(), StatusCode::FORBIDDEN);
 }
 
+/// A role whose link on `code` is a DENY scoped to one user instance.
+async fn role_denying_user(db: &TestDb, code: &str, resource_id: Uuid) -> String {
+    let mut conn = db.pool().get().await.expect("Failed to get connection");
+    let role_name = format!("sdeny-{}", &Uuid::new_v4().to_string()[..8]);
+
+    diesel::sql_query(
+        "INSERT INTO roles (id, name, resource_type, resource_id, created_at, updated_at) \
+         VALUES (gen_random_uuid(), $1, 'user', $2, NOW(), NOW())",
+    )
+    .bind::<diesel::sql_types::Text, _>(&role_name)
+    .bind::<diesel::sql_types::Uuid, _>(resource_id)
+    .execute(&mut *conn)
+    .await
+    .expect("scoped role insert failed");
+
+    diesel::sql_query(
+        "INSERT INTO roles_permissions (role_id, permission_id, effect, created_at) \
+         SELECT r.id, p.id, 1, NOW() FROM roles r JOIN permissions p ON p.code = $2 \
+         WHERE r.name = $1",
+    )
+    .bind::<diesel::sql_types::Text, _>(&role_name)
+    .bind::<diesel::sql_types::Text, _>(code)
+    .execute(&mut *conn)
+    .await
+    .expect("scoped deny link insert failed");
+
+    role_name
+}
+
+/// Link a role to a subject by name, scoped roles included.
+async fn link_role_by_name(db: &TestDb, user_id: Uuid, role_name: &str) {
+    let mut conn = db.pool().get().await.expect("Failed to get connection");
+    diesel::sql_query(
+        "INSERT INTO users_roles (user_id, role_id) \
+         SELECT $1, id FROM roles WHERE name = $2",
+    )
+    .bind::<diesel::sql_types::Uuid, _>(user_id)
+    .bind::<diesel::sql_types::Text, _>(role_name)
+    .execute(&mut *conn)
+    .await
+    .expect("role link insert failed");
+}
+
+#[actix_web::test]
+async fn a_scoped_deny_rule_refuses_the_roles_of_the_user_it_names() {
+    // The class check only sees unscoped rules, so a subject with the
+    // collection authority and a deny scoped to one user passes it whatever
+    // the target is. The instance check is what honours the scoped deny, and
+    // the roles endpoint was the one handler of the pair missing it.
+    seed_catalog();
+    let db = TestDb::new().await;
+    let config = test_config();
+
+    let other = subject_with_roles(&db, &[]).await;
+    let subject = subject_with_roles(&db, &["viewer"]).await;
+    link_role_by_name(&db, subject, &role_denying_user(&db, "users:read", other).await)
+        .await;
+
+    let app = admin_app!(&db);
+
+    // The user the deny names: the instance check refuses.
+    let req = test::TestRequest::get()
+        .uri(format!("/admin/users/{other}/roles").as_str())
+        .insert_header((
+            actix_web::http::header::AUTHORIZATION,
+            format!("Bearer {}", bearer(&config, subject)),
+        ))
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(
+        resp.status(),
+        StatusCode::FORBIDDEN,
+        "a deny scoped to a user must refuse that user's roles"
+    );
+
+    // Any other user: the collection authority still answers.
+    let req = test::TestRequest::get()
+        .uri(format!("/admin/users/{subject}/roles").as_str())
+        .insert_header((
+            actix_web::http::header::AUTHORIZATION,
+            format!("Bearer {}", bearer(&config, subject)),
+        ))
+        .to_request();
+    let resp = test::call_service(&app, req).await;
+    assert_eq!(
+        resp.status(),
+        StatusCode::OK,
+        "the scoped deny must not leak onto every other user"
+    );
+}
+
 #[actix_web::test]
 async fn manager_cannot_delete_roles() {
     seed_catalog();

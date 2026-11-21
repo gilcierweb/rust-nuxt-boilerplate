@@ -191,6 +191,11 @@ pub async fn find_user_roles(
 ) -> AppResult<HttpResponse> {
     ability.authorize(AbilityAction::Read, AbilityResource::Users)?;
     let user_id = id.into_inner();
+
+    // Instance check, the same the `GET /admin/users/{id}` handler performs: a
+    // deny scoped to one user never opens that user's role assignment.
+    ability.authorize_subject(AbilityAction::Read, AbilityResource::Users, user_id)?;
+
     container
         .users
         .find(&user_id)
