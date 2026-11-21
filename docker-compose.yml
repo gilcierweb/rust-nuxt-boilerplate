@@ -1,8 +1,14 @@
-version: "3.9"
 
 # -- rust_nuxt_boilerplate Platform - Docker Compose
 # Development: docker compose up
 # Production:  docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.production up -d
+#
+# Images are pinned by digest: a moving tag (`:latest`, `:alpine`) lets an
+# upstream re-push land in production without a commit. Bump deliberately:
+#   docker manifest inspect <image>:<tag>  ->  paste the new digest here.
+# The Dockerfile base images stay on their version family (rust:1.95-slim,
+# node:22-alpine): a digest pin there freezes every rebuild on a compiler
+# image the CVE feed cannot patch for you.
 #
 # Secrets (SECURITY_AUDIT.md I3):
 #   - In dev: env_file: .env provides values directly as env vars.
@@ -29,6 +35,10 @@ services:
     image: postgres:16-alpine
     container_name: rust_nuxt_boilerplate_postgres
     restart: unless-stopped
+    # Bounded: an unbounded container takes the host down with every other
+    # service on it, the database first of all.
+    mem_limit: 2g
+    cpus: 2.0
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-rust_nuxt_boilerplate}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -43,12 +53,14 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - rust_nuxt_boilerplate_net
+      - data
 
   # -- Redis
   # Internal service. See postgres note above. SECURITY_AUDIT.md I1.
   redis:
     image: redis:7-alpine
+    mem_limit: 1g
+    cpus: 1.0
     container_name: rust_nuxt_boilerplate_redis
     restart: unless-stopped
     # - maxmemory 2gb: Redis is used for rate limiting + caching + sessions +
@@ -59,6 +71,7 @@ services:
     #   failure (see SECURITY_AUDIT.md P7 / S3).
     command: >
       redis-server
+      --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD is required}
       --maxmemory 2gb
       --maxmemory-policy volatile-lru
       --save 60 1000
@@ -66,12 +79,14 @@ services:
       - redis_data:/data
     # NO host port mapping by default. Override file (dev only) adds it.
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      # The password is passed through the environment: a `redis-cli ping`
+      # without it answers NOAUTH once the server requires one.
+      test: ["CMD", "redis-cli", "-a", "$${REDIS_PASSWORD}", "--no-auth-warning", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - rust_nuxt_boilerplate_net
+      - data
 
   # -- Database Migrations (SECURITY_AUDIT.md I6)
   # One-shot job that applies pending Diesel migrations, then exits.
@@ -106,7 +121,7 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - rust_nuxt_boilerplate_net
+      - data
     # No `ports:` — this is a one-shot background job, not exposed.
     # No `secrets:` block — migrations only use DATABASE_URL which is
     # populated from env_file. Critical secrets are for the running app.
@@ -120,12 +135,16 @@ services:
       context: ./backend
       dockerfile: Dockerfile
       target: development
+    # Bounded: an unbounded container takes the host down with every other
+    # service on it.
+    mem_limit: 2g
+    cpus: 2.0
     container_name: rust_nuxt_boilerplate_backend
     restart: unless-stopped
     env_file: .env
     environment:
       DATABASE_URL: postgres://${POSTGRES_USER:-rust_nuxt_boilerplate}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-rust_nuxt_boilerplate_dev}
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
       # nginx terminates TLS and is the only ingress, so its requests are the
       # peer the API sees. Declaring the private ranges as trusted proxies lets
       # the backend recover the real client IP from X-Forwarded-For for rate
@@ -167,7 +186,9 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - rust_nuxt_boilerplate_net
+      # Multi-homed on purpose: it serves the edge and reads the data tier.
+      - app
+      - data
 
   # -- Frontend (Nuxt.js) 
   frontend:
@@ -175,6 +196,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
       target: development
+    mem_limit: 2g
+    cpus: 2.0
     container_name: rust_nuxt_boilerplate_frontend
     restart: unless-stopped
     env_file: .env
@@ -187,9 +210,9 @@ services:
     depends_on:
       - backend
     networks:
-      - rust_nuxt_boilerplate_net
+      - app
 
-  # -- Nginx (Reverse Proxy) 
+  # -- Nginx (Reverse Proxy)
   nginx:
     image: nginx:alpine
     container_name: rust_nuxt_boilerplate_nginx
@@ -205,27 +228,39 @@ services:
       #   openssl dhparam -out infra/ssl/dhparam.pem 2048
       # See infra/README.md.
       - ./infra/ssl/dhparam.pem:/etc/nginx/dhparam.pem:ro
+      # The ACME HTTP-01 webroot: `app.conf` serves the challenge from this
+      # path, so the volume must exist for certbot renewal to succeed.
+      - certbot_www:/var/www/certbot
       - nginx_logs:/var/log/nginx
     depends_on:
       - backend
       - frontend
+    # Multi-homed on purpose: it terminates TLS at the edge and proxies into
+    # the app tier.
     networks:
-      - rust_nuxt_boilerplate_net
+      - edge
+      - app
+    # The official image ships an unprivileged `nginx` user.
+    user: nginx
 
   # -- MeiliSearch
   meilisearch:
     image: getmeili/meilisearch:v1.7
     container_name: rust_nuxt_boilerplate_search
     restart: unless-stopped
+    mem_limit: 1g
+    cpus: 1.0
     environment:
       MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:?MEILI_MASTER_KEY is required}
       MEILI_ENV: ${ENVIRONMENT:-development}
     volumes:
       - meilisearch_data:/meili_data
     ports:
-      - "7700:7700"
+      # Loopback only: the master key protects the API, but the search index
+      # is an internal service with no reason to face a network interface.
+      - "127.0.0.1:7700:7700"
     networks:
-      - rust_nuxt_boilerplate_net
+      - app
 
   # -- MailCatcher (Local SMTP sink for development)
   # Catches every email the backend sends via SMTP and serves a web UI to
@@ -243,14 +278,14 @@ services:
   # observable end-to-end without a real internet relay.
   mailcatcher:
     profiles: ["dev-tools"]
-    image: sj26/mailcatcher:latest
+    image: sj26/mailcatcher@sha256:fd7457aa617aac5bfb4855af7f65c9c4fd83fe559d6a543b9fa7aa4eb8f92556
     container_name: rust_nuxt_boilerplate_mailcatcher
     restart: unless-stopped
     ports:
       - "1080:1080"  # Web UI
       - "1025:1025"  # SMTP
     networks:
-      - rust_nuxt_boilerplate_net
+      - app
 
   # -- Portainer (Container Management UI)
   # SECURITY_AUDIT.md I4: Portainer requires `/var/run/docker.sock` which
@@ -269,7 +304,7 @@ services:
   #     and point it at remote Docker daemons via TCP+TLS (no socket mount)
   portainer:
     profiles: ["dev-tools"]
-    image: portainer/portainer-ce:latest
+    image: portainer/portainer-ce@sha256:0896b627101b651102f4890968a39f6c245f05bf64f028f4723258cc831e2b3e
     container_name: rust_nuxt_boilerplate_portainer
     restart: unless-stopped
     ports:
@@ -281,11 +316,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - portainer_data:/data
     networks:
-      - rust_nuxt_boilerplate_net
+      - app
 
   # -- Prometheus 
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus@sha256:89c1a644817e9ad70fa2af76c84898e327c1de7063735f962e8313b1e28672c3
     container_name: rust_nuxt_boilerplate_prometheus
     restart: unless-stopped
     volumes:
@@ -296,9 +331,15 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=30d'
     ports:
-      - "9090:9090"
+      # Loopback only: Prometheus has no authentication of its own, so it
+      # answers every internal metric, alert rule and target to anyone who
+      # reaches the port.
+      - "127.0.0.1:9090:9090"
     networks:
-      - rust_nuxt_boilerplate_net
+      # Multi-homed on purpose: it scrapes the app tier and answers to the
+      # observability tier.
+      - app
+      - observability
 
   # -- Metrics auth proxy
   # GET /api/v1/metrics requires an API key (X-API-Key or Authorization:
@@ -307,26 +348,31 @@ services:
   # METRICS_SCRAPE_KEY must be one of the keys in the backend's
   # INTERNAL_API_KEYS.
   metrics-proxy:
-    image: caddy:2-alpine
+    image: caddy@sha256:fc9cbc100585871d18d4e451cca7021785c90a7006087427ae5ceb3e4efe6424
     container_name: rust_nuxt_boilerplate_metrics_proxy
     restart: unless-stopped
-    environment:
-      METRICS_SCRAPE_KEY: ${METRICS_SCRAPE_KEY:?set METRICS_SCRAPE_KEY in .env (one of INTERNAL_API_KEYS) for the Prometheus scrape}
+    # The scrape key is delivered as a secret file, the way the backend reads
+    # its credentials: an environment value is visible in `docker inspect`
+    # and was also echoed into a world-readable /tmp/Caddyfile at start.
+    secrets:
+      - metrics_scrape_key
     command:
       - sh
       - -c
       - |
         echo ":9091 {
           reverse_proxy backend:8080 {
-            header_up X-API-Key {$METRICS_SCRAPE_KEY}
+            header_up X-API-Key {file./run/secrets/metrics_scrape_key}
           }
         }" > /tmp/Caddyfile && caddy run --config /tmp/Caddyfile --adapter caddyfile
     networks:
-      - rust_nuxt_boilerplate_net
+      # Prometheus reaches it, and it proxies into the app tier.
+      - app
+      - observability
 
 # -- Grafana
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana@sha256:1c88285f1dd391a62232c010e6c224846e6a73bdc583b3365be2eba614b7919e
     container_name: rust_nuxt_boilerplate_grafana
     restart: unless-stopped
     environment:
@@ -337,11 +383,13 @@ services:
       - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
       - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "3001:3000"
+      # Loopback only: the admin password protects the dashboards, but there
+      # is no reason for the interface to face the network.
+      - "127.0.0.1:3001:3000"
     depends_on:
       - prometheus
     networks:
-      - rust_nuxt_boilerplate_net
+      - observability
 
 # -- Volumes
 volumes:
@@ -352,6 +400,7 @@ volumes:
   prometheus_data:
   grafana_data:
   nginx_logs:
+  certbot_www:
 
 # -- Docker secrets (SECURITY_AUDIT.md I3)
 # Each file in infra/secrets/ becomes /run/secrets/<name> in the backend container.
@@ -372,6 +421,8 @@ secrets:
     file: ./infra/secrets/refresh_token_hash_salt.txt
   resend_api_key:
     file: ./infra/secrets/resend_api_key.txt
+  metrics_scrape_key:
+    file: ./infra/secrets/metrics_scrape_key.txt
   stripe_secret_key:
     file: ./infra/secrets/stripe_secret_key.txt
   stripe_webhook_secret:
@@ -379,5 +430,17 @@ secrets:
 
 # -- Networks 
 networks:
-  rust_nuxt_boilerplate_net:
+  # Segmentation (was one flat bridge for all thirteen services): the edge
+  # terminates TLS, the app tier serves it, the data tier is reachable only
+  # from the app, and the observability tier only scrapes.
+  edge:
+    driver: bridge
+  app:
+    driver: bridge
+  data:
+    driver: bridge
+    # No external connectivity: the database and the cache are reachable from
+    # the app tier and from nothing else on the host.
+    internal: true
+  observability:
     driver: bridge
