@@ -240,7 +240,12 @@ security: {
       // Backend API proxies — never cache
       '/api/v1/**': {
         security: {
-          rateLimiter: false,
+          // CSRF stays off: the backend owns the HMAC CSRF scheme. The edge
+          // rate limiter is on for `/auth/**` (login, register, refresh,
+          // reset) so the backend's 10/min-per-IP lockout is enforced at the
+          // edge too — a longer edge window would let attackers race a second
+          // request after the lockout ticked over.
+          rateLimiter: true,
           csrf: false,
         },
         // nuxt-csurf reads `csurf` from route rules (NOT security.csrf)
