@@ -28,6 +28,7 @@ pub struct AuditLog {
     pub changes: Value,
     #[schema(value_type = Object)]
     pub metadata: Value,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
     pub prev_hash: Option<String>,
     pub hash: String,
@@ -53,6 +54,13 @@ pub struct NewAuditLog {
     pub changes: Value,
     #[schema(value_type = Object)]
     pub metadata: Value,
+    // The chain linkage is computed by the repository from the stored rows.
+    // The fields stay on the insert model, but a request body cannot set
+    // them: a client that posts `prev_hash`/`hash` would otherwise put an
+    // arbitrary chain position on the wire, one verification change away
+    // from a forged entry.
+    #[serde(default, skip_deserializing)]
     pub prev_hash: Option<String>,
+    #[serde(default, skip_deserializing)]
     pub hash: String,
 }

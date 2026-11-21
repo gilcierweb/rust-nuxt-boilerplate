@@ -44,7 +44,9 @@ pub struct Permission {
     pub code: String,
     pub name: String,
     pub description: Option<String>,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     pub updated_at: OffsetDateTime,
 }
 
@@ -95,6 +97,7 @@ pub struct RolePermissionLink {
     pub role_id: Uuid,
     pub permission_id: Uuid,
     pub effect: i16,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
 }
 

@@ -14,8 +14,11 @@ pub struct MagicLinkToken {
     pub token_digest: String,
     pub request_ip: Option<IpNet>,
     pub user_agent: Option<String>,
+    #[serde(with = "time::serde::rfc3339")]
     pub expires_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub consumed_at: Option<OffsetDateTime>,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
 }
 

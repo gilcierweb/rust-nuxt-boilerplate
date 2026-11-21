@@ -18,21 +18,27 @@ pub struct User {
 
     // Recoverable
     pub reset_password_token_digest: Option<String>,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub reset_password_sent_at: Option<OffsetDateTime>,
 
     // Rememberable
+    #[serde(with = "time::serde::rfc3339::option")]
     pub remember_created_at: Option<OffsetDateTime>,
 
     // Trackable
     pub sign_in_count: i32,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub current_sign_in_at: Option<OffsetDateTime>,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub last_sign_in_at: Option<OffsetDateTime>,
     pub current_sign_in_ip: Option<IpNet>,
     pub last_sign_in_ip: Option<IpNet>,
 
     // Confirmable
     pub confirmation_token_digest: Option<String>,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub confirmed_at: Option<OffsetDateTime>,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub confirmation_sent_at: Option<OffsetDateTime>,
     pub unconfirmed_email_blind_index: Option<Vec<u8>>,
     pub unconfirmed_email_encrypted: Option<Vec<u8>>,
@@ -40,15 +46,19 @@ pub struct User {
     // Lockable
     pub failed_attempts: i32,
     pub unlock_token_digest: Option<String>,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub locked_at: Option<OffsetDateTime>,
 
     // 2FA (TOTP)
     pub otp_secret: Option<String>,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub otp_enabled_at: Option<OffsetDateTime>,
     pub otp_backup_codes: Option<Vec<Option<String>>>,
     pub encryption_key_version: i32,
 
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     pub updated_at: OffsetDateTime,
 }
 
@@ -62,7 +72,9 @@ pub struct NewUser {
     pub unconfirmed_email_blind_index: Option<Vec<u8>>,
     pub unconfirmed_email_encrypted: Option<Vec<u8>>,
     pub encryption_key_version: i32,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     pub updated_at: OffsetDateTime,
 }
 

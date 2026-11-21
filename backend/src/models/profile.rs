@@ -41,7 +41,9 @@ pub struct Profile {
     pub social_network: Value,
     #[serde(skip_serializing, default = "default_encryption_key_version")]
     pub encryption_key_version: i32,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     pub updated_at: OffsetDateTime,
 }
 

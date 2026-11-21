@@ -14,9 +14,13 @@ pub struct RefreshToken {
     pub token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
+    #[serde(with = "time::serde::rfc3339")]
     pub expires_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339::option")]
     pub revoked_at: Option<OffsetDateTime>,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     pub updated_at: OffsetDateTime,
 }
 
@@ -28,8 +32,11 @@ pub struct NewRefreshToken {
     pub token_hash: String,
     pub device_info: Option<String>,
     pub ip_address: Option<String>,
+    #[serde(with = "time::serde::rfc3339")]
     pub expires_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     pub created_at: OffsetDateTime,
+    #[serde(with = "time::serde::rfc3339")]
     pub updated_at: OffsetDateTime,
 }
 
