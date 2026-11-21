@@ -3,6 +3,7 @@
   "admin.company_domains.validation.host_invalid": "Domínio inválido",
   "admin.company_settings.conflict.exists": "Configurações de empresa já existem",
   "admin.company_settings.validation.company_id_invalid": "Empresa inválida para configurações",
+  "audit_logs.validation.document_too_large": "Os documentos changes e metadata de um registro de auditoria devem ter menos de 64 KB",
   "admin.permissions.conflict.code_taken": "Já existe uma permissão com este recurso e esta ação",
   "admin.permissions.conflict.still_linked": "Esta permissão ainda está vinculada a um papel: remova o vínculo primeiro",
   "admin.permissions.validation.action_invalid": "Ação desconhecida: o código deve nomear uma ação do catálogo",
@@ -171,7 +172,7 @@
   "errors.rate_limited": "Limite de taxa excedido",
   "errors.rate_limiter_unavailable": "Limitador de taxa indisponível, tente novamente",
   "errors.service_unavailable": "Serviço temporariamente indisponível, tente novamente em instantes",
-  "errors.token_error": "Erro no token: {}",
+  "errors.token_error": "Erro no token",
   "errors.too_many_requests": "Muitas requisições",
   "errors.unauthorized": "Autenticação necessária",
   "errors.validation": "Falha na validação",
@@ -267,9 +268,10 @@
   "ws.field_too_long": "Campo '{}' excede {} caracteres",
   "ws.internal_error": "erro de validação",
   "ws.invalid_data_type": "Campo 'data' deve ser um objeto JSON",
-  "ws.invalid_json": "JSON inválido: {}",
+  "ws.invalid_json": "JSON inválido",
   "ws.invalid_message": "Mensagem WebSocket inválida",
   "ws.message_too_large": "Mensagem excede o limite de {} bytes",
+  "ws.room_forbidden": "Essa sala pertence a outro sujeito",
   "ws.missing_field": "Campo '{}' é obrigatório",
-  "ws.unknown_action": "Ação desconhecida: '{}'"
+  "ws.unknown_action": "Ação desconhecida"
 }

@@ -3,6 +3,7 @@
   "admin.company_domains.validation.host_invalid": "Invalid domain host",
   "admin.company_settings.conflict.exists": "Company settings already exist",
   "admin.company_settings.validation.company_id_invalid": "Invalid company for settings",
+  "audit_logs.validation.document_too_large": "The changes and metadata documents of an audit entry must stay under 64 KB",
   "admin.permissions.conflict.code_taken": "A permission with this resource and action already exists",
   "admin.permissions.conflict.still_linked": "This permission is still linked to a role: remove the link first",
   "admin.permissions.validation.action_invalid": "Unknown action: the code must name an action of the catalog",
@@ -171,7 +172,7 @@
   "errors.rate_limited": "Rate limit exceeded",
   "errors.rate_limiter_unavailable": "Rate limiter unavailable, please try again",
   "errors.service_unavailable": "Service temporarily unavailable, please try again shortly",
-  "errors.token_error": "Token error: {}",
+  "errors.token_error": "Token error",
   "errors.too_many_requests": "Too many requests",
   "errors.unauthorized": "Authentication required",
   "errors.validation": "Validation failed",
@@ -267,9 +268,10 @@
   "ws.field_too_long": "Field '{}' exceeds {} characters",
   "ws.internal_error": "validation error",
   "ws.invalid_data_type": "Field 'data' must be a JSON object",
-  "ws.invalid_json": "Malformed JSON: {}",
+  "ws.invalid_json": "Malformed JSON",
   "ws.invalid_message": "Invalid WebSocket message",
   "ws.message_too_large": "Message exceeds {} bytes limit",
   "ws.missing_field": "Field '{}' is required",
-  "ws.unknown_action": "Unknown action: '{}'"
+  "ws.unknown_action": "Unknown action",
+  "ws.room_forbidden": "That room belongs to another subject"
 }
