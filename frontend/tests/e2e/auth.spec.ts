@@ -80,16 +80,16 @@ test('should toggle password visibility on both password fields', async ({ page 
   test('should show password strength indicator', async ({ page }) => {
     const pw = page.locator('#password')
 
-    await pw.fill('abcdefgh')
+    await pw.fill('abcdefghijkl')
     await expect(page.getByText(a.register.strength.weak)).toBeVisible()
 
-    await pw.fill('Abcdefgh')
+    await pw.fill('Abcdefghijkl')
     await expect(page.getByText(a.register.strength.fair)).toBeVisible()
 
-    await pw.fill('Abcdefgh1')
+    await pw.fill('Abcdefghijk1')
     await expect(page.getByText(a.register.strength.good)).toBeVisible()
 
-    await pw.fill('Abcdefgh1!')
+    await pw.fill('Abcdefghijk1!')
     await expect(page.getByText(a.register.strength.strong)).toBeVisible()
   })
 
