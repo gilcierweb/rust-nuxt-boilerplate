@@ -646,25 +646,18 @@ where
                 is_authenticated,
             );
 
-            // Circuit breaker check: if open, fail OPEN (allow request through)
-            // instead of repeatedly hitting a dead Redis — EXCEPT for
-            // AuthStrict endpoints (login/register/recovery), which always
-            // fail CLOSED so a Redis outage never becomes a brute-force bypass.
+            // Circuit breaker check: a dead Redis never opens the door. Every
+            // category fails closed with 503, including the general endpoints,
+            // so an outage cannot be turned into an unlimited-traffic window.
+            // AuthStrict already behaved this way; the same rule now applies to
+            // the whole surface.
             if circuit_breaker.is_open() {
-                if effective_limit.is_strict() {
-                    tracing::warn!(
-                        event = "rate_limit.strict_fail_closed",
-                        key_prefix = effective_limit.key_prefix,
-                        "Circuit breaker open but AuthStrict endpoint — failing closed"
-                    );
-                    return Ok(service_unavailable_response(req));
-                }
-                tracing::debug!(
-                    event = "rate_limit.circuit_breaker_bypass",
-                    "Circuit breaker open — allowing request without rate limit check"
+                tracing::warn!(
+                    event = "rate_limit.circuit_breaker_fail_closed",
+                    key_prefix = effective_limit.key_prefix,
+                    "Circuit breaker open — failing closed"
                 );
-                let res = svc.call(req).await?;
-                return Ok(res.map_into_boxed_body());
+                return Ok(service_unavailable_response(req));
             }
 
             // Strict endpoints charge several dimensions (per IP, per subnet,
@@ -742,16 +735,15 @@ where
                         return Ok(service_unavailable_response(req));
                     }
                     if circuit_breaker.is_open() {
-                        // Circuit just opened — fail OPEN this request to avoid
-                        // cascading failures, but log the degradation
+                        // The circuit just opened on this failure: keep failing
+                        // closed instead of letting the request through, so an
+                        // outage never becomes an unlimited-traffic window.
                         tracing::warn!(
                             event = "rate_limit.circuit_breaker_opened_on_failure",
                             key = %first_charge.key,
-                            "Redis failure triggered circuit breaker — allowing request through"
+                            "Redis failure triggered circuit breaker — failing closed"
                         );
-                        // Let the request proceed without rate limiting
-                        let res = svc.call(req).await?;
-                        return Ok(res.map_into_boxed_body());
+                        return Ok(service_unavailable_response(req));
                     }
 
                     // Circuit not yet open — fail closed with 503

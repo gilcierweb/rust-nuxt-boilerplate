@@ -256,7 +256,7 @@ async fn brute_force_endpoints_fail_closed_when_redis_is_unavailable() {
 }
 
 #[actix_web::test]
-async fn general_endpoints_degrade_to_fail_open_when_redis_is_unavailable() {
+async fn general_endpoints_fail_closed_when_redis_is_unavailable() {
     let app = test::init_service(
         App::new()
             .wrap(RateLimiter::new(dead_redis_pool(), RATE_API))
@@ -274,11 +274,11 @@ async fn general_endpoints_degrade_to_fail_open_when_redis_is_unavailable() {
         statuses.push(resp.status().as_u16());
     }
 
-    // The first requests fail closed until the circuit opens, then the
-    // endpoint serves traffic again instead of turning an outage into a full
-    // denial of service.
+    // A Redis outage must never disable rate limiting, even for general
+    // endpoints: every request is refused with 503 instead of being allowed
+    // through once the circuit breaker opens.
     assert!(
-        statuses.contains(&200),
-        "once the circuit opens, general endpoints must serve traffic again, got {statuses:?}"
+        statuses.iter().all(|code| *code == 503),
+        "general endpoints must fail closed while Redis is down, got {statuses:?}"
     );
 }
