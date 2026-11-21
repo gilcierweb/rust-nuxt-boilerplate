@@ -67,6 +67,16 @@ where
 
             let headers = response.headers_mut();
 
+            // Pin browsers to HTTPS for a year. The proxy terminates TLS and sets the
+            // header too; the application repeats it so a deployment that ever
+            // serves the API directly (health checks from inside the mesh, a
+            // future direct TLS listener) does not lose the guarantee. Browsers
+            // ignore it over plain HTTP, so it is inert in development.
+            headers.insert(
+                header::STRICT_TRANSPORT_SECURITY,
+                HeaderValue::from_static("max-age=31536000; includeSubDomains"),
+            );
+
             // Prevent MIME type sniffing
             headers.insert(
                 header::X_CONTENT_TYPE_OPTIONS,
@@ -135,6 +145,10 @@ mod tests {
         let resp = test::call_service(&app, req).await;
 
         let headers = resp.headers();
+        assert_eq!(
+            headers.get("Strict-Transport-Security").unwrap(),
+            "max-age=31536000; includeSubDomains"
+        );
         assert_eq!(headers.get("X-Content-Type-Options").unwrap(), "nosniff");
         assert_eq!(headers.get("X-Frame-Options").unwrap(), "DENY");
         assert_eq!(
