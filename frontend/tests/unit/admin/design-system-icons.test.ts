@@ -3,7 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { extname, join } from 'node:path'
 
 // The design system renders icons through the installed tabler collection
-// (`<span class="icon-[tabler--name]">`). An `<Icon>` component referenced by
+// (a tabler icon span). An `<Icon>` component referenced by
 // live templates was never registered and its collections
 // (`heroicons`, `svg-spinners`) are not installed, so every icon on the
 // authentication screens silently rendered as nothing.
