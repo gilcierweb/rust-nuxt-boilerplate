@@ -1,26 +1,16 @@
 <template>
-  <section class="space-y-6">
-    <AdminBreadcrumb :items="breadcrumbItems" />
-
-    <div class="rounded-box border border-base-content/10 bg-base-100 p-6 shadow-md shadow-base-content/5">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div class="mb-3 inline-flex items-center gap-2 rounded-field bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-            <span class="icon-[tabler--user] size-4"></span>
-            <span>{{ $t('admin.users.title') }}</span>
-          </div>
-          <h1 class="text-3xl font-semibold tracking-tight text-base-content">{{ $t('admin.users.title') }}</h1>
-          <p class="mt-2 max-w-3xl text-sm leading-relaxed text-base-content/60">{{ $t('admin.users.description') }}</p>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <button type="button" class="btn btn-soft" :disabled="pending" @click="refresh()">
-            <span class="icon-[tabler--refresh] size-4.5"></span>
-            {{ $t('admin.common.refresh') }}
-          </button>
-        </div>
-      </div>
-    </div>
+  <AdminPageShell
+    icon="user"
+    title-key="admin.users.title"
+    description-key="admin.users.description"
+    :breadcrumb-items="breadcrumbItems"
+  >
+    <template #header-actions>
+      <button type="button" class="btn btn-soft" :disabled="pending" @click="refresh()">
+        <span class="icon-[tabler--refresh] size-4.5"></span>
+        {{ $t('admin.common.refresh') }}
+      </button>
+    </template>
 
     <AppDataTable
       :data="items"
@@ -59,7 +49,7 @@
         </div>
       </template>
     </AppDataTable>
-  </section>
+  </AdminPageShell>
 </template>
 
 <script setup lang="ts">

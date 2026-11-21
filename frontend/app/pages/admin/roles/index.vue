@@ -1,30 +1,20 @@
 <template>
-  <section class="space-y-6">
-    <AdminBreadcrumb :items="breadcrumbItems" />
-
-    <div class="rounded-box border border-base-content/10 bg-base-100 p-6 shadow-md shadow-base-content/5">
-      <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div class="mb-3 inline-flex items-center gap-2 rounded-field bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-            <span class="icon-[tabler--shield] size-4"></span>
-            <span>{{ $t('admin.roles.title') }}</span>
-          </div>
-          <h1 class="text-3xl font-semibold tracking-tight text-base-content">{{ $t('admin.roles.title') }}</h1>
-          <p class="mt-2 max-w-3xl text-sm leading-relaxed text-base-content/60">{{ $t('admin.roles.description') }}</p>
-        </div>
-
-        <div class="flex flex-wrap gap-2">
-          <NuxtLink :to="localePath('/admin/roles/new')" class="btn btn-primary">
-            <span class="icon-[tabler--plus] size-4.5"></span>
-            {{ $t('admin.roles.newTitle') }}
-          </NuxtLink>
-          <button type="button" class="btn btn-soft" :disabled="pending" @click="refresh()">
-            <span class="icon-[tabler--refresh] size-4.5"></span>
-            {{ $t('admin.common.refresh') }}
-          </button>
-        </div>
-      </div>
-    </div>
+  <AdminPageShell
+    icon="shield"
+    title-key="admin.roles.title"
+    description-key="admin.roles.description"
+    :breadcrumb-items="breadcrumbItems"
+  >
+    <template #header-actions>
+      <NuxtLink :to="localePath('/admin/roles/new')" class="btn btn-primary">
+        <span class="icon-[tabler--plus] size-4.5"></span>
+        {{ $t('admin.roles.newTitle') }}
+      </NuxtLink>
+      <button type="button" class="btn btn-soft" :disabled="pending" @click="refresh()">
+        <span class="icon-[tabler--refresh] size-4.5"></span>
+        {{ $t('admin.common.refresh') }}
+      </button>
+    </template>
 
     <AppDataTable
       v-model:row-selection="rowSelection"
@@ -102,7 +92,7 @@
       @confirm="onBulkRemovalConfirmed"
       @cancel="cancelBulkRemoval"
     />
-  </section>
+  </AdminPageShell>
 </template>
 
 <script setup lang="ts">
@@ -114,7 +104,8 @@ defineOptions({ name: 'AdminRolesIndexPage' })
 import { computed, h, ref, resolveComponent } from 'vue'
 import type { RowSelectionState } from '@tanstack/vue-table'
 import { useAdminResource } from '~/utils/admin-resource-helpers'
-import { adminDeleteButton, formatDateTime } from '~/utils/admin-ui'
+import { formatDateTime } from '~/utils/format-date'
+import { adminDeleteButton } from '~/utils/admin-ui'
 import ConfirmDialog from '~/components/admin/ConfirmDialog.vue'
 import type { DataTableColumn } from '~/types/data-table'
 import type { Role } from '~/types/rbac'

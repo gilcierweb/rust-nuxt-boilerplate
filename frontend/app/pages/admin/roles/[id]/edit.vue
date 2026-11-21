@@ -1,28 +1,17 @@
 <template>
-  <section class="space-y-6">
-    <AdminBreadcrumb :items="breadcrumbItems" />
-
-    <div class="card shadow-base-300/10 shadow-md">
-      <div class="card-body">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div class="mb-3 inline-flex items-center gap-2 rounded-field bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-              <span class="icon-[tabler--shield] size-4"></span>
-              <span>{{ $t('admin.roles.title') }}</span>
-            </div>
-            <h1 class="card-title text-3xl font-semibold tracking-tight text-base-content">{{ $t('admin.roles.editTitle') }}</h1>
-            <p class="mt-2 max-w-3xl text-sm leading-relaxed text-base-content/60">{{ $t('admin.roles.editDescription') }}</p>
-          </div>
-
-          <div class="card-actions flex flex-wrap gap-2">
-            <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">
-              <span class="icon-[tabler--arrow-left] size-4.5"></span>
-              {{ $t('admin.common.back') }}
-            </NuxtLink>
-          </div>
-        </div>
-      </div>
-    </div>
+  <AdminPageShell
+    icon="shield"
+    title-key="admin.roles.title"
+    description-key="admin.roles.editDescription"
+    header="card"
+    :breadcrumb-items="breadcrumbItems"
+  >
+    <template #header-actions>
+      <NuxtLink :to="localePath('/admin/roles')" class="btn btn-ghost">
+        <span class="icon-[tabler--arrow-left] size-4.5"></span>
+        {{ $t('admin.common.back') }}
+      </NuxtLink>
+    </template>
 
     <div v-if="pending" class="card shadow-base-300/10 shadow-md">
       <div class="card-body p-12">
@@ -48,10 +37,10 @@
 
     <div v-else-if="role" class="card shadow-base-300/10 shadow-md">
       <div class="card-body">
-        <RolesForm mode="edit" :initial-values="role" :saving="saving" @submit="handleSubmit" />
+        <RolesForm mode="edit" :initial-values="role" :saving="saving" :submit-disabled="!can('roles:update')" @submit="handleSubmit" />
       </div>
     </div>
-  </section>
+  </AdminPageShell>
 </template>
 
 <script setup lang="ts">
@@ -63,9 +52,11 @@ defineOptions({ name: 'AdminRoleEditPage' })
 import RolesForm from '~/components/admin/roles/RolesForm.vue'
 import type { Role } from '~/types/rbac'
 import { mapAdminError } from '~/utils/admin-errors'
+import { useRbac } from '~/composables/useRbac'
 
 definePageMeta({ layout: 'admin' })
 
+const { can } = useRbac()
 const { t } = useI18n()
 const localePath = useLocalePath()
 
