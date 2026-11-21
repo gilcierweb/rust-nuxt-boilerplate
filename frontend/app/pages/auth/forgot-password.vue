@@ -34,7 +34,7 @@
       <div>
         <label class="label-text mb-1.5 block" for="email">{{ $t('auth.forgotPassword.email') }}</label>
         <div class="relative">
-          <Icon name="heroicons:envelope" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+          <span class="icon-[tabler--mail] absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none"></span>
           <input
             id="email"
             v-model="email"
@@ -50,9 +50,9 @@
       </div>
 
       <button type="submit" :disabled="loading || !meta.valid" class="btn btn-primary btn-lg btn-gradient btn-block">
-        <Icon v-if="loading" name="svg-spinners:3-dots-fade" class="h-5 w-5" />
+        <span v-if="loading" class="icon-[tabler--loader-2] h-5 w-5 animate-spin"></span>
         <template v-else>
-          <Icon name="heroicons:paper-airplane" class="h-4 w-4" />
+          <span class="icon-[tabler--send] h-4 w-4"></span>
           {{ $t('auth.forgotPassword.submit') }}
         </template>
       </button>

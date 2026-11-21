@@ -3,7 +3,7 @@
     <!-- Sophisticated Background Glow -->
     <div
       class="absolute top-0 right-0 h-32 w-32 rounded-full blur-[60px] opacity-10 pointer-events-none transition-opacity duration-700 group-hover:opacity-20"
-      :style="`background: radial-gradient(circle, ${glowColors[stat?.color ?? 'brand']}, transparent); transform: translate(30%, -30%)`"
+      :style="`background: radial-gradient(circle, ${glowColors[props.stat?.color ?? 'brand']}, transparent); transform: translate(30%, -30%)`"
     />
 
     <div v-if="loading" class="space-y-4">
@@ -17,30 +17,32 @@
     <template v-else>
       <div
         class="h-12 w-12 rounded-2xl flex items-center justify-center mb-6 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 shadow-lg"
-        :class="iconBg[stat?.color ?? 'brand']"
+        :class="iconBg[props.stat?.color ?? 'brand']"
       >
-        <Icon :name="stat?.icon ?? 'heroicons:chart-bar'" class="h-6 w-6" :class="iconColor[stat?.color ?? 'brand']" />
+        <span class="h-6 w-6" :class="[iconClass, iconColor[props.stat?.color ?? 'brand']]" />
       </div>
 
       <div class="space-y-1">
         <p class="text-4xl font-bold text-white font-display tracking-tight group-hover:text-brand-400 transition-colors">
-          {{ stat?.value ?? t('admin.common.emptyValue') }}
+          {{ props.stat?.value ?? t('admin.common.emptyValue') }}
         </p>
         <p class="text-[11px] font-black uppercase tracking-[0.2em] text-white/50">
-          {{ stat?.label }}
+          {{ props.stat?.label }}
         </p>
       </div>
 
-      <div v-if="stat?.change !== undefined && stat.change !== 0" class="mt-6 flex items-center gap-2">
+      <div v-if="props.stat?.change !== undefined && props.stat.change !== 0" class="mt-6 flex items-center gap-2">
         <div class="flex items-center gap-1 px-2 py-1 rounded-full bg-white/[0.06] border border-white/[0.10] shadow-sm">
-          <Icon
-            :name="stat.change > 0 ? 'heroicons:arrow-trending-up' : 'heroicons:arrow-trending-down'"
+          <span
             class="h-3.5 w-3.5"
-            :class="stat.change > 0 ? 'text-emerald-400' : 'text-rose-400'"
+            :class="[
+              props.stat.change > 0 ? 'icon-[tabler--trending-up]' : 'icon-[tabler--trending-down]',
+              props.stat.change > 0 ? 'text-emerald-400' : 'text-rose-400',
+            ]"
           />
-          <span class="text-[10px] font-bold" :class="stat.change > 0 ? 'text-emerald-400' : 'text-rose-400'">
-            {{ stat.isMoney ? `R$ ${(Math.abs(stat.change) / 100).toFixed(0)}` : Math.abs(stat.change) }}
-            {{ stat.changeLabel }}
+          <span class="text-[10px] font-bold" :class="props.stat.change > 0 ? 'text-emerald-400' : 'text-rose-400'">
+            {{ props.stat.isMoney ? `R$ ${(Math.abs(props.stat.change) / 100).toFixed(0)}` : Math.abs(props.stat.change) }}
+            {{ props.stat.changeLabel }}
           </span>
         </div>
       </div>
@@ -49,20 +51,28 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+
 const { t } = useI18n()
 
-defineProps<{
+const props = defineProps<{
   stat?: {
     label: string
     value: string | number
     change?: number
     changeLabel?: string
+    /** The tabler icon name, the convention the whole design system uses. */
     icon: string
     color: string
     isMoney?: boolean
   }
   loading?: boolean
 }>()
+
+// The icon prop names a tabler icon: the span then carries the CSS mask the
+// project uses everywhere (`icon-[tabler--*]`), with the same fallback of the
+// previous Icon component for a stat without an icon.
+const iconClass = computed(() => `icon-[tabler--${props.stat?.icon ?? 'chart-bar'}]`)
 
 const glowColors: Record<string, string> = {
   brand: '#7c3aed',

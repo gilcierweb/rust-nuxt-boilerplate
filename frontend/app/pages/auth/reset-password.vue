@@ -28,7 +28,7 @@
         <label class="label-text mb-1.5 block" for="password">{{ $t('auth.resetPassword.newPassword') }}</label>
         <div class="flex items-center">
           <div class="relative flex-1">
-            <Icon name="heroicons:lock-closed" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+            <span class="icon-[tabler--lock] absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none"></span>
             <input
               id="password"
               v-model="password"
@@ -45,7 +45,7 @@
             aria-label="toggle password visibility"
             @click="showPw = !showPw"
           >
-            <Icon :name="showPw ? 'heroicons:eye-slash' : 'heroicons:eye'" class="h-5 w-5" />
+            <span class="h-5 w-5" :class="showPw ? 'icon-[tabler--eye-off]' : 'icon-[tabler--eye]'"></span>
           </button>
         </div>
         <span v-if="errors.password" class="text-error text-xs mt-1 block">{{ errors.password }}</span>
@@ -54,7 +54,7 @@
       <div>
         <label class="label-text mb-1.5 block" for="confirm">{{ $t('auth.resetPassword.confirmPassword') }}</label>
         <div class="relative">
-          <Icon name="heroicons:lock-closed" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none" />
+          <span class="icon-[tabler--lock] absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 opacity-50 pointer-events-none"></span>
           <input
             id="confirm"
             v-model="password_confirmation"
@@ -69,7 +69,7 @@
       </div>
 
       <button type="submit" :disabled="loading || !meta.valid" class="btn btn-primary btn-lg btn-gradient btn-block">
-        <Icon v-if="loading" name="svg-spinners:3-dots-fade" class="h-5 w-5" />
+        <span v-if="loading" class="icon-[tabler--loader-2] h-5 w-5 animate-spin"></span>
         <template v-else>{{ $t('auth.resetPassword.submit') }}</template>
       </button>
     </form>

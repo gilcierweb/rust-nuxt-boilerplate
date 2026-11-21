@@ -27,7 +27,7 @@
       class="space-y-4 rounded-xl border border-success/20 bg-success/5 p-6 text-center"
     >
       <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-success/15">
-        <Icon name="heroicons:envelope-open-solid" class="h-7 w-7 text-success" />
+        <span class="icon-[tabler--mail-opened] h-7 w-7 text-success"></span>
       </div>
       <div class="space-y-1">
         <h3 class="text-xl font-semibold text-base-content">{{ $t('auth.register.success.title') }}</h3>
@@ -130,7 +130,7 @@
         :disabled="isLoading || !meta.valid"
         class="btn btn-lg btn-primary btn-gradient btn-block disabled:opacity-60"
       >
-        <Icon v-if="isLoading" name="svg-spinners:ring-resize" class="h-5 w-5" />
+        <span v-if="isLoading" class="icon-[tabler--loader-2] h-5 w-5 animate-spin"></span>
         <template v-else>{{ $t('auth.register.submit') }}</template>
       </button>
     </form>
