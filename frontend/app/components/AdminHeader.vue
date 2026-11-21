@@ -24,7 +24,7 @@
               class="grow placeholder:text-sm"
               :placeholder="$t('common.search')"
             />
-            <label class="sr-only" for="kbdInput">Search</label>
+            <label class="sr-only" for="kbdInput">{{ $t('common.search') }}</label>
           </div>
         </div>
 

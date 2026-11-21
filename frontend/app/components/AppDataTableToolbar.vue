@@ -64,7 +64,7 @@ withDefaults(defineProps<{
   showTotal: true,
   enableGlobalFilter: true,
   showRefresh: false,
-  refreshLabel: 'Atualizar',
+  refreshLabel: 'Refresh',
   loading: false,
 })
 
