@@ -24,7 +24,7 @@
              email, a loose role label and a permanent logout button spent the
              bar on three controls and squeezed it on a phone. The menu keeps
              the same information, named in the language of the viewer. -->
-        <div class="dropdown relative inline-flex [--offset:21]">
+        <div class="dropdown relative inline-flex [--offset:21]" data-allow-mismatch="class">
           <button
             id="portal-profile-dropdown"
             type="button"
@@ -41,6 +41,7 @@
           </button>
           <ul
             class="dropdown-menu dropdown-open:opacity-100 hidden w-full max-w-75 space-y-0.5"
+            data-allow-mismatch="class"
             role="menu"
             aria-orientation="vertical"
             aria-labelledby="portal-profile-dropdown"

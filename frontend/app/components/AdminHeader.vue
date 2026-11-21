@@ -31,8 +31,10 @@
         <div class="navbar-end items-end gap-6">
           <ThemeToggle />
           <LanguageSwitcher />
-          <!-- Profile Dropdown -->
-          <div class="dropdown relative inline-flex [--offset:21]">
+          <!-- Profile Dropdown: FlyonUI toggles `open`/`hidden` on these
+               elements on load, before Vue hydrates, so their classes are
+               allowed to differ between server and client. -->
+          <div class="dropdown relative inline-flex [--offset:21]" data-allow-mismatch="class">
             <button
               id="profile-dropdown"
               type="button"
@@ -45,7 +47,7 @@
                 {{ initials }}
               </span>
             </button>
-            <ul class="dropdown-menu dropdown-open:opacity-100 max-w-75 hidden w-full space-y-0.5" role="menu" aria-orientation="vertical" aria-labelledby="profile-dropdown" tabindex="-1">
+            <ul class="dropdown-menu dropdown-open:opacity-100 max-w-75 hidden w-full space-y-0.5" data-allow-mismatch="class" role="menu" aria-orientation="vertical" aria-labelledby="profile-dropdown" tabindex="-1">
               <li class="dropdown-header pt-4.5 mb-1 gap-4 px-5 pb-3.5">
                 <div class="avatar avatar-online-top">
                   <div class="bg-primary text-primary-content flex w-10 items-center justify-center rounded-full text-sm font-semibold">
@@ -121,6 +123,7 @@
 </template>
 
 <script setup lang="ts">
+const { t } = useI18n()
 const runtimeConfig = useRuntimeConfig()
 const authStore = useAuthStore()
 const localePath = useLocalePath()

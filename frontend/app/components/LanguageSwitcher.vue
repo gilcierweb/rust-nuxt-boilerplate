@@ -1,9 +1,9 @@
 <template>
-  <div class="dropdown relative inline-flex [--auto-close:inside] [--offset:8] [--placement:bottom-end]">
+  <div class="dropdown relative inline-flex [--auto-close:inside] [--offset:8] [--placement:bottom-end]" data-allow-mismatch="class">
     <button id="lang-dropdown-header" type="button" class="dropdown-toggle btn btn-text btn-circle size-10" aria-haspopup="menu" aria-expanded="false">
       <span class="icon-[tabler--language] size-5.5"></span>
     </button>
-    <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-32 shadow-xl border border-base-content/10 mt-2" role="menu">
+    <ul class="dropdown-menu dropdown-open:opacity-100 hidden min-w-32 shadow-xl border border-base-content/10 mt-2" data-allow-mismatch="class" role="menu">
       <li v-for="lang in locales" :key="lang.code">
         <button class="dropdown-item flex items-center gap-2" :class="{ 'active': locale === lang.code }" @click="switchLocale(lang.code)">
           <span class="text-lg">{{ (lang as any).flag }}</span>
