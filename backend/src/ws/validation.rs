@@ -87,12 +87,12 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
         ));
     }
 
-    // Layer 2: JSON parse
+    // Layer 2: JSON parse. The serde reason stays in the server log: it names the
+    // shape of the internal request struct, which is reconnaissance for a
+    // client probing the parser.
     let parsed: RawClientMessage = serde_json::from_str(raw).map_err(|e| {
-        WsValidationError::new(
-            "INVALID_JSON",
-            t!("ws.invalid_json", reason = e.to_string()).into_owned(),
-        )
+        tracing::debug!(error = %e, "websocket message failed to parse");
+        WsValidationError::new("INVALID_JSON", t!("ws.invalid_json").into_owned())
     })?;
 
     // Layer 3: action field validation
@@ -125,11 +125,31 @@ pub fn validate_client_message(raw: &str) -> Result<WsClientAction, WsValidation
         "typing" => Ok(WsClientAction::Typing),
         "stop_typing" => Ok(WsClientAction::StopTyping),
         "ping" => Ok(WsClientAction::Ping),
-        other => Err(WsValidationError::new(
-            "UNKNOWN_ACTION",
-            t!("ws.unknown_action", action = other).into_owned(),
-        )),
+        other => {
+            tracing::debug!(action = %other, "websocket message named an unknown action");
+            Err(WsValidationError::new(
+                "UNKNOWN_ACTION",
+                t!("ws.unknown_action").into_owned(),
+            ))
+        },
     }
+}
+
+/// The prefix of a room that belongs to one subject.
+const USER_ROOM_PREFIX: &str = "user:";
+
+/// Whether a subject may join a room.
+///
+/// A room name without an owner is a name any subject can guess, and the
+/// broadcast of a room reaches every member of it: without this check one
+/// authenticated subject reads another subject's chat by guessing the name.
+/// A `user:`-prefixed room belongs to the subject it names and nobody else;
+/// every other name is a project room, public by definition.
+pub fn room_is_joinable(room: &str, subject: &uuid::Uuid) -> bool {
+    if let Some(owner) = room.strip_prefix(USER_ROOM_PREFIX) {
+        return owner == subject.to_string();
+    }
+    true
 }
 
 fn validate_join_room(data: serde_json::Value) -> Result<WsClientAction, WsValidationError> {
@@ -227,6 +247,62 @@ fn validate_data_is_object(data: &serde_json::Value) -> Result<(), WsValidationE
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_parse_failure_does_not_describe_the_internals_to_the_client() {
+        // The serde reason names the expected schema of the internal request
+        // struct: free reconnaissance for a client probing the parser.
+        let error = validate_client_message(r#"{"action":42}"#).unwrap_err();
+        assert_eq!(error.error.code, "INVALID_JSON");
+        for leak in ["expected", "invalid type", "at line", "column", "struct"] {
+            assert!(
+                !error.error.message.contains(leak),
+                "the message must not carry the parse reason ({leak}): {}",
+                error.error.message
+            );
+        }
+    }
+
+    #[test]
+    fn an_unknown_action_is_not_echoed_back() {
+        // The unknown action is the client's own probe string: echoing it
+        // confirms the endpoint reached the action dispatcher.
+        let error = validate_client_message(r#"{"action":"probe_action","data":{}}"#).unwrap_err();
+        assert_eq!(error.error.code, "UNKNOWN_ACTION");
+        assert!(
+            !error.error.message.contains("probe_action"),
+            "the message must not echo the unknown action: {}",
+            error.error.message
+        );
+    }
+
+    #[test]
+    fn the_parse_and_action_messages_carry_no_interpolated_detail() {
+        // The unit tests run without the i18n catalog loaded, so the message
+        // assertions above cannot see the rendered strings. This reads the
+        // catalog itself: a placeholder in the template is the only way a
+        // detail (the serde reason, the probed action) can reach a client.
+        for locale in ["en", "es", "pt-BR"] {
+            let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("locales")
+                .join(format!("{locale}.json"));
+            let catalog: serde_json::Value = serde_json::from_str(
+                &std::fs::read_to_string(&path).expect("the locale file exists"),
+            )
+            .expect("the locale file is JSON");
+            for key in ["ws.invalid_json", "ws.unknown_action"] {
+                let message = catalog
+                    .get(key)
+                    .unwrap_or_else(|| panic!("{key} must exist in {locale}"))
+                    .as_str()
+                    .expect("the message is a string");
+                assert!(
+                    !message.contains("{}"),
+                    "{locale}: {key} must not interpolate a detail: {message}"
+                );
+            }
+        }
+    }
 
     #[test]
     fn valid_join_room() {
@@ -465,5 +541,27 @@ mod tests {
             },
             _ => panic!("expected JoinRoom"),
         }
+    }
+
+    #[test]
+    fn a_subject_joins_the_room_that_names_it() {
+        let subject = uuid::Uuid::new_v4();
+        assert!(room_is_joinable(&format!("user:{subject}"), &subject));
+    }
+
+    #[test]
+    fn a_subject_cannot_join_the_room_of_another_subject() {
+        // The room broadcast reaches every member: guessing a name must not
+        // open another subject's chat.
+        let subject = uuid::Uuid::new_v4();
+        let other = uuid::Uuid::new_v4();
+        assert!(!room_is_joinable(&format!("user:{other}"), &subject));
+    }
+
+    #[test]
+    fn a_project_room_stays_public_and_a_bare_prefix_is_nobodys() {
+        let subject = uuid::Uuid::new_v4();
+        assert!(room_is_joinable("general", &subject));
+        assert!(!room_is_joinable("user:", &subject));
     }
 }

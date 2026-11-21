@@ -129,6 +129,19 @@ impl WebSocketActor {
 
         match action {
             crate::ws::validation::WsClientAction::JoinRoom { room } => {
+                // The broadcast reaches every member of a room, so the room
+                // is an access-controlled resource: a subject joins the room
+                // that names it or a public project room, never the room of
+                // another subject.
+                if !crate::ws::validation::room_is_joinable(&room, &self.profile_id) {
+                    let refusal = crate::ws::validation::WsValidationError::new(
+                        "ROOM_FORBIDDEN",
+                        t!("ws.room_forbidden").into_owned(),
+                    );
+                    ctx.text(refusal.to_json());
+                    return;
+                }
+
                 self.room = Some(room.clone());
                 let conn_info = ConnectionInfo {
                     profile_id: self.profile_id,
@@ -271,7 +284,60 @@ pub async fn ws_handler(
                             },
                         }
                     }
-                    result.claims.profile_id
+
+                    // A valid signature is not a live session: the handshake
+                    // runs the same revocation rule the HTTP path enforces, so
+                    // a token revoked by logout, or one predating a password
+                    // change, cannot keep a socket open until it expires.
+                    let answers = match state.as_ref() {
+                        Some(app_state) => {
+                            let blacklist = crate::repositories::access_token_blacklist::AccessTokenBlacklist::new(
+                                app_state.redis.clone(),
+                            );
+                            crate::middleware::token_revocation::RevocationAnswers {
+                                blacklisted: blacklist
+                                    .is_blacklisted(
+                                        &crate::repositories::access_token_blacklist::hash_token_for_blacklist(
+                                            &t,
+                                        ),
+                                    )
+                                    .await,
+                                epoch: blacklist.credential_epoch(&result.claims.sub).await,
+                            }
+                        },
+                        None => crate::middleware::token_revocation::RevocationAnswers::unavailable(),
+                    };
+
+                    match crate::middleware::token_revocation::decide_revocation(
+                        &answers,
+                        result.claims.iat,
+                    ) {
+                        crate::middleware::token_revocation::RevocationOutcome::Valid => {
+                            result.claims.profile_id
+                        },
+                        crate::middleware::token_revocation::RevocationOutcome::Revoked => {
+                            tracing::info!(
+                                event = "auth.ws_token_revoked",
+                                user_id = %result.claims.sub,
+                                "WebSocket token revoked; refusing the handshake"
+                            );
+                            return Err(AppError::Unauthorized(
+                                t!("middleware.token_revoked").into_owned(),
+                            ));
+                        },
+                        crate::middleware::token_revocation::RevocationOutcome::Indeterminate => {
+                            if let Some((event, error)) = answers.indeterminacy_cause() {
+                                tracing::error!(
+                                    event,
+                                    error = %error,
+                                    "WebSocket revocation status unavailable (Redis); failing closed"
+                                );
+                            }
+                            return Err(AppError::ServiceUnavailable(
+                                t!("middleware.token_status_unavailable").into_owned(),
+                            ));
+                        },
+                    }
                 },
                 Err(_) => {
                     tracing::warn!("WebSocket auth failed");

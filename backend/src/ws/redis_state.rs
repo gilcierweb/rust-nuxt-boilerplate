@@ -221,11 +221,11 @@ impl WsRedisState {
         let conn_key = format!("{}{}", WS_CONN_PREFIX, conn_id);
 
         let info_json: Option<String> = conn.hget(&conn_key, "data").await.ok().flatten();
-        if info_json.is_none() {
+        let Some(info_json) = info_json else {
             return Ok(());
-        }
+        };
 
-        let info: ConnectionInfo = serde_json::from_str(&info_json.unwrap())
+        let info: ConnectionInfo = serde_json::from_str(&info_json)
             .map_err(|e| AppError::Internal(format!("Failed to deserialize connection: {}", e)))?;
 
         let profile_id = info.profile_id;
