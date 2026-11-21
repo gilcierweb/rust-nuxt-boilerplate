@@ -146,7 +146,21 @@ where
                 }
 
                 // Verify the signature
-                let signature = stripe_signature.unwrap();
+                let Some(signature) = stripe_signature else {
+                    // The branch above already refused a missing header: the
+                    // refusal repeats instead of asserting.
+                    let response = HttpResponse::BadRequest()
+                        .json(serde_json::json!({
+                            "error": {
+                                "code": "STRIPE_SIGNATURE_MISSING",
+                                "message": t!("webhooks.stripe.missing_signature").into_owned(),
+                            }
+                        }));
+                    return Ok(ServiceResponse::new(
+                        req,
+                        response.map_into_boxed_body(),
+                    ));
+                };
                 let body_bytes = Bytes::from(body_bytes);
                 let is_valid =
                     verify_stripe_signature(&body_bytes, &signature, &cfg.stripe_webhook_secret);
@@ -164,8 +178,27 @@ where
                     return Ok(ServiceResponse::new(req, response));
                 }
 
-                // Reconstruct the request with the body
-                let req = ServiceRequest::from_parts(req, body_bytes.into());
+                // Reconstruct the request with the body, and write the event
+                // type from the payload the signature just verified: the
+                // handler reads this header to name the audit action, so a
+                // client-supplied value must never reach it.
+                let mut req = ServiceRequest::from_parts(req, body_bytes.clone().into());
+                let event_type = serde_json::from_slice::<serde_json::Value>(&body_bytes)
+                    .ok()
+                    .and_then(|event| {
+                        event
+                            .get("type")
+                            .and_then(|value| value.as_str())
+                            .map(str::to_string)
+                    })
+                    .unwrap_or_else(|| "unknown".to_string());
+                req.headers_mut().insert(
+                    actix_web::http::header::HeaderName::from_static("stripe-event-type"),
+                    actix_web::http::header::HeaderValue::from_str(&event_type)
+                        .unwrap_or_else(|_| {
+                            actix_web::http::header::HeaderValue::from_static("unknown")
+                        }),
+                );
                 return svc.call(req).await;
             }
 
@@ -508,5 +541,51 @@ mod tests {
             sig,
             "secret"
         ));
+    }
+
+    #[actix_web::test]
+    async fn the_event_type_the_handler_reads_comes_from_the_verified_payload() {
+        // The handler reads `stripe-event-type` to name the audit action. The
+        // verifier must write it from the payload the signature just checked,
+        // so a client cannot forge the name of the event it triggers.
+        let payload = br#"{"id":"evt_1","type":"checkout.session.completed"}"#;
+        let request = actix_web::test::TestRequest::post()
+            .uri("/api/v1/webhooks/stripe")
+            .insert_header(("stripe-event-type", "forged.event.type"))
+            .insert_header((
+                "stripe-signature",
+                make_valid_signature(payload, "whsec_event_type", now_secs()),
+            ))
+            .set_payload(payload.to_vec())
+            .to_request();
+
+        let container = container_with_webhook_secret("whsec_event_type");
+        let app = actix_web::test::init_service(
+            App::new()
+                .app_data(web::Data::new(container))
+                .service(
+                    web::scope("/api/v1/webhooks/stripe")
+                        .wrap(StripeWebhookVerifier::new())
+                        .route("", web::post().to(|req: actix_web::HttpRequest| async move {
+                            let event_type = req
+                                .headers()
+                                .get("stripe-event-type")
+                                .and_then(|value| value.to_str().ok())
+                                .unwrap_or("absent")
+                                .to_string();
+                            HttpResponse::Ok()
+                                .json(serde_json::json!({ "event_type": event_type }))
+                        })),
+                ),
+        )
+        .await;
+
+        let response = actix_web::test::call_service(&app, request).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let body: serde_json::Value = actix_web::test::read_body_json(response).await;
+        assert_eq!(
+            body["event_type"], "checkout.session.completed",
+            "the handler must read the event type the verifier derived, never the client header"
+        );
     }
 }

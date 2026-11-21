@@ -148,7 +148,20 @@ where
                     }
 
                     // Verify the signature
-                    let signature = pix_signature.unwrap();
+                    let Some(signature) = pix_signature else {
+                        // The branch above already refused a missing header:
+                        // the refusal repeats instead of asserting.
+                        let response = HttpResponse::BadRequest().json(serde_json::json!({
+                            "error": {
+                                "code": "PIX_SIGNATURE_MISSING",
+                                "message": t!("webhooks.pix.missing_signature").into_owned(),
+                            }
+                        }));
+                        return Ok(ServiceResponse::new(
+                            req,
+                            response.map_into_boxed_body(),
+                        ));
+                    };
                     let body_bytes = Bytes::from(body_bytes);
                     let is_valid =
                         verify_pix_signature(&body_bytes, &signature, &cfg.pix_webhook_secret);
