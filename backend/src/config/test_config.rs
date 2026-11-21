@@ -30,6 +30,14 @@ fn generate_deterministic_string(length: usize, seed: u64) -> String {
         .collect()
 }
 
+/// Read a test endpoint from the environment the way every integration suite
+/// does, with the historical local default as the last resort. The URL used
+/// to be hardcoded with credentials in it: a suite that pointed at another
+/// database silently kept writing to the compiled-in one.
+fn endpoint_from_env(variable: &str, default: &str) -> String {
+    std::env::var(variable).unwrap_or_else(|_| default.to_string())
+}
+
 /// Build a deterministic, realistic `AppConfig` for tests.
 pub fn test_config() -> AppConfig {
     AppConfig {
@@ -41,14 +49,17 @@ pub fn test_config() -> AppConfig {
         tls_key_path: "key.pem".to_string(),
         frontend_url: "http://localhost:3000".to_string(),
         environment: Environment::Test,
-        database_url: "postgres://boilerplate:password@localhost:5432/boilerplate_test".to_string(),
+        database_url: endpoint_from_env(
+            "DATABASE_URL_TEST",
+            "postgres://boilerplate:password@localhost:5432/boilerplate_test",
+        ),
         db_pool_size: 1,
         db_pool_min_idle: Some(1),
         db_pool_max_lifetime_secs: Some(1800),
         db_pool_idle_timeout_secs: Some(600),
         db_pool_connection_timeout_secs: 10,
         db_statement_timeout_secs: 30,
-        redis_url: "redis://127.0.0.1:6379".to_string(),
+        redis_url: endpoint_from_env("REDIS_URL_TEST", "redis://127.0.0.1:6379").to_string(),
         redis_pool_size: 10,
         jwt_secret: generate_deterministic_string(32, 0x9E3779B97F4A7C15),
         jwt_public_key: None,

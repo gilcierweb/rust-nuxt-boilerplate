@@ -7,6 +7,9 @@ use backend::config::AppConfig;
 use backend::security::SecurityService;
 use backend::services::email_service::EmailService;
 use backend::services::rbac_catalog_service;
+use backend::services::seed_credentials::{
+    resolve_seed_admin_password, seed_environment_is_production_like, SEED_PASSWORD_ENV_VAR,
+};
 use diesel::dsl::count_star;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -216,49 +219,22 @@ fn password_hash(password: &str) -> SeedResult<String> {
         .to_string())
 }
 
-fn ensure_refresh_token(
-    conn: &mut PgConnection,
-    user_uuid: Uuid,
-    seed_index: usize,
-) -> SeedResult<Uuid> {
-    use schema::refresh_tokens::dsl::*;
-    use time::Duration;
-
-    let token_hash_value = format!("seed-refresh-token-{seed_index:02}");
-
-    if let Some(existing_id) = refresh_tokens
-        .filter(token_hash.eq(&token_hash_value))
-        .select(id)
-        .first::<Uuid>(conn)
-        .optional()?
-    {
-        return Ok(existing_id);
-    }
-
-    Ok(diesel::insert_into(refresh_tokens)
-        .values((
-            id.eq(Uuid::new_v4()),
-            user_id.eq(user_uuid),
-            token_hash.eq(token_hash_value),
-            device_info.eq(Some(format!("Seed Device {seed_index:02}"))),
-            ip_address.eq(Some("127.0.0.1".to_string())),
-            expires_at.eq(OffsetDateTime::now_utc() + Duration::days(30)),
-            created_at.eq(OffsetDateTime::now_utc()),
-            updated_at.eq(OffsetDateTime::now_utc()),
-        ))
-        .returning(id)
-        .get_result(conn)?)
-}
-
+/// Seeded subjects never carry a refresh token.
+///
+/// The old seed wrote the literal `seed-refresh-token-XX` into a column that
+/// holds `hmac:<hex>` hashes at runtime. Nothing logs in with such a cookie,
+/// but a predictable value in a credential column is one verification change
+/// away from a session takeover, so the seed leaves the table alone: a real
+/// login mints a proper token.
 fn ensure_user(
     conn: &mut PgConnection,
     security: &SecurityService,
     user_index: usize,
+    user_password: &str,
 ) -> SeedResult<Uuid> {
     use schema::users::dsl::*;
 
     let user_email = test_user_email(user_index);
-    let user_password = "password123";
     let protected = security
         .protect_email(&user_email)
         .map_err(|e| format!("failed to protect seed email: {e}"))?;
@@ -442,7 +418,11 @@ fn print_counts(conn: &mut PgConnection) -> SeedResult<()> {
 /// Prints the role names each seed user really holds, read back from the link
 /// table. The old output printed a fixed `role=user`, which was false for every
 /// subject the rotation had given another role.
-fn print_seed_subjects(conn: &mut PgConnection, security: &SecurityService) -> SeedResult<()> {
+fn print_seed_subjects(
+    conn: &mut PgConnection,
+    security: &SecurityService,
+    password_notice: &str,
+) -> SeedResult<()> {
     let mut blind_indexes: Vec<Vec<u8>> = Vec::with_capacity(100);
     for index in 1..=100 {
         blind_indexes.push(
@@ -472,7 +452,7 @@ fn print_seed_subjects(conn: &mut PgConnection, security: &SecurityService) -> S
         }
     }
 
-    println!("\nTest users (password123):");
+    println!("\nTest users (password: {password_notice}):");
     for index in 1..=100 {
         let roles = roles_by_index
             .get(&index)
@@ -486,6 +466,22 @@ fn print_seed_subjects(conn: &mut PgConnection, security: &SecurityService) -> S
 
 fn main() -> SeedResult<()> {
     dotenvy::dotenv().ok();
+
+    // The guard runs before any other environment variable is read: loading
+    // the whole AppConfig first would demand every production secret from a
+    // run that is about to be refused anyway.
+    let configured_password = env::var(SEED_PASSWORD_ENV_VAR)
+        .map(|value| value.trim().to_string())
+        .ok()
+        .filter(|value| !value.is_empty());
+    let seed_password = resolve_seed_admin_password(
+        configured_password.as_deref(),
+        seed_environment_is_production_like(),
+    )?;
+    let password_notice = match configured_password {
+        Some(_) => format!("configured via {SEED_PASSWORD_ENV_VAR}"),
+        None => format!("the development default ({seed_password})"),
+    };
 
     // Check if user wants to send test emails (exit early)
     if env::args().any(|arg| arg == "--send-test-emails") {
@@ -507,11 +503,10 @@ fn main() -> SeedResult<()> {
 
         for index in 1..=100 {
             let user_data = generate_user_data(index);
-            let user_id = ensure_user(conn, &security, index)?;
+            let user_id = ensure_user(conn, &security, index, &seed_password)?;
             let _profile_id = ensure_profile(conn, user_id, index, &user_data)?;
             let role_id = canonical_roles[role_for(index)];
             ensure_user_roles(conn, user_id, &[role_id])?;
-            let _refresh_token_id = ensure_refresh_token(conn, user_id, index)?;
             let _audit_log_id = ensure_audit_log(conn, user_id, index)?;
         }
 
@@ -520,8 +515,8 @@ fn main() -> SeedResult<()> {
 
     println!("Seed completed successfully");
     println!("Admin email: admin@example.com");
-    println!("Default password: password123");
-    print_seed_subjects(&mut conn, &security)?;
+    println!("Seed password: {password_notice}");
+    print_seed_subjects(&mut conn, &security, &password_notice)?;
     print_counts(&mut conn)?;
 
     Ok(())
