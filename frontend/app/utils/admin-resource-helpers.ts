@@ -175,9 +175,9 @@ export function useAdminResource(resource: string, options?: {
    * very same single removals: a failure keeps the remaining ids going, and
    * the report names how many of them went through.
    */
-  async function confirmBulkRemoval(): Promise<{ deleted: number; failed: number }> {
+  async function confirmBulkRemoval(): Promise<{ deleted: number; failed: number; lastError: unknown }> {
     const target = bulkRemoval.value
-    if (!target) return { deleted: 0, failed: 0 }
+    if (!target) return { deleted: 0, failed: 0, lastError: null }
     bulkRemovalPending.value = true
     let deleted = 0
     let failed = 0
@@ -202,11 +202,16 @@ export function useAdminResource(resource: string, options?: {
             failed,
           }),
         )
+        // Surface the underlying cause of the failed rows instead of
+        // discarding it once some rows went through.
+        if (lastError) {
+          toast.error(mapAdminError(lastError, t, target.errorKey))
+        }
       } else {
         toast.error(mapAdminError(lastError, t, target.errorKey))
       }
       bulkRemoval.value = null
-      return { deleted, failed }
+      return { deleted, failed, lastError }
     } finally {
       bulkRemovalPending.value = false
     }

@@ -66,6 +66,10 @@ export function useAdminLookup() {
     'admin-lookup-loaded',
     () => ({}),
   )
+  const errorByEntity = useState<Partial<Record<LookupEntity, string>>>(
+    'admin-lookup-error',
+    () => ({}),
+  )
 
   async function load(entity: LookupEntity) {
     if (loadedByEntity.value[entity] || loadingByEntity.value[entity]) return
@@ -86,8 +90,13 @@ export function useAdminLookup() {
         [entity]: normalizeResourceResponse(payload) as EntityItem[],
       }
       loadedByEntity.value = { ...loadedByEntity.value, [entity]: true }
-    } catch {
+      errorByEntity.value = { ...errorByEntity.value, [entity]: undefined }
+    } catch (error: any) {
       itemsByEntity.value = { ...itemsByEntity.value, [entity]: [] }
+      errorByEntity.value = {
+        ...errorByEntity.value,
+        [entity]: error?.data?.error?.message || error?.statusMessage || 'Failed to load',
+      }
     } finally {
       loadingByEntity.value = { ...loadingByEntity.value, [entity]: false }
     }
@@ -95,6 +104,10 @@ export function useAdminLookup() {
 
   function getItems(entity: LookupEntity): EntityItem[] {
     return itemsByEntity.value[entity] || []
+  }
+
+  function getError(entity: LookupEntity): string | undefined {
+    return errorByEntity.value[entity]
   }
 
   function isLoading(entity: LookupEntity): boolean {

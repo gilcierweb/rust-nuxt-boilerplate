@@ -4,6 +4,8 @@
  * - Cursor-based: { data/posts/creators/etc, next_cursor, has_more }
  * - Offset-based: { data, pagination: { page, per_page, has_next } }
  */
+import { mapAuthError } from '~/utils/auth-errors'
+
 export function usePagination<T>(
   fetcher: (cursor?: string, page?: number) => Promise<{
     data?: T[]
@@ -84,7 +86,9 @@ export function usePagination<T>(
         }
       }
     } catch (err: any) {
-      error.value = err.statusMessage || 'Failed to load'
+      // Never surface the raw ofetch text (it can carry internal URLs);
+      // mapAuthError falls back to a generic, already-translated message.
+      error.value = mapAuthError(err, (key: string) => key, 'common.error')
     } finally {
       isLoading.value = false
       isLoadingMore.value = false
