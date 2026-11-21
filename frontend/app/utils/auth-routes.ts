@@ -39,3 +39,15 @@ export function isPublicRoute(path: string) {
 export function isAuthPage(path: string) {
   return AUTH_ONLY_PAGES.some((route) => matchesRoute(path, route))
 }
+
+/**
+ * Whether the route is an admin screen, whatever locale prefix precedes it.
+ *
+ * The check goes through the same `stripLocalePrefix` the public-route
+ * helpers use: naming the prefixes by hand drifts the moment a locale is
+ * registered, which is how the `pt` alias opened `/pt/admin/**` to a
+ * non admin subject.
+ */
+export function isAdminPath(path: string) {
+  return matchesRoute(path, '/admin')
+}

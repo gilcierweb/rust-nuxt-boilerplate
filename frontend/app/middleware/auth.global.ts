@@ -1,4 +1,4 @@
-import { isAuthPage, isPublicRoute } from "~/utils/auth-routes";
+import { isAdminPath, isAuthPage, isPublicRoute } from "~/utils/auth-routes";
 import { noticeTarget } from "~/utils/flash-notice";
 
 function isAssetLikePath(path: string) {
@@ -25,7 +25,7 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const localePath = useLocalePath();
   const isPublic = isPublicRoute(to.path);
   const authPage = isAuthPage(to.path);
-  const isAdminRoute = to.path.startsWith("/admin") || to.path.startsWith("/en/admin") || to.path.startsWith("/es/admin");
+  const isAdminRoute = isAdminPath(to.path);
 
   // BLOCK: intercept any route containing "undefined" as a path segment
   // This prevents `/admin/resource/undefined` navigations that were causing
