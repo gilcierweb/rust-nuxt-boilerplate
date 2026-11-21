@@ -135,7 +135,7 @@ actix-multipart = "0.7"
 infer = "0.19"
 mime = "0.3"
 sysinfo = "0.32"
-faker-rust = { version = "0.1.0", optional = true }
+faker-rust = { version = "0.1.1", optional = true }
 deadpool = { version = "0.13.0", features = ["managed"] }
 reqwest = { version = "0.13", features = ["json", "rustls"] }
 
