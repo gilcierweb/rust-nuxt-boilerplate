@@ -9,7 +9,7 @@
       <span class="text-error">{{ label }}</span>
     </template>
     <template v-else>
-      <span class="icon-[tabler--database-exclamation mr-2 inline-block size-6]"></span>
+      <span class="icon-[tabler--database-exclamation] mr-2 inline-block size-6"></span>
       {{ label }}
     </template>
   </div>
