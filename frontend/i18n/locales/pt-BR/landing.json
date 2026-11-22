@@ -187,7 +187,7 @@
         "privacy": "Privacidade",
         "contact": "Contato"
       },
-      "copyright": "© 2024 BuildTrack Sistemas Técnicos S.A. TODOS OS DIREITOS RESERVADOS.",
+      "copyright": "RustNuxt Boilerplate. Licenciado sob MIT. Todos os direitos reservados.",
       "cnpj": "CNPJ {number}",
       "location": "{city}, {state}",
       "clientPortal": "Portal do cliente"
