@@ -3,6 +3,13 @@
 # No fixed version available - transitive dep of jsonwebtoken
 # Will be resolved when jsonwebtoken updates its rsa dependency
 ignore = [
+  # cookie 0.16.2: private cookie nonces can repeat in processes that fork
+  # (RUSTSEC-2026-0594). Transitive dep of actix-web 4.20.0, which has not
+  # yet released a version depending on cookie >=0.18.3. This app does not
+  # use private/signed cookies (no cookie::Key), so the nonce-generation
+  # issue does not apply. Remove once actix-web upgrades cookie.
+  "RUSTSEC-2026-0594",
+
   "RUSTSEC-2023-0071",
 
   # rkyv 0.7.46: Insufficient archive validation (Rc/Arc OOB reads)

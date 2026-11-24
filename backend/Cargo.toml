@@ -52,7 +52,7 @@ actix-cors = "0.7.1"
 # The floor is the patched release of RUSTSEC-2026-0447 (compressed request
 # bodies can exhaust memory before the extractor limits apply): a resolve
 # against a fixed index must not land below it.
-actix-web = { version = "4.19.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
+actix-web = { version = "4.20.0", default-features = false, features = ["macros", "compress-brotli", "compress-gzip", "compress-zstd", "cookies", "unicode", "compat", "ws"] }
 actix-web-actors = "4.3"
 # security crypto
 argon2 = "0.5.3"
