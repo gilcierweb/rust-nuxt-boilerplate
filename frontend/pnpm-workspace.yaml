@@ -28,6 +28,15 @@ auditConfig:
   ignoreGhsas:
     - GHSA-fc5q-39xc-vjpf
 
+minimumReleaseAgeExclude:
+    - '@nuxt/kit@4.7.0'
+    - '@nuxt/nitro-server@4.7.0'
+    - '@nuxt/nitro-v3-server@4.7.0'
+    - '@nuxt/schema@4.7.0'
+    - '@nuxt/vite-builder@4.7.0'
+    - '@nuxt/vite-server@4.7.0'
+    - nuxt@4.7.0
+
 overrides:
   glob: ^14.0.2
   minimatch: ^11.0.1
