@@ -12,6 +12,9 @@ const isDev = process.env.NODE_ENV !== "production";
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  experimental: {
+    staticRoutes: true,
+  },
   css: ['~/assets/css/main.css'],
 
   vite: {
