@@ -7,6 +7,8 @@
     '''test_utils\.rs$''',
     '''test_repositories\.rs$''',
     '''test_security\.rs$''',
+    '''test_key_manager\.rs$''',
+    '''test_config\.rs$''',
   ]
 
 [[rules]]
