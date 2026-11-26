@@ -72,10 +72,11 @@ fn init_opentelemetry(
                     event = "otel.full_coverage_production",
                     sampler = ?telemetry.sampler,
                     "OpenTelemetry is sampling 100% of traces in PRODUCTION. \
-                     This will overwhelm the OTLP endpoint and incur high egress costs. \
-                     Set OTEL_SAMPLER=ratio_based and OTEL_SAMPLER_RATIO=0.1 (or similar) \
-                     to reduce trace volume."
+                      Refusing to enable tracing to avoid overwhelming the OTLP endpoint. \
+                      Set OTEL_SAMPLER=ratio_based and OTEL_SAMPLER_RATIO=0.1 (or similar) \
+                      to reduce trace volume."
                 );
+                return None;
             },
             Environment::Staging => {
                 tracing::warn!(

@@ -58,21 +58,25 @@ pub fn parse_rfc3339(value: &str, field: &str) -> AppResult<OffsetDateTime> {
     })
 }
 
+// Reserved for future use by callers that need the platform UTC offset.
 #[allow(dead_code)]
 pub fn utc_offset() -> UtcOffset {
     UtcOffset::UTC
 }
 
+// Reserved for future use: now in UTC, exposed for callers.
 #[allow(dead_code)]
 pub fn now_fixed() -> OffsetDateTime {
     OffsetDateTime::now_utc().to_offset(utc_offset())
 }
 
+// Reserved for future use: convert to the platform UTC offset.
 #[allow(dead_code)]
 pub fn to_fixed(dt: OffsetDateTime) -> OffsetDateTime {
     dt.to_offset(utc_offset())
 }
 
+// Reserved for future use: convert to UTC.
 #[allow(dead_code)]
 pub fn to_utc(dt: OffsetDateTime) -> OffsetDateTime {
     dt.to_offset(UtcOffset::UTC)
