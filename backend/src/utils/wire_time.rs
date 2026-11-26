@@ -53,8 +53,9 @@ pub fn parse_rfc3339_opt(value: Option<&str>) -> Option<OffsetDateTime> {
 /// Parse a required date, returning a localized validation error instead of
 /// silently discarding a malformed value.
 pub fn parse_rfc3339(value: &str, field: &str) -> AppResult<OffsetDateTime> {
-    OffsetDateTime::parse(value, &Rfc3339)
-        .map_err(|_| AppError::Validation(t!("validation.field_invalid", field = field).into_owned()))
+    OffsetDateTime::parse(value, &Rfc3339).map_err(|_| {
+        AppError::Validation(t!("validation.field_invalid", field = field).into_owned())
+    })
 }
 
 #[allow(dead_code)]
@@ -99,7 +100,9 @@ pub fn beginning_of_day(dt: OffsetDateTime) -> OffsetDateTime {
 
 /// Rails `DateTime#end_of_day` equivalent (23:59:59.999999999, same offset).
 pub fn end_of_day(dt: OffsetDateTime) -> OffsetDateTime {
-    dt.date().midnight().assume_offset(dt.offset())
+    dt.date()
+        .midnight()
+        .assume_offset(dt.offset())
         .saturating_add(Duration::seconds(86_399) + Duration::nanoseconds(999_999_999))
 }
 
@@ -215,7 +218,10 @@ mod tests {
             super::seconds_since_midnight(datetime!(2026-11-20 12:34:56 UTC)),
             12 * 3600 + 34 * 60 + 56
         );
-        assert_eq!(super::seconds_since_midnight(datetime!(2026-11-20 00:00:00 UTC)), 0);
+        assert_eq!(
+            super::seconds_since_midnight(datetime!(2026-11-20 00:00:00 UTC)),
+            0
+        );
     }
 
     #[test]
