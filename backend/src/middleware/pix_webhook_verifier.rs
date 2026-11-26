@@ -186,7 +186,7 @@ where
                                 .json(serde_json::json!({
                                     "error": {
                                         "code": "PIX_WEBHOOK_REPLAYED",
-                                        "message": "Pix webhook signature has already been processed"
+                                        "message": t!("webhooks.pix.replayed").into_owned()
                                     }
                                 }))
                                 .map_into_boxed_body();
@@ -208,7 +208,7 @@ where
                                 .json(serde_json::json!({
                                     "error": {
                                         "code": "PIX_WEBHOOK_REPLAY_CHECK_UNAVAILABLE",
-                                        "message": "Pix webhook replay status could not be verified"
+                                        "message": t!("webhooks.pix.replay_check_unavailable").into_owned()
                                     }
                                 }))
                                 .map_into_boxed_body();
@@ -242,7 +242,7 @@ fn fail_closed(
         .json(serde_json::json!({
             "error": {
                 "code": code,
-                "message": "Webhook signature could not be verified"
+                "message": t!("webhooks.signature_verification_failed").into_owned()
             }
         }))
         .map_into_boxed_body();

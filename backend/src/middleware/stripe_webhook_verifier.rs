@@ -217,7 +217,7 @@ fn fail_closed(
         .json(serde_json::json!({
             "error": {
                 "code": code,
-                "message": "Webhook signature could not be verified"
+                "message": t!("webhooks.signature_verification_failed").into_owned()
             }
         }))
         .map_into_boxed_body();
