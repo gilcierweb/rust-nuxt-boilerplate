@@ -28,6 +28,12 @@
 //! (or the `option` variant), so switching the platform-wide wire format
 //! means editing this file alone.
 
+use rust_i18n::t;
+use time::format_description::well_known::Rfc3339;
+use time::{Duration, OffsetDateTime, UtcOffset};
+
+use crate::errors::{AppError, AppResult};
+
 /// `OffsetDateTime` as RFC 3339. Use with `#[serde(with = "...")]`.
 pub mod datetime {
     pub use time::serde::rfc3339::{deserialize, serialize};
@@ -36,6 +42,70 @@ pub mod datetime {
 /// `Option<OffsetDateTime>` as RFC 3339 or null. Use with `#[serde(with = "...")]`.
 pub mod option {
     pub use time::serde::rfc3339::option::{deserialize, serialize};
+}
+
+/// Parse an optional query-param date. Invalid values are treated as an
+/// absent filter, matching the historical behaviour of list endpoints.
+pub fn parse_rfc3339_opt(value: Option<&str>) -> Option<OffsetDateTime> {
+    value.and_then(|raw| OffsetDateTime::parse(raw, &Rfc3339).ok())
+}
+
+/// Parse a required date, returning a localized validation error instead of
+/// silently discarding a malformed value.
+pub fn parse_rfc3339(value: &str, field: &str) -> AppResult<OffsetDateTime> {
+    OffsetDateTime::parse(value, &Rfc3339)
+        .map_err(|_| AppError::Validation(t!("validation.field_invalid", field = field).into_owned()))
+}
+
+#[allow(dead_code)]
+pub fn utc_offset() -> UtcOffset {
+    UtcOffset::UTC
+}
+
+#[allow(dead_code)]
+pub fn now_fixed() -> OffsetDateTime {
+    OffsetDateTime::now_utc().to_offset(utc_offset())
+}
+
+#[allow(dead_code)]
+pub fn to_fixed(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.to_offset(utc_offset())
+}
+
+#[allow(dead_code)]
+pub fn to_utc(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.to_offset(UtcOffset::UTC)
+}
+
+/// Rails `Date.current` equivalent (now, in UTC).
+pub fn today() -> OffsetDateTime {
+    OffsetDateTime::now_utc()
+}
+
+/// Rails `Date#yesterday` equivalent.
+pub fn yesterday(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.saturating_add(Duration::days(-1))
+}
+
+/// Rails `Date#tomorrow` equivalent.
+pub fn tomorrow(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.saturating_add(Duration::days(1))
+}
+
+/// Rails `DateTime#beginning_of_day` equivalent (same offset, time 00:00).
+pub fn beginning_of_day(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.date().midnight().assume_offset(dt.offset())
+}
+
+/// Rails `DateTime#end_of_day` equivalent (23:59:59.999999999, same offset).
+pub fn end_of_day(dt: OffsetDateTime) -> OffsetDateTime {
+    dt.date().midnight().assume_offset(dt.offset())
+        .saturating_add(Duration::seconds(86_399) + Duration::nanoseconds(999_999_999))
+}
+
+/// Rails `DateTime#seconds_since_midnight` equivalent.
+pub fn seconds_since_midnight(dt: OffsetDateTime) -> u64 {
+    u64::from(dt.hour()) * 3600 + u64::from(dt.minute()) * 60 + u64::from(dt.second())
 }
 
 #[cfg(test)]
@@ -92,5 +162,64 @@ mod tests {
         )
         .expect("deserialize through the option module");
         assert_eq!(value, decoded);
+    }
+
+    #[test]
+    fn parses_valid_rfc3339_instant() {
+        assert_eq!(
+            super::parse_rfc3339("2026-11-20T15:37:52Z", "date_from").expect("valid timestamp"),
+            datetime!(2026-11-20 15:37:52 UTC)
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_rfc3339_instant() {
+        assert!(super::parse_rfc3339("not-a-date", "date_from").is_err());
+    }
+
+    #[test]
+    fn optional_parser_ignores_invalid_and_missing_values() {
+        assert_eq!(
+            super::parse_rfc3339_opt(Some("2026-11-20T15:37:52Z")),
+            Some(datetime!(2026-11-20 15:37:52 UTC))
+        );
+        assert_eq!(super::parse_rfc3339_opt(Some("not-a-date")), None);
+        assert_eq!(super::parse_rfc3339_opt(None), None);
+    }
+
+    #[test]
+    fn yesterday_and_tomorrow_shift_by_one_day() {
+        let dt = datetime!(2026-11-20 15:37:52 UTC);
+        assert_eq!(super::yesterday(dt), datetime!(2026-11-19 15:37:52 UTC));
+        assert_eq!(super::tomorrow(dt), datetime!(2026-11-21 15:37:52 UTC));
+    }
+
+    #[test]
+    fn beginning_and_end_of_day_keep_the_same_day() {
+        let dt = datetime!(2026-11-20 15:37:52.984775 UTC);
+        assert_eq!(
+            super::beginning_of_day(dt),
+            datetime!(2026-11-20 00:00:00 UTC)
+        );
+        let end = super::end_of_day(dt);
+        assert_eq!(end.date(), dt.date());
+        assert_eq!(end.hour(), 23);
+        assert_eq!(end.minute(), 59);
+        assert_eq!(end.second(), 59);
+        assert_eq!(end.nanosecond(), 999_999_999);
+    }
+
+    #[test]
+    fn seconds_since_midnight_returns_time_of_day() {
+        assert_eq!(
+            super::seconds_since_midnight(datetime!(2026-11-20 12:34:56 UTC)),
+            12 * 3600 + 34 * 60 + 56
+        );
+        assert_eq!(super::seconds_since_midnight(datetime!(2026-11-20 00:00:00 UTC)), 0);
+    }
+
+    #[test]
+    fn today_is_now() {
+        assert_eq!(super::today().date(), OffsetDateTime::now_utc().date());
     }
 }
