@@ -151,7 +151,7 @@ pub async fn upload_file(
         }
 
         // Validate the upload using the captured prefix
-        let validated = validate_upload(
+        let _validated = validate_upload(
             &original_filename,
             &declared_mime,
             total_size,
@@ -160,12 +160,12 @@ pub async fn upload_file(
         )
         .map_err(file_validation_error_to_app)?;
 
-        // At this point, the file is validated and stored in temp_file.
-        // In a real implementation, you would move the temp file to permanent storage
-        // (S3, Bunny.net, Backblaze B2, etc.) here.
-        // For now, we just return the validation info.
-
-        return Ok(HttpResponse::Ok().json(UploadResponse::from(validated)));
+        // The file passed validation, but this boilerplate does not ship a
+        // storage backend: persisting would silently drop the bytes. Be honest
+        // about that instead of returning 200 for a file that is never stored.
+        return Ok(HttpResponse::NotImplemented().json(serde_json::json!({
+            "error": t!("upload.storage_not_configured").into_owned()
+        })));
     }
 
     Err(AppError::BadRequest(

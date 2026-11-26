@@ -199,6 +199,7 @@
   "ticket.update_nothing": "Nothing to update. Provide status and/or message.",
   "ticket.updated": "Your ticket received an update.",
   "upload.no_file_field": "No file field found in multipart form",
+  "upload.storage_not_configured": "Upload storage is not configured in this boilerplate",
   "users.profile_not_found": "User profile not found",
   "users.session_revoke_success": "Session revoked successfully",
   "validation.empty_file": "Uploaded file is empty",

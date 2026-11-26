@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 pub mod email_confirmation;
 pub mod password;
 pub mod users;

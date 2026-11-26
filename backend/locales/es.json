@@ -199,6 +199,7 @@
   "ticket.update_nothing": "Nada que actualizar. Proporcione estado y/o mensaje.",
   "ticket.updated": "Su ticket recibió una actualización.",
   "upload.no_file_field": "Campo de archivo no encontrado en formulario multipart",
+  "upload.storage_not_configured": "Almacenamiento de carga no configurado en este boilerplate",
   "users.profile_not_found": "Perfil de usuario no encontrado",
   "users.session_revoke_success": "Sesión revocada con éxito",
   "validation.empty_file": "Archivo enviado está vacío",
