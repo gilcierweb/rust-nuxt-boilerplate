@@ -11,7 +11,7 @@
 #   blind_index_key.txt         # 32-byte base64 blind-index key for searchable PII
 #   csrf_secret_key.txt         # 32-byte base64 CSRF HMAC key
 #   refresh_token_hash_salt.txt # 32-byte base64 salt for refresh token hashes
-#   metrics_scrape_key.txt      # the X-API-Key the Prometheus scrape authenticates with (one of INTERNAL_API_KEYS)
+#   metrics_scrape_key.txt      # the X-API-Key the Prometheus scrape authenticates with (one of BACKEND_API_KEYS)
 #
 # External service API keys are also kept here for production:
 #

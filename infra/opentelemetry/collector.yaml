@@ -10,7 +10,7 @@
 #   2. Traces: OTLP push from the app (enabled via OTEL_EXPORTER_OTLP_ENDPOINT).
 #      The otlp receiver below accepts them.
 #
-# Set the API key in backend/.env as INTERNAL_API_KEYS and copy one of those
+# Set the API key in backend/.env as BACKEND_API_KEYS and copy one of those
 # keys into the file named below. Without it the scrape gets a 401: the
 # /metrics payload carries route names, counters and system data by design.
 #

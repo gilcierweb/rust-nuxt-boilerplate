@@ -134,7 +134,7 @@ fn test_config() -> backend::config::AppConfig {
         master_key,
         blind_index_key,
         current_encryption_key_version: 1,
-        internal_api_keys: vec![],
+        backend_api_keys: vec![],
         resend_api_key: String::new(),
         email_from: "test@example.com".to_string(),
         email_from_name: "Test".to_string(),

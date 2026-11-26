@@ -23,7 +23,7 @@ use backend::controllers::health_controller::config as health_routes;
 /// so the probes report "down" deterministically in every environment.
 const UNREACHABLE_DB_URL: &str = "postgres://user:pass@127.0.0.1:1/health_probe_missing";
 const UNREACHABLE_REDIS_URL: &str = "redis://127.0.0.1:1";
-const INTERNAL_API_KEY: &str = "internal-key-for-health-tests";
+const BACKEND_API_KEY_TEST: &str = "internal-key-for-health-tests";
 
 fn config_with_api_keys() -> AppConfig {
     // The environment is a lookup the test names: no process env mutation, so
@@ -51,7 +51,7 @@ fn config_with_api_keys() -> AppConfig {
             "REFRESH_TOKEN_HASH_SALT",
             "test-refresh-token-hash-salt-for-integration-32b!",
         ),
-        ("INTERNAL_API_KEYS", INTERNAL_API_KEY),
+        ("BACKEND_API_KEYS", BACKEND_API_KEY_TEST),
     ];
 
     AppConfig::from_lookup(|key| {
@@ -129,7 +129,7 @@ async fn health_exposes_dependency_errors_with_a_valid_api_key() {
         &app,
         test::TestRequest::get()
             .uri("/api/v1/health")
-            .insert_header(("x-api-key", INTERNAL_API_KEY))
+            .insert_header(("x-api-key", BACKEND_API_KEY_TEST))
             .to_request(),
     )
     .await;

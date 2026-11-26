@@ -68,7 +68,7 @@ key_values = {
     "CSRF_SECRET_KEY": os.environ["CSRF_SECRET_KEY"],
     "REFRESH_TOKEN_HASH_SALT": os.environ["REFRESH_TOKEN_HASH_SALT"],
     "NUXT_BACKEND_API_KEY": os.environ["BACKEND_API_KEY"],
-    "INTERNAL_API_KEYS": os.environ["BACKEND_API_KEY"],
+    "BACKEND_API_KEYS": os.environ["BACKEND_API_KEY"],
 }
 
 out = []

@@ -269,7 +269,7 @@ mod tests {
             master_key: "dGVzdC1tYXN0ZXIta2V5LWZvci11bml0LXRlc3RzLTMyYiE=".to_string(),
             blind_index_key: "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLXVuaXQtdGVzdHM=".to_string(),
             current_encryption_key_version: 1,
-            internal_api_keys: vec![],
+            backend_api_keys: vec![],
             resend_api_key: String::new(),
             email_from: String::new(),
             email_from_name: String::new(),

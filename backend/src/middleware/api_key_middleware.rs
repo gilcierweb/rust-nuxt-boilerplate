@@ -82,7 +82,7 @@ where
 
             let expected_keys = req
                 .app_data::<web::Data<AppContainer>>()
-                .map(|container| container.config.internal_api_keys.clone())
+                .map(|container| container.config.backend_api_keys.clone())
                 .unwrap_or_default();
 
             let provided_key = extract_api_key(&req);
@@ -90,26 +90,34 @@ where
             // In development (no keys configured) we fail open so the
             // boilerplate works out of the box; production requires keys
             // (enforced by validate_or_panic).
-            let dev_mode = std::env::var("ENVIRONMENT")
-                .map(|v| {
-                    let v = v.to_ascii_lowercase();
-                    v.is_empty() || v == "development" || v == "dev" || v == "test"
-                })
-                .unwrap_or(true);
+            if expected_keys.is_empty() {
+                // No keys configured: fail loudly with an actionable message
+                // instead of a cryptic 401, so the operator sees exactly what
+                // is missing. In production validate_or_panic already blocks
+                // startup on this, so this path only happens in dev.
+                tracing::warn!(
+                    event = "api_key.no_keys_configured",
+                    "BACKEND_API_KEYS is empty. Set it in .env (or run \
+                     scripts/generate-secrets.sh) to enable /api/v1/admin/*."
+                );
+                let response = AppError::Internal(
+                    "BACKEND_API_KEYS is not configured. Set it in .env or run \
+                     scripts/generate-secrets.sh."
+                        .to_string(),
+                )
+                .error_response()
+                .map_into_right_body();
+                return Ok(req.into_response(response));
+            }
 
-            let is_valid = if expected_keys.is_empty() && dev_mode {
-                true
-            } else {
-                provided_key
-                    .as_deref()
-                    .map(|provided| {
-                        !expected_keys.is_empty()
-                            && expected_keys
-                                .iter()
-                                .any(|expected| constant_time_eq(expected, provided))
-                    })
-                    .unwrap_or(false)
-            };
+            let is_valid = provided_key
+                .as_deref()
+                .map(|provided| {
+                    expected_keys
+                        .iter()
+                        .any(|expected| constant_time_eq(expected, provided))
+                })
+                .unwrap_or(false);
 
             if !is_valid {
                 let response = AppError::Unauthorized(t!("middleware.unauthorized").into_owned())
@@ -152,7 +160,7 @@ mod tests {
     fn container_with_api_key() -> crate::repositories::container::AppContainer {
         let mut container = mock_container();
         let mut config = (*container.config).clone();
-        config.internal_api_keys = vec!["test-api-key".to_string()];
+        config.backend_api_keys = vec!["test-api-key".to_string()];
         container.config = Arc::new(config);
         container
     }

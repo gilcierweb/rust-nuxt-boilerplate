@@ -69,7 +69,7 @@ pub fn test_config() -> AppConfig {
         master_key: generate_deterministic_base64_key(32, 0xC0FFEE),
         blind_index_key: generate_deterministic_base64_key(32, 0xDEADBEEF),
         current_encryption_key_version: 1,
-        internal_api_keys: vec![],
+        backend_api_keys: vec![],
         resend_api_key: String::new(),
         email_from: String::new(),
         email_from_name: String::new(),

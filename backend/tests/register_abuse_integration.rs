@@ -95,7 +95,7 @@ fn limiter_config(register_daily_limit: u64) -> backend::config::AppConfig {
         master_key: "q0J4u1cHcVtvRUFORlJ5WmpOMkF3WmFYc0xHRnVI=".to_string(),
         blind_index_key: "zM2r8pL4sT7wY0aB3cD6eF9gH1jK5nQ8sU2vX5zA=".to_string(),
         current_encryption_key_version: 1,
-        internal_api_keys: vec![],
+        backend_api_keys: vec![],
         resend_api_key: String::new(),
         email_from: "test@example.com".to_string(),
         email_from_name: "Test".to_string(),

@@ -161,7 +161,7 @@ pub async fn health_check(state: web::Data<AppState>, req: HttpRequest) -> HttpR
     // credentials) and this route is reachable without an API key, so they are
     // only returned to callers that authenticate with a valid internal key.
     // Everyone else gets the status and latency, which is what a probe needs.
-    let is_internal = request_has_valid_api_key(&req, &state.config.internal_api_keys);
+    let is_internal = request_has_valid_api_key(&req, &state.config.backend_api_keys);
 
     let mut db_status = db_status;
     let mut redis_status = redis_status;

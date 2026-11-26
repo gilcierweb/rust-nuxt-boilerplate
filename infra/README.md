@@ -42,14 +42,14 @@ Prometheus exposition at `GET /api/v1/metrics`. Traces go out as OTLP when
 ### The metrics endpoint requires an API key
 
 `/api/v1/metrics` answers only to `X-API-Key: <key>` or
-`Authorization: ApiKey <key>`, from `INTERNAL_API_KEYS` in the backend `.env`
+`Authorization: ApiKey <key>`, from `BACKEND_API_KEYS` in the backend `.env`
 (the payload carries route names, counters and system data). Prometheus itself
 can only send Bearer or Basic credentials, so the local stack scrapes through
 the `metrics-proxy` service in `docker-compose.yml`, which injects the header.
 Tell it which key to use in your `.env`:
 
 ```bash
-# .env (root): METRICS_SCRAPE_KEY must be one of the keys in INTERNAL_API_KEYS
+# .env (root): METRICS_SCRAPE_KEY must be one of the keys in BACKEND_API_KEYS
 METRICS_SCRAPE_KEY=$(openssl rand -hex 32)
 ```
 

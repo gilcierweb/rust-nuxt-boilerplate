@@ -346,7 +346,7 @@ services:
   # ApiKey). Prometheus itself can only send Bearer or Basic credentials, so
   # this sidecar injects the header for the scrape in infra/prometheus.
   # METRICS_SCRAPE_KEY must be one of the keys in the backend's
-  # INTERNAL_API_KEYS.
+  # BACKEND_API_KEYS.
   metrics-proxy:
     image: caddy@sha256:fc9cbc100585871d18d4e451cca7021785c90a7006087427ae5ceb3e4efe6424
     container_name: rust_nuxt_boilerplate_metrics_proxy

@@ -47,7 +47,7 @@ services:
         sync: false
       - key: REFRESH_TOKEN_HASH_SALT
         sync: false
-      - key: INTERNAL_API_KEYS
+      - key: BACKEND_API_KEYS
         sync: false
       - key: FRONTEND_URL
         sync: false

@@ -19,7 +19,7 @@ use crate::AppState;
 /// Authorization: ApiKey <key>
 /// ```
 ///
-/// Keys are configured via the `INTERNAL_API_KEYS` environment variable
+/// Keys are configured via the `BACKEND_API_KEYS` environment variable
 /// (comma-separated list). See `.env.example` for details.
 ///
 /// # Security Rationale

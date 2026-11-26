@@ -21,7 +21,7 @@ scrape_configs:
   # Prometheus itself can only send Bearer or Basic credentials, so the local
   # stack scrapes through the metrics-proxy service in docker-compose.yml,
   # which injects the header. Set METRICS_SCRAPE_KEY in your .env to one of
-  # the keys listed in INTERNAL_API_KEYS.
+  # the keys listed in BACKEND_API_KEYS.
   - job_name: backend
     metrics_path: /api/v1/metrics
     static_configs:

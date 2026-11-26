@@ -238,7 +238,7 @@ pub struct AppConfig {
     pub master_key: String,
     pub blind_index_key: String,
     pub current_encryption_key_version: u32,
-    pub internal_api_keys: Vec<String>,
+    pub backend_api_keys: Vec<String>,
     pub csrf_secret_key: String,
     pub refresh_token_hash_salt: String,
     // Account lockout
@@ -578,7 +578,7 @@ impl AppConfig {
                 .unwrap_or_else(|| "1".to_string())
                 .parse()
                 .unwrap_or(1),
-            internal_api_keys: read("INTERNAL_API_KEYS")
+            backend_api_keys: read("BACKEND_API_KEYS")
                 .unwrap_or_default()
                 .split(',')
                 .map(str::trim)
@@ -1003,17 +1003,17 @@ impl AppConfig {
             );
         }
 
-        // INTERNAL_API_KEYS validation
+        // BACKEND_API_KEYS validation
         // The /api/v1/metrics endpoint (and other internal routes) are protected
         // exclusively by RequireApiKey. An empty key list means the middleware
         // will reject ALL requests to those routes, effectively disabling metrics
         // scraping. In production this is a misconfiguration, not a safe default.
-        if self.internal_api_keys.is_empty() {
+        if self.backend_api_keys.is_empty() {
             if self.is_production_like() {
                 errors.push(
-                    "INTERNAL_API_KEYS is empty. The /metrics endpoint (and other \
+                    "BACKEND_API_KEYS is empty. The /metrics endpoint (and other \
                      internal routes) require at least one API key. Set \
-                     INTERNAL_API_KEYS=<key1>,<key2> before deploying to \
+                     BACKEND_API_KEYS=<key1>,<key2> before deploying to \
                      staging/production. Generate a key with: \
                      openssl rand -hex 32"
                         .to_string(),
@@ -1023,8 +1023,8 @@ impl AppConfig {
                 // Not a hard error — devs may not have set up keys locally yet.
                 tracing::warn!(
                     event = "config.missing_api_keys",
-                    "INTERNAL_API_KEYS is empty. /api/v1/metrics will reject all \
-                     requests. Set INTERNAL_API_KEYS in your .env file to enable \
+                    "BACKEND_API_KEYS is empty. /api/v1/metrics will reject all \
+                     requests. Set BACKEND_API_KEYS in your .env file to enable \
                      metrics scraping locally."
                 );
             }
