@@ -78,6 +78,34 @@ pub async fn stripe_webhook(
         .and_then(|v| v.as_str())
         .unwrap_or("unknown");
 
+    // Idempotency: skip events already processed.
+    let idempotency_key = format!("webhook:stripe:{}", event_id);
+    if container
+        .cache
+        .exists(&idempotency_key)
+        .await
+        .unwrap_or(false)
+    {
+        tracing::info!(
+            event = "stripe_webhook.duplicate",
+            event_id = %event_id,
+            "Stripe webhook already processed; skipping"
+        );
+        return HttpResponse::Ok().json(serde_json::json!({
+            "received": true,
+            "duplicate": true,
+            "event_id": event_id
+        }));
+    }
+    let _ = container
+        .cache
+        .set_with_ttl(
+            &idempotency_key,
+            &true,
+            std::time::Duration::from_secs(86_400),
+        )
+        .await;
+
     // Log the webhook event to audit log
     let audit_log = crate::models::audit_log::NewAuditLog {
         actor_user_id: None,
@@ -250,6 +278,34 @@ pub async fn pix_webhook(
         .or_else(|| payload_json.get("type"))
         .and_then(|v| v.as_str())
         .unwrap_or("pix.received");
+
+    // Idempotency: skip events already processed.
+    let idempotency_key = format!("webhook:pix:{}:{}", transaction_id, event_type);
+    if container
+        .cache
+        .exists(&idempotency_key)
+        .await
+        .unwrap_or(false)
+    {
+        tracing::info!(
+            event = "pix_webhook.duplicate",
+            transaction_id = %transaction_id,
+            "Pix webhook already processed; skipping"
+        );
+        return HttpResponse::Ok().json(serde_json::json!({
+            "received": true,
+            "duplicate": true,
+            "transaction_id": transaction_id
+        }));
+    }
+    let _ = container
+        .cache
+        .set_with_ttl(
+            &idempotency_key,
+            &true,
+            std::time::Duration::from_secs(86_400),
+        )
+        .await;
 
     // Log the webhook event to audit log
     let audit_log = crate::models::audit_log::NewAuditLog {

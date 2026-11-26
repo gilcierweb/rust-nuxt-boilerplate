@@ -1,5 +1,4 @@
 use std::fmt;
-use std::ops::{Add, Sub};
 
 use bigdecimal::{BigDecimal, ToPrimitive};
 use serde::{Deserialize, Serialize};
@@ -39,7 +38,9 @@ impl Money {
     #[allow(dead_code)]
     pub fn from_decimal(value: BigDecimal, currency: Currency) -> Option<Self> {
         let scaled = value * BigDecimal::from(100);
-        let amount_minor = scaled.with_scale(0).to_i64()?;
+        let amount_minor = scaled
+            .with_scale_round(0, bigdecimal::RoundingMode::HalfUp)
+            .to_i64()?;
         Some(Self {
             amount_minor,
             currency,
@@ -92,34 +93,15 @@ impl Money {
     }
 }
 
-impl Add for Money {
-    type Output = Self;
-
-    /// Sums amounts of the same currency.
-    ///
-    /// The operator cannot refuse, so a mismatched currency panics: the
-    /// checked path is [`Money::checked_add`], which returns `None` instead.
-    fn add(self, rhs: Self) -> Self::Output {
-        self.checked_add(rhs)
-            .expect("Money::add: the two amounts must share a currency and fit an i64")
-    }
-}
-
-impl Sub for Money {
-    type Output = Self;
-
-    /// Subtracts amounts of the same currency, with the same panic contract
-    /// as [`Add`]: the checked path is [`Money::checked_sub`].
-    fn sub(self, rhs: Self) -> Self::Output {
-        self.checked_sub(rhs)
-            .expect("Money::sub: the two amounts must share a currency and fit an i64")
-    }
-}
-
 impl fmt::Display for Money {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let decimal = self.to_decimal();
-        write!(f, "{} {:?}", decimal, self.currency)
+        let decimal = self.to_decimal().with_scale(2);
+        let code = match self.currency {
+            Currency::Brl => "BRL",
+            Currency::Usd => "USD",
+            Currency::Euro => "EUR",
+        };
+        write!(f, "{} {}", decimal, code)
     }
 }
 
@@ -181,12 +163,15 @@ mod tests {
     }
 
     #[test]
-    fn the_operators_keep_the_convenient_syntax_for_one_currency() {
-        let total = Money::new(1990, Currency::Brl) + Money::new(500, Currency::Brl);
-        assert_eq!(total.amount_minor, 2490);
-        assert_eq!(
-            Money::new(2490, Currency::Brl) - Money::new(500, Currency::Brl),
-            Money::new(1990, Currency::Brl)
-        );
+    fn from_decimal_rounds_to_the_nearest_cent() {
+        let amount: BigDecimal = "10.005".parse().expect("decimal parses");
+        let money = Money::from_decimal(amount, Currency::Brl).expect("fits an i64");
+        assert_eq!(money.amount_minor, 1001);
+    }
+
+    #[test]
+    fn display_uses_the_currency_code() {
+        let money = Money::new(2490, Currency::Brl);
+        assert_eq!(money.to_string(), "24.90 BRL");
     }
 }

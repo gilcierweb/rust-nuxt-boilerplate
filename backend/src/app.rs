@@ -254,11 +254,19 @@ fn start_background_tasks(
     state: &web::Data<AppState>,
     container: &web::Data<crate::repositories::AppContainer>,
 ) {
-    // Start WebSocket Pub/Sub listener for distributed message delivery
+    // Start WebSocket Pub/Sub listener for distributed message delivery.
+    // Supervised: restart on failure instead of dying silently.
     let pubsub_state = std::sync::Arc::new(state.ws.clone());
     actix::spawn(async move {
-        if let Err(e) = crate::ws::redis_state::run_pubsub_listener(pubsub_state).await {
-            tracing::error!("WebSocket Pub/Sub listener failed: {}", e);
+        loop {
+            if let Err(e) = crate::ws::redis_state::run_pubsub_listener(pubsub_state.clone()).await
+            {
+                tracing::error!("WebSocket Pub/Sub listener failed: {}; restarting in 5s", e);
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            } else {
+                tracing::warn!("WebSocket Pub/Sub listener exited; restarting in 5s");
+                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+            }
         }
     });
 
@@ -342,14 +350,10 @@ pub async fn run() -> std::io::Result<()> {
     let server = HttpServer::new(app);
 
     let host = config.host.clone();
-    if config.tls_enabled {
-        tracing::warn!(
-            event = "server.tls_proxy_required",
-            "tls_enabled=true but actix TLS (rustls-0_23/http2) is disabled to fix RUSTSEC-2026-0258 (h2 0.3.27). \
-             Terminate TLS at reverse proxy (nginx/traefik) and set tls_enabled=false. \
-             Plain HTTP will be used."
-        );
-    }
+    // TLS is terminated at the reverse proxy (nginx/traefik); actix serves
+    // plain HTTP. `tls_enabled` is retained in the config for documentation
+    // only and must stay false in production.
+    let _ = config.tls_enabled;
     let port = config.port;
     tracing::info!(
         event = "server.bind",
@@ -358,7 +362,7 @@ pub async fn run() -> std::io::Result<()> {
         scheme = "http",
         "HTTP server bound"
     );
-    let result = server.bind((host, port))?.run().await;
+    let result = server.bind((host, port))?.shutdown_timeout(30).run().await;
 
     // OpenTelemetry provider shutdown is handled automatically on process exit
     result

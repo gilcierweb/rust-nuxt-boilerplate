@@ -230,7 +230,13 @@ pub fn register_user(
         ))
         .returning(User::as_returning())
         .get_result::<User>(conn)
-        .map_err(AppError::Database)?;
+        .map_err(|e| match e {
+            diesel::result::Error::DatabaseError(
+                diesel::result::DatabaseErrorKind::UniqueViolation,
+                _,
+            ) => AppError::Conflict(t!("auth.register.email_exists", locale = locale).into_owned()),
+            _ => AppError::Database(e),
+        })?;
 
     Ok((user, confirmation_token_plain))
 }
