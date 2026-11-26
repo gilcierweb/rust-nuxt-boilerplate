@@ -37,11 +37,11 @@ fn config_with_api_keys() -> AppConfig {
         ),
         (
             "MASTER_KEY",
-            "dGVzdC1tYXN0ZXIta2V5LWZvci1pbnRlZ3JhdGlvbi10ZXN0cw==",
+            "dGVzdC1tYXN0ZXIta2V5LWZvci11bml0LXRlc3RzLTMyYiE=",
         ),
         (
             "BLIND_INDEX_KEY",
-            "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLWludGVncmF0aW9uLXRlc3Rz",
+            "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLXVuaXQtdGVzdHM=",
         ),
         (
             "CSRF_SECRET_KEY",

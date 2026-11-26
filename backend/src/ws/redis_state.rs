@@ -546,9 +546,7 @@ impl WsRedisState {
 }
 
 /// Background task: subscribe to Redis Pub/Sub and deliver to local actors.
-pub async fn run_pubsub_listener(state: Arc<WsRedisState>) -> AppResult<()> {
-    let redis_url =
-        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+pub async fn run_pubsub_listener(state: Arc<WsRedisState>, redis_url: &str) -> AppResult<()> {
     let client = redis::Client::open(redis_url)
         .map_err(|e| AppError::Internal(format!("Failed to create Redis client: {}", e)))?;
 

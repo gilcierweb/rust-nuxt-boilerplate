@@ -14,12 +14,15 @@ use std::sync::Arc;
 fn setup_env() {
     // SAFETY: idempotent writes, same values across tests.
     unsafe {
-        std::env::set_var("MASTER_KEY", "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=");
+        std::env::set_var(
+            "MASTER_KEY",
+            "dGVzdC1tYXN0ZXIta2V5LWZvci11bml0LXRlc3RzLTMyYiE=",
+        );
     }
     unsafe {
         std::env::set_var(
             "BLIND_INDEX_KEY",
-            "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "dGVzdC1ibGluZC1pbmRleC1rZXktZm9yLXVuaXQtdGVzdHM=",
         );
     }
 }

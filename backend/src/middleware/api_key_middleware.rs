@@ -87,15 +87,29 @@ where
 
             let provided_key = extract_api_key(&req);
 
-            let is_valid = provided_key
-                .as_deref()
-                .map(|provided| {
-                    !expected_keys.is_empty()
-                        && expected_keys
-                            .iter()
-                            .any(|expected| constant_time_eq(expected, provided))
+            // In development (no keys configured) we fail open so the
+            // boilerplate works out of the box; production requires keys
+            // (enforced by validate_or_panic).
+            let dev_mode = std::env::var("ENVIRONMENT")
+                .map(|v| {
+                    let v = v.to_ascii_lowercase();
+                    v.is_empty() || v == "development" || v == "dev" || v == "test"
                 })
-                .unwrap_or(false);
+                .unwrap_or(true);
+
+            let is_valid = if expected_keys.is_empty() && dev_mode {
+                true
+            } else {
+                provided_key
+                    .as_deref()
+                    .map(|provided| {
+                        !expected_keys.is_empty()
+                            && expected_keys
+                                .iter()
+                                .any(|expected| constant_time_eq(expected, provided))
+                    })
+                    .unwrap_or(false)
+            };
 
             if !is_valid {
                 let response = AppError::Unauthorized(t!("middleware.unauthorized").into_owned())

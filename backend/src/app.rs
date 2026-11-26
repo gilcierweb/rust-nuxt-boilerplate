@@ -214,6 +214,38 @@ async fn build_runtime(
     let redis_pool = build_redis_pool(config);
     let redis_pool_for_container = redis_pool.clone();
 
+    // Best-effort reachability check at boot: Redis is required for rate
+    // limiting, caching and pub/sub. A failure here (e.g. REDIS_URL
+    // pointing at an unresolvable host outside docker) makes the API
+    // return 503 on every request, so warn loudly and early.
+    let redis_pool_for_check = redis_pool.clone();
+    actix::spawn(async move {
+        match redis_pool_for_check.get().await {
+            Ok(mut conn) => {
+                if let Err(e) = redis::AsyncCommands::ping::<String>(&mut conn).await {
+                    tracing::warn!(
+                        event = "redis.unreachable_at_boot",
+                        error = %e,
+                        "Redis is unreachable at boot. Set REDIS_URL to a reachable host \
+                         (e.g. redis://:password@localhost:6379 in dev) or start the \
+                         redis service. Rate limiting will fail closed (503) until \
+                         Redis recovers."
+                    );
+                }
+            },
+            Err(e) => {
+                tracing::warn!(
+                    event = "redis.unreachable_at_boot",
+                    error = %e,
+                    "Redis pool could not hand out a connection at boot. \
+                     Set REDIS_URL to a reachable host (e.g. \
+                     redis://:password@localhost:6379 in dev) or start the \
+                     redis service."
+                );
+            },
+        }
+    });
+
     // Single shared WebSocket state: the connection handler (served via
     // `web::Data`) and the Pub/Sub listener (served via `AppState.ws`) MUST
     // observe the same `local_connections` map, otherwise cross-worker
@@ -256,18 +288,32 @@ fn start_background_tasks(
     container: &web::Data<crate::repositories::AppContainer>,
 ) {
     // Start WebSocket Pub/Sub listener for distributed message delivery.
-    // Supervised: restart on failure instead of dying silently.
+    // Uses the configured Redis URL (not a separate env lookup) and backs off
+    // exponentially so a missing Redis does not spam the log forever.
     let pubsub_state = std::sync::Arc::new(state.ws.clone());
+    let pubsub_redis_url = state.config.redis_url.clone();
     actix::spawn(async move {
+        let mut backoff = std::time::Duration::from_secs(5);
         loop {
-            if let Err(e) = crate::ws::redis_state::run_pubsub_listener(pubsub_state.clone()).await
+            match crate::ws::redis_state::run_pubsub_listener(
+                pubsub_state.clone(),
+                &pubsub_redis_url,
+            )
+            .await
             {
-                tracing::error!("WebSocket Pub/Sub listener failed: {}; restarting in 5s", e);
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
-            } else {
-                tracing::warn!("WebSocket Pub/Sub listener exited; restarting in 5s");
-                tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                Ok(()) => {
+                    tracing::warn!("WebSocket Pub/Sub listener exited; restarting");
+                },
+                Err(e) => {
+                    tracing::error!(
+                        "WebSocket Pub/Sub listener failed: {}; retrying in {:?}",
+                        e,
+                        backoff
+                    );
+                },
             }
+            tokio::time::sleep(backoff).await;
+            backoff = (backoff * 2).min(std::time::Duration::from_secs(60));
         }
     });
 
