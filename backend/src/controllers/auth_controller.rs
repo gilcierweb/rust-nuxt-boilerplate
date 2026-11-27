@@ -165,6 +165,10 @@ pub struct UserInfo {
     pub profile_id: Uuid,
     pub is_otp_enabled: bool,
     pub roles: Vec<String>,
+    /// The effective class level `resource:action` authorities, derived from
+    /// the database grants. Mirrors `/auth/me` so the frontend can gate its
+    /// affordances immediately after login/session without an extra round trip.
+    pub permissions: Vec<String>,
 }
 
 /// The payload of `/auth/me`: the capabilities the frontend reads, all derived
@@ -950,7 +954,13 @@ pub async fn login(
         access_token,
         token_type: "Bearer",
         expires_in: container.config.jwt_access_expiry_secs,
-        user: build_user_info(container.config.as_ref(), &user, profile.id, roles)?,
+        user: build_user_info(
+            container.config.as_ref(),
+            &user,
+            profile.id,
+            roles,
+            ability.permissions().can.into_iter().collect(),
+        )?,
     }))
 }
 
@@ -1199,7 +1209,13 @@ async fn session_impl(
             access_token,
             token_type: "Bearer",
             expires_in: container.config.jwt_access_expiry_secs,
-            user: build_user_info(container.config.as_ref(), &user, profile.id, roles)?,
+            user: build_user_info(
+                container.config.as_ref(),
+                &user,
+                profile.id,
+                roles,
+                ability.permissions().can.into_iter().collect(),
+            )?,
         }))
 }
 
@@ -1942,6 +1958,7 @@ fn build_user_info(
     user: &User,
     profile_id: Uuid,
     roles: Vec<String>,
+    permissions: Vec<String>,
 ) -> AppResult<UserInfo> {
     let security = SecurityService::from_config(config)?;
     let email = security.decrypt_user_email(user)?;
@@ -1952,6 +1969,7 @@ fn build_user_info(
         profile_id,
         is_otp_enabled: user.is_otp_enabled(),
         roles,
+        permissions,
     })
 }
 
@@ -2544,7 +2562,13 @@ pub async fn verify_magic_link(
         access_token,
         token_type: "Bearer",
         expires_in: container.config.jwt_access_expiry_secs,
-        user: build_user_info(container.config.as_ref(), &user, profile.id, roles)?,
+        user: build_user_info(
+            container.config.as_ref(),
+            &user,
+            profile.id,
+            roles,
+            ability.permissions().can.into_iter().collect(),
+        )?,
     }))
 }
 
