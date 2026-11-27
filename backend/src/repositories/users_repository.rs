@@ -11,6 +11,7 @@ use ipnet::IpNet;
 use time::{OffsetDateTime, PrimitiveDateTime};
 use uuid::Uuid;
 
+use crate::DbPoolExt;
 use crate::db::database::DBPool;
 use crate::db::functions::{FragmentMatch, matches_fragment};
 use crate::db::schema::profiles;
@@ -20,7 +21,6 @@ use crate::models::profile::Profile;
 use crate::models::role::Role;
 use crate::models::user::{NewUser, User};
 use crate::models::user_role::NewUserRole;
-use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::users_trait::{
     AdminUserItem, AdminUserLookupItem, IUserRepository, IUserRepositoryTransaction,
 };
@@ -67,14 +67,12 @@ fn profile_fragment_predicate(term: &str) -> ProfileFragmentPredicate {
 }
 
 pub struct UsersRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl UsersRepository {
     pub fn new(pool: DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+        Self { db: pool }
     }
 }
 
@@ -84,7 +82,7 @@ pub use crate::repositories::traits::users_trait::MockIUserRepository;
 #[async_trait::async_trait]
 impl IUserRepository for UsersRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<User>> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move {
                     users_table::table
@@ -98,7 +96,7 @@ impl IUserRepository for UsersRepository {
 
     async fn find(&self, uid: &Uuid) -> diesel::QueryResult<User> {
         let uid_val = *uid;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_table::table
@@ -114,7 +112,7 @@ impl IUserRepository for UsersRepository {
     async fn create(&self, item: &NewUser) -> diesel::QueryResult<User> {
         let item = item.clone();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::insert_into(users_table::table)
@@ -142,7 +140,7 @@ impl IUserRepository for UsersRepository {
         let item = item.clone();
         let uid = *uid;
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(uid))
@@ -165,7 +163,7 @@ impl IUserRepository for UsersRepository {
 
     async fn destroy(&self, uid: &Uuid) -> diesel::QueryResult<usize> {
         let uid = *uid;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::delete(users_table::table.find(uid))
@@ -177,7 +175,7 @@ impl IUserRepository for UsersRepository {
     }
 
     async fn count(&self) -> diesel::QueryResult<i64> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move { users_table::table.count().first::<i64>(conn).await })
             })
@@ -191,7 +189,7 @@ impl IUserRepository for UsersRepository {
     ) -> diesel::QueryResult<Option<User>> {
         let blind_index = email_blind_index_param.to_vec();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_table::table
@@ -211,7 +209,7 @@ impl IUserRepository for UsersRepository {
     ) -> diesel::QueryResult<Option<User>> {
         let blind_index = email_blind_index_param.to_vec();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_table::table
@@ -231,7 +229,7 @@ impl IUserRepository for UsersRepository {
     ) -> diesel::QueryResult<Option<User>> {
         let token_digest = token_digest_param.to_string();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_table::table
@@ -254,7 +252,7 @@ impl IUserRepository for UsersRepository {
         last_sign_in_ip_val: Option<IpNet>,
     ) -> diesel::QueryResult<User> {
         let user_id = *user_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::users::dsl::*;
@@ -285,7 +283,7 @@ impl IUserRepository for UsersRepository {
         let pwd = new_encrypted_password.to_string();
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
@@ -313,7 +311,7 @@ impl IUserRepository for UsersRepository {
     ) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
@@ -342,7 +340,7 @@ impl IUserRepository for UsersRepository {
         let ee = encrypted_email.to_vec();
         let td = token_digest.to_string();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
@@ -363,7 +361,7 @@ impl IUserRepository for UsersRepository {
     async fn confirm_email(&self, token_digest: &str) -> diesel::QueryResult<usize> {
         let td = token_digest.to_string();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(
@@ -399,7 +397,7 @@ impl IUserRepository for UsersRepository {
         let user_id = *user_id;
         let salt = refresh_token_hash_salt.to_string();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     // Generate unlock token digest when account gets locked
@@ -448,7 +446,7 @@ impl IUserRepository for UsersRepository {
         ip: Option<IpNet>,
     ) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::users::dsl::*;
@@ -482,7 +480,7 @@ impl IUserRepository for UsersRepository {
         use diesel::expression_methods::NullableExpressionMethods;
 
         let user_id = *user_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     // A role without links still answers with NULL fields, so
@@ -562,7 +560,7 @@ impl IUserRepository for UsersRepository {
     /// The roles assigned to a user, as the admin interface reads them back.
     async fn find_user_role_assignments(&self, user_id: &Uuid) -> QueryResult<Vec<(Uuid, String)>> {
         let user_id = *user_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::{roles, users_roles};
@@ -586,7 +584,7 @@ impl IUserRepository for UsersRepository {
         let user_id = *user_id;
         let role_ids = role_ids.to_vec();
 
-        self.base
+        self.db
             .run_transaction(move |conn| {
                 let role_ids = role_ids.clone();
                 Box::pin(async move {
@@ -619,7 +617,7 @@ impl IUserRepository for UsersRepository {
         use diesel::AggregateExpressionMethods;
 
         let codes = codes.to_vec();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_roles::table
@@ -653,7 +651,7 @@ impl IUserRepository for UsersRepository {
 
     async fn get_user_roles(&self, user_id: &Uuid) -> diesel::QueryResult<Vec<String>> {
         let user_id = *user_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::{roles, users_roles};
@@ -670,7 +668,7 @@ impl IUserRepository for UsersRepository {
 
     async fn find_assignable_roles_by_name(&self, name: &str) -> diesel::QueryResult<Vec<Role>> {
         let role_name = name.to_string();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::roles::dsl::*;
@@ -690,7 +688,7 @@ impl IUserRepository for UsersRepository {
         use crate::db::schema::{permissions, roles_permissions};
 
         let role_id = *role_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     let codes: Vec<String> = roles_permissions::table
@@ -712,7 +710,7 @@ impl IUserRepository for UsersRepository {
 
     async fn get_user_permissions(&self, user_id: &Uuid) -> diesel::QueryResult<Vec<String>> {
         let user_id = *user_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::{permissions, roles_permissions, users_roles};
@@ -744,7 +742,7 @@ impl IUserRepository for UsersRepository {
         let tok = token_digest.to_string();
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
@@ -768,7 +766,7 @@ impl IUserRepository for UsersRepository {
         let tok = token_digest_param.to_string();
         let pwd = new_password.to_string();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.filter(reset_password_token_digest.eq(&tok)))
@@ -788,7 +786,7 @@ impl IUserRepository for UsersRepository {
     async fn set_otp_secret(&self, user_id: &Uuid, otp_secret: &str) -> diesel::QueryResult<usize> {
         let sec = otp_secret.to_string();
         let user_id = *user_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::users::dsl::*;
@@ -812,7 +810,7 @@ impl IUserRepository for UsersRepository {
         let codes = backup_codes.to_vec();
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
@@ -831,7 +829,7 @@ impl IUserRepository for UsersRepository {
     async fn disable_2fa(&self, user_id: &Uuid) -> diesel::QueryResult<usize> {
         let user_id = *user_id;
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
@@ -856,7 +854,7 @@ impl IUserRepository for UsersRepository {
         let user_id = *user_id;
         let codes = backup_codes.to_vec();
         use crate::db::schema::users::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(users_table::table.find(user_id))
@@ -885,7 +883,7 @@ impl IUserRepository for UsersRepository {
         let offset = params.offset();
         let descending = params.sort_dir.as_deref() == Some("desc");
 
-        self.base
+        self.db
             .run(move |conn| {
                 let security = security.clone();
                 Box::pin(async move {
@@ -1046,7 +1044,7 @@ impl IUserRepository for UsersRepository {
         security: Arc<SecurityService>,
     ) -> diesel::QueryResult<AdminUserItem> {
         let uid_val = *uid;
-        self.base
+        self.db
             .run(move |conn| {
                 let security = security.clone();
                 Box::pin(async move {
@@ -1119,7 +1117,7 @@ impl IUserRepositoryTransaction for UsersRepository {
         T: Send + 'static,
         E: From<diesel::result::Error> + Send + 'static,
     {
-        self.base.run_transaction(f).await
+        self.db.run_transaction(f).await
     }
 }
 

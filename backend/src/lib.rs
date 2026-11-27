@@ -21,6 +21,7 @@ pub mod ws;
 use std::sync::Arc;
 
 pub use db::database::DBPool;
+pub use db::database::DbPoolExt;
 
 pub struct AppState {
     pub db: crate::db::database::DBPool,

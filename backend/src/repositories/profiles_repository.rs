@@ -3,20 +3,18 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::DbPoolExt;
 use crate::db::schema::profiles as profiles_table;
 use crate::models::profile::{NewProfile, Profile};
-use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::profiles_trait::IProfileRepository;
 
 pub struct ProfilesRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl ProfilesRepository {
     pub fn new(pool: DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+        Self { db: pool }
     }
 }
 
@@ -26,7 +24,7 @@ pub use crate::repositories::traits::profiles_trait::MockIProfileRepository;
 #[async_trait::async_trait]
 impl IProfileRepository for ProfilesRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<Profile>> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move {
                     profiles_table::table
@@ -40,7 +38,7 @@ impl IProfileRepository for ProfilesRepository {
 
     async fn find(&self, pid: &Uuid) -> diesel::QueryResult<Profile> {
         let pid = *pid;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     profiles_table::table
@@ -55,7 +53,7 @@ impl IProfileRepository for ProfilesRepository {
 
     async fn create(&self, item: &NewProfile) -> diesel::QueryResult<Profile> {
         let item = item.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::insert_into(profiles_table::table)
@@ -72,7 +70,7 @@ impl IProfileRepository for ProfilesRepository {
         let item = item.clone();
         let pid = *pid;
         use crate::db::schema::profiles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(profiles_table::table.find(pid))
@@ -104,7 +102,7 @@ impl IProfileRepository for ProfilesRepository {
 
     async fn destroy(&self, pid: &Uuid) -> diesel::QueryResult<usize> {
         let pid = *pid;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::delete(profiles_table::table.find(pid))
@@ -123,7 +121,7 @@ impl IProfileRepository for ProfilesRepository {
     ) -> diesel::QueryResult<Profile> {
         let pid = *pid;
         let patch = patch.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(profiles_table::table.find(pid))
@@ -139,7 +137,7 @@ impl IProfileRepository for ProfilesRepository {
     async fn find_by_user_id(&self, uid: &Uuid) -> diesel::QueryResult<Option<Profile>> {
         let uid = *uid;
         use crate::db::schema::profiles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     profiles_table::table
@@ -159,7 +157,7 @@ impl IProfileRepository for ProfilesRepository {
     ) -> diesel::QueryResult<Option<Profile>> {
         let blind_index = blind_index_param.to_vec();
         use crate::db::schema::profiles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     profiles_table::table
@@ -179,7 +177,7 @@ impl IProfileRepository for ProfilesRepository {
     ) -> diesel::QueryResult<Option<Profile>> {
         let blind_index = blind_index_param.to_vec();
         use crate::db::schema::profiles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     profiles_table::table
@@ -199,7 +197,7 @@ impl IProfileRepository for ProfilesRepository {
     ) -> diesel::QueryResult<Option<Profile>> {
         let blind_index = blind_index_param.to_vec();
         use crate::db::schema::profiles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     profiles_table::table

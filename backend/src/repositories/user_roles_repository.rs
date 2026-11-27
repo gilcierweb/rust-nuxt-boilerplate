@@ -3,20 +3,18 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::DbPoolExt;
 use crate::db::schema::users_roles as users_roles_table;
 use crate::models::user_role::{NewUserRole, UserRole};
-use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::user_roles_trait::IUserRoleRepository;
 
 pub struct UserRolesRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl UserRolesRepository {
     pub fn new(pool: DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+        Self { db: pool }
     }
 }
 
@@ -26,7 +24,7 @@ pub use crate::repositories::traits::user_roles_trait::MockIUserRoleRepository;
 #[async_trait::async_trait]
 impl IUserRoleRepository for UserRolesRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<UserRole>> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move { users_roles_table::table.load::<UserRole>(conn).await })
             })
@@ -37,7 +35,7 @@ impl IUserRoleRepository for UserRolesRepository {
         let user = *user;
         let role = *role;
         use crate::db::schema::users_roles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_roles_table::table
@@ -53,7 +51,7 @@ impl IUserRoleRepository for UserRolesRepository {
     async fn find_by_user(&self, uid: &Uuid) -> diesel::QueryResult<Vec<UserRole>> {
         let uid = *uid;
         use crate::db::schema::users_roles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_roles_table::table
@@ -68,7 +66,7 @@ impl IUserRoleRepository for UserRolesRepository {
     async fn find_by_role(&self, rid: &Uuid) -> diesel::QueryResult<Vec<UserRole>> {
         let rid = *rid;
         use crate::db::schema::users_roles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     users_roles_table::table
@@ -82,7 +80,7 @@ impl IUserRoleRepository for UserRolesRepository {
 
     async fn create(&self, item: &NewUserRole) -> diesel::QueryResult<UserRole> {
         let item = item.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::insert_into(users_roles_table::table)
@@ -99,7 +97,7 @@ impl IUserRoleRepository for UserRolesRepository {
         let user = *user;
         let role = *role;
         use crate::db::schema::users_roles::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::delete(

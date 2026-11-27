@@ -6,22 +6,20 @@ use time::{Duration, OffsetDateTime};
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::DbPoolExt;
 use crate::db::schema::refresh_tokens as refresh_tokens_table;
 use crate::db::schema::refresh_tokens::dsl::{expires_at, revoked_at};
 use crate::models::refresh_token::{NewRefreshToken, RefreshToken};
-use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::refresh_tokens_trait::IRefreshTokenRepository;
 use crate::services::token_service::{generate_random_token, hash_token};
 
 pub struct RefreshTokensRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl RefreshTokensRepository {
     pub fn new(pool: DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+        Self { db: pool }
     }
 }
 
@@ -68,7 +66,7 @@ pub use crate::repositories::traits::refresh_tokens_trait::MockIRefreshTokenRepo
 #[async_trait::async_trait]
 impl IRefreshTokenRepository for RefreshTokensRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<RefreshToken>> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move {
                     refresh_tokens_table::table
@@ -82,7 +80,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
 
     async fn find(&self, tid: &Uuid) -> diesel::QueryResult<RefreshToken> {
         let tid = *tid;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     refresh_tokens_table::table
@@ -97,7 +95,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
 
     async fn create(&self, item: &NewRefreshToken) -> diesel::QueryResult<RefreshToken> {
         let item = item.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::insert_into(refresh_tokens_table::table)
@@ -112,7 +110,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
 
     async fn destroy(&self, tid: &Uuid) -> diesel::QueryResult<usize> {
         let tid = *tid;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::delete(refresh_tokens_table::table.find(tid))
@@ -129,7 +127,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
     ) -> diesel::QueryResult<Option<RefreshToken>> {
         let hash = token_hash_str.to_string();
         use crate::db::schema::refresh_tokens::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     refresh_tokens_table::table
@@ -153,7 +151,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
 
         let token = plaintext_token.to_string();
         let key = hash_key.to_string();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     let now = OffsetDateTime::now_utc();
@@ -192,7 +190,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
     async fn revoke(&self, tid: &Uuid) -> diesel::QueryResult<usize> {
         let tid = *tid;
         use crate::db::schema::refresh_tokens::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(refresh_tokens_table::table.find(tid))
@@ -207,7 +205,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
     async fn revoke_all_for_user(&self, uid: &Uuid) -> diesel::QueryResult<usize> {
         let uid = *uid;
         use crate::db::schema::refresh_tokens::dsl::*;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(refresh_tokens_table::table.filter(user_id.eq(uid)))
@@ -230,7 +228,7 @@ impl IRefreshTokenRepository for RefreshTokensRepository {
         let salt = hash_salt.to_string();
         let key = hash_salt.to_string();
 
-        self.base
+        self.db
             .run_transaction(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::refresh_tokens::dsl::{

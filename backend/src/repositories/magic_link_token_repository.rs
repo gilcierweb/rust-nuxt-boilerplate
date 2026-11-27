@@ -5,9 +5,10 @@ use diesel_async::RunQueryDsl;
 use time::OffsetDateTime;
 use uuid::Uuid;
 
+use crate::DBPool;
+use crate::DbPoolExt;
 use crate::db::schema::magic_link_tokens as table;
 use crate::models::magic_link_token::{MagicLinkToken, NewMagicLinkToken};
-use crate::repositories::base::BaseRepo;
 
 pub use crate::repositories::traits::magic_link_token_trait::IMagicLinkTokenRepository;
 
@@ -15,14 +16,12 @@ pub use crate::repositories::traits::magic_link_token_trait::IMagicLinkTokenRepo
 pub use crate::repositories::traits::magic_link_token_trait::MockIMagicLinkTokenRepository;
 
 pub struct MagicLinkTokenRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl MagicLinkTokenRepository {
-    pub fn new(pool: crate::db::database::DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+    pub fn new(pool: DBPool) -> Self {
+        Self { db: pool }
     }
 }
 
@@ -30,7 +29,7 @@ impl MagicLinkTokenRepository {
 impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
     async fn create(&self, item: &NewMagicLinkToken) -> QueryResult<MagicLinkToken> {
         let item = item.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::insert_into(table::table)
@@ -45,7 +44,7 @@ impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
 
     async fn find_by_digest(&self, token_digest: &str) -> QueryResult<Option<MagicLinkToken>> {
         let digest = token_digest.to_string();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     table::table
@@ -68,7 +67,7 @@ impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
     /// row again and report success to both requests.
     async fn mark_consumed(&self, id: &Uuid) -> QueryResult<usize> {
         let id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(table::table.find(id).filter(table::consumed_at.is_null()))
@@ -81,7 +80,7 @@ impl IMagicLinkTokenRepository for MagicLinkTokenRepository {
     }
 
     async fn delete_expired(&self) -> QueryResult<usize> {
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::delete(

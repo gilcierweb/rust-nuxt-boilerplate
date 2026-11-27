@@ -3,23 +3,21 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::DbPoolExt;
 use crate::db::functions::matches_fragment;
 use crate::db::schema::audit_logs as audit_logs_table;
 use crate::models::audit_log::{AuditLog, NewAuditLog};
-use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::audit_logs_trait::IAuditLogRepository;
 use crate::services::audit_log_service::compute_audit_log_hash;
 use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
 
 pub struct AuditLogsRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl AuditLogsRepository {
     pub fn new(pool: DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+        Self { db: pool }
     }
 }
 
@@ -29,7 +27,7 @@ pub use crate::repositories::traits::audit_logs_trait::MockIAuditLogRepository;
 #[async_trait::async_trait]
 impl IAuditLogRepository for AuditLogsRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<AuditLog>> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move {
                     audit_logs_table::table
@@ -43,7 +41,7 @@ impl IAuditLogRepository for AuditLogsRepository {
 
     async fn find(&self, id: &Uuid) -> diesel::QueryResult<AuditLog> {
         let id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     audit_logs_table::table
@@ -57,7 +55,7 @@ impl IAuditLogRepository for AuditLogsRepository {
 
     async fn create(&self, item: &NewAuditLog) -> diesel::QueryResult<AuditLog> {
         let item = item.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     // Get the previous log's hash for chaining
@@ -87,7 +85,7 @@ impl IAuditLogRepository for AuditLogsRepository {
     }
 
     async fn find_latest_hash(&self) -> diesel::QueryResult<Option<String>> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move {
                     audit_logs_table::table
@@ -106,7 +104,7 @@ impl IAuditLogRepository for AuditLogsRepository {
         cursor_id: Option<Uuid>,
         limit: i64,
     ) -> diesel::QueryResult<Vec<AuditLog>> {
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     let mut query = audit_logs_table::table
@@ -136,7 +134,7 @@ impl IAuditLogRepository for AuditLogsRepository {
             .map(|value| value.trim().to_lowercase())
             .filter(|value| !value.is_empty());
 
-        self.base
+        self.db
             .run(move |conn| {
                 let search = search.clone();
                 Box::pin(async move {

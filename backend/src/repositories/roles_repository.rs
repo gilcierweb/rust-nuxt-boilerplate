@@ -10,24 +10,22 @@ use time::OffsetDateTime;
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::DbPoolExt;
 use crate::db::functions::matches_fragment;
 use crate::db::schema::roles as roles_table;
 use crate::models::permission::{NewRolePermissionLink, RolePermissionItem};
 use crate::models::role::{NewRole, Role};
-use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::roles_trait::{IRoleRepository, RoleMemberItem};
 use crate::security::SecurityService;
 use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
 
 pub struct RolesRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl RolesRepository {
     pub fn new(pool: DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+        Self { db: pool }
     }
 }
 
@@ -57,14 +55,14 @@ fn display_name(
 #[async_trait::async_trait]
 impl IRoleRepository for RolesRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<Role>> {
-        self.base
+        self.db
             .run(|conn| Box::pin(async move { roles_table::table.load::<Role>(conn).await }))
             .await
     }
 
     async fn find(&self, id: &Uuid) -> diesel::QueryResult<Role> {
         let id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     roles_table::table
@@ -79,7 +77,7 @@ impl IRoleRepository for RolesRepository {
 
     async fn find_by_name(&self, name: &str) -> diesel::QueryResult<Option<Role>> {
         let name = name.to_string();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     roles_table::table
@@ -96,7 +94,7 @@ impl IRoleRepository for RolesRepository {
     async fn find_administrator_role(&self) -> diesel::QueryResult<Option<Role>> {
         use crate::authz::guards::ADMINISTRATOR_ROLE_NAME;
 
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     roles_table::table
@@ -114,7 +112,7 @@ impl IRoleRepository for RolesRepository {
 
     async fn create(&self, item: &NewRole) -> diesel::QueryResult<Role> {
         let item = item.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::insert_into(roles_table::table)
@@ -130,7 +128,7 @@ impl IRoleRepository for RolesRepository {
     async fn update(&self, id: &Uuid, item: &NewRole) -> diesel::QueryResult<Role> {
         let item = item.clone();
         let role_id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     use crate::db::schema::roles::dsl::*;
@@ -151,7 +149,7 @@ impl IRoleRepository for RolesRepository {
 
     async fn destroy(&self, id: &Uuid) -> diesel::QueryResult<usize> {
         let id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::delete(roles_table::table.find(id))
@@ -172,7 +170,7 @@ impl IRoleRepository for RolesRepository {
             .map(|value| value.trim().to_lowercase())
             .filter(|value| !value.is_empty());
 
-        self.base
+        self.db
             .run(move |conn| {
                 let search = search.clone();
                 Box::pin(async move {
@@ -229,7 +227,7 @@ impl IRoleRepository for RolesRepository {
         use crate::db::schema::{permissions, roles_permissions};
 
         let role_id = *role_id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     let rows: Vec<(String, i16)> = roles_permissions::table
@@ -257,7 +255,7 @@ impl IRoleRepository for RolesRepository {
         use crate::db::schema::{profiles, users, users_roles};
 
         let role_id = *role_id;
-        self.base
+        self.db
             .run(move |conn| {
                 let security = security.clone();
                 Box::pin(async move {
@@ -321,7 +319,7 @@ impl IRoleRepository for RolesRepository {
         use crate::db::schema::{permissions, roles, roles_permissions};
 
         let codes = codes.to_vec();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     roles_permissions::table
@@ -364,7 +362,7 @@ impl IRoleRepository for RolesRepository {
             ));
         }
 
-        self.base
+        self.db
             .run_transaction(move |conn| {
                 let items = items.clone();
                 Box::pin(async move {

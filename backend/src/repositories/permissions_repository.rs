@@ -6,25 +6,23 @@ use diesel_async::RunQueryDsl;
 use uuid::Uuid;
 
 use crate::DBPool;
+use crate::DbPoolExt;
 use crate::db::schema::permissions as permissions_table;
 use crate::models::permission::{
     NewPermission, Permission, PermissionPatch, PermissionRole, PermissionWithRoles,
 };
-use crate::repositories::base::BaseRepo;
 pub use crate::repositories::traits::permissions_trait::{
     IPermissionRepository, PERMISSION_SORT_FIELDS,
 };
 use crate::utils::pagination::{ListParams, PaginatedResponse, PaginationParams};
 
 pub struct PermissionsRepository {
-    base: BaseRepo,
+    db: DBPool,
 }
 
 impl PermissionsRepository {
     pub fn new(pool: DBPool) -> Self {
-        Self {
-            base: BaseRepo::new(pool),
-        }
+        Self { db: pool }
     }
 }
 
@@ -56,7 +54,7 @@ fn code_parts(code: &str) -> (String, String) {
 #[async_trait::async_trait]
 impl IPermissionRepository for PermissionsRepository {
     async fn all(&self) -> diesel::QueryResult<Vec<Permission>> {
-        self.base
+        self.db
             .run(|conn| {
                 Box::pin(async move {
                     permissions_table::table
@@ -70,7 +68,7 @@ impl IPermissionRepository for PermissionsRepository {
 
     async fn find(&self, id: &Uuid) -> diesel::QueryResult<Permission> {
         let permission_id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     permissions_table::table
@@ -85,7 +83,7 @@ impl IPermissionRepository for PermissionsRepository {
 
     async fn find_by_code(&self, code: &str) -> diesel::QueryResult<Option<Permission>> {
         let code = code.to_string();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     permissions_table::table
@@ -101,7 +99,7 @@ impl IPermissionRepository for PermissionsRepository {
 
     async fn create(&self, item: &NewPermission) -> diesel::QueryResult<Permission> {
         let item = item.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::insert_into(permissions_table::table)
@@ -117,7 +115,7 @@ impl IPermissionRepository for PermissionsRepository {
     async fn update(&self, id: &Uuid, patch: &PermissionPatch) -> diesel::QueryResult<Permission> {
         let permission_id = *id;
         let patch = patch.clone();
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::update(permissions_table::table.find(permission_id))
@@ -132,7 +130,7 @@ impl IPermissionRepository for PermissionsRepository {
 
     async fn destroy(&self, id: &Uuid) -> diesel::QueryResult<usize> {
         let permission_id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     diesel::delete(permissions_table::table.find(permission_id))
@@ -147,7 +145,7 @@ impl IPermissionRepository for PermissionsRepository {
         use crate::db::schema::roles_permissions;
 
         let permission_id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     roles_permissions::table
@@ -164,7 +162,7 @@ impl IPermissionRepository for PermissionsRepository {
         use crate::db::schema::{permissions, roles, roles_permissions};
 
         let permission_id = *id;
-        self.base
+        self.db
             .run(move |conn| {
                 Box::pin(async move {
                     // Left joins: a permission nobody links yet still answers
@@ -239,7 +237,7 @@ impl IPermissionRepository for PermissionsRepository {
             .map(|value| value.trim().to_lowercase())
             .filter(|value| !value.is_empty());
 
-        self.base
+        self.db
             .run(move |conn| {
                 let search = search.clone();
                 Box::pin(async move {
